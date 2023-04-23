@@ -46,21 +46,21 @@ public class DruidDataSourceConfig {
      *
      * @return DruidDataSource
      */
-    @Bean("dataSourceOne")
+    @Bean("dataSource")
     @ConfigurationProperties(prefix = "spring.datasource.druid.datasourceone")
-    public DataSource druidDataSourceOne() {
+    public DataSource druidDataSource() {
         return new DruidDataSource();
     }
 
     /**
      * build extract JdbcTemplate
      *
-     * @param dataSourceOne DataSource
+     * @param dataSource DataSource
      * @return JdbcTemplate
      */
-    @Bean("jdbcTemplateOne")
-    public JdbcTemplate jdbcTemplateOne(@Qualifier("dataSourceOne") DataSource dataSourceOne) {
-        JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSourceOne);
+    @Bean("jdbcTemplate")
+    public JdbcTemplate jdbcTemplateOne(@Qualifier("dataSource") DataSource dataSource) {
+        JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
         jdbcTemplate.setFetchSize(20000);
         return jdbcTemplate;
     }

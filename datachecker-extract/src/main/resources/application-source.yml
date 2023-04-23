@@ -10,7 +10,7 @@ spring:
   application:
     name: gs_datacheck_source
   config:
-    import: file:./config/application-source.yml
+    additional-location: file:config/application-source.yml
   lifecycle:
     timeout-per-shutdown-phase: 5
 
@@ -18,7 +18,7 @@ spring:
     schema: test
     databaseType: MS  # MS mysql
     endpoint: SOURCE
-    query-dop: 8 # jdbc Parallel Query  config
+    query-dop: 1 # jdbc Parallel Query  config
     debezium-enable: false # Whether to enable incremental debezium configuration (not enabled by default)
     debezium-topic:
     debezium-groupId: debezium-extract-group

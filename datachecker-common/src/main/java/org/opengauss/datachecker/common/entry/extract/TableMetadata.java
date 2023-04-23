@@ -44,6 +44,8 @@ public class TableMetadata {
      */
     private long tableRows;
 
+    private long avgRowLength;
+
     /**
      * Primary key column properties
      */

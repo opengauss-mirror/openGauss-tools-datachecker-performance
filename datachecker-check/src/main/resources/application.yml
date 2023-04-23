@@ -9,7 +9,7 @@ spring:
   application:
     name: gs_datacheck
   config:
-    location: file:./config/application.yml
+    additional-location: file:config/application.yml
   lifecycle:
     timeout-per-shutdown-phase: 5
   kafka:

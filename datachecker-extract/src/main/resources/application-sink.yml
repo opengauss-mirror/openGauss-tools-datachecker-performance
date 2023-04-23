@@ -11,14 +11,14 @@ spring:
   application:
     name: gs_datacheck_sink
   config:
-    import: file:./config/application-sink.yml
+    additional-location: file:config/application-sink.yml
   lifecycle:
     timeout-per-shutdown-phase: 5
   extract:
     schema: jack
     databaseType: OG  #OG opengauss
     endpoint: SINK
-    query-dop: 8 # jdbc Parallel Query  config
+    query-dop: 1 # jdbc Parallel Query  config
     debezium-enable: false
     debezium-topic:
     debezium-groupId:
@@ -38,6 +38,7 @@ spring:
         minIdle: 10
         maxActive: 20
         maxWait: 60000
+
         timeBetweenEvictionRunsMillis: 60000
         minEvictableIdleTimeMillis: 300000
         testWhileIdle: false

@@ -36,9 +36,9 @@ import javax.sql.DataSource;
 @Service
 public class ExtractThreadSupport {
     @Resource
-    private DataSource dataSourceOne;
+    private DataSource dataSource;
     @Resource
-    private ConnectionManager connectionManager;
+    private ResourceManager resourceManager;
     @Resource
     private KafkaTemplate<String, String> kafkaTemplate;
     @Resource

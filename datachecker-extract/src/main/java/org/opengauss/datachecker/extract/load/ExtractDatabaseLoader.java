@@ -15,11 +15,9 @@
 
 package org.opengauss.datachecker.extract.load;
 
-import com.alibaba.fastjson.JSONObject;
 import lombok.extern.slf4j.Slf4j;
 import org.opengauss.datachecker.common.entry.extract.MetadataLoadProcess;
 import org.opengauss.datachecker.common.util.ThreadUtil;
-import org.opengauss.datachecker.extract.cache.MetaDataCache;
 import org.opengauss.datachecker.extract.service.MetaDataService;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
