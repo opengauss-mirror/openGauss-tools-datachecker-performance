@@ -15,6 +15,11 @@
 
 package org.opengauss.datachecker.common.entry.memory;
 
+import lombok.Setter;
+
+import java.util.LinkedList;
+import java.util.List;
+
 /**
  * ThreadInfo
  *
@@ -22,37 +27,28 @@ package org.opengauss.datachecker.common.entry.memory;
  * @date ：Created in 2023/3/29
  * @since ：11
  */
-public class ThreadInfo {
-    int threadCount;
-    int peakThreadCount;
-    int daemonThreadCount;
+@Setter
+public class ThreadInfo extends BaseMonitor implements MonitorFormatter {
+    private int threadCount;
+    private int peakThreadCount;
+    private int daemonThreadCount;
 
-    /**
-     * ThreadInfo
-     *
-     * @param threadCount       threadCount
-     * @param peakThreadCount   peakThreadCount
-     * @param daemonThreadCount daemonThreadCount
-     */
-    public ThreadInfo(int threadCount, int peakThreadCount, int daemonThreadCount) {
-        this.threadCount = threadCount;
-        this.peakThreadCount = peakThreadCount;
-        this.daemonThreadCount = daemonThreadCount;
-    }
-
-    /**
-     * format template
-     * <p>
-     * -------------------- JVM Thread Information --------------------
-     * Number of threads: threadCount  Max threads: peakThreadCount  Number of daemon threads: daemonThreadCount
-     * </p>
-     *
-     * @return format
-     */
     @Override
     public String toString() {
-        return "-------------------- JVM Thread Information --------------------" + System.lineSeparator()
-            + "| Threads: " + threadCount + ", Max Threads: " + peakThreadCount + ", Daemon Threads: "
-            + daemonThreadCount + System.lineSeparator();
+        return format();
+    }
+
+    @Override
+    public String getTitle() {
+        return "JVM Thread";
+    }
+
+    @Override
+    public List<Field> getFormatFields() {
+        List<Field> threadFields = new LinkedList<>();
+        threadFields.add(Field.of("threads", threadCount));
+        threadFields.add(Field.of("max", peakThreadCount));
+        threadFields.add(Field.of("daemon", daemonThreadCount));
+        return threadFields;
     }
 }

@@ -32,8 +32,8 @@ import org.springframework.stereotype.Service;
 @Order(101)
 @Service
 public class ThreadPoolLoader extends AbstractCheckLoader {
-    @Value("${data.check.max-core-pool-size}")
-    protected int coreSize;
+    @Value("${spring.check.core-pool-size}")
+    private int coreSize;
 
     @Override
     public void load(CheckEnvironment checkEnvironment) {

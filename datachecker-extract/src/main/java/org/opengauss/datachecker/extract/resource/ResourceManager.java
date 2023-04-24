@@ -13,11 +13,11 @@
  * See the Mulan PSL v2 for more details.
  */
 
-package org.opengauss.datachecker.extract.task;
+package org.opengauss.datachecker.extract.resource;
 
 import com.alibaba.druid.pool.DruidDataSource;
 import lombok.extern.slf4j.Slf4j;
-import org.opengauss.datachecker.common.entry.memory.MemoryInfo;
+import org.opengauss.datachecker.common.entry.memory.JvmInfo;
 import org.opengauss.datachecker.common.service.MemoryManager;
 import org.opengauss.datachecker.common.service.ShutdownService;
 import org.opengauss.datachecker.extract.config.DruidDataSourceConfig;
@@ -64,8 +64,8 @@ public class ResourceManager {
         if (dataSource instanceof DruidDataSource) {
             final DruidDataSource druidDataSource = (DruidDataSource) dataSource;
             connectionCount.set(druidDataSource.getMaxActive());
-            final MemoryInfo memory = MemoryManager.getJvmMemoryInfo();
-            log.info("max active connection {} ,max memory {}", connectionCount.get(), memory.getVmTotal());
+            final JvmInfo memory = MemoryManager.getJvmInfo();
+            log.info("max active connection {} ,max memory {}", connectionCount.get(), memory.getMax());
         }
     }
 
@@ -88,7 +88,7 @@ public class ResourceManager {
     public boolean canExecQuery(long freeSize) {
         lock.lock();
         try {
-            final MemoryInfo memory = MemoryManager.getJvmMemoryInfo();
+            final JvmInfo memory = MemoryManager.getJvmInfo();
             if (connectionCount.get() > 2 && memory.isAvailable(freeSize)) {
                 connectionCount.decrementAndGet();
                 tryAvailableTimes.set(0);

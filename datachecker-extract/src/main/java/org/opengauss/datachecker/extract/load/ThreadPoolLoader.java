@@ -39,13 +39,15 @@ import java.util.Map;
 public class ThreadPoolLoader extends AbstractExtractLoader {
     @Resource
     private MetaDataService metaDataService;
-    @Value("${spring.check.max-core-pool-size}")
-    protected int maxCorePoolSize;
+    @Value("${spring.check.core-pool-size}")
+    private int maxCorePoolSize;
     @Value("${spring.check.max-retry-times}")
-    protected int maxRetryTimes;
+    private int maxRetryTimes;
 
     /**
      * Initialize the verification result environment
+     *
+     * @param extractEnvironment extractEnvironment
      */
     @Override
     public void load(ExtractEnvironment extractEnvironment) {

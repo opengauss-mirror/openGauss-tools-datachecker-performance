@@ -13,25 +13,26 @@
  * See the Mulan PSL v2 for more details.
  */
 
-package org.opengauss.datachecker.common.entry.memory;
+package org.opengauss.datachecker.common.service;
+
+import java.util.Map;
+import java.util.concurrent.ThreadPoolExecutor;
 
 /**
- * MemoryBase
+ * DynamicThreadPool
  *
  * @author ：wangchao
- * @date ：Created in 2023/3/29
+ * @date ：Created in 2023/4/24
  * @since ：11
  */
-public class MemoryBase {
-    private static final int BYTE_TO_MB = 1024 * 1024;
-
+public interface DynamicThreadPool {
     /**
-     * byte to Mb
+     * init Dynamic Thread Pool Executor
      *
-     * @param value byte value
-     * @return mb
+     * @param executorServiceCache executorServiceCache
+     * @param corePoolSize         corePoolSize
+     * @param maximumPoolSize      maximumPoolSize
      */
-    protected static long byteToMb(long value) {
-        return value / BYTE_TO_MB;
-    }
+    void buildDynamicThreadPoolExecutor(Map<String, ThreadPoolExecutor> executorServiceCache, int corePoolSize,
+        int maximumPoolSize);
 }

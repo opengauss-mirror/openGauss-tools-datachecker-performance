@@ -13,24 +13,28 @@
  * See the Mulan PSL v2 for more details.
  */
 
-package org.opengauss.datachecker.extract.load;
-
-import lombok.Data;
-import org.opengauss.datachecker.common.entry.enums.CheckMode;
-import org.springframework.stereotype.Component;
+package org.opengauss.datachecker.common.entry.memory;
 
 /**
- * ExtractEnvironment
+ * MonitorFormat
  *
  * @author ：wangchao
- * @date ：Created in 2022/10/31
+ * @date ：Created in 2023/3/29
  * @since ：11
  */
-@Data
-@Component
-public class ExtractEnvironment {
-    private int maxCorePoolSize = 0;
-    private int queueSize = 0;
-    private boolean loadSuccess = false;
-    private volatile CheckMode checkMode;
+public class BaseMonitor {
+    /**
+     * byte to mb
+     */
+    protected static final int BYTE_TO_MB = 1024 * 1024;
+
+    /**
+     * byte to Mb
+     *
+     * @param value byte value
+     * @return mb
+     */
+    protected static long byteToMb(long value) {
+        return value / BYTE_TO_MB;
+    }
 }
