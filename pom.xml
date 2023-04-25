@@ -35,6 +35,7 @@
         <snakeyaml.version>1.33</snakeyaml.version>
         <powermock.version>2.0.0</powermock.version>
         <commons.cli.version>1.4</commons.cli.version>
+        <oshi.version>5.3.6</oshi.version>
     </properties>
     <modules>
         <module>datachecker-common</module>
@@ -56,6 +57,11 @@
                 <version>${spring.cloud.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.github.oshi</groupId>
+                <artifactId>oshi-core</artifactId>
+                <version>${oshi.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.yaml</groupId>

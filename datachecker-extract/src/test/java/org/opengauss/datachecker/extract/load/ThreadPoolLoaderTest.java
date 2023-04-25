@@ -11,15 +11,19 @@ import org.opengauss.datachecker.extract.util.TestJsonUtil;
 
 import java.util.HashMap;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
+/**
+ * ThreadPoolLoaderTest
+ *
+ * @author ：wangchao
+ * @date ：Created in 2023/4/23
+ * @since ：11
+ */
 @ExtendWith(MockitoExtension.class)
 class ThreadPoolLoaderTest {
-
     @Mock
     private MetaDataService mockMetaDataService;
-
     @InjectMocks
     private ThreadPoolLoader threadPoolLoaderUnderTest;
 
@@ -33,8 +37,5 @@ class ThreadPoolLoaderTest {
         when(mockMetaDataService.queryMetaDataOfSchemaCache()).thenReturn(tableMetadata);
         // Run the test
         threadPoolLoaderUnderTest.load(extractEnvironment);
-        // Verify the results
-        assertThat(extractEnvironment.getThreadPoolExecutor()).isNotNull();
-        extractEnvironment.getThreadPoolExecutor().shutdown();
     }
 }

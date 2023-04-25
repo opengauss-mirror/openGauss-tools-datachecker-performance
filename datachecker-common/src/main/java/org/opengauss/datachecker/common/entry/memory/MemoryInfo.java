@@ -15,6 +15,11 @@
 
 package org.opengauss.datachecker.common.entry.memory;
 
+import lombok.Setter;
+
+import java.util.LinkedList;
+import java.util.List;
+
 /**
  * MemoryInfo
  *
@@ -22,18 +27,12 @@ package org.opengauss.datachecker.common.entry.memory;
  * @date ：Created in 2023/3/29
  * @since ：11
  */
-public class MemoryInfo extends MemoryBase {
+@Setter
+public class MemoryInfo extends BaseMonitor implements MonitorFormatter {
     private long vmTotal;
     private long vmFree;
     private long vmMax;
     private long vmUse;
-
-    public MemoryInfo(long vmTotal, long vmFree, long vmMax) {
-        this.vmTotal = vmTotal;
-        this.vmFree = vmFree;
-        this.vmMax = vmMax;
-        this.vmUse = vmTotal - vmFree;
-    }
 
     public long getVmTotal() {
         return byteToMb(vmTotal);
@@ -51,20 +50,9 @@ public class MemoryInfo extends MemoryBase {
         return byteToMb(vmUse);
     }
 
-    /**
-     * format template
-     * <p>
-     * -------------------- JVM Memory Information --------------------
-     * JVM Memory used: vmUse,  Free Memory : vmFree, Total Memory: vmTotal, Maximum Memory: vmMax
-     * </p>
-     *
-     * @return format
-     */
     @Override
     public String toString() {
-        return "-------------------- JVM Memory Information --------------------" + System.lineSeparator()
-            + "| JVM Memory used: " + byteToMb(vmUse) + " MB, Free Memory: " + byteToMb(vmFree) + " MB, Total Memory: "
-            + byteToMb(vmTotal) + " MB, Maximum Memory: " + byteToMb(vmMax) + " MB " + System.lineSeparator();
+        return format();
     }
 
     /**
@@ -75,5 +63,20 @@ public class MemoryInfo extends MemoryBase {
      */
     public boolean isAvailable(long freeSize) {
         return vmFree >= freeSize;
+    }
+
+    @Override
+    public String getTitle() {
+        return "Memory Information";
+    }
+
+    @Override
+    public List<Field> getFormatFields() {
+        List<Field> memoryFields = new LinkedList<>();
+        memoryFields.add(Field.of("total", byteToMb(vmTotal) + " MB"));
+        memoryFields.add(Field.of("maximum", byteToMb(vmMax) + " MB "));
+        memoryFields.add(Field.of("used", byteToMb(vmUse) + " MB"));
+        memoryFields.add(Field.of("free", byteToMb(vmFree) + " MB"));
+        return memoryFields;
     }
 }

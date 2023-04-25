@@ -15,6 +15,9 @@
 
 package org.opengauss.datachecker.common.entry.memory;
 
+import java.util.LinkedList;
+import java.util.List;
+
 /**
  * GcInfo
  *
@@ -22,7 +25,7 @@ package org.opengauss.datachecker.common.entry.memory;
  * @date ：Created in 2023/3/29
  * @since ：11
  */
-public class GcInfo {
+public class GcInfo extends BaseMonitor implements MonitorFormatter {
     private String name;
     private long collectionTime;
     private long collectionCount;
@@ -40,17 +43,22 @@ public class GcInfo {
         this.collectionCount = collectionCount;
     }
 
-    /**
-     * format template
-     * <p>
-     * GC Name : name , GC Times : collectionCount times，GC Time : collectionTime milli
-     * </p>
-     *
-     * @return format
-     */
     @Override
     public String toString() {
-        return "| GC Name: " + name + " , GC Times: " + collectionCount + " times, GC Time: " + collectionTime
-            + " milli";
+        return format();
+    }
+
+    @Override
+    public String getTitle() {
+        return "GC Information";
+    }
+
+    @Override
+    public List<Field> getFormatFields() {
+        List<Field> format = new LinkedList<>();
+        format.add(Field.of("name", name));
+        format.add(Field.of("collectionCount", collectionCount + " times"));
+        format.add(Field.of("collectionTime", collectionTime + " milli"));
+        return format;
     }
 }

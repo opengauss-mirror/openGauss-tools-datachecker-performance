@@ -15,6 +15,9 @@
 
 package org.opengauss.datachecker.common.entry.memory;
 
+import java.util.LinkedList;
+import java.util.List;
+
 /**
  * OsInfo
  *
@@ -22,58 +25,48 @@ package org.opengauss.datachecker.common.entry.memory;
  * @date ：Created in 2023/3/29
  * @since ：11
  */
-public class OsInfo {
-    private String osName;
+public class OsInfo extends BaseMonitor implements MonitorFormatter {
+    private String name;
     private String version;
-    private int availableProcessors;
-    private double systemLoadAverage;
+    private int processors;
+    private double average;
     private String arch;
 
     /**
      * OsInfo
      *
-     * @param osName              osName
-     * @param version             version
-     * @param availableProcessors availableProcessors
-     * @param systemLoadAverage   systemLoadAverage
-     * @param arch                arch
+     * @param name       osName
+     * @param version    version
+     * @param processors availableProcessors
+     * @param average    systemLoadAverage
+     * @param arch       arch
      */
-    public OsInfo(String osName, String version, int availableProcessors, double systemLoadAverage, String arch) {
-        this.osName = osName;
+    public OsInfo(String name, String version, int processors, double average, String arch) {
+        this.name = name;
         this.version = version;
-        this.availableProcessors = availableProcessors;
-        this.systemLoadAverage = systemLoadAverage;
+        this.processors = processors;
+        this.average = average;
         this.arch = arch;
     }
 
-    /**
-     * format template
-     * <p>
-     * -------------------- Operating System Information --------------------
-     * Operating System Name       : osName
-     * Operating System Version    : version
-     * Operating System Processors : availableProcessors
-     * Operating System Average    : systemLoadAverage
-     * Operating System arch       : arch
-     * </p>
-     *
-     * @return format
-     */
     @Override
     public String toString() {
-        StringBuffer message = new StringBuffer();
-        message.append("-------------------- Operating System Information --------------------");
-        message.append(System.lineSeparator());
-        message.append("| Operating System Name       : ").append(osName);
-        message.append(System.lineSeparator());
-        message.append("| Operating System Version    : ").append(version);
-        message.append(System.lineSeparator());
-        message.append("| Operating System Processors : ").append(availableProcessors);
-        message.append(System.lineSeparator());
-        message.append("| Operating System Average    : ").append(systemLoadAverage);
-        message.append(System.lineSeparator());
-        message.append("| Operating System arch       : ").append(arch);
-        message.append(System.lineSeparator());
-        return message.toString();
+        return format();
+    }
+
+    @Override
+    public String getTitle() {
+        return "Operating System";
+    }
+
+    @Override
+    public List<Field> getFormatFields() {
+        List<Field> osFields = new LinkedList<>();
+        osFields.add(Field.of("name", name));
+        osFields.add(Field.of("version", version));
+        osFields.add(Field.of("processors", processors));
+        osFields.add(Field.of("average", average));
+        osFields.add(Field.of("arch", arch));
+        return osFields;
     }
 }

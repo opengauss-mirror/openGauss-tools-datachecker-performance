@@ -6,6 +6,9 @@ logging:
 
 spring:
   memory-monitor-enable: false
+  check:
+    core-pool-size: 5
+    maximum-pool-size: 20
   application:
     name: gs_datacheck
   config:
@@ -39,7 +42,6 @@ data:
     check-with-sync-extracting: true
     retry-fetch-record-times: 5
     error-rate: 30
-    max-core-pool-size: 10
     max-retry-times: 1000
     retry-interval-times: 1000
     # auto-delete-topic :  Configure whether to automatically delete topic.

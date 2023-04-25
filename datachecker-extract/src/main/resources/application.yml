@@ -4,7 +4,8 @@ spring:
   memory-monitor-enable: false
   check:
     server-uri: http://127.0.0.1:9000
-    max-core-pool-size: 10
+    core-pool-size: 2
+    maximum-pool-size: 20
     max-retry-times: 1000
     retry-interval-times: 10000
   lifecycle:

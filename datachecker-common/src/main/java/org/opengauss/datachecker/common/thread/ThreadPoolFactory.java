@@ -19,7 +19,6 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -36,11 +35,11 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 @Slf4j
 public class ThreadPoolFactory {
-    private static final double TARGET_UTILIZATION = 0.5;
-    private static final double IO_WAIT_TIME = 1.0;
-    private static final double CPU_TIME = 1.0;
-    private static final double POOL_QUEUE_EXPANSION_RATIO = 1.2;
-    private static final double CORE_POOL_SIZE_RATIO = 2.0;
+    private static final double TARGET_UTILIZATION = 0.5d;
+    private static final double IO_WAIT_TIME = 1.0d;
+    private static final double CPU_TIME = 1.0d;
+    private static final double POOL_QUEUE_EXPANSION_RATIO = 1.2d;
+    private static final double CORE_POOL_SIZE_RATIO = 2.0d;
     private static final int DEFAULT_QUEUE_SIZE = 1000;
 
     /**
@@ -50,7 +49,7 @@ public class ThreadPoolFactory {
      * @param queueSize  queueSize
      * @return ExecutorService
      */
-    public static ExecutorService newThreadPool(String threadName, int queueSize) {
+    public static ThreadPoolExecutor newThreadPool(String threadName, int queueSize) {
         return createThreadPool(threadName, queueSize);
     }
 
@@ -62,7 +61,7 @@ public class ThreadPoolFactory {
      * @param queueSize    queueSize
      * @return ExecutorService
      */
-    public static ExecutorService newThreadPool(String threadName, int corePoolSize, int queueSize) {
+    public static ThreadPoolExecutor newThreadPool(String threadName, int corePoolSize, int queueSize) {
         if (corePoolSize <= 0) {
             return createThreadPool(threadName, queueSize);
         }
@@ -70,14 +69,32 @@ public class ThreadPoolFactory {
         return createThreadPool(threadName, corePoolSize, maxCorePoolSize, queueSize);
     }
 
-    private static ExecutorService createThreadPool(String threadName, int size) {
+    /**
+     * Initialize the service thread pool
+     *
+     * @param threadName      threadName
+     * @param corePoolSize    corePoolSize
+     * @param maximumPoolSize maximumPoolSize
+     * @param queueSize       queueSize
+     * @return ExecutorService
+     */
+    public static ThreadPoolExecutor newThreadPool(String threadName, int corePoolSize, int maximumPoolSize,
+        int queueSize) {
+        if (corePoolSize <= 0) {
+            return createThreadPool(threadName, queueSize);
+        }
+        return createThreadPool(threadName, corePoolSize, maximumPoolSize, queueSize);
+    }
+
+    private static ThreadPoolExecutor createThreadPool(String threadName, int size) {
         int queueSize = calculateCheckQueueCapacity(size);
         int threadNum = calculateOptimalThreadCount(CPU_TIME, IO_WAIT_TIME, TARGET_UTILIZATION);
         int corePoolSize = calculateCorePoolSize(threadNum);
         return createThreadPool(threadName, corePoolSize, threadNum, queueSize);
     }
 
-    private static ExecutorService createThreadPool(String threadName, int corePoolSize, int threadNum, int queueSize) {
+    private static ThreadPoolExecutor createThreadPool(String threadName, int corePoolSize, int threadNum,
+        int queueSize) {
         if (queueSize <= 0) {
             queueSize = DEFAULT_QUEUE_SIZE;
         }
