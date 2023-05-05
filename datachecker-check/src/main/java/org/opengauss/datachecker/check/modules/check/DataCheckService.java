@@ -24,11 +24,14 @@ import org.opengauss.datachecker.common.entry.check.IncrementDataCheckParam;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.extract.SourceDataLog;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
+import org.opengauss.datachecker.common.service.DynamicThreadPoolManager;
 import org.springframework.boot.autoconfigure.kafka.KafkaProperties;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ThreadPoolExecutor;
+
+import static org.opengauss.datachecker.common.constant.DynamicTpConstant.CHECK_EXECUTOR;
 
 /**
  * DataCheckService
@@ -50,6 +53,8 @@ public class DataCheckService {
     private CheckEnvironment checkEnvironment;
     @Resource
     private EndpointMetaDataManager endpointMetaDataManager;
+    @Resource
+    private DynamicThreadPoolManager dynamicThreadPoolManager;
 
     /**
      * submit check table data runnable
@@ -60,7 +65,7 @@ public class DataCheckService {
      * @param tablePartitionRowCount tablePartitionRowCount
      */
     public void checkTableData(String process, String tableName, int partitions, int tablePartitionRowCount) {
-        final ExecutorService executors = checkEnvironment.getCheckExecutorService();
+        ThreadPoolExecutor executor = dynamicThreadPoolManager.getExecutor(CHECK_EXECUTOR);
         final int bucketCapacity = dataCheckConfig.getBucketCapacity();
         final int errorRate = dataCheckConfig.getDataCheckProperties().getErrorRate();
         final TableMetadata sourceMeta = endpointMetaDataManager.getTableMetadata(Endpoint.SOURCE, tableName);
@@ -68,7 +73,7 @@ public class DataCheckService {
         checkParam.setProcess(process).setTableName(tableName).setSchema(getSinkSchema()).setSourceMetadata(sourceMeta)
                   .setTablePartitionRowCount(tablePartitionRowCount).setBucketCapacity(bucketCapacity)
                   .setPartitions(partitions).setProperties(kafkaProperties).setErrorRate(errorRate);
-        executors.submit(new DataCheckRunnable(checkParam, dataCheckRunnableSupport));
+        executor.submit(new DataCheckRunnable(checkParam, dataCheckRunnableSupport));
     }
 
     private String getSinkSchema() {

@@ -26,25 +26,32 @@ import java.util.stream.IntStream;
  */
 public class TaskUtil {
     public static final int EXTRACT_MAX_ROW_COUNT = 50000;
-    private static final int[] MAX_LIMIT = {200000, 300000, 400000, 500000, 600000, 700000, 800000, 900000, 1000000};
-    private static final float CPU_UTILIZATION = 2.0f;
-    private static final float TABLE_ROWS_DEVIATION_RATE = 1.0f;
+    private static final int[] MAX_LIMIT =
+        {50000, 100000, 150000, 200000, 250000, 300000, 350000, 400000, 450000, 500000, 550000, 600000, 650000, 700000,
+            800000, 900000, 1000000};
+    private static final float TABLE_ROWS_DEVIATION_RATE = 1f;
+    private static final double LASTED_TASK_DEVIATION_RATE = 0.3d;
 
-    private static int calcMaxLimitRowCount(long tableRows) {
-        if (tableRows < MAX_LIMIT[0]) {
+    /**
+     * calc max limit row count
+     *
+     * @param tableRows tableRows
+     * @return max limit row count
+     */
+    public static int calcMaxLimitRowCount(long tableRows) {
+        if (tableRows <= MAX_LIMIT[0]) {
             return MAX_LIMIT[0];
         }
-        final int processors = Runtime.getRuntime().availableProcessors();
-        int maxLimitRowCount = (int) (tableRows * 10 / (processors * CPU_UTILIZATION * 10));
+        final double processors = 10.0d;
+        int maxLimitRowCount = (int) Math.ceil(tableRows / processors);
         int level = 0;
         int i = 0;
         for (; i < MAX_LIMIT.length; i++) {
-            if (MAX_LIMIT[i] > maxLimitRowCount) {
+            if (MAX_LIMIT[i] >= maxLimitRowCount) {
                 maxLimitRowCount = MAX_LIMIT[i];
                 level = i;
                 break;
             }
-            i++;
         }
         if (level != i) {
             maxLimitRowCount = MAX_LIMIT[MAX_LIMIT.length - 1];
@@ -53,7 +60,7 @@ public class TaskUtil {
     }
 
     public static int calcAutoTaskCount(long tableRows) {
-        if (tableRows < MAX_LIMIT[0]) {
+        if (tableRows <= MAX_LIMIT[0]) {
             return 1;
         }
         int maxLimitRowCount = calcMaxLimitRowCount(tableRows);
@@ -68,17 +75,38 @@ public class TaskUtil {
      * @return Total number of split tasks offset
      */
     public static int[][] calcAutoTaskOffset(long tableRows) {
-        if (tableRows < MAX_LIMIT[0]) {
+        if (tableRows <= MAX_LIMIT[0]) {
             return new int[][] {{0, MAX_LIMIT[0]}};
         }
         int maxLimitRowCount = calcMaxLimitRowCount(tableRows);
-        final int taskCount = (int) Math.ceil(tableRows * TABLE_ROWS_DEVIATION_RATE / maxLimitRowCount) + 1;
+        final int taskCount = (int) Math.round(tableRows * TABLE_ROWS_DEVIATION_RATE / maxLimitRowCount) + 1;
         int[][] taskOffset = new int[taskCount][2];
         IntStream.range(0, taskCount).forEach(taskCountIdx -> {
             int start = taskCountIdx * maxLimitRowCount;
-            taskOffset[taskCountIdx] = new int[] {start, maxLimitRowCount};
+            if (taskCountIdx == taskCount - 1) {
+                taskOffset[taskCountIdx] = new int[] {start, lastTaskOffsetFixed(taskCount, maxLimitRowCount)};
+            } else {
+                taskOffset[taskCountIdx] = new int[] {start, maxLimitRowCount};
+            }
         });
+        if (taskOffset.length > 1) {
+            int[] lastOffset = taskOffset[taskOffset.length - 1];
+            taskOffset[taskOffset.length - 1] = taskOffset[0];
+            taskOffset[0] = lastOffset;
+        }
         return taskOffset;
+    }
+
+    /**
+     * taskCount * {@value LASTED_TASK_DEVIATION_RATE} / 10
+     *
+     * @param taskCount        taskCount
+     * @param maxLimitRowCount maxLimitRowCount
+     * @return lastTaskOffsetFixed
+     */
+    private static int lastTaskOffsetFixed(int taskCount, int maxLimitRowCount) {
+        double taskDeviationRatio = (taskCount * LASTED_TASK_DEVIATION_RATE);
+        return (int) (maxLimitRowCount * Math.max(taskDeviationRatio, 1.5));
     }
 
     /**

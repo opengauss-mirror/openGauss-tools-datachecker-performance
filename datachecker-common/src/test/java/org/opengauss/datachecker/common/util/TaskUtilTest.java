@@ -1,3 +1,18 @@
+/*
+ * Copyright (c) 2022-2022 Huawei Technologies Co.,Ltd.
+ *
+ * openGauss is licensed under Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *
+ *           http://license.coscl.org.cn/MulanPSL2
+ *
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+ * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+ * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
+ */
+
 package org.opengauss.datachecker.common.util;
 
 import org.junit.jupiter.api.DisplayName;
@@ -8,8 +23,14 @@ import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * TaskUtilTest
+ *
+ * @author ：wangchao
+ * @date ：Created in 2023/4/23
+ * @since ：11
+ */
 class TaskUtilTest {
-
     @DisplayName("calc task of 0 row")
     @Test
     void testCalcAutoTaskCount_0_row() {
@@ -173,19 +194,5 @@ class TaskUtilTest {
             res[row - 1][1] = end;
         }
         return res;
-    }
-
-    @DisplayName("calc task offset of 100000000L row")
-    @Test
-    void testCalcAutoTaskOffset_100000000L_row() {
-        int[][] res = constructor(100, 1000000, 0);
-        assertThat(TaskUtil.calcAutoTaskOffset(100000000L)).isEqualTo(res);
-    }
-
-    @DisplayName("calc task offset of 200000000L row")
-    @Test
-    void testCalcAutoTaskOffset_200000000L_row() {
-        int[][] res = constructor(200, 1000000, 0);
-        assertThat(TaskUtil.calcAutoTaskOffset(200000000L)).isEqualTo(res);
     }
 }

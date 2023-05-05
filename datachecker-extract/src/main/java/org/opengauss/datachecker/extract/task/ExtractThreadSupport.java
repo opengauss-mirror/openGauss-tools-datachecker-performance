@@ -16,9 +16,12 @@
 package org.opengauss.datachecker.extract.task;
 
 import lombok.Getter;
+import org.opengauss.datachecker.common.service.DynamicThreadPoolManager;
 import org.opengauss.datachecker.extract.client.CheckingFeignClient;
 import org.opengauss.datachecker.extract.config.ExtractProperties;
-import org.opengauss.datachecker.extract.load.ExtractEnvironment;
+import org.opengauss.datachecker.extract.kafka.KafkaAdminService;
+import org.opengauss.datachecker.extract.resource.ResourceManager;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
@@ -41,10 +44,12 @@ public class ExtractThreadSupport {
     private ResourceManager resourceManager;
     @Resource
     private KafkaTemplate<String, String> kafkaTemplate;
+    @Autowired
+    private KafkaAdminService kafkaAdminService;
     @Resource
     private CheckingFeignClient checkingFeignClient;
     @Resource
     private ExtractProperties extractProperties;
     @Resource
-    private ExtractEnvironment extractEnvironment;
+    private DynamicThreadPoolManager dynamicThreadPoolManager;
 }

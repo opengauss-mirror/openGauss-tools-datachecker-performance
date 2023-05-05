@@ -16,8 +16,10 @@
 package org.opengauss.datachecker.common.entry.extract;
 
 import lombok.Data;
-import lombok.ToString;
 import lombok.experimental.Accessors;
+import org.opengauss.datachecker.common.entry.enums.Endpoint;
+
+import java.util.Objects;
 
 /**
  * Topic
@@ -26,21 +28,22 @@ import lombok.experimental.Accessors;
  * @date ：Created in 2022/6/14
  * @since ：11
  */
-@ToString
 @Data
 @Accessors(chain = true)
 public class Topic {
-    /**
-     * tableName
-     */
     private String tableName;
-    /**
-     * Current table, corresponding topic name
-     */
     private String topicName;
-    /**
-     * The total number of partitions of data in the current table in Kafka topic
-     */
+    private String sourceTopicName;
+    private String sinkTopicName;
     private int partitions;
 
+    public String getTopicName(Endpoint endpoint) {
+        return Objects.equals(Endpoint.SOURCE, endpoint) ? sourceTopicName : sinkTopicName;
+    }
+
+    @Override
+    public String toString() {
+        return " tableName=" + tableName + ", topicName=" + topicName + ", sourceTopicName=" + sourceTopicName
+            + ", sinkTopicName=" + sinkTopicName + ", partitions=" + partitions;
+    }
 }

@@ -46,15 +46,15 @@ public interface DynamicTpConstant {
     /**
      * check-executor
      */
-    String CHECK_EXECUTOR = "check-executor";
+    String CHECK_EXECUTOR = "check-dtp";
 
     /**
      * extract-executor
      */
-    String EXTRACT_EXECUTOR = "extract-executor";
+    String EXTRACT_EXECUTOR = "extract-dtp";
 
     /**
      * table-parallel-executor
      */
-    String TABLE_PARALLEL_EXECUTOR = "table-parallel-executor";
+    String TABLE_PARALLEL_EXECUTOR = "parallel-dtp";
 }

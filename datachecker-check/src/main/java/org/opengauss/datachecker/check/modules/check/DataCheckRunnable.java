@@ -436,6 +436,6 @@ public class DataCheckRunnable implements Runnable {
     }
 
     private void resetThreadName(String tableName, int partitions) {
-        Thread.currentThread().setName(tableName + "_" + partitions + "_" + Thread.currentThread().getId());
+        Thread.currentThread().setName(tableName + "_p" + partitions);
     }
 }
