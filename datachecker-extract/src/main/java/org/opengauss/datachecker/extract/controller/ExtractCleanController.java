@@ -63,13 +63,6 @@ public class ExtractCleanController {
         return Result.success();
     }
 
-    @Operation(summary = "clear the kafka information of the current endpoint")
-    @PostMapping("/extract/clean/kafka")
-    Result<Void> cleanKafka() {
-        kafkaManagerService.cleanKafka();
-        return Result.success();
-    }
-
     @PostMapping("/extract/shutdown")
     Result<Void> shutdown(@RequestBody String message) {
         shutdownService.shutdown(message);

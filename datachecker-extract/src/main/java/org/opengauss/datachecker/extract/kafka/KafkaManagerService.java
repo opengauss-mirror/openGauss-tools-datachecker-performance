@@ -17,9 +17,7 @@ package org.opengauss.datachecker.extract.kafka;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.opengauss.datachecker.common.entry.extract.Topic;
 import org.opengauss.datachecker.extract.config.KafkaConsumerConfig;
-import org.opengauss.datachecker.extract.config.KafkaProducerConfig;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -36,21 +34,7 @@ import java.util.List;
 @Service
 public class KafkaManagerService {
     private final KafkaAdminService kafkaAdminService;
-    private final KafkaCommonService kafkaCommonService;
     private final KafkaConsumerConfig kafkaConsumerConfig;
-
-    /**
-     * Create a topic according to the table name
-     *
-     * @param process    process
-     * @param tableName  tableName
-     * @param partitions Total partitions
-     * @return Topic name after successful creation
-     */
-    public String createTopic(String process, String tableName, int partitions) {
-        final Topic topicInfo = kafkaCommonService.getTopicInfo(process, tableName, partitions);
-        return kafkaAdminService.createTopic(topicInfo.getTopicName(), partitions);
-    }
 
     /**
      * Clear Kafka information
@@ -58,7 +42,6 @@ public class KafkaManagerService {
      * @param processNo processNo
      */
     public void cleanKafka(String processNo) {
-        kafkaCommonService.cleanTopicMapping();
         log.info("Extract service cleanup Kafka topic mapping information");
         kafkaConsumerConfig.cleanKafkaConsumer();
         log.info("Extract service to clean up Kafka consumer information");
@@ -67,16 +50,6 @@ public class KafkaManagerService {
         log.info("Extract service cleanup current process ({}) Kafka topics {}", processNo, topics);
         kafkaAdminService.deleteTopic(topics);
         log.info("Extract service cleanup current process ({}) Kafka topics {}", processNo, topics);
-    }
-
-    /**
-     * Clear Kafka information
-     */
-    public void cleanKafka() {
-        final List<String> topics = kafkaCommonService.getAllTopicName();
-        kafkaConsumerConfig.cleanKafkaConsumer();
-        kafkaAdminService.deleteTopic(topics);
-        kafkaCommonService.cleanTopicMapping();
     }
 
     /**

@@ -152,7 +152,7 @@ public class ThreadPoolFactory {
 
         @Override
         public Thread newThread(Runnable r) {
-            String trName = String.format("Pool-%d-%s-%d", this.poolId, this.prefix, this.counter.incrementAndGet());
+            String trName = String.format("pool-%d-%s-%d", this.poolId, this.prefix, this.counter.incrementAndGet());
             Thread thread = new Thread(this.group, r);
             thread.setName(trName);
             thread.setDaemon(this.daemon);

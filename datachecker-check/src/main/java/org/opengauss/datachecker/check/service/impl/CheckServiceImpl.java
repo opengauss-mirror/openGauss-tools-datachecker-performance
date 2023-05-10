@@ -19,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.opengauss.datachecker.check.cache.TableStatusRegister;
+import org.opengauss.datachecker.check.cache.TopicRegister;
 import org.opengauss.datachecker.check.client.FeignClientService;
 import org.opengauss.datachecker.check.load.CheckEnvironment;
 import org.opengauss.datachecker.check.modules.check.DataCheckService;
@@ -32,13 +33,12 @@ import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.extract.ExtractTask;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
+import org.opengauss.datachecker.common.entry.extract.Topic;
 import org.opengauss.datachecker.common.exception.CheckingException;
 import org.opengauss.datachecker.common.exception.CommonException;
 import org.opengauss.datachecker.common.util.IdGenerator;
 import org.opengauss.datachecker.common.util.JsonObjectUtil;
-import org.opengauss.datachecker.common.util.TaskUtil;
 import org.opengauss.datachecker.common.util.ThreadUtil;
-import org.opengauss.datachecker.common.util.TopicUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -91,6 +91,8 @@ public class CheckServiceImpl implements CheckService {
     private FeignClientService feignClientService;
     @Autowired
     private TableStatusRegister tableStatusRegister;
+    @Resource
+    private TopicRegister topicRegister;
     @Resource
     private DataCheckService dataCheckService;
     @Autowired
@@ -153,6 +155,7 @@ public class CheckServiceImpl implements CheckService {
     private void startCheckFullMode() {
         String processNo = IdGenerator.nextId36();
         kafkaTopicDeleteProvider.init(processNo);
+        topicRegister.initProcess(processNo);
         // Source endpoint task construction
         final List<ExtractTask> extractTasks = feignClientService.buildExtractTaskAllTables(Endpoint.SOURCE, processNo);
         log.info("check full mode : build extract task source {}", processNo);
@@ -205,21 +208,22 @@ public class CheckServiceImpl implements CheckService {
 
     private void startCheckTableThread(String tableName) {
         final TableMetadata tableMetadata = endpointMetaDataManager.getTableMetadata(Endpoint.SOURCE, tableName);
-        if (Objects.nonNull(tableMetadata)) {
-            int taskCount = TaskUtil.calcAutoTaskCount(tableMetadata.getTableRows());
-            final int partitions = TopicUtil.calcPartitions(taskCount);
-            final int tablePartitionRowCount =
-                TaskUtil.calcTablePartitionRowCount(tableMetadata.getTableRows(), partitions);
-            String process = getCurrentCheckProcess();
-            tableStatusRegister.initPartitionsStatus(tableName, partitions);
-            IntStream.range(0, partitions).forEach(idxPartition -> {
-                // Verify the data according to the table name and Kafka partition
-                dataCheckService.checkTableData(process, tableName, idxPartition, tablePartitionRowCount);
-            });
-            kafkaTopicDeleteProvider.addTableToDropTopic(tableName);
-        } else {
+        if (Objects.isNull(tableMetadata)) {
             log.error("can not find table={} meta data, checking skipped", tableName);
+            return;
         }
+        Topic topic = topicRegister.getTopic(tableName);
+        if (Objects.isNull(topic)) {
+            log.error("table={} does not register its topic info, checking skipped", tableName);
+            return;
+        }
+        String process = getCurrentCheckProcess();
+        tableStatusRegister.initPartitionsStatus(tableName, topic.getPartitions());
+        IntStream.range(0, topic.getPartitions()).forEach(idxPartition -> {
+            // Verify the data according to the table name and Kafka partition
+            dataCheckService.checkTableData(process, tableName, idxPartition, topic.getPartitions());
+        });
+        kafkaTopicDeleteProvider.addTableToDropTopic(tableName);
     }
 
     private void completeProgressBar(ScheduledExecutorService scheduledExecutor) {

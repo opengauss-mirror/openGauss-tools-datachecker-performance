@@ -21,7 +21,7 @@ class ThreadPoolFactoryTest {
         executorService.shutdown();
         assertThat(executorService.isShutdown()).isTrue();
     }
-    
+
     @DisplayName("new thread pool  queue size =0")
     @Test
     void testNewThreadPool_queue_0() {

@@ -28,20 +28,17 @@ import org.opengauss.datachecker.common.entry.extract.RowDataHash;
 import org.opengauss.datachecker.common.entry.extract.SourceDataLog;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.entry.extract.TableMetadataHash;
-import org.opengauss.datachecker.common.entry.extract.Topic;
 import org.opengauss.datachecker.common.exception.BuildRepairStatementException;
 import org.opengauss.datachecker.common.exception.ProcessMultipleException;
 import org.opengauss.datachecker.common.exception.TableNotExistException;
 import org.opengauss.datachecker.common.exception.TaskNotFoundException;
-import org.opengauss.datachecker.common.thread.ThreadPoolFactory;
+import org.opengauss.datachecker.common.service.DynamicThreadPoolManager;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.opengauss.datachecker.extract.cache.MetaDataCache;
 import org.opengauss.datachecker.extract.cache.TableExtractStatusCache;
+import org.opengauss.datachecker.extract.cache.TopicCache;
 import org.opengauss.datachecker.extract.client.CheckingFeignClient;
 import org.opengauss.datachecker.extract.config.ExtractProperties;
-import org.opengauss.datachecker.extract.kafka.KafkaAdminService;
-import org.opengauss.datachecker.extract.kafka.KafkaCommonService;
-import org.opengauss.datachecker.extract.load.ExtractEnvironment;
 import org.opengauss.datachecker.extract.task.DataManipulationService;
 import org.opengauss.datachecker.extract.task.ExtractTaskBuilder;
 import org.opengauss.datachecker.extract.task.ExtractTaskRunnable;
@@ -63,6 +60,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+
+import static org.opengauss.datachecker.common.constant.DynamicTpConstant.EXTRACT_EXECUTOR;
 
 /**
  * DataExtractServiceImpl
@@ -94,7 +93,6 @@ public class DataExtractServiceImpl implements DataExtractService {
     private final AtomicReference<String> atomicProcessNo = new AtomicReference<>(PROCESS_NO_RESET);
 
     private final AtomicReference<List<ExtractTask>> taskReference = new AtomicReference<>();
-
     @Autowired
     private ExtractTaskBuilder extractTaskBuilder;
     @Autowired
@@ -104,17 +102,13 @@ public class DataExtractServiceImpl implements DataExtractService {
     @Autowired
     private ExtractProperties extractProperties;
     @Autowired
-    private KafkaCommonService kafkaCommonService;
-    @Autowired
-    private KafkaAdminService kafkaAdminService;
-    @Autowired
     private MetaDataService metaDataService;
     @Autowired
     private DataManipulationService dataManipulationService;
     @Value("${server.port}")
     private int serverPort = 0;
     @Resource
-    private ExtractEnvironment extractEnvironment;
+    private DynamicThreadPoolManager dynamicThreadPoolManager;
 
     /**
      * Data extraction service
@@ -140,6 +134,7 @@ public class DataExtractServiceImpl implements DataExtractService {
             log.info("The current endpoint is not the source endpoint, and the task cannot be built");
             return new ArrayList<>(0);
         }
+        TopicCache.initEndpoint(extractProperties.getEndpoint());
         if (atomicProcessNo.compareAndSet(PROCESS_NO_RESET, processNo)) {
             Set<String> tableNames = MetaDataCache.getAllKeys();
 
@@ -267,7 +262,6 @@ public class DataExtractServiceImpl implements DataExtractService {
     @Async
     @Override
     public void execExtractTaskAllTables(String processNo) throws TaskNotFoundException {
-        Thread.currentThread().setName("invoke-extract-" + serverPort + "-" + processNo.toLowerCase());
         if (Objects.equals(atomicProcessNo.get(), processNo)) {
             int sleepCount = 0;
             while (CollectionUtils.isEmpty(taskReference.get())) {
@@ -278,11 +272,12 @@ public class DataExtractServiceImpl implements DataExtractService {
                     break;
                 }
             }
+            dynamicThreadPoolManager.dynamicThreadPoolMonitor();
             List<ExtractTask> taskList = taskReference.get();
             if (CollectionUtils.isEmpty(taskList)) {
                 return;
             }
-            final ExecutorService executorService = getExecutorService(extractEnvironment);
+            final ExecutorService executorService = dynamicThreadPoolManager.getExecutor(EXTRACT_EXECUTOR);
             Map<String, Integer> tableCheckStatus = checkingFeignClient.queryTableCheckStatus();
             taskList.forEach(task -> {
                 log.info("Perform data extraction tasks {}", task.getTaskName());
@@ -291,18 +286,9 @@ public class DataExtractServiceImpl implements DataExtractService {
                     log.info("Abnormal table[{}] status, ignoring the current table data extraction task", tableName);
                     return;
                 }
-                Topic topic = kafkaCommonService.getTopicInfo(processNo, tableName, task.getDivisionsTotalNumber());
-                kafkaAdminService.createTopic(topic.getTopicName(), topic.getPartitions());
-                executorService.submit(new ExtractTaskRunnable(task, topic, extractThreadSupport));
+                executorService.submit(new ExtractTaskRunnable(task, extractThreadSupport));
             });
         }
-    }
-
-    private ExecutorService getExecutorService(ExtractEnvironment environment) {
-        final int core = Runtime.getRuntime().availableProcessors();
-        final int maxCorePoolSize = environment.getMaxCorePoolSize();
-        int corePoolSize = Math.min(core, maxCorePoolSize);
-        return ThreadPoolFactory.newThreadPool("extract", corePoolSize, environment.getQueueSize());
     }
 
     @Override

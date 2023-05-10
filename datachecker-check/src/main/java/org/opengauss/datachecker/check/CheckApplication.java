@@ -15,6 +15,7 @@
 
 package org.opengauss.datachecker.check;
 
+import lombok.extern.slf4j.Slf4j;
 import org.opengauss.datachecker.check.cmd.CheckCommandLine;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -28,18 +29,23 @@ import org.springframework.context.annotation.ComponentScan;
  * @date 2022/5/8 19:27
  * @since 11
  **/
+@Slf4j
 @EnableFeignClients(basePackages = {"org.opengauss.datachecker.check.client"})
 @SpringBootApplication
 @ComponentScan(value = {"org.opengauss.datachecker.check", "org.opengauss.datachecker.common"})
 public class CheckApplication {
     public static void main(String[] args) {
-        CheckCommandLine commandLine = new CheckCommandLine();
-        commandLine.parseArgs(args);
-        SpringApplication application = new SpringApplication(CheckApplication.class);
-        if (commandLine.hasHelp()) {
-            commandLine.help();
-        } else {
-            application.run(args);
+        try {
+            CheckCommandLine commandLine = new CheckCommandLine();
+            commandLine.parseArgs(args);
+            SpringApplication application = new SpringApplication(CheckApplication.class);
+            if (commandLine.hasHelp()) {
+                commandLine.help();
+            } else {
+                application.run(args);
+            }
+        } catch (Throwable er) {
+            log.error("server start has unknown error", er);
         }
     }
 }

@@ -17,6 +17,7 @@ package org.opengauss.datachecker.extract.resource;
 
 import org.opengauss.datachecker.common.service.DynamicThreadPool;
 import org.opengauss.datachecker.common.thread.ThreadPoolFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -34,11 +35,16 @@ import static org.opengauss.datachecker.common.constant.DynamicTpConstant.TABLE_
  */
 @Component
 public class DynamicExtractTpService implements DynamicThreadPool {
+    @Value("${spring.extract.query-dop}")
+    private int queryDop;
+
     @Override
     public void buildDynamicThreadPoolExecutor(Map<String, ThreadPoolExecutor> executors, int corePoolSize,
         int maximumPoolSize) {
         executors.put(EXTRACT_EXECUTOR, buildExtractExecutor(corePoolSize, maximumPoolSize));
-        executors.put(TABLE_PARALLEL_EXECUTOR, buildTableParallelExecutor(corePoolSize, maximumPoolSize));
+        if (queryDop > 1) {
+            executors.put(TABLE_PARALLEL_EXECUTOR, buildTableParallelExecutor(corePoolSize, maximumPoolSize));
+        }
     }
 
     private ThreadPoolExecutor buildTableParallelExecutor(int corePoolSize, int maximumPoolSize) {

@@ -22,21 +22,18 @@ import org.opengauss.datachecker.common.entry.enums.ColumnKey;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.MetadataLoadProcess;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
-import org.opengauss.datachecker.common.thread.ThreadPoolFactory;
-import org.opengauss.datachecker.common.util.PhaserUtil;
+import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.opengauss.datachecker.extract.cache.MetaDataCache;
 import org.opengauss.datachecker.extract.dao.DataBaseMetaDataDAOImpl;
+import org.opengauss.datachecker.extract.resource.ResourceManager;
 import org.springframework.stereotype.Service;
 
 import java.util.Comparator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 /**
@@ -51,6 +48,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class MetaDataService {
     private final DataBaseMetaDataDAOImpl dataBaseMetadataDAOImpl;
+    private final ResourceManager resourceManager;
 
     /**
      * Return database metadata information through cache
@@ -86,30 +84,42 @@ public class MetaDataService {
     }
 
     public Map<String, TableMetadata> queryMetaDataOfSchema() {
-        log.info("query table metadata");
         Map<String, TableMetadata> tableMetadataMap = new ConcurrentHashMap<>();
         final List<TableMetadata> tableMetadataList = dataBaseMetadataDAOImpl.queryTableMetadataList();
+        log.info("query table metadata {}", tableMetadataList.size());
         if (CollectionUtils.isEmpty(tableMetadataList)) {
             return tableMetadataMap;
         }
-        ExecutorService threadPool =
-            ThreadPoolFactory.newThreadPool("batch-query-table-metadata", 4, Integer.MAX_VALUE);
-        List<Future<?>> futureList = new LinkedList<>();
         tableMetadataList.forEach(tableMetadata -> {
-            futureList.add(threadPool.submit(() -> {
+            takeConnection();
+            if (resourceManager.isShutdown()) {
+                log.warn("extract service is shutdown ,task set table metadata of table is canceled!");
+            } else {
                 setTableMetadataByTableName(tableMetadata);
                 tableMetadataMap.put(tableMetadata.getTableName(), tableMetadata);
-            }));
+            }
+            resourceManager.release();
         });
-        PhaserUtil.executorComplete(threadPool, futureList);
+        log.info("query table column metadata {}", tableMetadataList.size());
         Map<String, TableMetadata> filterNoPrimary = tableMetadataMap.entrySet().stream().filter(
             entry -> CollectionUtils.isNotEmpty(entry.getValue().getPrimaryMetas())).collect(
             Collectors.toMap(Entry::getKey, Entry::getValue));
+        log.info("filter table which does not have primary metadata {}", filterNoPrimary.size());
         tableMetadataMap.clear();
         tableMetadataMap.putAll(filterNoPrimary);
         dataBaseMetadataDAOImpl.matchRowRules(tableMetadataMap);
         log.info("build table metadata [{}]", tableMetadataMap.size());
         return tableMetadataMap;
+    }
+
+    private void takeConnection() {
+        while (!resourceManager.canExecQuery()) {
+            if (resourceManager.isShutdown()) {
+                break;
+            }
+            log.info("jdbc connection resource is not enough");
+            ThreadUtil.sleep(50);
+        }
     }
 
     private void setTableMetadataByTableName(TableMetadata tableMetadata) {

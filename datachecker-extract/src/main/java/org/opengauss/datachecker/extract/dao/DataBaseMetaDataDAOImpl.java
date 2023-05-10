@@ -98,7 +98,7 @@ public class DataBaseMetaDataDAOImpl implements MetaDataDAO {
         List<TableMetadata> tableList = new LinkedList<>();
         try (Stream<TableMetadata> resultStream = jdbc.queryForStream(sql, tableCondition, (rs, rowNum) -> {
             TableMetadata tableMetaData = new TableMetadata();
-            tableMetaData.setTableName(rs.getString(1)).setTableRows(rs.getLong(2));
+            tableMetaData.setTableName(rs.getString(1)).setTableRows(rs.getLong(2)).setAvgRowLength(rs.getLong(3));
             return tableMetaData;
         })) {
             tableList.addAll(resultStream.collect(Collectors.toList()));
