@@ -18,6 +18,7 @@ package org.opengauss.datachecker.check.modules.check;
 import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
 import lombok.extern.slf4j.Slf4j;
+import org.opengauss.datachecker.check.cache.CheckRateCache;
 import org.opengauss.datachecker.check.cache.TableStatusRegister;
 import org.opengauss.datachecker.check.client.FeignClientService;
 import org.opengauss.datachecker.check.modules.bucket.Bucket;
@@ -25,9 +26,11 @@ import org.opengauss.datachecker.check.modules.bucket.BuilderBucketHandler;
 import org.opengauss.datachecker.check.modules.merkle.MerkleTree;
 import org.opengauss.datachecker.check.modules.merkle.MerkleTree.Node;
 import org.opengauss.datachecker.check.modules.report.CheckResultManagerService;
+import org.opengauss.datachecker.check.service.EndpointMetaDataManager;
 import org.opengauss.datachecker.check.service.StatisticalService;
 import org.opengauss.datachecker.common.constant.Constants;
 import org.opengauss.datachecker.common.entry.check.CheckPartition;
+import org.opengauss.datachecker.common.entry.check.CheckTable;
 import org.opengauss.datachecker.common.entry.check.DataCheckParam;
 import org.opengauss.datachecker.common.entry.check.DifferencePair;
 import org.opengauss.datachecker.common.entry.check.Pair;
@@ -35,8 +38,10 @@ import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.extract.ConditionLimit;
 import org.opengauss.datachecker.common.entry.extract.RowDataHash;
+import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.exception.LargeDataDiffException;
 import org.opengauss.datachecker.common.exception.MerkleTreeDepthException;
+import org.opengauss.datachecker.common.util.SpringUtil;
 import org.opengauss.datachecker.common.util.TopicUtil;
 import org.springframework.lang.NonNull;
 import org.springframework.util.CollectionUtils;
@@ -76,6 +81,7 @@ public class DataCheckRunnable implements Runnable {
     private final TableStatusRegister tableStatusRegister;
     private final DataCheckParam checkParam;
     private final KafkaConsumerHandler kafkaConsumerHandler;
+    private final EndpointMetaDataManager endpointMetaDataManager;
     private final CheckResultManagerService checkResultManagerService;
     private String sinkSchema;
     private String sourceTopic;
@@ -88,6 +94,7 @@ public class DataCheckRunnable implements Runnable {
     private int bucketCapacity;
     private LocalDateTime startTime;
     private CheckPartition checkPartition;
+    private CheckRateCache checkRateCache;
 
     /**
      * DataCheckRunnable
@@ -103,6 +110,8 @@ public class DataCheckRunnable implements Runnable {
         tableStatusRegister = support.getTableStatusRegister();
         checkResultManagerService = support.getCheckResultManagerService();
         kafkaConsumerHandler = buildKafkaHandler(support);
+        checkRateCache = SpringUtil.getBean(CheckRateCache.class);
+        endpointMetaDataManager = SpringUtil.getBean(EndpointMetaDataManager.class);
     }
 
     private KafkaConsumerHandler buildKafkaHandler(DataCheckRunnableSupport support) {
@@ -135,8 +144,16 @@ public class DataCheckRunnable implements Runnable {
             refreshCheckStatus();
             checkResult();
             cleanCheckThreadEnvironment();
+            checkRateCache.add(buildCheckTable());
             log.debug("check table result {} complete!", tableName);
         }
+    }
+
+    private CheckTable buildCheckTable() {
+        TableMetadata tableMetadata = endpointMetaDataManager.getTableMetadata(Endpoint.SINK, tableName);
+        return CheckTable.builder().tableName(tableName).partition(partitions).rowCount(rowCount).topicName(sinkTopic)
+                         .completeTimestamp(System.currentTimeMillis()).avgRowLength(tableMetadata.getAvgRowLength())
+                         .build();
     }
 
     private void checkTableData() {

@@ -16,6 +16,7 @@
 package org.opengauss.datachecker.check.modules.report;
 
 import lombok.SneakyThrows;
+import org.opengauss.datachecker.check.cache.CheckRateCache;
 import org.opengauss.datachecker.check.cache.TableStatusRegister;
 import org.opengauss.datachecker.check.load.CheckEnvironment;
 import org.opengauss.datachecker.check.service.EndpointMetaDataManager;
@@ -54,6 +55,8 @@ public class ProgressService {
     @Resource
     private TableStatusRegister tableStatusRegister;
     @Resource
+    private CheckRateCache checkRateCache;
+    @Resource
     private EndpointMetaDataManager endpointMetaDataManager;
     private final ScheduledExecutorService executorService = ThreadUtil.newSingleThreadScheduledExecutor();
 
@@ -83,8 +86,8 @@ public class ProgressService {
     /**
      * Get the progress and return the latest progress information when the scheduled task is closed
      *
-     * @return progress
      * @param completeCount completeCount
+     * @return progress
      */
     @SneakyThrows
     public CheckProgress getCheckProgress(int completeCount) {
@@ -92,7 +95,7 @@ public class ProgressService {
             while (!isComplete()) {
                 ThreadUtil.sleepHalfSecond();
             }
-        }else {
+        } else {
             refreshCompleteProgress(completeCount);
         }
         return progressRef.get();
@@ -128,15 +131,17 @@ public class ProgressService {
         final LocalDateTime now = LocalDateTime.now();
         return (process) -> {
             process.setCompleteCount(completeCount);
+            process.setCost(calcCost(now));
+            process.setSpeed(checkRateCache.getCurrentSecondSpeed());
+            process.setAvgSpeed(checkRateCache.getAvgSpeed(process.getCost()));
+            process.setTotal(checkRateCache.getTotal());
+            process.setTotalRows(checkRateCache.getTotalRows());
+            process.setCurrentTime(now);
             if (completeCount == process.getTableCount()) {
                 process.setEndTime(now);
-                process.setCost(calcCost(now));
                 process.setStatus(CheckProgressStatus.END);
-                process.setCurrentTime(now);
             } else {
                 process.setStatus(CheckProgressStatus.PROGRESS);
-                process.setCost(calcCost(now));
-                process.setCurrentTime(now);
             }
             return process;
         };
