@@ -19,14 +19,17 @@ import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
+import org.opengauss.datachecker.check.cache.CheckRateCache;
 import org.opengauss.datachecker.check.client.FeignClientService;
 import org.opengauss.datachecker.check.modules.bucket.Bucket;
 import org.opengauss.datachecker.check.modules.bucket.BuilderBucketHandler;
 import org.opengauss.datachecker.check.modules.merkle.MerkleTree;
 import org.opengauss.datachecker.check.modules.merkle.MerkleTree.Node;
 import org.opengauss.datachecker.check.modules.report.CheckResultManagerService;
+import org.opengauss.datachecker.check.service.EndpointMetaDataManager;
 import org.opengauss.datachecker.common.constant.Constants.InitialCapacity;
 import org.opengauss.datachecker.common.entry.check.CheckPartition;
+import org.opengauss.datachecker.common.entry.check.CheckTable;
 import org.opengauss.datachecker.common.entry.check.DifferencePair;
 import org.opengauss.datachecker.common.entry.check.IncrementDataCheckParam;
 import org.opengauss.datachecker.common.entry.check.Pair;
@@ -34,9 +37,11 @@ import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.extract.RowDataHash;
 import org.opengauss.datachecker.common.entry.extract.SourceDataLog;
+import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.entry.extract.TableMetadataHash;
 import org.opengauss.datachecker.common.exception.DispatchClientException;
 import org.opengauss.datachecker.common.exception.MerkleTreeDepthException;
+import org.opengauss.datachecker.common.util.SpringUtil;
 import org.opengauss.datachecker.common.web.Result;
 import org.springframework.lang.NonNull;
 
@@ -82,7 +87,8 @@ public class IncrementCheckThread extends Thread {
     private boolean isTableStructureEquals;
     private boolean isExistTableMiss;
     private Endpoint onlyExistEndpoint;
-
+    private CheckRateCache checkRateCache;
+    private EndpointMetaDataManager endpointMetaDataManager;
     private int maxRowSize;
 
     /**
@@ -102,6 +108,8 @@ public class IncrementCheckThread extends Thread {
         bucketCapacity = checkParam.getBucketCapacity();
         feignClient = support.getFeignClientService();
         checkResultManagerService = support.getCheckResultManagerService();
+        checkRateCache = SpringUtil.getBean(CheckRateCache.class);
+        endpointMetaDataManager = SpringUtil.getBean(EndpointMetaDataManager.class);
         queryRowDataWapper = new QueryRowDataWapper(feignClient);
     }
 
@@ -135,10 +143,18 @@ public class IncrementCheckThread extends Thread {
             }
             // Verification result verification repair report
             checkResult();
+            checkRateCache.add(buildCheckTable());
             log.info(" {} check table {} end", process, tableName);
         } catch (Exception ex) {
             log.error("check error", ex);
         }
+    }
+
+    private CheckTable buildCheckTable() {
+        TableMetadata tableMetadata = endpointMetaDataManager.getTableMetadata(Endpoint.SINK, tableName);
+        return CheckTable.builder().tableName(tableName).rowCount(rowCount)
+                         .completeTimestamp(System.currentTimeMillis()).avgRowLength(tableMetadata.getAvgRowLength())
+                         .build();
     }
 
     /**
