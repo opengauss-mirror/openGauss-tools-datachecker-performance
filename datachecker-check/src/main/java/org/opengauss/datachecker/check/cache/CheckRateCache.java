@@ -87,6 +87,9 @@ public class CheckRateCache {
      * @return avg speed
      */
     public int getAvgSpeed(long cost) {
+        if (cost == 0) {
+            return 0;
+        }
         return (int) (total / (cost * BYTE_TO_MB));
     }
 
