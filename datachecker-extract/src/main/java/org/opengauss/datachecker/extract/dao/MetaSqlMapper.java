@@ -46,7 +46,7 @@ public class MetaSqlMapper {
         dataBaseOpenGauss.put(DataBaseMeta.COLUMN, DataBaseOpenGauss.TABLES_COLUMN_META_DATA_SQL);
         dataBaseOpenGauss.put(DataBaseMeta.HEALTH, DataBaseOpenGauss.HEALTH_SQL);
         DATABASE_META_MAPPER.put(DataBaseType.OG, dataBaseOpenGauss);
-        DATABASE_TABLE_META_MAPPER.put(DataBaseType.MS, DataBaseOpenGauss.ONE_TABLE_METADATA_SQL);
+        DATABASE_TABLE_META_MAPPER.put(DataBaseType.OG, DataBaseOpenGauss.ONE_TABLE_METADATA_SQL);
 
         Map<DataBaseMeta, String> databaseO = new HashMap<>();
         databaseO.put(DataBaseMeta.TABLE, DataBaseO.TABLE_METADATA_SQL);
