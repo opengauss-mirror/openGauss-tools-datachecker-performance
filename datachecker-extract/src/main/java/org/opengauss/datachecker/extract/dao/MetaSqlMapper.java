@@ -98,7 +98,7 @@ public class MetaSqlMapper {
             + " WHERE  table_schema=:databaseSchema ) info ON pk.id=info.id AND pk.TABLE_NAME=info.TABLE_NAME "
             + " ORDER BY info.table_rows ASC ";
 
-        String ONE_TABLE_METADATA_SQL = "select info.table_name tableName, info.table_rows tableRows"
+        String ONE_TABLE_METADATA_SQL = "select info.table_name tableName, info.table_rows tableRows "
             + "from information_schema.tables info where info.table_schema=:databaseSchema and info.table_name=:tableName";
         /**
          * column metadata query SQL
