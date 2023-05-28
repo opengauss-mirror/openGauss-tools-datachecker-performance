@@ -35,11 +35,11 @@ public class MysqlResultSetHandler extends ResultSetHandler {
     private final Map<MysqlType, TypeHandler> typeHandlers = new ConcurrentHashMap<>();
 
     {
-        TypeHandler binaryToString = (resultSet, columnLabel) -> byteToStringTrim(resultSet.getBytes(columnLabel));
-        TypeHandler varbinaryToString = (resultSet, columnLabel) -> bytesToString(resultSet.getBytes(columnLabel));
-        TypeHandler blobToString = (resultSet, columnLabel) -> HexUtil.byteToHexTrim(resultSet.getBytes(columnLabel));
-        TypeHandler numericToString = (resultSet, columnLabel) -> numericToString(resultSet.getBigDecimal(columnLabel));
-        TypeHandler bitBooleanToString = (resultSet, columnLabel) -> booleanToString(resultSet.getBoolean(columnLabel));
+        TypeHandler binaryToString = (rs, columnLabel, displaySize) -> byteToStringTrim(rs.getBytes(columnLabel));
+        TypeHandler varbinaryToString = (rs, columnLabel, displaySize) -> bytesToString(rs.getBytes(columnLabel));
+        TypeHandler blobToString = (rs, columnLabel, displaySize) -> HexUtil.byteToHexTrim(rs.getBytes(columnLabel));
+        TypeHandler numericToString = (rs, columnLabel, displaySize) -> numericToString(rs.getBigDecimal(columnLabel));
+        TypeHandler bitBooleanToString = (rs, columnLabel, displaySize) -> bitToString(rs, columnLabel, displaySize);
 
         typeHandlers.put(MysqlType.FLOAT, numericToString);
         typeHandlers.put(MysqlType.DOUBLE, numericToString);
@@ -62,25 +62,28 @@ public class MysqlResultSetHandler extends ResultSetHandler {
         typeHandlers.put(MysqlType.YEAR, this::getYearFormat);
     }
 
+    private String bitToString(ResultSet resultSet, String columnLabel, int displaySize) throws SQLException {
+        if (displaySize == 1) {
+            return String.valueOf(resultSet.getInt(columnLabel));
+        } else {
+            Object object = resultSet.getObject(columnLabel);
+            return Objects.isNull(object) ? NULL : object.toString();
+        }
+    }
+
     private String byteToStringTrim(byte[] bytes) {
         return HexUtil.byteToHexTrim(bytes);
     }
 
-    protected String booleanToString(Boolean bool) {
-        if (Objects.isNull(bool)) {
-            return NULL;
-        }
-        return String.valueOf(bool);
-    }
-
     @Override
-    public String convert(ResultSet resultSet, String columnTypeName, String columnLabel) throws SQLException {
+    public String convert(ResultSet resultSet, String columnTypeName, String columnLabel, int displaySize)
+        throws SQLException {
         final MysqlType mysqlType = MysqlType.getByName(columnTypeName);
         if (typeHandlers.containsKey(mysqlType)) {
-            return typeHandlers.get(mysqlType).convert(resultSet, columnLabel);
+            return typeHandlers.get(mysqlType).convert(resultSet, columnLabel, displaySize);
         } else {
-            return Objects.isNull(resultSet.getObject(columnLabel)) ? NULL :
-                String.valueOf(resultSet.getObject(columnLabel));
+            Object object = resultSet.getObject(columnLabel);
+            return Objects.isNull(object) ? NULL : object.toString();
         }
     }
 }

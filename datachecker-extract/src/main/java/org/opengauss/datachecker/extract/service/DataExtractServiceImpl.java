@@ -28,12 +28,14 @@ import org.opengauss.datachecker.common.entry.extract.RowDataHash;
 import org.opengauss.datachecker.common.entry.extract.SourceDataLog;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.entry.extract.TableMetadataHash;
+import org.opengauss.datachecker.common.entry.extract.Topic;
 import org.opengauss.datachecker.common.exception.BuildRepairStatementException;
 import org.opengauss.datachecker.common.exception.ProcessMultipleException;
 import org.opengauss.datachecker.common.exception.TableNotExistException;
 import org.opengauss.datachecker.common.exception.TaskNotFoundException;
 import org.opengauss.datachecker.common.service.DynamicThreadPoolManager;
 import org.opengauss.datachecker.common.util.ThreadUtil;
+import org.opengauss.datachecker.common.util.TopicUtil;
 import org.opengauss.datachecker.extract.cache.MetaDataCache;
 import org.opengauss.datachecker.extract.cache.TableExtractStatusCache;
 import org.opengauss.datachecker.extract.cache.TopicCache;
@@ -137,7 +139,6 @@ public class DataExtractServiceImpl implements DataExtractService {
         TopicCache.initEndpoint(extractProperties.getEndpoint());
         if (atomicProcessNo.compareAndSet(PROCESS_NO_RESET, processNo)) {
             Set<String> tableNames = MetaDataCache.getAllKeys();
-
             List<ExtractTask> taskList = extractTaskBuilder.builder(tableNames);
             if (CollectionUtils.isEmpty(taskList)) {
                 return taskList;
@@ -165,6 +166,9 @@ public class DataExtractServiceImpl implements DataExtractService {
     public void buildExtractTaskAllTables(String processNo, @NonNull List<ExtractTask> taskList)
         throws ProcessMultipleException {
         if (!Objects.equals(extractProperties.getEndpoint(), Endpoint.SINK)) {
+            return;
+        }
+        if (CollectionUtils.isEmpty(taskList)) {
             return;
         }
         // Verify whether the task list built on the source side exists on the destination side,
@@ -286,9 +290,17 @@ public class DataExtractServiceImpl implements DataExtractService {
                     log.info("Abnormal table[{}] status, ignoring the current table data extraction task", tableName);
                     return;
                 }
+                registerTopic(task);
                 executorService.submit(new ExtractTaskRunnable(task, extractThreadSupport));
             });
         }
+    }
+
+    private void registerTopic(ExtractTask task) {
+        int topicPartitions = TopicUtil.calcPartitions(task.getDivisionsTotalNumber());
+        Endpoint currentEndpoint = extractProperties.getEndpoint();
+        Topic topic = checkingFeignClient.registerTopic(task.getTableName(), topicPartitions, currentEndpoint);
+        task.setTopic(topic);
     }
 
     @Override

@@ -26,10 +26,10 @@ import org.opengauss.datachecker.common.entry.extract.RowDataHash;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.entry.extract.Topic;
 import org.opengauss.datachecker.common.exception.ExtractDataAccessException;
+import org.opengauss.datachecker.common.exception.ExtractException;
 import org.opengauss.datachecker.common.service.DynamicThreadPoolManager;
 import org.opengauss.datachecker.common.util.TaskUtil;
 import org.opengauss.datachecker.common.util.ThreadUtil;
-import org.opengauss.datachecker.common.util.TopicUtil;
 import org.opengauss.datachecker.extract.cache.TopicCache;
 import org.opengauss.datachecker.extract.client.CheckingFeignClient;
 import org.opengauss.datachecker.extract.kafka.KafkaAdminService;
@@ -98,23 +98,25 @@ public class ExtractTaskRunnable implements Runnable {
         this.kafkaOperate = new KafkaOperations(support.getKafkaTemplate(), support.getKafkaAdminService());
     }
 
-    @SneakyThrows
     @Override
     public void run() {
-        TableMetadata tableMetadata = task.getTableMetadata();
-        kafkaOperate.createTopic(task.getTableName(), task.getDivisionsTotalNumber(), endpoint);
-        QueryTableRowContext context = new QueryTableRowContext(tableMetadata, databaseType, kafkaOperate);
-        // Construct query SQL according to the metadata information of the table in the current task
-        final int[][] taskOffset = TaskUtil.calcAutoTaskOffset(tableMetadata.getTableRows());
         try {
+            log.debug("table {} extract begin", task.getTableName());
+            TableMetadata tableMetadata = task.getTableMetadata();
+            kafkaOperate.createTopic(task.getTopic());
+            log.debug("table {} extract create topic", task.getTableName());
+            QueryTableRowContext context = new QueryTableRowContext(tableMetadata, databaseType, kafkaOperate);
+            // Construct query SQL according to the metadata information of the table in the current task
+            final int[][] taskOffset = TaskUtil.calcAutoTaskOffset(tableMetadata.getTableRows());
             if (jdbcOperation.getParallelQueryDop() > 1 && taskOffset.length >= 2) {
                 executeMultiTaskOffset(taskOffset, context);
             } else {
                 executeTask(context);
             }
             checkingFeignClient.refreshTableExtractStatus(task.getTableName(), endpoint, endpoint.getCode());
-        } catch (ExtractDataAccessException ex) {
+        } catch (Exception ex) {
             checkingFeignClient.refreshTableExtractStatus(task.getTableName(), endpoint, -1);
+            log.error("extract", ex);
         }
     }
 
@@ -372,7 +374,7 @@ public class ExtractTaskRunnable implements Runnable {
             }
             context.resultFlush();
             LocalDateTime end = LocalDateTime.now();
-            log.info("{},fetch and send record {},query-cost={} send-result-cost={} all-cost={}", task.getTableName(),
+            log.debug("{},fetch and send record {},query-cost={} send-result-cost={} all-cost={}", task.getTableName(),
                 rowCount.get(), Duration.between(start, endQuery).toMillis(),
                 Duration.between(endQuery, end).toMillis(), Duration.between(start, end).toMillis());
             return rowCount.get();
@@ -468,17 +470,22 @@ public class ExtractTaskRunnable implements Runnable {
         /**
          * create topic for table
          *
-         * @param tableName            tableName
-         * @param divisionsTotalNumber divisionsTotalNumber
-         * @param currentEndpoint      currentEndpoint
+         * @param topic topic
          */
-        public void createTopic(String tableName, int divisionsTotalNumber, Endpoint currentEndpoint) {
-            int topicPartitions = TopicUtil.calcPartitions(divisionsTotalNumber);
-            Topic topic = checkingFeignClient.registerTopic(tableName, topicPartitions, currentEndpoint);
+        public void createTopic(Topic topic) {
             TopicCache.add(topic);
             kafkaAdminService.createTopic(topic.getTopicName(), topic.getPartitions());
             this.topicName = topic.getTopicName();
             this.topicPartitionCount = topic.getPartitions();
+            if (!kafkaAdminService.isTopicExists(topicName)) {
+                ThreadUtil.sleep(100);
+                if (!kafkaAdminService.isTopicExists(topicName)) {
+                    kafkaAdminService.createTopic(topic.getTopicName(), topic.getPartitions());
+                }
+            }
+            if (!kafkaAdminService.isTopicExists(topicName)) {
+                throw new ExtractException("create topic has error : " + topic.toString());
+            }
         }
 
         /**

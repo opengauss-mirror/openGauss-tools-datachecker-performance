@@ -62,24 +62,23 @@ public class ProgressService {
 
     /**
      * Schedule loading scheduled tasks
+     *
+     * @param checkEnvironment
      */
-    public void progressing() {
-        progressRef.set(new CheckProgress());
+    public void progressing(CheckEnvironment checkEnvironment, LocalDateTime startTime) {
+        progressRef.set(new CheckProgress().setStartTime(startTime).setMode(checkEnvironment.getCheckMode())
+                                           .setTableCount(endpointMetaDataManager.getCheckTaskCount())
+                                           .setStatus(CheckProgressStatus.START));
+        createProgressLog();
         if (isFullMode()) {
             executorService.scheduleWithFixedDelay(() -> {
                 Thread.currentThread().setName(PROGRESS);
-                if (progressRef.get().getTableCount() == 0) {
-                    if (endpointMetaDataManager.getCheckTaskCount() > 0) {
-                        initProgress(endpointMetaDataManager.getCheckTaskCount());
-                    }
-                } else {
-                    refreshCompleteProgress(tableStatusRegister.getCheckedCount());
-                }
+                refreshCompleteProgress(tableStatusRegister.getCheckedCount());
                 if (progressRef.get().getStatus() == CheckProgressStatus.END) {
                     ThreadUtil.sleepHalfSecond();
                     executorService.shutdownNow();
                 }
-            }, 1, 1, TimeUnit.SECONDS);
+            }, 0, 1, TimeUnit.SECONDS);
         }
     }
 

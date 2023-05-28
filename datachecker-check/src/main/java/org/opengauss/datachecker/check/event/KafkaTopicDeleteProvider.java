@@ -101,7 +101,7 @@ public class KafkaTopicDeleteProvider implements ApplicationContextAware {
         });
         if (CollectionUtils.isNotEmpty(deleteOptions)) {
             deleteOptions.forEach(deleteOption -> {
-                log.info("publish delete-topic-event table = [{}] ,  current-pending-quantity = [{}]",
+                log.debug("publish delete-topic-event table = [{}] ,  current-pending-quantity = [{}]",
                     deleteOption.getTableName(), deleteTableMap.size());
                 applicationContext.publishEvent(new DeleteTopicsEvent(deleteOption, deleteOption.toString()));
                 deleteTableMap.remove(deleteOption.getTableName());

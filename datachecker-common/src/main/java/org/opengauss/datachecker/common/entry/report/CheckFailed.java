@@ -31,7 +31,7 @@ import java.util.Set;
 @Accessors(chain = true)
 @JSONType(
     orders = {"process", "schema", "tableName", "topic", "partition", "beginOffset","rowCount", "diffCount", "cost", "startTime",
-        "endTime", "message", "keyInsertSet", "keyUpdateSet", "keyDeleteSet"})
+        "endTime", "message", "keyInsertSet", "keyUpdateSet", "keyDeleteSet","hasMore"})
 public class CheckFailed {
     private String process;
     private String schema;
@@ -48,4 +48,5 @@ public class CheckFailed {
     private Set<String> keyInsertSet;
     private Set<String> keyUpdateSet;
     private Set<String> keyDeleteSet;
+    private String hasMore;
 }

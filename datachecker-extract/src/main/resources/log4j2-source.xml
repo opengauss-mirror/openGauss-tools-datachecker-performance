@@ -44,13 +44,13 @@
             <appender-ref ref="console_out_appender"/>
             <appender-ref ref="source_appender"/>
         </root>
-
         <logger name="org.apache.kafka" level="ERROR"/>
         <logger name="org.springframework" level="ERROR"/>
         <logger name="_org.springframework.web" level="ERROR"/>
         <logger name="org.hibernate.validator" level="ERROR"/>
         <logger name="org.jboss.netty" level="ERROR"/>
         <logger name="org.apache.http" level="ERROR"/>
+        <logger name="oshi.util.platform" level="ERROR"/>
     </Loggers>
 
 </Configuration>

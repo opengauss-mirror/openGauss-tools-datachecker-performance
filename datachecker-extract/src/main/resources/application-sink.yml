@@ -1,9 +1,6 @@
 server:
   port: 9002
-  shutdown: graceful
-
 debug: false
-
 logging:
   config: classpath:log4j2-sink.xml
 
