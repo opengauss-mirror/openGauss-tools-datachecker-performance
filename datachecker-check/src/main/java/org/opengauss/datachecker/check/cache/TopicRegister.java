@@ -36,9 +36,8 @@ import java.util.concurrent.locks.ReentrantLock;
 @Slf4j
 @Service
 public class TopicRegister {
-    private static final Map<String, Topic> TOPIC_CACHE = new ConcurrentHashMap<>();
+    private static volatile Map<String, Topic> TOPIC_CACHE = new ConcurrentHashMap<>();
 
-    private ReentrantLock lock = new ReentrantLock();
     private volatile String process;
 
     /**
@@ -59,31 +58,23 @@ public class TopicRegister {
      * @return topic
      */
     public Topic register(String table, int topicPartitions, Endpoint endpoint) {
-        lock.lock();
-        try {
+        synchronized (table) {
             Topic topic = TOPIC_CACHE.get(table);
             if (Objects.isNull(topic)) {
                 topic = new Topic();
                 topic.setTableName(table);
                 topic.setPartitions(topicPartitions);
-                setTopicName(table, endpoint, topic);
+                setTopicName(table, topic);
                 TOPIC_CACHE.put(table, topic);
-            } else {
-                setTopicName(table, endpoint, topic);
             }
-            log.info("register topic {}-{}", endpoint, topic.toString());
-        } finally {
-            lock.unlock();
+            log.debug("register topic {}-{}", endpoint, topic.toString());
         }
         return TOPIC_CACHE.get(table);
     }
 
-    private void setTopicName(String table, Endpoint endpoint, Topic topic) {
-        if (Objects.equals(Endpoint.SOURCE, endpoint)) {
-            topic.setSourceTopicName(TopicUtil.buildTopicName(process, endpoint, table));
-        } else {
-            topic.setSinkTopicName(TopicUtil.buildTopicName(process, endpoint, table));
-        }
+    private void setTopicName(String table, Topic topic) {
+        topic.setSourceTopicName(TopicUtil.buildTopicName(process, Endpoint.SOURCE, table));
+        topic.setSinkTopicName(TopicUtil.buildTopicName(process, Endpoint.SINK, table));
     }
 
     /**

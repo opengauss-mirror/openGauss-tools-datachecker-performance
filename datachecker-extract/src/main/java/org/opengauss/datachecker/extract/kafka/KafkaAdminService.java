@@ -82,7 +82,7 @@ public class KafkaAdminService {
                 return topic;
             } else {
                 adminClient.createTopics(List.of(new NewTopic(topic, partitions, (short) 1)));
-                log.info("topic={} create,numPartitions={}, short replicationFactor={}", topic, partitions, 1);
+                log.debug("topic={} create,numPartitions={}, short replicationFactor={}", topic, partitions, 1);
                 return topic;
             }
         } catch (InterruptedException | ExecutionException e) {
@@ -102,7 +102,7 @@ public class KafkaAdminService {
         kafkaFutureMap.forEach((topic, future) -> {
             try {
                 future.get();
-                log.info("topic={} is delete successfull", topic);
+                log.debug("topic={} is delete successfull", topic);
             } catch (InterruptedException | ExecutionException e) {
                 log.error("topic={} is delete error : {}", topic, e);
             }
@@ -117,7 +117,7 @@ public class KafkaAdminService {
      */
     public List<String> getAllTopic(String prefix) {
         try {
-            log.info("topic prefix :{}", prefix);
+            log.debug("topic prefix :{}", prefix);
             return adminClient.listTopics().listings().get().stream().map(TopicListing::name)
                               .filter(name -> name.startsWith(prefix)).collect(Collectors.toList());
         } catch (InterruptedException | ExecutionException e) {

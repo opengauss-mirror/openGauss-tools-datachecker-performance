@@ -91,15 +91,17 @@ public class MetaSqlMapper {
         /**
          * Table metadata query SQL
          */
-        String TABLE_METADATA_SQL = "SELECT info.table_name tableName,info.table_rows tableRows ,info.avg_row_length avgRowLength,pk.id rowId FROM "
+        String TABLE_METADATA_SQL = "SELECT info.table_name tableName,info.table_rows tableRows ,"
+            + " info.avg_row_length avgRowLength,pk.id rowId FROM "
             + " (SELECT distinct SHA2(TABLE_NAME,224) id, TABLE_NAME FROM information_schema.KEY_COLUMN_USAGE  WHERE "
             + " TABLE_SCHEMA=:databaseSchema AND CONSTRAINT_NAME='PRIMARY' "
-            + " ) pk LEFT JOIN ( select SHA2(TABLE_NAME,224) id, TABLE_NAME,TABLE_ROWS,avg_row_length from  information_schema.tables  "
+            + " ) pk LEFT JOIN ( select SHA2(TABLE_NAME,224) id, TABLE_NAME,TABLE_ROWS,avg_row_length from "
+            + " information_schema.tables  "
             + " WHERE  table_schema=:databaseSchema ) info ON pk.id=info.id AND pk.TABLE_NAME=info.TABLE_NAME "
             + " ORDER BY info.table_rows ASC ";
 
         String ONE_TABLE_METADATA_SQL = "select info.table_name tableName, info.table_rows tableRows "
-            + "from information_schema.tables info where info.table_schema=:databaseSchema and info.table_name=:tableName";
+            + " from information_schema.tables info where info.table_schema=:databaseSchema and info.table_name=:tableName";
         /**
          * column metadata query SQL
          */
@@ -121,30 +123,30 @@ public class MetaSqlMapper {
         String TABLE_METADATA_SQL = "select c.relname tableName,c.reltuples tableRows, "
             + " case when c.reltuples>0 then pg_table_size(c.oid)/c.reltuples else 0 end as avgRowLength"
             + " from pg_class c "
-            + "LEFT JOIN pg_namespace n on n.oid = c.relnamespace left join pg_index b on c.oid=b.indrelid "
-            + "where n.nspname=:databaseSchema and b.indisprimary='t' order by c.reltuples asc;";
+            + " LEFT JOIN pg_namespace n on n.oid = c.relnamespace left join pg_index b on c.oid=b.indrelid "
+            + " where n.nspname=:databaseSchema and b.indisprimary='t' order by c.reltuples asc;";
 
         String ONE_TABLE_METADATA_SQL = "select c.relname tableName,c.reltuples tableRows from pg_class c "
-            + "LEFT JOIN pg_namespace n on n.oid = c.relnamespace left join pg_index b on c.oid=b.indrelid "
-            + "where n.nspname=:databaseSchema and b.indisprimary='t' and c.relname=:tableName; ";
+            + " LEFT JOIN pg_namespace n on n.oid = c.relnamespace left join pg_index b on c.oid=b.indrelid "
+            + " where n.nspname=:databaseSchema and b.indisprimary='t' and c.relname=:tableName; ";
         /**
          * column metadata query SQL
          */
         String TABLES_COLUMN_META_DATA_SQL = "SELECT c.relname tableName ,a.attname columnName ,"
             + " a.attnum ordinalPosition,(CASE WHEN (t.typtype = 'd'::\"char\") "
             + " THEN CASE WHEN ((bt.typelem <> (0)::oid) AND (bt.typlen = (-1))) THEN 'ARRAY'::text "
-            + "WHEN (nbt.nspname = 'pg_catalog'::name) THEN format_type(t.typbasetype, NULL::integer) "
-            + "ELSE 'USER-DEFINED'::text END ELSE CASE WHEN ((t.typelem <> (0)::oid) AND (t.typlen = (-1))) "
-            + "THEN 'ARRAY'::text WHEN (nt.nspname = 'pg_catalog'::name) THEN format_type(a.atttypid, NULL::integer) "
-            + "ELSE 'USER-DEFINED'::text END END)::information_schema.character_data AS dataType ,"
+            + " WHEN (nbt.nspname = 'pg_catalog'::name) THEN format_type(t.typbasetype, NULL::integer) "
+            + " ELSE 'USER-DEFINED'::text END ELSE CASE WHEN ((t.typelem <> (0)::oid) AND (t.typlen = (-1))) "
+            + " THEN 'ARRAY'::text WHEN (nt.nspname = 'pg_catalog'::name) THEN format_type(a.atttypid, NULL::integer) "
+            + " ELSE 'USER-DEFINED'::text END END)::information_schema.character_data AS dataType ,"
             + " t.typname columnType, (case when co.contype='p'::\"char\" then 'PRI' end ) columnKey"
             + " FROM ((pg_attribute a JOIN (pg_class c JOIN pg_namespace nc ON c.relnamespace = nc.oid ) ON a.attrelid = c.oid ) "
-            + "JOIN (pg_type t JOIN pg_namespace nt ON t.typnamespace = nt.oid) ON a.atttypid = t.oid) "
-            + "LEFT JOIN (pg_type bt JOIN pg_namespace nbt ON bt.typnamespace = nbt.oid) "
-            + "ON (t.typtype = 'd'::\"char\" AND t.typbasetype = bt.oid) "
-            + "left join pg_constraint co on c.oid = co.conrelid and a.attnum = any (array[co.conkey]) "
-            + "WHERE a.attnum > 0 AND (NOT a.attisdropped)  "
-            + "AND (c.relkind = ANY (ARRAY['r'::\"char\", 'm'::\"char\", 'v'::\"char\", 'f'::\"char\"]))"
+            + " JOIN (pg_type t JOIN pg_namespace nt ON t.typnamespace = nt.oid) ON a.atttypid = t.oid) "
+            + " LEFT JOIN (pg_type bt JOIN pg_namespace nbt ON bt.typnamespace = nbt.oid) "
+            + " ON (t.typtype = 'd'::\"char\" AND t.typbasetype = bt.oid) "
+            + " left join pg_constraint co on c.oid = co.conrelid and a.attnum = any (array[co.conkey]) "
+            + " WHERE a.attnum > 0 AND (NOT a.attisdropped)  "
+            + " AND (c.relkind = ANY (ARRAY['r'::\"char\", 'm'::\"char\", 'v'::\"char\", 'f'::\"char\"]))"
             + " and  nc.nspname=:databaseSchema and c.relname in (:tableNames) and c.relhaspkey=true;";
     }
 

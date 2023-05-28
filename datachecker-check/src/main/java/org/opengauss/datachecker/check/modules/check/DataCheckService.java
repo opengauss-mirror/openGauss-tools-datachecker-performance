@@ -25,6 +25,7 @@ import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.extract.SourceDataLog;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.service.DynamicThreadPoolManager;
+import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.springframework.boot.autoconfigure.kafka.KafkaProperties;
 import org.springframework.stereotype.Service;
 
@@ -74,6 +75,7 @@ public class DataCheckService {
                   .setTablePartitionRowCount(tablePartitionRowCount).setBucketCapacity(bucketCapacity)
                   .setPartitions(partitions).setProperties(kafkaProperties).setErrorRate(errorRate);
         executor.submit(new DataCheckRunnable(checkParam, dataCheckRunnableSupport));
+        log.info("add check worker dp-executor : {} , {} , {}", process, tableName, partitions);
     }
 
     private String getSinkSchema() {

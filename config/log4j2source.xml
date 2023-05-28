@@ -53,6 +53,7 @@
         <logger name="org.hibernate.validator" level="ERROR"/>
         <logger name="org.jboss.netty" level="ERROR"/>
         <logger name="org.apache.http" level="ERROR"/>
+        <logger name="oshi.util.platform" level="ERROR"/>
     </Loggers>
 
 </Configuration>

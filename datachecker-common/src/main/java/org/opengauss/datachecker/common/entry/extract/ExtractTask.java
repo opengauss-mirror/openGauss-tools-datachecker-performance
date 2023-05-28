@@ -60,7 +60,7 @@ public class ExtractTask {
      * Task execution offset
      */
     private long offset;
-
+    private Topic topic;
     /**
      * Table metadata information
      */

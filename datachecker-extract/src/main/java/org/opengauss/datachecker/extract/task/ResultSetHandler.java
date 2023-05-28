@@ -62,14 +62,12 @@ public abstract class ResultSetHandler {
     public Map<String, String> putOneResultSetToMap(ResultSet resultSet) {
         Map<String, String> values = new HashMap<>(InitialCapacity.CAPACITY_64);
         try {
-            final ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
-            IntStream.rangeClosed(1, resultSetMetaData.getColumnCount()).forEach(columnIdx -> {
+            final ResultSetMetaData rsmd = resultSet.getMetaData();
+            IntStream.rangeClosed(1, rsmd.getColumnCount()).forEach(columnIdx -> {
                 try {
-                    // Get the column and its corresponding column name
-                    String columnLabel = resultSetMetaData.getColumnLabel(columnIdx);
-                    // Get the corresponding value from the result set according to the column name
-                    final String columnTypeName = resultSetMetaData.getColumnTypeName(columnIdx);
-                    values.put(columnLabel, convert(resultSet, columnTypeName, columnLabel));
+                    String columnLabel = rsmd.getColumnLabel(columnIdx);
+                    values.put(columnLabel, convert(resultSet, rsmd.getColumnTypeName(columnIdx), columnLabel,
+                        rsmd.getColumnDisplaySize(columnIdx)));
                 } catch (SQLException ex) {
                     log.error("putOneResultSetToMap Convert data according to result set metadata information.", ex);
                 }
@@ -80,24 +78,27 @@ public abstract class ResultSetHandler {
         return values;
     }
 
-    protected abstract String convert(ResultSet resultSet, String columnTypeName, String columnLabel)
+    protected abstract String convert(ResultSet resultSet, String columnTypeName, String columnLabel, int displaySize)
         throws SQLException;
 
     protected String numericToString(BigDecimal bigDecimal) {
         return Objects.isNull(bigDecimal) ? NULL : bigDecimal.stripTrailingZeros().toPlainString();
     }
 
-    protected String getDateFormat(@NonNull ResultSet resultSet, String columnLabel) throws SQLException {
+    protected String getDateFormat(@NonNull ResultSet resultSet, String columnLabel, int displaySize)
+        throws SQLException {
         final Date date = resultSet.getDate(columnLabel);
         return Objects.nonNull(date) ? DATE.format(date.toLocalDate()) : NULL;
     }
 
-    protected String getTimeFormat(@NonNull ResultSet resultSet, String columnLabel) throws SQLException {
+    protected String getTimeFormat(@NonNull ResultSet resultSet, String columnLabel, int displaySize)
+        throws SQLException {
         final Time time = resultSet.getTime(columnLabel);
         return Objects.nonNull(time) ? TIME.format(time.toLocalTime()) : NULL;
     }
 
-    protected String getTimestampFormat(@NonNull ResultSet resultSet, String columnLabel) throws SQLException {
+    protected String getTimestampFormat(@NonNull ResultSet resultSet, String columnLabel, int displaySize)
+        throws SQLException {
         final Timestamp timestamp =
             resultSet.getTimestamp(columnLabel, Calendar.getInstance(TimeZone.getTimeZone("GMT+8")));
         return Objects.nonNull(timestamp) ? formatTimestamp(timestamp) : NULL;
@@ -108,7 +109,8 @@ public abstract class ResultSetHandler {
             TIMESTAMP.format(timestamp.toLocalDateTime());
     }
 
-    protected String getYearFormat(@NonNull ResultSet resultSet, String columnLabel) throws SQLException {
+    protected String getYearFormat(@NonNull ResultSet resultSet, String columnLabel, int displaySize)
+        throws SQLException {
         final Date date = resultSet.getDate(columnLabel);
         return Objects.nonNull(date) ? YEAR.format(date.toLocalDate()) : NULL;
     }
@@ -123,7 +125,8 @@ public abstract class ResultSetHandler {
     protected String bytesToString(byte[] bytes) {
         return HexUtil.byteToHex(bytes);
     }
-    protected String trim(@NonNull ResultSet resultSet, String columnLabel) throws SQLException {
+
+    protected String trim(@NonNull ResultSet resultSet, String columnLabel, int displaySize) throws SQLException {
         final String string = resultSet.getString(columnLabel);
         return string == null ? NULL : string.stripTrailing();
     }
@@ -135,9 +138,10 @@ public abstract class ResultSetHandler {
          *
          * @param resultSet   resultSet
          * @param columnLabel columnLabel
+         * @param displaySize displaySize
          * @return result
          * @throws SQLException SQLException
          */
-        String convert(ResultSet resultSet, String columnLabel) throws SQLException;
+        String convert(ResultSet resultSet, String columnLabel, int displaySize) throws SQLException;
     }
 }

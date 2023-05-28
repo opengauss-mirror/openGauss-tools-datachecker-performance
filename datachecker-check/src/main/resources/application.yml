@@ -3,7 +3,7 @@ server:
   shutdown: graceful
 logging:
   config: classpath:./config/log4j2.xml
-
+debug: false
 spring:
   memory-monitor-enable: false
   check:

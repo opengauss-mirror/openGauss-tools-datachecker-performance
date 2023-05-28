@@ -79,11 +79,11 @@ public class DynamicThreadPoolMonitor implements Runnable {
             return;
         }
         if (Objects.nonNull(cpuInfo)) {
-            log.warn("{} coreSize={}, maxSize={}, taskCount={}, completedCount={}, activeCount={},cpu-free={}", name,
+            log.debug("{} coreSize={}, maxSize={}, taskCount={}, completedCount={}, activeCount={},cpu-free={}", name,
                 tpExecutor.getCorePoolSize(), tpExecutor.getMaximumPoolSize(), tpExecutor.getTaskCount(),
                 tpExecutor.getCompletedTaskCount(), tpExecutor.getActiveCount(), cpuInfo.getFree());
         } else {
-            log.warn("{} coreSize={}, maxSize={}, taskCount={}, completedCount={}, activeCount={}", name,
+            log.debug("{} coreSize={}, maxSize={}, taskCount={}, completedCount={}, activeCount={}", name,
                 tpExecutor.getCorePoolSize(), tpExecutor.getMaximumPoolSize(), tpExecutor.getTaskCount(),
                 tpExecutor.getCompletedTaskCount(), tpExecutor.getActiveCount());
         }

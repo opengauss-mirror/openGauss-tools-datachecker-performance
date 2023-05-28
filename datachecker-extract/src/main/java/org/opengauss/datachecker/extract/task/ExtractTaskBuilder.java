@@ -60,9 +60,7 @@ public class ExtractTaskBuilder {
      * @return task list
      */
     public List<ExtractTask> builder(Set<String> tableNames) {
-        Assert.isTrue(!CollectionUtils.isEmpty(tableNames), "Build data extraction task table cannot be empty");
         List<ExtractTask> taskList = new ArrayList<>();
-
         final List<String> tableNameOrderList =
             tableNames.stream().filter(MetaDataCache::containsKey).sorted((tableName1, tableName2) -> {
                 TableMetadata metadata1 = MetaDataCache.get(tableName1);
