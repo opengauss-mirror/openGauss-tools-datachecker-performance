@@ -25,6 +25,7 @@ import org.opengauss.datachecker.common.entry.extract.ExtractTask;
 import org.opengauss.datachecker.common.entry.extract.RowDataHash;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.entry.extract.Topic;
+import org.opengauss.datachecker.common.exception.CreateTopicTimeOutException;
 import org.opengauss.datachecker.common.exception.ExtractDataAccessException;
 import org.opengauss.datachecker.common.exception.ExtractException;
 import org.opengauss.datachecker.common.service.DynamicThreadPoolManager;
@@ -84,10 +85,11 @@ public class ExtractTaskRunnable implements Runnable {
     /**
      * Thread Constructor
      *
-     * @param task    task information
-     * @param support Thread helper class
+     * @param processNo processNo
+     * @param task      task information
+     * @param support   Thread helper class
      */
-    public ExtractTaskRunnable(ExtractTask task, ExtractThreadSupport support) {
+    public ExtractTaskRunnable(String processNo, ExtractTask task, ExtractThreadSupport support) {
         this.task = task;
         this.databaseType = support.getExtractProperties().getDatabaseType();
         this.schema = support.getExtractProperties().getSchema();
@@ -96,6 +98,7 @@ public class ExtractTaskRunnable implements Runnable {
         this.checkingFeignClient = support.getCheckingFeignClient();
         this.dynamicThreadPoolManager = support.getDynamicThreadPoolManager();
         this.kafkaOperate = new KafkaOperations(support.getKafkaTemplate(), support.getKafkaAdminService());
+        kafkaOperate.init(processNo, endpoint);
     }
 
     @Override
@@ -124,21 +127,22 @@ public class ExtractTaskRunnable implements Runnable {
         if (taskOffset == null || taskOffset.length < 2) {
             return;
         }
+        LocalDateTime start = LocalDateTime.now();
         try {
-            LocalDateTime start = LocalDateTime.now();
             Vector<Boolean> sliceQuantityAnalysis = parallelExtractTableData(taskOffset, context);
-            log.debug("table=[{}] parallel execution completed, cost {} milliseconds", context.getTableName(),
+            log.debug("table=[{}] parallel task completed, cost {} milliseconds", context.getTableName(),
                 Duration.between(start, LocalDateTime.now()).toMillis());
             // any slice query count small current slice offset ,then this table had queried all table rows.
             if (sliceQuantityAnalysis.stream().anyMatch((noEqual -> !noEqual))) {
                 return;
             }
             fixedParallelExtractTableData(taskOffset, context);
-            log.info("table=[{}] execution completed, taking a total of {} milliseconds", context.getTableName(),
-                Duration.between(start, LocalDateTime.now()).toMillis());
         } catch (Exception ex) {
             log.error("jdbc parallel query has unknown error [{}] : ", context.getTableName(), ex);
             throw new ExtractDataAccessException();
+        } finally {
+            log.info("table=[{}] execution completed, taking a total of {} milliseconds", context.getTableName(),
+                Duration.between(start, LocalDateTime.now()).toMillis());
         }
     }
 
@@ -450,11 +454,13 @@ public class ExtractTaskRunnable implements Runnable {
     class KafkaOperations {
         private static final int DEFAULT_PARTITION = 0;
         private static final int MIN_PARTITION_NUM = 1;
+        private static final int MAX_TRY_CREATE_TOPIC_TIME = 600;
 
         private final KafkaTemplate<String, String> kafkaTemplate;
         private final KafkaAdminService kafkaAdminService;
         private int topicPartitionCount;
         private String topicName;
+        private String endpointTopicPrefix;
 
         /**
          * constructor
@@ -468,12 +474,33 @@ public class ExtractTaskRunnable implements Runnable {
         }
 
         /**
+         * init endpointTopicPrefix
+         *
+         * @param process  process
+         * @param endpoint endpoint
+         */
+        public void init(String process, Endpoint endpoint) {
+            this.endpointTopicPrefix = "CHECK_" + process + "_" + endpoint.getCode() + "_";
+        }
+
+        /**
          * create topic for table
          *
          * @param topic topic
          */
         public void createTopic(Topic topic) {
             TopicCache.add(topic);
+            int tryCreateTopicTime = 0;
+            // add kafka current limiting operation
+            while (!kafkaAdminService.canCreateTopic(endpointTopicPrefix)) {
+                log.warn("kafka's topic number is reached maximum-topic-size limits, {} wait ...",
+                    topic.getTopicName());
+                if (tryCreateTopicTime > MAX_TRY_CREATE_TOPIC_TIME) {
+                    throw new CreateTopicTimeOutException(topicName);
+                }
+                tryCreateTopicTime++;
+                ThreadUtil.sleepOneSecond();
+            }
             kafkaAdminService.createTopic(topic.getTopicName(), topic.getPartitions());
             this.topicName = topic.getTopicName();
             this.topicPartitionCount = topic.getPartitions();

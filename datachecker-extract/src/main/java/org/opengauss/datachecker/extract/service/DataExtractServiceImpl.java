@@ -291,7 +291,7 @@ public class DataExtractServiceImpl implements DataExtractService {
                     return;
                 }
                 registerTopic(task);
-                executorService.submit(new ExtractTaskRunnable(task, extractThreadSupport));
+                executorService.submit(new ExtractTaskRunnable(processNo, task, extractThreadSupport));
             });
         }
     }
@@ -409,5 +409,10 @@ public class DataExtractServiceImpl implements DataExtractService {
                 .setEndpoint(extractProperties.getEndpoint());
         config.setDebeziumEnable(extractProperties.isDebeziumEnable()).setDatabase(database);
         return config;
+    }
+
+    @Override
+    public TableMetadata queryIncrementMetaData(String tableName) {
+        return metaDataService.queryIncrementMetaData(tableName);
     }
 }

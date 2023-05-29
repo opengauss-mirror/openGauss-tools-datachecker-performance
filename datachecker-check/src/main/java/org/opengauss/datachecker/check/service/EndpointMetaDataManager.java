@@ -168,4 +168,15 @@ public class EndpointMetaDataManager {
     public List<String> getMissTableList() {
         return MISS_TABLE_LIST;
     }
+
+    /**
+     * query table metadata by jdbc
+     *
+     * @param endpoint  endpoint
+     * @param tableName tableName
+     * @return TableMetadata
+     */
+    public TableMetadata queryIncrementMetaData(Endpoint endpoint, String tableName) {
+        return feignClientService.queryIncrementMetaData(endpoint, tableName);
+    }
 }

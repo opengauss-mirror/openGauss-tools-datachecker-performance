@@ -5,6 +5,9 @@ logging:
 spring:
   kafka:
     bootstrap-servers: localhost:9092
+  check:
+    core-pool-size: 2
+    maximum-pool-size: 10
 data:
   check:
     data-path: ./check_result

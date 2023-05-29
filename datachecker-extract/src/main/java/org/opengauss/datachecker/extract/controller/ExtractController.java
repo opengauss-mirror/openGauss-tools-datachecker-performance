@@ -213,6 +213,17 @@ public class ExtractController {
     }
 
     /**
+     * queryIncrementMetaData
+     *
+     * @param tableName tableName
+     * @return TableMetadata
+     */
+    @GetMapping("/extract/query/increment/metadata")
+    Result<TableMetadata> queryIncrementMetaData(@RequestParam(name = "tableName") String tableName) {
+        return Result.success(dataExtractService.queryIncrementMetaData(tableName));
+    }
+
+    /**
      * queries data corresponding to a specified primary key value in a table
      * and performs hash for secondary verification data query.
      *
