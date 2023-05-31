@@ -7,8 +7,8 @@ debug: false
 spring:
   memory-monitor-enable: false
   check:
-    core-pool-size: 5
-    maximum-pool-size: 20
+    core-pool-size: 2
+    maximum-pool-size: 10
   application:
     name: gs_datacheck
   config:

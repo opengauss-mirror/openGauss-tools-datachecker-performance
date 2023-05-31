@@ -20,7 +20,6 @@ import com.google.common.collect.Maps;
 import lombok.extern.slf4j.Slf4j;
 import org.opengauss.datachecker.check.cache.CheckRateCache;
 import org.opengauss.datachecker.check.cache.TableStatusRegister;
-import org.opengauss.datachecker.check.client.FeignClientService;
 import org.opengauss.datachecker.check.modules.bucket.Bucket;
 import org.opengauss.datachecker.check.modules.bucket.BuilderBucketHandler;
 import org.opengauss.datachecker.check.modules.merkle.MerkleTree;
@@ -76,7 +75,6 @@ public class DataCheckRunnable implements Runnable {
     private final DifferencePair<Map<String, RowDataHash>, Map<String, RowDataHash>, Map<String, Pair<Node, Node>>>
         difference = DifferencePair.of(new HashMap<>(), new HashMap<>(), new HashMap<>());
     private final Map<Integer, Pair<Integer, Integer>> bucketNumberDiffMap = new HashMap<>();
-    private final FeignClientService feignClient;
     private final StatisticalService statisticalService;
     private final TableStatusRegister tableStatusRegister;
     private final DataCheckParam checkParam;
@@ -105,7 +103,6 @@ public class DataCheckRunnable implements Runnable {
     public DataCheckRunnable(@NonNull DataCheckParam checkParam, @NonNull DataCheckRunnableSupport support) {
         this.checkParam = checkParam;
         startTime = LocalDateTime.now();
-        feignClient = support.getFeignClientService();
         statisticalService = support.getStatisticalService();
         tableStatusRegister = support.getTableStatusRegister();
         checkResultManagerService = support.getCheckResultManagerService();
@@ -301,7 +298,7 @@ public class DataCheckRunnable implements Runnable {
             difference.getOnlyOnLeft().putAll(subDifference.getOnlyOnLeft());
             difference.getOnlyOnRight().putAll(subDifference.getOnlyOnRight());
         });
-        log.info("Complete the data verification of table [{}-{}]", tableName, partitions);
+        log.debug("Complete the data verification of table [{}-{}]", tableName, partitions);
     }
 
     /**
@@ -417,7 +414,7 @@ public class DataCheckRunnable implements Runnable {
             // sourceSize == 0, that is, all buckets are empty
             if (sourceBucketCount == 0) {
                 // Table is empty, verification succeeded!
-                log.info("table[{}-{}] is an empty table,this check successful!", tableName, partitions);
+                log.debug("table[{}-{}] is an empty table,this check successful!", tableName, partitions);
             } else {
                 // sourceSize is less than thresholdMinBucketSize, that is, there is only one bucket. Compare
                 DifferencePair<Map, Map, Map> subDifference =
@@ -444,7 +441,6 @@ public class DataCheckRunnable implements Runnable {
                    .errorRate(20).checkMode(CheckMode.FULL).keyUpdateSet(difference.getDiffering().keySet())
                    .keyInsertSet(difference.getOnlyOnLeft().keySet()).keyDeleteSet(difference.getOnlyOnRight().keySet())
                    .build();
-        log.info("completed data check and export results of {}", checkPartition);
         checkResultManagerService.addResult(checkPartition, result);
     }
 

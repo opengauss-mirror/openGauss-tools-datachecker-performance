@@ -17,12 +17,14 @@ package org.opengauss.datachecker.check.load;
 
 import lombok.extern.slf4j.Slf4j;
 import org.opengauss.datachecker.check.service.EndpointMetaDataManager;
+import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.exception.CheckingException;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
+import java.util.Objects;
 
 /**
  * MetaDataLoader
@@ -40,6 +42,9 @@ public class MetaDataLoader extends AbstractCheckLoader {
 
     @Override
     public void load(CheckEnvironment checkEnvironment) {
+        if (Objects.equals(checkEnvironment.getCheckMode(), CheckMode.INCREMENT)) {
+            return;
+        }
         try {
             int retry = 0;
             log.info("check service is start to load metadata,place wait a moment.");

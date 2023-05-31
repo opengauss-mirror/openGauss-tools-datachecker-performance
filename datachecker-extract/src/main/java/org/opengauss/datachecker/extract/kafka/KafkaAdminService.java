@@ -51,6 +51,8 @@ public class KafkaAdminService {
     @Value("${spring.kafka.bootstrap-servers}")
     private String springKafkaBootstrapServers;
     private AdminClient adminClient;
+    @Value("${spring.check.maximum-topic-size}")
+    private int maximumTopicSize = 50;
 
     /**
      * Initialize Admin Client
@@ -151,6 +153,26 @@ public class KafkaAdminService {
         try {
             return adminClient.listTopics().listings().get().stream().map(TopicListing::name)
                               .anyMatch(name -> name.equalsIgnoreCase(topicName));
+        } catch (InterruptedException | ExecutionException e) {
+            log.error("admin client get topic error:", e);
+        }
+        return false;
+    }
+
+    /**
+     * Check if the number of kafka topics created by the current process has reached the maximum limit
+     * if maximumTopicSize <=0 , no check.
+     *
+     * @param endpointTopicPrefix endpointTopicPrefix
+     * @return true | false
+     */
+    public boolean canCreateTopic(String endpointTopicPrefix) {
+        if (maximumTopicSize <= 0) {
+            return true;
+        }
+        try {
+            return maximumTopicSize > adminClient.listTopics().listings().get().stream().map(TopicListing::name)
+                                                 .filter(name -> name.startsWith(endpointTopicPrefix)).count();
         } catch (InterruptedException | ExecutionException e) {
             log.error("admin client get topic error:", e);
         }

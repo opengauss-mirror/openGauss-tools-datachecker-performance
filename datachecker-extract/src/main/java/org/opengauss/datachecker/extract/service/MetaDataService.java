@@ -154,4 +154,14 @@ public class MetaDataService {
                               .sorted(Comparator.comparing(ColumnsMetaData::getOrdinalPosition))
                               .collect(Collectors.toList());
     }
+
+    /**
+     * queryIncrementMetaData
+     *
+     * @param tableName tableName
+     * @return TableMetadata
+     */
+    public TableMetadata queryIncrementMetaData(String tableName) {
+        return dataBaseMetadataDAOImpl.queryTableMetadata(tableName);
+    }
 }

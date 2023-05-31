@@ -19,6 +19,7 @@ import org.opengauss.datachecker.common.entry.extract.ExtractConfig;
 import org.opengauss.datachecker.common.entry.extract.ExtractTask;
 import org.opengauss.datachecker.common.entry.extract.RowDataHash;
 import org.opengauss.datachecker.common.entry.extract.SourceDataLog;
+import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.entry.extract.TableMetadataHash;
 import org.opengauss.datachecker.common.exception.ProcessMultipleException;
 import org.opengauss.datachecker.common.exception.TaskNotFoundException;
@@ -138,4 +139,12 @@ public interface DataExtractService {
      * @return ExtractConfig
      */
     ExtractConfig getEndpointConfig();
+
+    /**
+     * queryIncrementMetaData
+     *
+     * @param tableName tableName
+     * @return TableMetadata
+     */
+    TableMetadata queryIncrementMetaData(String tableName);
 }

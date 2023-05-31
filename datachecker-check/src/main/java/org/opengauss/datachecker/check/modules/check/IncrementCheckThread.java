@@ -151,7 +151,7 @@ public class IncrementCheckThread extends Thread {
     }
 
     private CheckTable buildCheckTable() {
-        TableMetadata tableMetadata = endpointMetaDataManager.getTableMetadata(Endpoint.SINK, tableName);
+        TableMetadata tableMetadata = endpointMetaDataManager.queryIncrementMetaData(Endpoint.SINK, tableName);
         return CheckTable.builder().tableName(tableName).rowCount(rowCount)
                          .completeTimestamp(System.currentTimeMillis()).avgRowLength(tableMetadata.getAvgRowLength())
                          .build();

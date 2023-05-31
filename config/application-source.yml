@@ -6,6 +6,9 @@ logging:
 spring:
   check:
     server-uri: http://127.0.0.1:9000
+    core-pool-size: 2
+    maximum-pool-size: 10
+    maximum-topic-size: 30
   extract:
     schema: test
     databaseType: MS

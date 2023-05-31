@@ -15,6 +15,7 @@
 
 package org.opengauss.datachecker.check.event;
 
+import lombok.extern.slf4j.Slf4j;
 import org.opengauss.datachecker.check.load.CheckEnvironment;
 import org.opengauss.datachecker.check.modules.check.CheckDiffResult;
 import org.opengauss.datachecker.common.entry.report.CheckSuccess;
@@ -30,6 +31,7 @@ import javax.annotation.Resource;
  * @date ：Created in 2023/3/7
  * @since ：11
  */
+@Slf4j
 @Component
 public class CheckSuccessReportEventListener extends CheckReportEventAdapter
     implements ApplicationListener<CheckSuccessReportEvent> {
@@ -40,7 +42,9 @@ public class CheckSuccessReportEventListener extends CheckReportEventAdapter
     @Override
     public void onApplicationEvent(CheckSuccessReportEvent event) {
         final CheckDiffResult source = (CheckDiffResult) event.getSource();
-        FileUtils.writeAppendFile(getSuccessPath(), JsonObjectUtil.prettyFormatMillis(translateCheckSuccess(source))+",");
+        FileUtils
+            .writeAppendFile(getSuccessPath(), JsonObjectUtil.prettyFormatMillis(translateCheckSuccess(source)) + ",");
+        log.debug("completed {} check success and export results of  ", source.getTable());
     }
 
     private String getSuccessPath() {

@@ -17,6 +17,7 @@ package org.opengauss.datachecker.check.event;
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
+import lombok.extern.slf4j.Slf4j;
 import org.opengauss.datachecker.check.load.CheckEnvironment;
 import org.opengauss.datachecker.check.modules.check.CheckDiffResult;
 import org.opengauss.datachecker.check.modules.check.CheckResultConstants;
@@ -35,6 +36,7 @@ import java.util.Set;
  * @date ：Created in 2023/3/7
  * @since ：11
  */
+@Slf4j
 @Component
 public class CheckFailedReportEventListener extends CheckReportEventAdapter
     implements ApplicationListener<CheckFailedReportEvent> {
@@ -49,6 +51,7 @@ public class CheckFailedReportEventListener extends CheckReportEventAdapter
         final CheckDiffResult source = (CheckDiffResult) event.getSource();
         FileUtils
             .writeAppendFile(getFailedPath(), JsonObjectUtil.prettyFormatMillis(translateCheckFailed(source)) + ",");
+        log.debug("completed {} failed success and export results of  ", source.getTable());
     }
 
     private String getFailedPath() {
@@ -74,6 +77,6 @@ public class CheckFailedReportEventListener extends CheckReportEventAdapter
             return keySet;
         }
         hasMore.append(message);
-        return Sets.newTreeSet(Iterables.limit(keySet,MAX_DISPLAY_SIZE));
+        return Sets.newTreeSet(Iterables.limit(keySet, MAX_DISPLAY_SIZE));
     }
 }
