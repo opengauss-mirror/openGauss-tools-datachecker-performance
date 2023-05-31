@@ -15,6 +15,8 @@
 
 package org.opengauss.datachecker.extract.debezium;
 
+import org.opengauss.datachecker.extract.service.MetaDataService;
+
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -42,4 +44,11 @@ public interface DebeziumDataHandler<E> {
      * @param schema schema
      */
     void setSchema(String schema);
+
+    /**
+     * inject MetaDataService Instance
+     *
+     * @param metaDataService metaDataService
+     */
+    void injectMetaDataServiceInstanceToHandler(MetaDataService metaDataService);
 }
