@@ -20,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.opengauss.datachecker.common.entry.debezium.DebeziumData;
 import org.opengauss.datachecker.common.entry.debezium.DebeziumPayload;
 import org.opengauss.datachecker.common.entry.debezium.PayloadSource;
+import org.opengauss.datachecker.extract.service.MetaDataService;
 
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
@@ -35,6 +36,9 @@ import java.util.concurrent.LinkedBlockingQueue;
  */
 @Slf4j
 public class DebeziumStringHandler implements DebeziumDataHandler<String> {
+    private String destSchema;
+    private MetaDataService metaDataService;
+
     /**
      * Debezium message parsing and adding the parsing result to the {@code DebeziumDataLogs.class} result set
      *
@@ -58,6 +62,11 @@ public class DebeziumStringHandler implements DebeziumDataHandler<String> {
 
     @Override
     public void setSchema(String schema) {
+        this.destSchema = schema;
+    }
 
+    @Override
+    public void injectMetaDataServiceInstanceToHandler(MetaDataService metaDataService) {
+        this.metaDataService = metaDataService;
     }
 }

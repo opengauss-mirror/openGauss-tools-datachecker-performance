@@ -15,6 +15,7 @@
 
 package org.opengauss.datachecker.extract.util;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 
@@ -25,11 +26,19 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
+ * MetaDataUtil
+ *
  * @author ：wangchao
  * @date ：Created in 2022/6/15
  * @since ：11
  */
 public class MetaDataUtil {
+    /**
+     * getTableColumns
+     *
+     * @param tableMetadata tableMetadata
+     * @return table Columns
+     */
     public static List<String> getTableColumns(TableMetadata tableMetadata) {
         if (Objects.isNull(tableMetadata)) {
             return emptyList();
@@ -38,6 +47,12 @@ public class MetaDataUtil {
         return getTableColumns(columnsMetas);
     }
 
+    /**
+     * getTablePrimaryColumns
+     *
+     * @param tableMetadata tableMetadata
+     * @return table Columns
+     */
     public static List<String> getTablePrimaryColumns(TableMetadata tableMetadata) {
         if (Objects.isNull(tableMetadata)) {
             return emptyList();
@@ -56,5 +71,15 @@ public class MetaDataUtil {
         }
         return columnsMetas.stream().sorted(Comparator.comparing(ColumnsMetaData::getOrdinalPosition))
                            .map(ColumnsMetaData::getColumnName).collect(Collectors.toUnmodifiableList());
+    }
+
+    /**
+     * hasNoPrimary
+     *
+     * @param tableMetadata tableMetadata
+     * @return true | false
+     */
+    public static boolean hasNoPrimary(TableMetadata tableMetadata) {
+        return CollectionUtils.isEmpty(tableMetadata.getPrimaryMetas());
     }
 }

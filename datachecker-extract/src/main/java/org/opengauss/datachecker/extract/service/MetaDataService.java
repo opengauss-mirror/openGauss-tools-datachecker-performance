@@ -164,4 +164,17 @@ public class MetaDataService {
     public TableMetadata queryIncrementMetaData(String tableName) {
         return dataBaseMetadataDAOImpl.queryTableMetadata(tableName);
     }
+
+    /**
+     * updateTableMetadata
+     *
+     * @param tableMetadata tableMetadata
+     */
+    public void updateTableMetadata(TableMetadata tableMetadata) {
+        if (Objects.isNull(tableMetadata)) {
+            MetaDataCache.remove(tableMetadata.getTableName());
+        } else {
+            MetaDataCache.put(tableMetadata.getTableName(), tableMetadata);
+        }
+    }
 }
