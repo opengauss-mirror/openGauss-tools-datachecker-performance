@@ -1,8 +1,7 @@
 #!/bin/bash
-#nohup java  -Dspring.config.additional-location=config/application-source.yml -jar datachecker-extract-0.0.1.jar --spring.profiles.active=source >/dev/null 2>&1
-#nohup java  -Dspring.config.additional-location=config/application-sink.yml -jar datachecker-extract-0.0.1.jar --spring.profiles.active=sink >/dev/null 2>&1
 APP_NAME=datachecker-extract-0.0.1.jar
 CONFIG_PATH=config
+run_path=$(cd `dirname $0`; pwd)
 #使用说明，用来提示输入参数
 usage() {
 echo "Usage: sh 脚本名.sh [start|stop|restart|status]"
@@ -11,7 +10,7 @@ exit 1
 
 #检查程序是否在运行
 is_exist(){
-pid=`ps -ef|grep $APP_NAME | grep -v grep|awk '{print $2}'`
+pid=`ps -ef | grep ${run_path} | grep $APP_NAME | grep -v grep|awk '{print $2}'`
 #如果不存在返回1，存在返回0
 if [ -z "${pid}" ]; then
 return 1
@@ -26,9 +25,9 @@ is_exist
 if [ $? -eq "0" ]; then
 echo "${APP_NAME} is already running. pid=${pid} ."
 else
-nohup java -Xmx6G -Xms6G -XX:MaxMetaspaceSize=1G -XX:MetaspaceSize=1G  -XX:+UseG1GC -XX:MaxGCPauseMillis=100 -XX:+ParallelRefProcEnabled -jar $APP_NAME --source >/dev/null 2>&1 &
+nohup java -Xmx6G -Xms6G -XX:MaxMetaspaceSize=1G -XX:MetaspaceSize=1G  -XX:+UseG1GC -XX:MaxGCPauseMillis=100 -XX:+ParallelRefProcEnabled -jar ${run_path}/${APP_NAME} --source >/dev/null 2>&1 &
 
-nohup java -Xmx6G -Xms6G -XX:MaxMetaspaceSize=1G -XX:MetaspaceSize=1G  -XX:+UseG1GC -XX:MaxGCPauseMillis=100 -XX:+ParallelRefProcEnabled -jar $APP_NAME --sink >/dev/null 2>&1 &
+nohup java -Xmx6G -Xms6G -XX:MaxMetaspaceSize=1G -XX:MetaspaceSize=1G  -XX:+UseG1GC -XX:MaxGCPauseMillis=100 -XX:+ParallelRefProcEnabled -jar ${run_path}/${APP_NAME} --sink >/dev/null 2>&1 &
 sleep 1s
 echo "${APP_NAME} source and sink start success"
 fi
