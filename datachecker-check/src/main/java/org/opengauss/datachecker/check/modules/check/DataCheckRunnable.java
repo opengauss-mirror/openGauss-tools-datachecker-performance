@@ -28,6 +28,7 @@ import org.opengauss.datachecker.check.modules.report.CheckResultManagerService;
 import org.opengauss.datachecker.check.service.EndpointMetaDataManager;
 import org.opengauss.datachecker.check.service.StatisticalService;
 import org.opengauss.datachecker.common.constant.Constants;
+import org.opengauss.datachecker.common.constant.Constants.InitialCapacity;
 import org.opengauss.datachecker.common.entry.check.CheckPartition;
 import org.opengauss.datachecker.common.entry.check.CheckTable;
 import org.opengauss.datachecker.common.entry.check.DataCheckParam;
@@ -254,7 +255,7 @@ public class DataCheckRunnable implements Runnable {
      * @param bucketList Bucket list
      */
     private void initBucketList(Endpoint endpoint, int partitions, List<Bucket> bucketList) {
-        Map<Integer, Bucket> bucketMap = new ConcurrentHashMap<>(Constants.InitialCapacity.EMPTY);
+        Map<Integer, Bucket> bucketMap = new ConcurrentHashMap<>(InitialCapacity.CAPACITY_128);
         // Use feign client to pull Kafka data
         List<RowDataHash> dataList = getTopicPartitionsData(getTopicName(endpoint), partitions);
         rowCount = rowCount + dataList.size();

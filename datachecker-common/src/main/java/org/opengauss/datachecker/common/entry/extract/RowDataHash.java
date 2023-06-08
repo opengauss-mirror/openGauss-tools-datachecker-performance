@@ -48,6 +48,10 @@ public class RowDataHash {
         decode(content);
     }
 
+    public RowDataHash(String primaryKey, String content) {
+        decode(primaryKey,content);
+    }
+
     /**
      * <pre>
      * If the primary key is a numeric type, it will be converted to a string.
@@ -94,7 +98,23 @@ public class RowDataHash {
         String header = getHeader(content);
         return header + StringUtils.join(content, "");
     }
-
+    private void decode(String key ,String content) {
+        final char[] chars = content.toCharArray();
+        if (chars.length < 8) {
+            return;
+        }
+        int pos1 = parseInt(chars, 0, 2);
+        int pos2 = parseInt(chars, 2, 4);
+        int pos3 = parseInt(chars, 4, 6);
+        int pos4 = parseInt(chars, 6, 8);
+        if (chars.length != (8 + pos1 + pos2 + pos3 + pos4)) {
+            return;
+        }
+        this.setPartition(parseInt(chars, 8, 8 + pos1));
+        this.setPrimaryKeyHash(parseLong(chars, 8 + pos1, 8 + pos1 + pos2));
+        this.setRowHash(parseLong(chars, 8 + pos1 + pos2, 8 + pos1 + pos2 + pos3));
+        this.setPrimaryKey(key);
+    }
     private void decode(String content) {
         final char[] chars = content.toCharArray();
         if (chars.length < 8) {

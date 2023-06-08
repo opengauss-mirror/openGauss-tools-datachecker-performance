@@ -19,10 +19,10 @@ spring:
       linger.ms: 10
       max.in.flight.requests.per.connection: 5
     producer:
-      retries: 1
+      retries: 3
       acks: all
-      batch-size: 1048576
-      buffer-memory: 536870912
+      batch-size: 2097152 # 2M
+      buffer-memory: 67108864 # 64M
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
