@@ -15,7 +15,6 @@
 
 package org.opengauss.datachecker.extract.task;
 
-import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.opengauss.datachecker.common.constant.DynamicTpConstant;
@@ -71,7 +70,8 @@ import static org.opengauss.datachecker.common.constant.DynamicTpConstant.TABLE_
  **/
 @Slf4j
 public class ExtractTaskRunnable implements Runnable {
-    private static final int FETCH_SIZE = 50000;
+    private static final int FETCH_SIZE = 10000;
+    private static final int TABLE_ROW_ESTIMATE_COUNT = 10000000;
 
     private final ExtractTask task;
     private final Endpoint endpoint;
@@ -109,18 +109,22 @@ public class ExtractTaskRunnable implements Runnable {
             kafkaOperate.createTopic(task.getTopic());
             log.debug("table {} extract create topic", task.getTableName());
             QueryTableRowContext context = new QueryTableRowContext(tableMetadata, databaseType, kafkaOperate);
-            // Construct query SQL according to the metadata information of the table in the current task
             final int[][] taskOffset = TaskUtil.calcAutoTaskOffset(tableMetadata.getTableRows());
-            if (jdbcOperation.getParallelQueryDop() > 1 && taskOffset.length >= 2) {
-                executeMultiTaskOffset(taskOffset, context);
-            } else {
+            if (isNotSlice(tableMetadata, taskOffset)) {
                 executeTask(context);
+            } else {
+                executeMultiTaskOffset(taskOffset, context);
             }
             checkingFeignClient.refreshTableExtractStatus(task.getTableName(), endpoint, endpoint.getCode());
         } catch (Exception ex) {
             checkingFeignClient.refreshTableExtractStatus(task.getTableName(), endpoint, -1);
             log.error("extract", ex);
         }
+    }
+
+    private boolean isNotSlice(TableMetadata tableMetadata, int[][] taskOffset) {
+        return tableMetadata.getTableRows() > TABLE_ROW_ESTIMATE_COUNT || taskOffset.length == 1
+            || jdbcOperation.getParallelQueryDop() == 1;
     }
 
     private void executeMultiTaskOffset(int[][] taskOffset, QueryTableRowContext context) {
@@ -493,7 +497,7 @@ public class ExtractTaskRunnable implements Runnable {
             int tryCreateTopicTime = 0;
             // add kafka current limiting operation
             while (!kafkaAdminService.canCreateTopic(endpointTopicPrefix)) {
-                log.warn("kafka's topic number is reached maximum-topic-size limits, {} wait ...",
+                log.debug("kafka's topic number is reached maximum-topic-size limits, {} wait ...",
                     topic.getTopicName());
                 if (tryCreateTopicTime > MAX_TRY_CREATE_TOPIC_TIME) {
                     throw new CreateTopicTimeOutException(topicName);
@@ -505,7 +509,7 @@ public class ExtractTaskRunnable implements Runnable {
             this.topicName = topic.getTopicName();
             this.topicPartitionCount = topic.getPartitions();
             if (!kafkaAdminService.isTopicExists(topicName)) {
-                ThreadUtil.sleep(100);
+                ThreadUtil.sleepOneSecond();
                 if (!kafkaAdminService.isTopicExists(topicName)) {
                     kafkaAdminService.createTopic(topic.getTopicName(), topic.getPartitions());
                 }
@@ -522,6 +526,10 @@ public class ExtractTaskRunnable implements Runnable {
          */
         public void sendSinglePartitionRowData(RowDataHash row) {
             row.setPartition(DEFAULT_PARTITION);
+            if (row.getPrimaryKeyHash() == 0) {
+                log.debug("row data hash zero :{}:{}", row.getPrimaryKey(), row.toEncode());
+                return;
+            }
             kafkaTemplate.send(new ProducerRecord<>(topicName, DEFAULT_PARTITION, row.getPrimaryKey(), row.toEncode()));
         }
 
