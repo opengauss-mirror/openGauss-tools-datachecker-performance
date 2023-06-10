@@ -18,18 +18,19 @@
         <!--Property LOG_HOME must be absolute path dir -->
         <Property name="LOG_HOME">logs</Property>
         <Property name="LOG_LEVEL">INFO</Property>
+        <Property name="LOG_NAME">sink</Property>
         <property name="LOG_PATTERN" value="%d{HH:mm:ss.SSS} [%thread] %-5level [%-36.36c{1.}] - %msg%n"/>
     </Properties>
     <Appenders>
-        <Console name="console_out_appender" target="SYSTEM_OUT">
-            <Filters>
-                <ThresholdFilter level="${LOG_LEVEL}" onMatch="ACCEPT" onMismatch="DENY"/>
-            </Filters>
-            <PatternLayout pattern="${LOG_PATTERN}"/>
-        </Console>
+<!--        <Console name="console_out_appender" target="SYSTEM_OUT">-->
+<!--            <Filters>-->
+<!--                <ThresholdFilter level="${LOG_LEVEL}" onMatch="ACCEPT" onMismatch="DENY"/>-->
+<!--            </Filters>-->
+<!--            <PatternLayout pattern="${LOG_PATTERN}"/>-->
+<!--        </Console>-->
 
-        <RollingFile name="sink_appender" immediateFlush="true" fileName="${LOG_HOME}/sink.log"
-                     filePattern="${LOG_HOME}/history/source - %d{yyyy-MM-dd}.log.gz">
+        <RollingFile name="sink_appender" immediateFlush="true" fileName="${LOG_HOME}/${LOG_NAME}.log"
+                     filePattern="${LOG_HOME}/history/${LOG_NAME} - %d{yyyy-MM-dd}.log.gz">
             <PatternLayout pattern="${LOG_PATTERN}"/>
             <Policies>
                 <SizeBasedTriggeringPolicy size="20MB"/>
@@ -39,8 +40,8 @@
                 <ThresholdFilter level="info" onMatch="ACCEPT" onMismatch="DENY"/>
             </Filters>
         </RollingFile>
-        <RollingFile name="sink_debug_appender" immediateFlush="true" fileName="${LOG_HOME}/sink-debug.log"
-                     filePattern="${LOG_HOME}/history/source - %d{yyyy-MM-dd}.log.gz">
+        <RollingFile name="sink_debug_appender" immediateFlush="true" fileName="${LOG_HOME}/${LOG_NAME}-debug.log"
+                     filePattern="${LOG_HOME}/history/${LOG_NAME} - %d{yyyy-MM-dd}.log.gz">
             <PatternLayout pattern="${LOG_PATTERN}"/>
             <Policies>
                 <SizeBasedTriggeringPolicy size="20MB"/>
@@ -50,8 +51,8 @@
                 <ThresholdFilter level="debug" onMatch="ACCEPT" onMismatch="DENY"/>
             </Filters>
         </RollingFile>
-        <RollingFile name="sink_error_appender" immediateFlush="true" fileName="${LOG_HOME}/sink-error.log"
-                     filePattern="${LOG_HOME}/history/source - %d{yyyy-MM-dd}.log.gz">
+        <RollingFile name="sink_error_appender" immediateFlush="true" fileName="${LOG_HOME}/${LOG_NAME}-error.log"
+                     filePattern="${LOG_HOME}/history/${LOG_NAME} - %d{yyyy-MM-dd}.log.gz">
             <PatternLayout pattern="${LOG_PATTERN}"/>
             <Policies>
                 <SizeBasedTriggeringPolicy size="20MB"/>
@@ -64,7 +65,7 @@
 
     <Loggers>
         <root level="${LOG_LEVEL}">
-            <appender-ref ref="console_out_appender"/>
+<!--            <appender-ref ref="console_out_appender"/>-->
             <appender-ref ref="sink_appender"/>
             <appender-ref ref="sink_debug_appender"/>
             <appender-ref ref="sink_error_appender"/>

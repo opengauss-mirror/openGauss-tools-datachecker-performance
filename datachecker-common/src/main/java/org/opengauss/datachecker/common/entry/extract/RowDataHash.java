@@ -18,12 +18,10 @@ package org.opengauss.datachecker.common.entry.extract;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
-import org.apache.commons.lang3.StringUtils;
 
 import static org.opengauss.datachecker.common.util.EncodeUtil.format;
 import static org.opengauss.datachecker.common.util.EncodeUtil.parseInt;
 import static org.opengauss.datachecker.common.util.EncodeUtil.parseLong;
-import static org.opengauss.datachecker.common.util.EncodeUtil.parse;
 
 /**
  * RowDataHash
@@ -36,20 +34,13 @@ import static org.opengauss.datachecker.common.util.EncodeUtil.parse;
 @EqualsAndHashCode
 @Accessors(chain = true)
 public class RowDataHash {
+    private static final int HEADER_LENGTH = 6;
+
     public RowDataHash() {
     }
 
-    /**
-     * According to the line record encoding string, reverse construct the line record object
-     *
-     * @param content Line record encoding string
-     */
-    public RowDataHash(String content) {
-        decode(content);
-    }
-
     public RowDataHash(String primaryKey, String content) {
-        decode(primaryKey,content);
+        decode(primaryKey, content);
     }
 
     /**
@@ -73,8 +64,10 @@ public class RowDataHash {
     private int partition;
 
     /**
-     * This method implements the serialization encoding of the current object，The encoding format is [head][content]
-     * Head is a string with a fixed length of 8，Each 2 characters of the head represents the string length of an attribute。
+     * This method implements the serialization encoding of the current object，The
+     * encoding format is [head][content]
+     * Head is a string with a fixed length of 8，Each 2 characters of the head
+     * represents the string length of an attribute。
      * The encoding order of head is[partition,primaryKeyHash,rowHash,primaryKey]
      * content is the value of four attributes of the current object,
      * The encoding order of content is[partition,primaryKeyHash,rowHash,primaryKey]
@@ -82,54 +75,25 @@ public class RowDataHash {
      * @return Returns the object code string
      */
     public String toEncode() {
-        return encode();
+        String[] content = new String[]{partition + "", primaryKeyHash + "", rowHash + ""};
+        return format(content[0].length()) + format(content[1].length()) + format(content[2].length()) + content[0]
+                + content[1] + content[2];
     }
 
-    private String getHeader(String[] content) {
-        String header = "";
-        for (int i = 0; i < content.length; i++) {
-            header += format(content[i].length());
-        }
-        return header;
-    }
-
-    private String encode() {
-        String[] content = new String[] {partition + "", primaryKeyHash + "", rowHash + "", primaryKey};
-        String header = getHeader(content);
-        return header + StringUtils.join(content, "");
-    }
-    private void decode(String key ,String content) {
+    private void decode(String key, String content) {
         final char[] chars = content.toCharArray();
-        if (chars.length < 8) {
+        if (chars.length < HEADER_LENGTH) {
             return;
         }
-        int pos1 = parseInt(chars, 0, 2);
-        int pos2 = parseInt(chars, 2, 4);
-        int pos3 = parseInt(chars, 4, 6);
-        int pos4 = parseInt(chars, 6, 8);
-        if (chars.length != (8 + pos1 + pos2 + pos3 + pos4)) {
+        int pos1 = HEADER_LENGTH + parseInt(chars, 0, 2);
+        int pos2 = pos1 + parseInt(chars, 2, 4);
+        int pos3 = pos2 + parseInt(chars, 4, 6);
+        if (chars.length != pos3) {
             return;
         }
-        this.setPartition(parseInt(chars, 8, 8 + pos1));
-        this.setPrimaryKeyHash(parseLong(chars, 8 + pos1, 8 + pos1 + pos2));
-        this.setRowHash(parseLong(chars, 8 + pos1 + pos2, 8 + pos1 + pos2 + pos3));
+        this.setPartition(parseInt(chars, HEADER_LENGTH, pos1));
+        this.setPrimaryKeyHash(parseLong(chars, pos1, pos2));
+        this.setRowHash(parseLong(chars, pos2, pos3));
         this.setPrimaryKey(key);
-    }
-    private void decode(String content) {
-        final char[] chars = content.toCharArray();
-        if (chars.length < 8) {
-            return;
-        }
-        int pos1 = parseInt(chars, 0, 2);
-        int pos2 = parseInt(chars, 2, 4);
-        int pos3 = parseInt(chars, 4, 6);
-        int pos4 = parseInt(chars, 6, 8);
-        if (chars.length != (8 + pos1 + pos2 + pos3 + pos4)) {
-            return;
-        }
-        this.setPartition(parseInt(chars, 8, 8 + pos1));
-        this.setPrimaryKeyHash(parseLong(chars, 8 + pos1, 8 + pos1 + pos2));
-        this.setRowHash(parseLong(chars, 8 + pos1 + pos2, 8 + pos1 + pos2 + pos3));
-        this.setPrimaryKey(parse(chars, 8 + pos1 + pos2 + pos3, 8 + pos1 + pos2 + pos3 + pos4));
     }
 }
