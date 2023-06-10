@@ -364,28 +364,28 @@ public class ExtractTaskRunnable implements Runnable {
         public int resultSetHandler(Connection connection, String sql, QueryTableRowContext context, int fetchSize)
             throws SQLException {
             LocalDateTime start = LocalDateTime.now();
-            PreparedStatement ps = connection.prepareStatement(sql);
-            ResultSet resultSet = ps.executeQuery();
-            resultSet.setFetchSize(fetchSize);
-            AtomicInteger rowCount = new AtomicInteger(0);
-            LocalDateTime endQuery = LocalDateTime.now();
-            if (kafkaOperate.isMultiplePartitions()) {
-                while (resultSet.next()) {
-                    context.resultSetMultiplePartitionsHandler(resultSet);
-                    rowCount.incrementAndGet();
+            try (PreparedStatement ps = connection.prepareStatement(sql); ResultSet resultSet = ps.executeQuery()) {
+                resultSet.setFetchSize(fetchSize);
+                AtomicInteger rowCount = new AtomicInteger(0);
+                LocalDateTime endQuery = LocalDateTime.now();
+                if (kafkaOperate.isMultiplePartitions()) {
+                    while (resultSet.next()) {
+                        context.resultSetMultiplePartitionsHandler(resultSet);
+                        rowCount.incrementAndGet();
+                    }
+                } else {
+                    while (resultSet.next()) {
+                        context.resultSetSinglePartitionHandler(resultSet);
+                        rowCount.incrementAndGet();
+                    }
                 }
-            } else {
-                while (resultSet.next()) {
-                    context.resultSetSinglePartitionHandler(resultSet);
-                    rowCount.incrementAndGet();
-                }
+                context.resultFlush();
+                LocalDateTime end = LocalDateTime.now();
+                log.debug("{},fetch and send record {},query-cost={} send-result-cost={} all-cost={}",
+                    task.getTableName(), rowCount.get(), Duration.between(start, endQuery).toMillis(),
+                    Duration.between(endQuery, end).toMillis(), Duration.between(start, end).toMillis());
+                return rowCount.get();
             }
-            context.resultFlush();
-            LocalDateTime end = LocalDateTime.now();
-            log.debug("{},fetch and send record {},query-cost={} send-result-cost={} all-cost={}", task.getTableName(),
-                rowCount.get(), Duration.between(start, endQuery).toMillis(),
-                Duration.between(endQuery, end).toMillis(), Duration.between(start, end).toMillis());
-            return rowCount.get();
         }
 
         /**
@@ -414,8 +414,9 @@ public class ExtractTaskRunnable implements Runnable {
         public void enableDatabaseParallelQuery(int queryDop) throws SQLException {
             if (Objects.equals(DataBaseType.OG, databaseType)) {
                 Connection connection = getConnectionAndClosedAutoCommit();
-                PreparedStatement ps = connection.prepareStatement(String.format(OPEN_GAUSS_PARALLEL_QUERY, queryDop));
-                ps.execute();
+                try(PreparedStatement ps = connection.prepareStatement(String.format(OPEN_GAUSS_PARALLEL_QUERY, queryDop))) {
+                    ps.execute();
+                }
                 DataSourceUtils.doReleaseConnection(connection, jdbcDataSource);
             }
         }
