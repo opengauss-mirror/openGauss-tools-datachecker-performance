@@ -77,10 +77,14 @@ public class EndpointMetaDataManager {
      */
     public boolean isMetaLoading() {
         if (MapUtils.isEmpty(SOURCE_METADATA)) {
+            log.debug("loading {} metadata", Endpoint.SOURCE);
             SOURCE_METADATA.putAll(feignClientService.queryMetaDataOfSchema(Endpoint.SOURCE));
+            log.debug("loading {} metadata end ", Endpoint.SOURCE);
         }
         if (MapUtils.isEmpty(SINK_METADATA)) {
+            log.debug("loading {} metadata", Endpoint.SINK);
             SINK_METADATA.putAll(feignClientService.queryMetaDataOfSchema(Endpoint.SINK));
+            log.debug("loading {} metadata end ", Endpoint.SINK);
         }
         return SOURCE_METADATA.isEmpty() || SINK_METADATA.isEmpty();
     }
