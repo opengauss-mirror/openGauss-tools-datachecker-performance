@@ -17,6 +17,7 @@ package org.opengauss.datachecker.check;
 
 import lombok.extern.slf4j.Slf4j;
 import org.opengauss.datachecker.check.cmd.CheckCommandLine;
+import org.opengauss.datachecker.common.service.CommonCommandLine.CmdOption;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.openfeign.EnableFeignClients;
@@ -38,6 +39,7 @@ public class CheckApplication {
         try {
             CheckCommandLine commandLine = new CheckCommandLine();
             commandLine.parseArgs(args);
+            System.setProperty(CmdOption.LOG_NAME, commandLine.getMode());
             SpringApplication application = new SpringApplication(CheckApplication.class);
             if (commandLine.hasHelp()) {
                 commandLine.help();

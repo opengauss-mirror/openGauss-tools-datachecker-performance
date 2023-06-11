@@ -55,6 +55,10 @@ public class CommonCommandLine {
         StringBuffer descBuffer = new StringBuffer();
         descBuffer.append("server -D param :");
         descBuffer.append(System.lineSeparator());
+        descBuffer.append("java -DlogName=check -jar xxx.jar");
+        descBuffer.append(System.lineSeparator());
+        descBuffer.append("logName to set log4j2 file-name");
+        descBuffer.append(System.lineSeparator());
         descBuffer.append("java -Dloader.path=./lib -jar xxx.jar");
         descBuffer.append(System.lineSeparator());
         descBuffer.append("loader.path to Reassign third-party public jar directory");
@@ -115,6 +119,7 @@ public class CommonCommandLine {
         String SOURCE = "source";
         String SINK = "sink";
         String HELP = "h";
+        String LOG_NAME = "logName";
         String HELP_LONG = "help";
     }
 }

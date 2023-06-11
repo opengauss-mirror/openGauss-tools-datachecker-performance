@@ -19,6 +19,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.cli.Option;
 import org.opengauss.datachecker.common.service.CommonCommandLine;
 
+import java.util.Objects;
+
 import static org.opengauss.datachecker.common.service.CommonCommandLine.CmdOption.CHECK;
 
 /**
@@ -65,5 +67,10 @@ public class CheckCommandLine extends CommonCommandLine {
         descBuffer.append(" nohup java -jar datachecker-check-0.0.1.jar >/dev/null 2>&1 & ");
         descBuffer.append(System.lineSeparator());
         return Option.builder().longOpt(CHECK).desc(descBuffer.toString()).build();
+    }
+
+    public String getMode() {
+        String logName = commandLine.getOptionProperties("D").getProperty(CmdOption.LOG_NAME);
+        return Objects.isNull(logName) ? CHECK : logName;
     }
 }
