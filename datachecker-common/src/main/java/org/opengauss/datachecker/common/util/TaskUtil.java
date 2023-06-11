@@ -29,8 +29,8 @@ public class TaskUtil {
     private static final int[] MAX_LIMIT =
         {50000, 100000, 150000, 200000, 250000, 300000, 350000, 400000, 450000, 500000, 550000, 600000, 650000, 700000,
             800000, 900000, 1000000};
-    private static final float TABLE_ROWS_DEVIATION_RATE = 1f;
-    private static final double LASTED_TASK_DEVIATION_RATE = 0.3d;
+    private static final float TABLE_ROWS_DEVIATION_RATE = 1.3f;
+    private static final double LASTED_TASK_DEVIATION_RATE = 0.2d;
 
     /**
      * calc max limit row count
@@ -75,19 +75,18 @@ public class TaskUtil {
      * @return Total number of split tasks offset
      */
     public static int[][] calcAutoTaskOffset(long tableRows) {
-        if (tableRows <= MAX_LIMIT[0]) {
-            return new int[][] {{0, MAX_LIMIT[0]}};
+        return calcAutoTaskOffset(tableRows, MAX_LIMIT[1]);
+    }
+
+    public static int[][] calcAutoTaskOffset(long tableRows, int maxLimitRowCount) {
+        if (tableRows <= maxLimitRowCount) {
+            return new int[][] {{0, maxLimitRowCount}};
         }
-        int maxLimitRowCount = calcMaxLimitRowCount(tableRows);
         final int taskCount = (int) Math.round(tableRows * TABLE_ROWS_DEVIATION_RATE / maxLimitRowCount) + 1;
         int[][] taskOffset = new int[taskCount][2];
         IntStream.range(0, taskCount).forEach(taskCountIdx -> {
             int start = taskCountIdx * maxLimitRowCount;
-            if (taskCountIdx == taskCount - 1) {
-                taskOffset[taskCountIdx] = new int[] {start, lastTaskOffsetFixed(taskCount, maxLimitRowCount)};
-            } else {
-                taskOffset[taskCountIdx] = new int[] {start, maxLimitRowCount};
-            }
+            taskOffset[taskCountIdx] = new int[] {start, maxLimitRowCount};
         });
         if (taskOffset.length > 1) {
             int[] lastOffset = taskOffset[taskOffset.length - 1];
@@ -95,18 +94,6 @@ public class TaskUtil {
             taskOffset[0] = lastOffset;
         }
         return taskOffset;
-    }
-
-    /**
-     * taskCount * {@value LASTED_TASK_DEVIATION_RATE} / 10
-     *
-     * @param taskCount        taskCount
-     * @param maxLimitRowCount maxLimitRowCount
-     * @return lastTaskOffsetFixed
-     */
-    private static int lastTaskOffsetFixed(int taskCount, int maxLimitRowCount) {
-        double taskDeviationRatio = (taskCount * LASTED_TASK_DEVIATION_RATE);
-        return (int) (maxLimitRowCount * Math.max(taskDeviationRatio, 1.5));
     }
 
     /**

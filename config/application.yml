@@ -1,7 +1,7 @@
 server:
   port: 9000
 logging:
-  config: # absolute_path/config/log4j2.xml
+  config: config/log4j2.xml
 spring:
   kafka:
     bootstrap-servers: localhost:9092
@@ -32,8 +32,6 @@ rules:
   # If the configured TEXT is empty, the rule is invalid and will be filtered automatically
   # If the configured TEXT is duplicate, the rule item will automatically filter the duplicates.
   table:
-  #  - name: white
-  #    text: ^[a-zA-Z][a-zA-Z_]+$
   #  - name: white
   #    text: ^[a-zA-Z]+$a-zA-Z_]+$
   #  - name: white

@@ -55,5 +55,9 @@ public class ColumnsMetaData {
      * {@value ColumnKey#API_DESCRIPTION}
      */
     private ColumnKey columnKey;
+
+    public String getColumnMsg() {
+        return " [" + columnName + " : " + columnType + "]";
+    }
 }
 

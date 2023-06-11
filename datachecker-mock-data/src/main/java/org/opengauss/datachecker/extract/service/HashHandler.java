@@ -15,7 +15,7 @@
 
 package org.opengauss.datachecker.extract.service;
 
-import org.opengauss.datachecker.common.util.LongHashFunctionWrapper;
+import net.openhft.hashing.LongHashFunction;
 
 /**
  * HashHandler
@@ -26,7 +26,12 @@ import org.opengauss.datachecker.common.util.LongHashFunctionWrapper;
  */
 public class HashHandler {
     private static final String PRIMARY_DELIMITER = "_#_";
-    private static final LongHashFunctionWrapper LONG_HASH_FUNCTION = new LongHashFunctionWrapper();
+    private static final long XX3_SEED = 199972221018L;
+
+    /**
+     * hashing algorithm
+     */
+    private static final LongHashFunction XX_3_HASH = LongHashFunction.xx3(XX3_SEED);
 
     /**
      * hash
@@ -35,6 +40,6 @@ public class HashHandler {
      * @return hash result
      */
     public long xx3Hash(String key) {
-        return LONG_HASH_FUNCTION.hashChars(key);
+        return XX_3_HASH.hashChars(key);
     }
 }

@@ -15,12 +15,13 @@
 
 package org.opengauss.datachecker.extract.util;
 
-import org.opengauss.datachecker.common.util.LongHashFunctionWrapper;
+import net.openhft.hashing.LongHashFunction;
 import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 import static org.opengauss.datachecker.extract.constants.ExtConstants.PRIMARY_DELIMITER;
@@ -33,7 +34,12 @@ import static org.opengauss.datachecker.extract.constants.ExtConstants.PRIMARY_D
  * @since ：11
  */
 public class HashHandler {
-    private final LongHashFunctionWrapper hashFunctionWrapper = new LongHashFunctionWrapper();
+    private static final long XX3_SEED = 199972221018L;
+
+    /**
+     * hashing algorithm
+     */
+    private static final LongHashFunction XX_3_HASH = LongHashFunction.xx3(XX3_SEED);
 
     /**
      * According to the field list set in the columns set,
@@ -47,13 +53,10 @@ public class HashHandler {
         if (CollectionUtils.isEmpty(columns)) {
             return 0L;
         }
-        StringBuffer sb = new StringBuffer();
-        columns.forEach(column -> {
-            if (columnsValueMap.containsKey(column)) {
-                sb.append(columnsValueMap.get(column));
-            }
-        });
-        return hashFunctionWrapper.hashChars(sb.toString());
+        String colValue =
+            columnsValueMap.entrySet().stream().filter(entry -> columns.contains(entry.getKey())).map(Entry::getValue)
+                           .collect(Collectors.joining());
+        return XX_3_HASH.hashChars(colValue);
     }
 
     /**
