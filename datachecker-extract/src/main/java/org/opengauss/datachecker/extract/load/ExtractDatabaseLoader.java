@@ -44,6 +44,7 @@ public class ExtractDatabaseLoader extends AbstractExtractLoader {
      */
     @Override
     public void load(ExtractEnvironment extractEnvironment) {
+        log.info("extract database loader start");
         metaDataService.loadMetaDataOfSchemaCache();
         ThreadUtil.sleepHalfSecond();
         metadataLoadProcess = metaDataService.getMetadataLoadProcess();

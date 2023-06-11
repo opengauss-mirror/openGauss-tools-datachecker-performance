@@ -18,6 +18,7 @@ package org.opengauss.datachecker.check.load;
 import lombok.extern.slf4j.Slf4j;
 import org.opengauss.datachecker.check.service.EndpointMetaDataManager;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
+import org.opengauss.datachecker.common.exception.CheckMetaDataException;
 import org.opengauss.datachecker.common.exception.CheckingException;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.springframework.core.annotation.Order;
@@ -51,7 +52,8 @@ public class MetaDataLoader extends AbstractCheckLoader {
             while (endpointMetaDataManager.isMetaLoading()) {
                 ThreadUtil.sleep(retryIntervalTimes);
                 if (++retry > maxRetryTimes) {
-                    break;
+                    log.info("check service is loading metadata, try out of {}", maxRetryTimes);
+                    throw new CheckMetaDataException("loading metadata, try out of " + maxRetryTimes);
                 }
                 log.info("check service is loading metadata,place wait a moment.");
             }

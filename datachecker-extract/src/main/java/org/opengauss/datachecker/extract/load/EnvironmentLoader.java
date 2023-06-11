@@ -15,6 +15,7 @@
 
 package org.opengauss.datachecker.extract.load;
 
+import lombok.extern.slf4j.Slf4j;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.util.SpringUtil;
 import org.springframework.scheduling.annotation.Async;
@@ -30,6 +31,7 @@ import java.util.Map;
  * @date ：Created in 2022/12/2
  * @since ：11
  */
+@Slf4j
 @Service
 public class EnvironmentLoader {
     @Resource
@@ -37,9 +39,11 @@ public class EnvironmentLoader {
 
     @Async
     public void load(CheckMode checkMode) {
+        log.info("extract environment loader start");
         extractEnvironment.setCheckMode(checkMode);
         final Map<String, ExtractLoader> beans = SpringUtil.getBeans(ExtractLoader.class);
         beans.values().forEach(loader -> {
+            log.info("extract environment loader {} start", loader.getClass().getName());
             loader.load(extractEnvironment);
         });
     }

@@ -56,6 +56,7 @@ public class MetaDataService {
      * @return metadata information
      */
     public Map<String, TableMetadata> queryMetaDataOfSchemaCache() {
+        log.debug("load table metadata from cache isEmpty=[{}]", MetaDataCache.isEmpty());
         return MetaDataCache.getAll();
     }
 
