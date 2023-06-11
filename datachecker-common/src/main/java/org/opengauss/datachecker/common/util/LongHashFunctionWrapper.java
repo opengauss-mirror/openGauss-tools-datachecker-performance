@@ -36,16 +36,6 @@ public class LongHashFunctionWrapper {
     private static final LongHashFunction XX_3_HASH = LongHashFunction.xx3(XX3_SEED);
 
     /**
-     * Hash the string using the XX3 hash algorithm
-     *
-     * @param input string
-     * @return Hash value
-     */
-    public long hashChars(@NonNull String input) {
-        return XX_3_HASH.hashChars(input);
-    }
-
-    /**
      * Hash the byte array using the XX3 hash algorithm
      *
      * @param input byte array

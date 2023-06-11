@@ -15,6 +15,7 @@
 
 package org.opengauss.datachecker.check.modules.check;
 
+import com.alibaba.fastjson.JSON;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -118,7 +119,7 @@ public class KafkaConsumerHandler {
         ConsumerRecords<String, String> consumerRecords =
             kafkaConsumer.poll(Duration.ofMillis(KAFKA_CONSUMER_POLL_DURATION));
         consumerRecords.forEach(record -> {
-            dataList.add(new RowDataHash(record.key(), record.value()));
+            dataList.add(JSON.parseObject(record.value(), RowDataHash.class));
         });
     }
 }

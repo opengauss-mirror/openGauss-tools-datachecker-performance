@@ -30,10 +30,10 @@ import java.sql.Time;
 import java.sql.Timestamp;
 import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TimeZone;
+import java.util.TreeMap;
 import java.util.stream.IntStream;
 
 /**
@@ -60,7 +60,7 @@ public abstract class ResultSetHandler {
      * @return JDBC Data encapsulation results
      */
     public Map<String, String> putOneResultSetToMap(ResultSet resultSet) {
-        Map<String, String> values = new HashMap<>(InitialCapacity.CAPACITY_64);
+        Map<String, String> values = new TreeMap<>();
         try {
             final ResultSetMetaData rsmd = resultSet.getMetaData();
             IntStream.rangeClosed(1, rsmd.getColumnCount()).forEach(columnIdx -> {

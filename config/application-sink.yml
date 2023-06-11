@@ -1,13 +1,14 @@
 server:
   port: 9002
 logging:
-  config: # absolute_path/log4j2sink.xml
+  config: config/log4j2sink.xml
 spring:
   check:
     server-uri: http://127.0.0.1:9000
     core-pool-size: 2
     maximum-pool-size: 10
     maximum-topic-size: 30
+    maximum-table-slice-size: 100000
   extract:
     schema: jack
     databaseType: OG

@@ -20,7 +20,9 @@
         <Property name="LOG_HOME">logs</Property>
         <Property name="LOG_LEVEL">INFO</Property>
         <Property name="LOG_NAME">source</Property>
+        <Property name="LOG_BUSINESS_NAME">business</Property>
         <property name="LOG_PATTERN" value="%d{HH:mm:ss.SSS} [%thread] %-5level [%-36.36c{1.}] - %msg%n"/>
+        <property name="LOG_BUSINESS_PATTERN" value="%d{HH:mm:ss.SSS}[%thread][%-16.16c{1.}] - %msg%n"/>
     </Properties>
     <Appenders>
 <!--        <Console name="console_out_appender" target="SYSTEM_OUT">-->
@@ -37,7 +39,18 @@
                 <SizeBasedTriggeringPolicy size="20MB"/>
             </Policies>
             <Filters>
-                <ThresholdFilter level="error" onMatch="DENY" onMismatch="NEUTRAL"/>
+                <ThresholdFilter level="error" onMatch="ACCEPT" onMismatch="DENY"/>
+                <ThresholdFilter level="info" onMatch="ACCEPT" onMismatch="DENY"/>
+            </Filters>
+        </RollingFile>
+        <RollingFile name="business_appender" immediateFlush="true" fileName="${LOG_HOME}/${LOG_BUSINESS_NAME}-${LOG_NAME}.log"
+                     filePattern="${LOG_HOME}/history/${LOG_BUSINESS_NAME}-${LOG_NAME} - %d{yyyy-MM-dd}.log.gz">
+            <PatternLayout pattern="${LOG_BUSINESS_PATTERN}"/>
+            <Policies>
+                <SizeBasedTriggeringPolicy size="20MB"/>
+            </Policies>
+            <Filters>
+                <ThresholdFilter level="error" onMatch="ACCEPT" onMismatch="DENY"/>
                 <ThresholdFilter level="info" onMatch="ACCEPT" onMismatch="DENY"/>
             </Filters>
         </RollingFile>
@@ -72,7 +85,9 @@
             <appender-ref ref="source_debug_appender"/>
             <appender-ref ref="source_error_appender"/>
         </root>
-
+        <logger name="extract_business" level="INFO">
+            <appender-ref ref="business_appender"/>
+        </logger>
         <logger name="org.apache.kafka" level="ERROR"/>
         <logger name="org.springframework" level="INFO"/>
         <logger name="_org.springframework.web" level="ERROR"/>

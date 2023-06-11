@@ -38,7 +38,7 @@
             </Policies>
             <Filters>
                 <ThresholdFilter level="error" onMatch="ACCEPT" onMismatch="DENY"/>
-                <ThresholdFilter level="info" onMatch="DENY" onMismatch="DENY"/>
+                <ThresholdFilter level="info" onMatch="ACCEPT" onMismatch="DENY"/>
             </Filters>
         </RollingFile>
         <RollingFile name="check_debug_appender" immediateFlush="true" fileName="${LOG_HOME}/${LOG_NAME}-debug.log"

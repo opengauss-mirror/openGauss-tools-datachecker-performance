@@ -11,6 +11,7 @@ spring:
     max-retry-times: 1000
     retry-interval-times: 10000
     maximum-topic-size: 30
+    maximum-table-slice-size: 100000
   lifecycle:
     timeout-per-shutdown-phase: 5
   kafka:

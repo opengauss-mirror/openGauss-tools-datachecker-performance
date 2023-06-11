@@ -15,6 +15,7 @@
 
 package org.opengauss.datachecker.extract.kafka;
 
+import com.alibaba.fastjson.JSON;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -71,7 +72,7 @@ public class KafkaProducerWapper {
         recordHashList.forEach(record -> {
             record.setPartition(DEFAULT_PARTITION);
             final ProducerRecord<String, String> producerRecord =
-                new ProducerRecord<>(topicName, DEFAULT_PARTITION, record.getPrimaryKey(), record.toEncode());
+                new ProducerRecord<>(topicName, DEFAULT_PARTITION, record.getPrimaryKey(), JSON.toJSONString(record));
             kafkaTemplate.send(producerRecord);
         });
         kafkaTemplate.flush();
@@ -83,7 +84,7 @@ public class KafkaProducerWapper {
             int partition = calcSimplePartition(record.getPrimaryKeyHash(), partitions);
             record.setPartition(partition);
             ProducerRecord<String, String> producerRecord =
-                new ProducerRecord<>(topicName, partition, record.getPrimaryKey(), record.toEncode());
+                new ProducerRecord<>(topicName, partition, record.getPrimaryKey(), JSON.toJSONString(record));
             kafkaTemplate.send(producerRecord);
         });
         kafkaTemplate.flush();

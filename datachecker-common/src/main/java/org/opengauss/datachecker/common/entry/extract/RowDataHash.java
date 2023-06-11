@@ -39,10 +39,6 @@ public class RowDataHash {
     public RowDataHash() {
     }
 
-    public RowDataHash(String primaryKey, String content) {
-        decode(primaryKey, content);
-    }
-
     /**
      * <pre>
      * If the primary key is a numeric type, it will be converted to a string.
@@ -62,38 +58,4 @@ public class RowDataHash {
     private long rowHash;
 
     private int partition;
-
-    /**
-     * This method implements the serialization encoding of the current object，The
-     * encoding format is [head][content]
-     * Head is a string with a fixed length of 8，Each 2 characters of the head
-     * represents the string length of an attribute。
-     * The encoding order of head is[partition,primaryKeyHash,rowHash,primaryKey]
-     * content is the value of four attributes of the current object,
-     * The encoding order of content is[partition,primaryKeyHash,rowHash,primaryKey]
-     *
-     * @return Returns the object code string
-     */
-    public String toEncode() {
-        String[] content = new String[]{partition + "", primaryKeyHash + "", rowHash + ""};
-        return format(content[0].length()) + format(content[1].length()) + format(content[2].length()) + content[0]
-                + content[1] + content[2];
-    }
-
-    private void decode(String key, String content) {
-        final char[] chars = content.toCharArray();
-        if (chars.length < HEADER_LENGTH) {
-            return;
-        }
-        int pos1 = HEADER_LENGTH + parseInt(chars, 0, 2);
-        int pos2 = pos1 + parseInt(chars, 2, 4);
-        int pos3 = pos2 + parseInt(chars, 4, 6);
-        if (chars.length != pos3) {
-            return;
-        }
-        this.setPartition(parseInt(chars, HEADER_LENGTH, pos1));
-        this.setPrimaryKeyHash(parseLong(chars, pos1, pos2));
-        this.setRowHash(parseLong(chars, pos2, pos3));
-        this.setPrimaryKey(key);
-    }
 }
