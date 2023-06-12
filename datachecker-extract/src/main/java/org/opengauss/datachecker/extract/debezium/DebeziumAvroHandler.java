@@ -39,6 +39,7 @@ import static org.opengauss.datachecker.extract.debezium.DebeziumAvroHandler.Mes
 import static org.opengauss.datachecker.extract.debezium.DebeziumAvroHandler.MessageConstants.AVRO_FIELD_DB;
 import static org.opengauss.datachecker.extract.debezium.DebeziumAvroHandler.MessageConstants.DDL;
 import static org.opengauss.datachecker.extract.debezium.DebeziumAvroHandler.MessageConstants.TRANSACTION_STATUS;
+import static org.opengauss.datachecker.extract.debezium.DebeziumAvroHandler.MessageConstants.AVRO_OG_SCHEMA;
 
 /**
  * DebeziumAvroHandler
@@ -63,6 +64,9 @@ public class DebeziumAvroHandler implements DebeziumDataHandler<GenericData.Reco
     public void handler(long offset, @NotEmpty GenericData.Record message,
         @NotNull LinkedBlockingQueue<DebeziumDataBean> queue) {
         try {
+            if (Objects.isNull(message)) {
+                return;
+            }
             if (isTransactionMessage(message)) {
                 log.warn("transaction Message is ignored :  {}", message.toString());
                 return;
@@ -87,7 +91,7 @@ public class DebeziumAvroHandler implements DebeziumDataHandler<GenericData.Reco
             }
             final Map<String, String> before = parseRecordData(message, AVRO_FIELD_BEFORE);
             final Map<String, String> after = parseRecordData(message, AVRO_FIELD_AFTER);
-            final String schema = source.get(AVRO_FIELD_DB);
+            final String schema = getValidSchema(source);
             if ((isMatchSchema(schema)) && source.containsKey(AVRO_FIELD_TABLE)) {
                 final DebeziumDataBean dataBean = new DebeziumDataBean(table, offset, after.isEmpty() ? before : after);
                 queue.put(dataBean);
@@ -100,14 +104,19 @@ public class DebeziumAvroHandler implements DebeziumDataHandler<GenericData.Reco
         }
     }
 
-    private boolean tableHasNoPrimary(TableMetadata tableMetadata) {
-        return MetaDataUtil.hasNoPrimary(tableMetadata);
+    private String getValidSchema(Map<String, String> source) {
+        return source.get(AVRO_OG_SCHEMA) == null ? source.get(AVRO_FIELD_DB) : source.get(AVRO_OG_SCHEMA);
     }
 
-    private TableMetadata refreshMetadataCache(String table) {
+    private boolean tableHasNoPrimary(TableMetadata tableMetadata) {
+        return Objects.isNull(tableMetadata) || MetaDataUtil.hasNoPrimary(tableMetadata);
+    }
+
+    private void refreshMetadataCache(String table) {
         TableMetadata tableMetadata = metaDataService.queryIncrementMetaData(table);
-        metaDataService.updateTableMetadata(tableMetadata);
-        return tableMetadata;
+        if (Objects.nonNull(table)) {
+            metaDataService.updateTableMetadata(table, tableMetadata);
+        }
     }
 
     @Override
@@ -140,6 +149,7 @@ public class DebeziumAvroHandler implements DebeziumDataHandler<GenericData.Reco
         String AVRO_FIELD_SOURCE = "source";
         String AVRO_FIELD_TABLE = "table";
         String AVRO_FIELD_DB = "db";
+        String AVRO_OG_SCHEMA = "schema";
     }
 
     private Map<String, String> parseRecordData(Record message, String key) {
