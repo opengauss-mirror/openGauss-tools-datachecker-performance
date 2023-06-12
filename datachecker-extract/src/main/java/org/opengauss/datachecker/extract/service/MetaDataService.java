@@ -169,11 +169,12 @@ public class MetaDataService {
     /**
      * updateTableMetadata
      *
+     * @param table table
      * @param tableMetadata tableMetadata
      */
-    public void updateTableMetadata(TableMetadata tableMetadata) {
+    public void updateTableMetadata(String table, TableMetadata tableMetadata) {
         if (Objects.isNull(tableMetadata)) {
-            MetaDataCache.remove(tableMetadata.getTableName());
+            MetaDataCache.remove(table);
         } else {
             MetaDataCache.put(tableMetadata.getTableName(), tableMetadata);
         }
