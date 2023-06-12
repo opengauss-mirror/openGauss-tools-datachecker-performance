@@ -16,6 +16,7 @@
 package org.opengauss.datachecker.extract;
 
 import org.opengauss.datachecker.common.exception.ExtractBootstrapException;
+import org.opengauss.datachecker.common.service.CommonCommandLine.CmdOption;
 import org.opengauss.datachecker.extract.cmd.ExtractCommandLine;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -40,6 +41,7 @@ public class ExtractApplication {
         ExtractCommandLine commandLine = new ExtractCommandLine();
         commandLine.parseArgs(args);
         SpringApplication application = new SpringApplication(ExtractApplication.class);
+        System.setProperty(CmdOption.LOG_NAME, commandLine.getMode());
         if (commandLine.hasOnlySink()) {
             application.setAdditionalProfiles(PROFILE_SINK);
             application.run(args);

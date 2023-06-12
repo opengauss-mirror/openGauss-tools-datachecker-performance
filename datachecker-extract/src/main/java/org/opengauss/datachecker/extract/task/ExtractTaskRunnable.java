@@ -478,7 +478,7 @@ public class ExtractTaskRunnable implements Runnable {
     class KafkaOperations {
         private static final int DEFAULT_PARTITION = 0;
         private static final int MIN_PARTITION_NUM = 1;
-        private static final int MAX_TRY_CREATE_TOPIC_TIME = 600;
+        private static final int MAX_TRY_CREATE_TOPIC_TIME = 6000;
 
         private final KafkaTemplate<String, String> kafkaTemplate;
         private final KafkaAdminService kafkaAdminService;

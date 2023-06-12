@@ -16,9 +16,10 @@
 package org.opengauss.datachecker.extract.cmd;
 
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.opengauss.datachecker.common.service.CommonCommandLine;
+
+import java.util.Objects;
 
 import static org.opengauss.datachecker.common.service.CommonCommandLine.CmdOption.SINK;
 import static org.opengauss.datachecker.common.service.CommonCommandLine.CmdOption.SOURCE;
@@ -105,5 +106,14 @@ public class ExtractCommandLine extends CommonCommandLine {
      */
     public boolean hasOnlySource() {
         return commandLine.hasOption(SOURCE) && !commandLine.hasOption(SINK);
+    }
+
+    public String getMode() {
+        String logName = commandLine.getOptionProperties("D").getProperty(CmdOption.LOG_NAME);
+        if (hasOnlySink()) {
+            return Objects.isNull(logName) ? SINK : logName;
+        } else {
+            return Objects.isNull(logName) ? SOURCE : logName;
+        }
     }
 }

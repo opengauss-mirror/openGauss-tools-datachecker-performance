@@ -19,7 +19,7 @@
         <!--Property LOG_HOME must be absolute path dir -->
         <Property name="LOG_HOME">logs</Property>
         <Property name="LOG_LEVEL">INFO</Property>
-        <Property name="LOG_NAME">check</Property>
+        <Property name="LOG_NAME">${sys:logName}</Property>
         <property name="LOG_PATTERN" value="%d{HH:mm:ss.SSS} [%thread] %-5level [%-36.36c{1.}] - %msg%n"/>
     </Properties>
     <Appenders>
