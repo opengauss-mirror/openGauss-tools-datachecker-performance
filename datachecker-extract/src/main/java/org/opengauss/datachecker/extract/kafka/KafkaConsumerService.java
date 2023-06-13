@@ -43,6 +43,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class KafkaConsumerService {
     private final KafkaConsumerConfig consumerConfig;
+    private final TopicCache topicCache;
 
     /**
      * Get the data of the specified topic partition
@@ -52,7 +53,7 @@ public class KafkaConsumerService {
      * @return kafka topic data
      */
     public List<RowDataHash> getTopicRecords(String tableName, int partitions) {
-        Topic topic = TopicCache.getTopic(tableName);
+        Topic topic = topicCache.getTopic(tableName);
         KafkaConsumer<String, String> kafkaConsumer = consumerConfig.getKafkaConsumer(topic.getTopicName(), partitions);
         kafkaConsumer.assign(List.of(new TopicPartition(topic.getTopicName(), partitions)));
         List<RowDataHash> dataList = new LinkedList<>();

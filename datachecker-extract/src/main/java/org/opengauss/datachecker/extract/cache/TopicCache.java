@@ -17,10 +17,12 @@ package org.opengauss.datachecker.extract.cache;
 
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.extract.Topic;
+import org.springframework.stereotype.Service;
 
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * TopicCache
@@ -29,16 +31,18 @@ import java.util.concurrent.ConcurrentHashMap;
  * @date ：Created in 2023/4/23
  * @since ：11
  */
+@Service
 public class TopicCache {
     private static final Map<String, Topic> TOPIC_CACHE = new ConcurrentHashMap<>();
     private static volatile Endpoint endpoint;
+    private static ReentrantLock lock = new ReentrantLock();
 
     /**
      * init current endpoint
      *
      * @param currentEndpoint currentEndpoint
      */
-    public static void initEndpoint(Endpoint currentEndpoint) {
+    public void initEndpoint(Endpoint currentEndpoint) {
         endpoint = currentEndpoint;
     }
 
@@ -47,16 +51,21 @@ public class TopicCache {
      *
      * @param topic topic
      */
-    public static void add(Topic topic) {
-        if (Objects.isNull(topic)) {
-            return;
+    public void add(Topic topic) {
+        lock.lock();
+        try {
+            if (Objects.isNull(topic)) {
+                return;
+            }
+            if (Objects.equals(endpoint, Endpoint.SOURCE)) {
+                topic.setTopicName(topic.getSourceTopicName());
+            } else {
+                topic.setTopicName(topic.getSinkTopicName());
+            }
+            TOPIC_CACHE.put(topic.getTableName(), topic);
+        } finally {
+            lock.unlock();
         }
-        if (Objects.equals(endpoint, Endpoint.SOURCE)) {
-            topic.setTopicName(topic.getSourceTopicName());
-        } else {
-            topic.setTopicName(topic.getSinkTopicName());
-        }
-        TOPIC_CACHE.put(topic.getTableName(), topic);
     }
 
     /**
@@ -65,7 +74,29 @@ public class TopicCache {
      * @param table table name
      * @return Topic
      */
-    public static Topic getTopic(String table) {
+    public Topic getTopic(String table) {
         return Objects.requireNonNull(TOPIC_CACHE.get(table), table + " is not found the topic information");
+    }
+
+    public void removeTopic(String table) {
+        lock.lock();
+        try {
+            TOPIC_CACHE.remove(table);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public boolean canCreateTopic(int maxTopicNum) {
+        lock.lock();
+        try {
+            return maxTopicNum > TOPIC_CACHE.size();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public int size() {
+        return TOPIC_CACHE.size();
     }
 }

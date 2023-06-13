@@ -307,4 +307,12 @@ public class FeignClientService {
             throw new DispatchClientException(endpoint, "get table metadata error: " + ignored.getMessage());
         }
     }
+
+    public void notifyCheckTableFinished(Endpoint endpoint, String tableName) {
+        try {
+            getClient(endpoint).notifyCheckTableFinished(tableName);
+        } catch (Exception ignored) {
+            throw new DispatchClientException(endpoint, "notify error: " + ignored.getMessage());
+        }
+    }
 }

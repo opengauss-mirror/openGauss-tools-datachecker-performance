@@ -41,6 +41,7 @@ import org.opengauss.datachecker.extract.cache.TableExtractStatusCache;
 import org.opengauss.datachecker.extract.cache.TopicCache;
 import org.opengauss.datachecker.extract.client.CheckingFeignClient;
 import org.opengauss.datachecker.extract.config.ExtractProperties;
+import org.opengauss.datachecker.extract.kafka.KafkaAdminService;
 import org.opengauss.datachecker.extract.task.DataManipulationService;
 import org.opengauss.datachecker.extract.task.ExtractTaskBuilder;
 import org.opengauss.datachecker.extract.task.ExtractTaskRunnable;
@@ -107,10 +108,16 @@ public class DataExtractServiceImpl implements DataExtractService {
     private MetaDataService metaDataService;
     @Autowired
     private DataManipulationService dataManipulationService;
+    @Resource
+    private TopicCache topicCache;
     @Value("${server.port}")
     private int serverPort = 0;
+    @Value("${spring.check.maximum-topic-size}")
+    private int maximumTopicSize = 10;
     @Resource
     private DynamicThreadPoolManager dynamicThreadPoolManager;
+    @Resource
+    private KafkaAdminService kafkaAdminService;
 
     /**
      * Data extraction service
@@ -136,7 +143,7 @@ public class DataExtractServiceImpl implements DataExtractService {
             log.info("The current endpoint is not the source endpoint, and the task cannot be built");
             return new ArrayList<>(0);
         }
-        TopicCache.initEndpoint(extractProperties.getEndpoint());
+        topicCache.initEndpoint(extractProperties.getEndpoint());
         if (atomicProcessNo.compareAndSet(PROCESS_NO_RESET, processNo)) {
             Set<String> tableNames = MetaDataCache.getAllKeys();
             List<ExtractTask> taskList = extractTaskBuilder.builder(tableNames);
@@ -276,6 +283,7 @@ public class DataExtractServiceImpl implements DataExtractService {
                     break;
                 }
             }
+            kafkaAdminService.init(processNo, extractProperties.getEndpoint());
             dynamicThreadPoolManager.dynamicThreadPoolMonitor();
             List<ExtractTask> taskList = taskReference.get();
             if (CollectionUtils.isEmpty(taskList)) {
@@ -291,6 +299,14 @@ public class DataExtractServiceImpl implements DataExtractService {
                     return;
                 }
                 registerTopic(task);
+                while (!topicCache.canCreateTopic(maximumTopicSize)) {
+                    ThreadUtil.sleep(5000);
+                }
+                Topic topic = task.getTopic();
+                Endpoint endpoint = extractProperties.getEndpoint();
+                kafkaAdminService.createTopic(topic.getTopicName(endpoint), topic.getPartitions());
+                topicCache.add(topic);
+                log.info("current topic cache size = {}", topicCache.size());
                 executorService.submit(new ExtractTaskRunnable(processNo, task, extractThreadSupport));
             });
         }

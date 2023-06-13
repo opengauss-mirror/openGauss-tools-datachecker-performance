@@ -180,5 +180,10 @@ public class ExtractFallbackFactory implements FallbackFactory<ExtractFeignClien
         public Result<TableMetadata> queryIncrementMetaData(String tableName) {
             return Result.error("Remote call,  Distribution query Increment MetaData exception");
         }
+
+        @Override
+        public Result<Void> notifyCheckTableFinished(String tableName) {
+            return Result.error("Remote call, notify Check Table Finished exception");
+        }
     }
 }
