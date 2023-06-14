@@ -5,12 +5,12 @@ logging:
 spring:
   check:
     server-uri: http://127.0.0.1:9000
-    core-pool-size: 2
-    maximum-pool-size: 10
-    maximum-topic-size: 30
+    core-pool-size: 1
+    maximum-pool-size: 5
+    maximum-topic-size: 5
     maximum-table-slice-size: 100000
   extract:
-    schema: jack
+    schema: test
     databaseType: OG
     query-dop: 8 # jdbc Parallel Query  config
     debezium-enable: false # no need config,but not delete
@@ -26,7 +26,7 @@ spring:
     druid:
       dataSourceOne:
         driver-class-name: org.opengauss.Driver
-        url: jdbc:opengauss://127.0.0.1:5432/postgres?useSSL=false&useUnicode=true&characterEncoding=utf-8&serverTimezone=UTC
+        url: jdbc:opengauss://localhost:5432/postgres?useSSL=false&useUnicode=true&characterEncoding=utf-8&serverTimezone=UTC
         username:
         password: 'xxxx'  # The password text may contain special characters, which need to be enclosed in quotation marks
         # Configure initialization connection pool size, minimum number of connections, and maximum number of connections

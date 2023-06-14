@@ -17,7 +17,6 @@ package org.opengauss.datachecker.extract.task;
 
 import com.alibaba.fastjson.JSON;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.constant.DynamicTpConstant;
 import org.opengauss.datachecker.common.entry.common.ExtractContext;
@@ -28,11 +27,12 @@ import org.opengauss.datachecker.common.entry.extract.RowDataHash;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.entry.extract.Topic;
 import org.opengauss.datachecker.common.exception.ExtractDataAccessException;
+import org.opengauss.datachecker.common.exception.ExtractException;
 import org.opengauss.datachecker.common.service.DynamicThreadPoolManager;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.TaskUtil;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.opengauss.datachecker.extract.client.CheckingFeignClient;
-import org.opengauss.datachecker.extract.kafka.KafkaAdminService;
 import org.opengauss.datachecker.extract.resource.ResourceManager;
 import org.opengauss.datachecker.extract.task.sql.QuerySqlEntry;
 import org.opengauss.datachecker.extract.task.sql.SelectSqlBuilder;
@@ -72,7 +72,8 @@ import static org.opengauss.datachecker.common.constant.DynamicTpConstant.TABLE_
  * @since 11
  **/
 public class ExtractTaskRunnable implements Runnable {
-    public static final Logger log = LogManager.getLogger("extract_business");
+    private static final Logger log = LogUtils.getExtractLogger();
+    private static final Logger logKafka = LogUtils.geKafkaLogger();
     private static final int FETCH_SIZE = 10000;
     private final ExtractTask task;
     private final DynamicThreadPoolManager dynamicThreadPoolManager;
@@ -471,6 +472,7 @@ public class ExtractTaskRunnable implements Runnable {
      * kafka operations
      */
     class KafkaOperations {
+
         private static final int DEFAULT_PARTITION = 0;
         private static final int MIN_PARTITION_NUM = 1;
 
@@ -498,6 +500,16 @@ public class ExtractTaskRunnable implements Runnable {
         }
 
         /**
+         * send row data to topic,that has multiple partition
+         *
+         * @param row row
+         */
+        public void sendMultiplePartitionsRowData(RowDataHash row) {
+            row.setPartition(calcSimplePartition(row.getPrimaryKeyHash()));
+            send(topicName, row.getPartition(), row.getPrimaryKey(), JSON.toJSONString(row));
+        }
+
+        /**
          * send row data to topic,that has single partition
          *
          * @param row row
@@ -508,8 +520,17 @@ public class ExtractTaskRunnable implements Runnable {
                 log.debug("row data hash zero :{}:{}", row.getPrimaryKey(), JSON.toJSONString(row));
                 return;
             }
-            kafkaTemplate
-                .send(new ProducerRecord<>(topicName, DEFAULT_PARTITION, row.getPrimaryKey(), JSON.toJSONString(row)));
+            send(topicName, DEFAULT_PARTITION, row.getPrimaryKey(), JSON.toJSONString(row));
+        }
+
+        private void send(String topicName, int partition, String key, String message) {
+            try {
+                kafkaTemplate.send(new ProducerRecord<>(topicName, partition, key, message));
+            } catch (Exception kafkaException) {
+                logKafka.error("send kafka [{} , {}] record error {}", topicName, key, kafkaException);
+                throw new ExtractException(
+                    "send kafka [" + topicName + " , " + key + "] record " + kafkaException.getMessage());
+            }
         }
 
         /**
@@ -517,17 +538,6 @@ public class ExtractTaskRunnable implements Runnable {
          */
         public void flush() {
             kafkaTemplate.flush();
-        }
-
-        /**
-         * send row data to topic,that has multiple partition
-         *
-         * @param row row
-         */
-        public void sendMultiplePartitionsRowData(RowDataHash row) {
-            row.setPartition(calcSimplePartition(row.getPrimaryKeyHash()));
-            kafkaTemplate
-                .send(new ProducerRecord<>(topicName, row.getPartition(), row.getPrimaryKey(), JSON.toJSONString(row)));
         }
 
         /**
