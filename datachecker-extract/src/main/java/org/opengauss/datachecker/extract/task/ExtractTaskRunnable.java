@@ -22,19 +22,15 @@ import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.constant.DynamicTpConstant;
 import org.opengauss.datachecker.common.entry.common.ExtractContext;
 import org.opengauss.datachecker.common.entry.enums.DataBaseType;
-import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.ExtractTask;
 import org.opengauss.datachecker.common.entry.extract.RowDataHash;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.entry.extract.Topic;
-import org.opengauss.datachecker.common.exception.CreateTopicTimeOutException;
 import org.opengauss.datachecker.common.exception.ExtractDataAccessException;
-import org.opengauss.datachecker.common.exception.ExtractException;
 import org.opengauss.datachecker.common.service.DynamicThreadPoolManager;
 import org.opengauss.datachecker.common.util.TaskUtil;
 import org.opengauss.datachecker.common.util.ThreadUtil;
-import org.opengauss.datachecker.extract.cache.TopicCache;
 import org.opengauss.datachecker.extract.client.CheckingFeignClient;
 import org.opengauss.datachecker.extract.kafka.KafkaAdminService;
 import org.opengauss.datachecker.extract.resource.ResourceManager;
@@ -98,8 +94,7 @@ public class ExtractTaskRunnable implements Runnable {
         this.checkingFeignClient = support.getCheckingFeignClient();
         this.dynamicThreadPoolManager = support.getDynamicThreadPoolManager();
         this.extractContext = support.getContext();
-        this.kafkaOperate = new KafkaOperations(support.getKafkaTemplate(), support.getKafkaAdminService());
-        kafkaOperate.init(processNo, extractContext.getEndpoint());
+        this.kafkaOperate = new KafkaOperations(support.getKafkaTemplate());
     }
 
     @Override
@@ -107,7 +102,7 @@ public class ExtractTaskRunnable implements Runnable {
         try {
             log.info("table [{}] extract task has beginning", task.getTableName());
             TableMetadata tableMetadata = task.getTableMetadata();
-            kafkaOperate.createTopic(task.getTopic());
+            kafkaOperate.setTopic(task.getTopic());
             log.info("table [{}] create topic , column=[{}] , avgRowLength=[{}] , tableRows=[{}] ", task.getTableName(),
                 tableMetadata.getColumnsMetas().size(), tableMetadata.getAvgRowLength(), tableMetadata.getTableRows());
             log.info("table [{}] table column metadata -> {}", tableMetadata.getTableName(),
@@ -478,33 +473,18 @@ public class ExtractTaskRunnable implements Runnable {
     class KafkaOperations {
         private static final int DEFAULT_PARTITION = 0;
         private static final int MIN_PARTITION_NUM = 1;
-        private static final int MAX_TRY_CREATE_TOPIC_TIME = 6000;
 
         private final KafkaTemplate<String, String> kafkaTemplate;
-        private final KafkaAdminService kafkaAdminService;
         private int topicPartitionCount;
         private String topicName;
-        private String endpointTopicPrefix;
 
         /**
          * constructor
          *
-         * @param kafkaTemplate     kafkaTemplate
-         * @param kafkaAdminService kafkaAdminService
+         * @param kafkaTemplate kafkaTemplate
          */
-        public KafkaOperations(KafkaTemplate<String, String> kafkaTemplate, KafkaAdminService kafkaAdminService) {
+        public KafkaOperations(KafkaTemplate<String, String> kafkaTemplate) {
             this.kafkaTemplate = kafkaTemplate;
-            this.kafkaAdminService = kafkaAdminService;
-        }
-
-        /**
-         * init endpointTopicPrefix
-         *
-         * @param process  process
-         * @param endpoint endpoint
-         */
-        public void init(String process, Endpoint endpoint) {
-            this.endpointTopicPrefix = "CHECK_" + process + "_" + endpoint.getCode() + "_";
         }
 
         /**
@@ -512,31 +492,9 @@ public class ExtractTaskRunnable implements Runnable {
          *
          * @param topic topic
          */
-        public void createTopic(Topic topic) {
-            TopicCache.add(topic);
-            int tryCreateTopicTime = 0;
-            // add kafka current limiting operation
-            while (!kafkaAdminService.canCreateTopic(endpointTopicPrefix)) {
-                log.debug("kafka's topic number is reached maximum-topic-size limits, {} wait ...",
-                    topic.getTopicName());
-                if (tryCreateTopicTime > MAX_TRY_CREATE_TOPIC_TIME) {
-                    throw new CreateTopicTimeOutException(topicName);
-                }
-                tryCreateTopicTime++;
-                ThreadUtil.sleepOneSecond();
-            }
-            kafkaAdminService.createTopic(topic.getTopicName(), topic.getPartitions());
-            this.topicName = topic.getTopicName();
+        public void setTopic(Topic topic) {
+            this.topicName = topic.getTopicName(extractContext.getEndpoint());
             this.topicPartitionCount = topic.getPartitions();
-            if (!kafkaAdminService.isTopicExists(topicName)) {
-                ThreadUtil.sleepOneSecond();
-                if (!kafkaAdminService.isTopicExists(topicName)) {
-                    kafkaAdminService.createTopic(topic.getTopicName(), topic.getPartitions());
-                }
-            }
-            if (!kafkaAdminService.isTopicExists(topicName)) {
-                throw new ExtractException("create topic has error : " + topic.toString());
-            }
         }
 
         /**

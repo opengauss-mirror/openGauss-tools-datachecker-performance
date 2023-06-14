@@ -23,10 +23,13 @@ import org.apache.kafka.clients.admin.DeleteTopicsResult;
 import org.apache.kafka.clients.admin.KafkaAdminClient;
 import org.apache.kafka.clients.admin.TopicListing;
 import org.apache.kafka.common.KafkaFuture;
+import org.opengauss.datachecker.check.client.FeignClientService;
+import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.Resource;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,6 +45,9 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 public class DeleteTopicsEventListener implements ApplicationListener<DeleteTopicsEvent> {
+    private static final int DELETE_RETRY_TIMES = 3;
+    @Resource
+    private FeignClientService feignClient;
     @Value("${spring.kafka.bootstrap-servers}")
     private String bootstrapServers;
     private AdminClient adminClient = null;
@@ -49,11 +55,17 @@ public class DeleteTopicsEventListener implements ApplicationListener<DeleteTopi
 
     @Override
     public void onApplicationEvent(DeleteTopicsEvent event) {
-        log.debug("delete topic event listener : {}", event.getMessage());
-        final Object source = event.getSource();
-        initAdminClient();
-        final DeleteTopics deleteOption = (DeleteTopics) source;
-        deleteTopic(deleteOption.getTopicList());
+        try {
+            final Object source = event.getSource();
+            initAdminClient();
+            final DeleteTopics deleteOption = (DeleteTopics) source;
+            deleteTopic(deleteOption.getTopicList());
+            feignClient.notifyCheckTableFinished(Endpoint.SOURCE, deleteOption.getTableName());
+            feignClient.notifyCheckTableFinished(Endpoint.SINK, deleteOption.getTableName());
+            log.info("delete topic event : {}", event.getMessage());
+        } catch (Exception exception) {
+            log.error("delete topic has error ", exception);
+        }
     }
 
     private void deleteTopic(List<String> deleteTopicList) {
@@ -65,7 +77,7 @@ public class DeleteTopicsEventListener implements ApplicationListener<DeleteTopi
             List<String> checkedList = adminClient.listTopics().listings().get().stream().map(TopicListing::name)
                                                   .filter(deleteTopicList::contains).collect(Collectors.toList());
             if (CollectionUtils.isNotEmpty(checkedList)) {
-                if (retryTimes.get() <= 3) {
+                if (retryTimes.get() <= DELETE_RETRY_TIMES) {
                     deleteTopic(checkedList);
                 } else {
                     log.error("retry to delete {} topic error : delete too many times(3) ", checkedList);

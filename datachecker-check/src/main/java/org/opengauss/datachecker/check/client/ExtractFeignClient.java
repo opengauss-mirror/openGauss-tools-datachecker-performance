@@ -222,4 +222,7 @@ public interface ExtractFeignClient {
      */
     @GetMapping("/extract/query/increment/metadata")
     Result<TableMetadata> queryIncrementMetaData(@RequestParam(name = "tableName") String tableName);
+
+    @PostMapping("/notify/check/finished")
+    Result<Void> notifyCheckTableFinished(@RequestParam(name = "tableName") String tableName);
 }

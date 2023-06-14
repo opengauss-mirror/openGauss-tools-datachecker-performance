@@ -18,6 +18,8 @@ package org.opengauss.datachecker.check.modules.check;
 import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.check.cache.CheckRateCache;
 import org.opengauss.datachecker.check.cache.TableStatusRegister;
 import org.opengauss.datachecker.check.modules.bucket.Bucket;
@@ -67,8 +69,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * @date ：Created in 2022/5/23
  * @since ：11
  */
-@Slf4j
 public class DataCheckRunnable implements Runnable {
+    public static final Logger log = LogManager.getLogger("check_business");
     private static final int THRESHOLD_MIN_BUCKET_SIZE = 2;
 
     private final List<Bucket> sourceBucketList = Collections.synchronizedList(new ArrayList<>());
@@ -103,6 +105,7 @@ public class DataCheckRunnable implements Runnable {
      */
     public DataCheckRunnable(@NonNull DataCheckParam checkParam, @NonNull DataCheckRunnableSupport support) {
         this.checkParam = checkParam;
+        tableName = checkParam.getTableName();
         startTime = LocalDateTime.now();
         statisticalService = support.getStatisticalService();
         tableStatusRegister = support.getTableStatusRegister();
@@ -132,9 +135,9 @@ public class DataCheckRunnable implements Runnable {
     @Override
     public void run() {
         try {
+            log.info("check table {} start", tableName);
             paramInit();
             checkTableData();
-            log.debug("check table {} complete!", tableName);
         } catch (Exception ignore) {
             log.error("check table has some error,", ignore);
         } finally {
@@ -143,7 +146,7 @@ public class DataCheckRunnable implements Runnable {
             checkResult();
             cleanCheckThreadEnvironment();
             checkRateCache.add(buildCheckTable());
-            log.debug("check table result {} complete!", tableName);
+            log.info("check table result {} complete!", tableName);
         }
     }
 
