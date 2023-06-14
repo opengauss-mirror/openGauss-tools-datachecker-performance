@@ -43,6 +43,7 @@ import org.opengauss.datachecker.common.entry.extract.RowDataHash;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.exception.LargeDataDiffException;
 import org.opengauss.datachecker.common.exception.MerkleTreeDepthException;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.SpringUtil;
 import org.opengauss.datachecker.common.util.TopicUtil;
 import org.springframework.lang.NonNull;
@@ -70,7 +71,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * @since ：11
  */
 public class DataCheckRunnable implements Runnable {
-    public static final Logger log = LogManager.getLogger("check_business");
+    private static final Logger log = LogUtils.getCheckLogger();
+    private static final Logger logKafka = LogUtils.geKafkaLogger();
     private static final int THRESHOLD_MIN_BUCKET_SIZE = 2;
 
     private final List<Bucket> sourceBucketList = Collections.synchronizedList(new ArrayList<>());
@@ -117,6 +119,7 @@ public class DataCheckRunnable implements Runnable {
 
     private KafkaConsumerHandler buildKafkaHandler(DataCheckRunnableSupport support) {
         KafkaConsumerService kafkaConsumerService = support.getKafkaConsumerService();
+        logKafka.info("create kafka consumer for [{}] [{}]", tableName, partitions);
         return new KafkaConsumerHandler(kafkaConsumerService.buildKafkaConsumer(false),
             kafkaConsumerService.getRetryFetchRecordTimes());
     }
@@ -146,6 +149,9 @@ public class DataCheckRunnable implements Runnable {
             checkResult();
             cleanCheckThreadEnvironment();
             checkRateCache.add(buildCheckTable());
+            kafkaConsumerHandler.closeConsumer();
+            logKafka.info("close table consumer of topic, [{},{}] : [{} : {}] ", tableName, partitions, sourceTopic,
+                sinkTopic);
             log.info("check table result {} complete!", tableName);
         }
     }

@@ -15,12 +15,13 @@
 
 package org.opengauss.datachecker.check.event;
 
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.check.config.DataCheckProperties;
 import org.opengauss.datachecker.check.modules.task.TaskManagerService;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.TopicUtil;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
@@ -41,11 +42,12 @@ import java.util.concurrent.TimeUnit;
  * @date ：Created in 2023/3/7
  * @since ：11
  */
-@Slf4j
 @Service
 public class KafkaTopicDeleteProvider implements ApplicationContextAware {
-    private ApplicationContext applicationContext;
+    private static final Logger logKafka = LogUtils.geKafkaLogger();
     private static volatile Map<String, DeleteTopics> deleteTableMap = new ConcurrentHashMap<>();
+
+    private ApplicationContext applicationContext;
     @Resource
     private DataCheckProperties properties;
     @Resource
@@ -101,7 +103,7 @@ public class KafkaTopicDeleteProvider implements ApplicationContextAware {
         });
         if (CollectionUtils.isNotEmpty(deleteOptions)) {
             deleteOptions.forEach(deleteOption -> {
-                log.info("publish delete-topic-event table = [{}] ,  current-pending-quantity = [{}]",
+                logKafka.info("publish delete-topic-event table = [{}] ,  current-pending-quantity = [{}]",
                     deleteOption.getTableName(), deleteTableMap.size());
                 applicationContext.publishEvent(new DeleteTopicsEvent(deleteOption, deleteOption.toString()));
                 deleteTableMap.remove(deleteOption.getTableName());

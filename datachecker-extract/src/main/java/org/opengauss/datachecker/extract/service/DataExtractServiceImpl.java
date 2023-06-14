@@ -17,6 +17,7 @@ package org.opengauss.datachecker.extract.service;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.constant.Constants;
 import org.opengauss.datachecker.common.entry.enums.DML;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
@@ -34,6 +35,7 @@ import org.opengauss.datachecker.common.exception.ProcessMultipleException;
 import org.opengauss.datachecker.common.exception.TableNotExistException;
 import org.opengauss.datachecker.common.exception.TaskNotFoundException;
 import org.opengauss.datachecker.common.service.DynamicThreadPoolManager;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.opengauss.datachecker.common.util.TopicUtil;
 import org.opengauss.datachecker.extract.cache.MetaDataCache;
@@ -76,7 +78,7 @@ import static org.opengauss.datachecker.common.constant.DynamicTpConstant.EXTRAC
 @Slf4j
 @Service
 public class DataExtractServiceImpl implements DataExtractService {
-
+    private static final Logger logKafka = LogUtils.geKafkaLogger();
     /**
      * Maximum number of sleeps of threads executing data extraction tasks
      */
@@ -304,6 +306,7 @@ public class DataExtractServiceImpl implements DataExtractService {
                 }
                 Topic topic = task.getTopic();
                 Endpoint endpoint = extractProperties.getEndpoint();
+                logKafka.info("try to create [{}] [{}]", topic.getTopicName(endpoint), topic.getPartitions());
                 kafkaAdminService.createTopic(topic.getTopicName(endpoint), topic.getPartitions());
                 topicCache.add(topic);
                 log.info("current topic cache size = {}", topicCache.size());

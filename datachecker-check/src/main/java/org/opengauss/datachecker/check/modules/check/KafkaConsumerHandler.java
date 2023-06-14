@@ -39,6 +39,7 @@ import java.util.Map;
  */
 @Slf4j
 public class KafkaConsumerHandler {
+
     private static final int KAFKA_CONSUMER_POLL_DURATION = 20;
 
     private final KafkaConsumer<String, String> kafkaConsumer;
@@ -121,5 +122,9 @@ public class KafkaConsumerHandler {
         consumerRecords.forEach(record -> {
             dataList.add(JSON.parseObject(record.value(), RowDataHash.class));
         });
+    }
+
+    public void closeConsumer() {
+        kafkaConsumer.close(Duration.ofSeconds(1));
     }
 }
