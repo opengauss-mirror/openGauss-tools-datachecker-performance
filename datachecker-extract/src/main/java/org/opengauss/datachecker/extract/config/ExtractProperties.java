@@ -76,6 +76,8 @@ public class ExtractProperties {
      * Group parameter setting for the debezium incremental migration verification topic
      */
     private String debeziumGroupId;
+    
+    private Boolean countRow = true;
 
     /**
      * openGauss query dop config

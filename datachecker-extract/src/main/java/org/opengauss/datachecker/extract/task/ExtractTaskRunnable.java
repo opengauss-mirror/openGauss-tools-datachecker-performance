@@ -31,6 +31,7 @@ import org.opengauss.datachecker.common.exception.ExtractException;
 import org.opengauss.datachecker.common.service.DynamicThreadPoolManager;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.TaskUtil;
+import org.opengauss.datachecker.common.util.TaskUtilHelper;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.opengauss.datachecker.extract.client.CheckingFeignClient;
 import org.opengauss.datachecker.extract.resource.ResourceManager;
@@ -110,8 +111,8 @@ public class ExtractTaskRunnable implements Runnable {
                 getTableColumnInformation(tableMetadata));
             QueryTableRowContext context =
                 new QueryTableRowContext(tableMetadata, extractContext.getDatabaseType(), kafkaOperate);
-            final int[][] taskOffset =
-                TaskUtil.calcAutoTaskOffset(tableMetadata.getTableRows(), extractContext.getMaximumTableSliceSize());
+            final int[][] taskOffset = new TaskUtilHelper(tableMetadata,
+                    extractContext.getMaximumTableSliceSize()).calcAutoTaskOffset();
             if (isNotSlice(taskOffset)) {
                 executeTask(context);
             } else {
@@ -151,7 +152,9 @@ public class ExtractTaskRunnable implements Runnable {
             if (sliceQuantityAnalysis.stream().anyMatch((noEqual -> !noEqual))) {
                 return;
             }
-            fixedParallelExtractTableData(taskOffset, context);
+            if (!context.tableMetadata.canUseBetween()) {
+                fixedParallelExtractTableData(taskOffset, context);
+            }
         } catch (Exception ex) {
             log.error("jdbc parallel query has unknown error [{}] : ", context.getTableName(), ex);
             throw new ExtractDataAccessException();

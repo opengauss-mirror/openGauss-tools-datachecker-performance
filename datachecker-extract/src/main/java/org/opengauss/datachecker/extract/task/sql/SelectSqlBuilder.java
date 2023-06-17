@@ -35,6 +35,9 @@ import static org.opengauss.datachecker.extract.task.sql.QuerySqlTemplate.MYSQL_
 import static org.opengauss.datachecker.extract.task.sql.QuerySqlTemplate.OPENGAUSS_ESCAPE;
 import static org.opengauss.datachecker.extract.task.sql.QuerySqlTemplate.OFFSET;
 import static org.opengauss.datachecker.extract.task.sql.QuerySqlTemplate.ORDER_BY;
+import static org.opengauss.datachecker.extract.task.sql.QuerySqlTemplate.PRIMARY_KEY;
+import static org.opengauss.datachecker.extract.task.sql.QuerySqlTemplate.QUERY_BETWEEN_SET;
+import static org.opengauss.datachecker.extract.task.sql.QuerySqlTemplate.QUERY_OFF_SET;
 import static org.opengauss.datachecker.extract.task.sql.QuerySqlTemplate.SCHEMA;
 import static org.opengauss.datachecker.extract.task.sql.QuerySqlTemplate.START;
 import static org.opengauss.datachecker.extract.task.sql.QuerySqlTemplate.TABLE_NAME;
@@ -65,6 +68,17 @@ public class SelectSqlBuilder {
         (sqlGenerateMeta) -> GENERATE_TEMPLATE.replace(QuerySqlTemplate.QUERY_OFF_SET, sqlGenerateMeta);
     private static final SqlGenerate NO_OFFSET_GENERATE = (sqlGenerateMeta) -> NO_OFFSET_SQL_GENERATE_TEMPLATE
         .replace(QuerySqlTemplate.QUERY_NO_OFF_SET, sqlGenerateMeta);
+    
+    private static final SqlGenerateTemplate QUERY_BETWEEN_TEMPLATE = (template, sqlGenerateMeta) ->
+            template.replace(COLUMN, sqlGenerateMeta.getColumns())
+                .replace(SCHEMA, sqlGenerateMeta.getSchema())
+                .replace(TABLE_NAME, sqlGenerateMeta.getTableName())
+                .replace(ORDER_BY, sqlGenerateMeta.getOrder())
+                .replace(PRIMARY_KEY, sqlGenerateMeta.getPrimaryKey())
+                .replace(START, String.valueOf(sqlGenerateMeta.getStart()))
+                .replace(OFFSET, String.valueOf(sqlGenerateMeta.getStart() + sqlGenerateMeta.getOffset() - 1));
+    private static final SqlGenerate QUERY_BETWEEN_GENERATE = (sqlGenerateMeta ->
+            QUERY_BETWEEN_TEMPLATE.replace(QUERY_BETWEEN_SET, sqlGenerateMeta));
 
     static {
         SQL_GENERATE.put(DataBaseType.MS, OFFSET_GENERATE);
@@ -164,16 +178,22 @@ public class SelectSqlBuilder {
                                          .map(key -> escape(key, dataBaseType) + " asc")
                                          .collect(Collectors.joining(DELIMITER));
     }
-
+    
     public String buildSelectSqlOffset(TableMetadata tableMetadata, long start, long offset) {
         List<ColumnsMetaData> columnsMetas = tableMetadata.getColumnsMetas();
         String schemaEscape = escape(schema, dataBaseType);
         String tableName = escape(tableMetadata.getTableName(), dataBaseType);
         String columnNames = getColumnNameList(columnsMetas, dataBaseType);
         final String orderBy = getOrderBy(tableMetadata.getPrimaryMetas(), dataBaseType);
-        SqlGenerateMeta sqlGenerateMeta =
-            new SqlGenerateMeta(schemaEscape, tableName, columnNames, orderBy, start, offset);
-        return getSqlGenerate(dataBaseType).replace(sqlGenerateMeta);
+        SqlGenerateMeta sqlGenerateMeta = null;
+        if (!tableMetadata.canUseBetween()) {
+            sqlGenerateMeta = new SqlGenerateMeta(schemaEscape, tableName, columnNames, orderBy, start, offset);
+            return getSqlGenerate(dataBaseType).replace(sqlGenerateMeta);
+        } else {
+            String primaryKey = escape(tableMetadata.getPrimaryMetas().get(0).getColumnName(), dataBaseType);
+            sqlGenerateMeta = new SqlGenerateMeta(schemaEscape, tableName, columnNames, orderBy, start, offset, primaryKey);
+            return QUERY_BETWEEN_GENERATE.replace(sqlGenerateMeta);
+        }
     }
 
     private String escape(String content, DataBaseType dataBaseType) {
@@ -202,32 +222,33 @@ public class SelectSqlBuilder {
         private String schema;
         private String tableName;
         private String columns;
+        private String primaryKey;
         private String order;
         private long start;
         private long offset;
 
         public SqlGenerateMeta(String schema, String tableName, String columns) {
-            this.schema = schema;
-            this.tableName = tableName;
-            this.columns = columns;
+            this(schema, tableName, columns, null, 0, 0, null);
         }
 
         public SqlGenerateMeta(String schema, String tableName, String columns, long start, long offset) {
-            this.schema = schema;
-            this.tableName = tableName;
-            this.columns = columns;
-            this.order = "";
-            this.start = start;
-            this.offset = offset;
+            this(schema, tableName, columns, "", start, offset, null);
         }
 
         public SqlGenerateMeta(String schema, String tableName, String columns, String order, long start, long offset) {
+            this(schema, tableName, columns, order, start, offset, null);
+        }
+    
+        public SqlGenerateMeta(String schema, String tableName, String columns, String order,
+                               long start, long offset,
+                               String primaryKey) {
             this.schema = schema;
             this.tableName = tableName;
             this.columns = columns;
             this.order = order;
             this.start = start;
             this.offset = offset;
+            this.primaryKey = primaryKey;
         }
     }
 

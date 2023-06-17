@@ -18,7 +18,13 @@ package org.opengauss.datachecker.common.entry.extract;
 import lombok.Data;
 import lombok.ToString;
 import lombok.experimental.Accessors;
+import org.apache.commons.lang3.StringUtils;
 import org.opengauss.datachecker.common.entry.enums.ColumnKey;
+import org.opengauss.datachecker.common.util.EnumUtil;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.Locale;
 
 /**
  * Table metadata information
@@ -31,6 +37,7 @@ import org.opengauss.datachecker.common.entry.enums.ColumnKey;
 @Accessors(chain = true)
 @ToString
 public class ColumnsMetaData {
+    public static final String AUTO_INCREMENT = "auto_increment";
     /**
      * Table
      */
@@ -55,9 +62,31 @@ public class ColumnsMetaData {
      * {@value ColumnKey#API_DESCRIPTION}
      */
     private ColumnKey columnKey;
-
+    
+    private String extra;
+    
     public String getColumnMsg() {
         return " [" + columnName + " : " + columnType + "]";
+    }
+    
+    public boolean isAutoIncrementColumn() {
+        if (columnKey == null || columnKey != ColumnKey.PRI) {
+            return false;
+        }
+        return !StringUtils.isEmpty(getExtra())
+                && getExtra().toLowerCase(Locale.ENGLISH).contains(AUTO_INCREMENT);
+    }
+    
+    public static ColumnsMetaData parse(ResultSet rs) throws SQLException {
+        ColumnsMetaData columnsMetaData = new ColumnsMetaData();
+        columnsMetaData.setTableName(rs.getString(1))
+                .setColumnName(rs.getString(2))
+                .setOrdinalPosition(rs.getInt(3))
+                .setDataType(rs.getString(4))
+                .setColumnType(rs.getString(5))
+                .setColumnKey(EnumUtil.valueOf(ColumnKey.class, rs.getString(6)))
+                .setExtra(rs.getString(7));
+        return columnsMetaData;
     }
 }
 

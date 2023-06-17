@@ -38,6 +38,8 @@ public class MetaSqlMapper {
         dataBaseMySql.put(DataBaseMeta.TABLE, DataBaseMySql.TABLE_METADATA_SQL);
         dataBaseMySql.put(DataBaseMeta.COLUMN, DataBaseMySql.TABLES_COLUMN_META_DATA_SQL);
         dataBaseMySql.put(DataBaseMeta.HEALTH, DataBaseMySql.HEALTH_SQL);
+        dataBaseMySql.put(DataBaseMeta.COUNT, DataBaseMySql.TABLE_COUNTS);
+        dataBaseMySql.put(DataBaseMeta.MAX_ID_COUNT, DataBaseMySql.TABLE_MAX_COUNTS);
         DATABASE_META_MAPPER.put(DataBaseType.MS, dataBaseMySql);
         DATABASE_TABLE_META_MAPPER.put(DataBaseType.MS, DataBaseMySql.ONE_TABLE_METADATA_SQL);
 
@@ -45,6 +47,8 @@ public class MetaSqlMapper {
         dataBaseOpenGauss.put(DataBaseMeta.TABLE, DataBaseOpenGauss.TABLE_METADATA_SQL);
         dataBaseOpenGauss.put(DataBaseMeta.COLUMN, DataBaseOpenGauss.TABLES_COLUMN_META_DATA_SQL);
         dataBaseOpenGauss.put(DataBaseMeta.HEALTH, DataBaseOpenGauss.HEALTH_SQL);
+        dataBaseOpenGauss.put(DataBaseMeta.COUNT, DataBaseOpenGauss.TABLE_COUNTS);
+        dataBaseOpenGauss.put(DataBaseMeta.MAX_ID_COUNT, DataBaseOpenGauss.TABLE_MAX_COUNTS);
         DATABASE_META_MAPPER.put(DataBaseType.OG, dataBaseOpenGauss);
         DATABASE_TABLE_META_MAPPER.put(DataBaseType.OG, DataBaseOpenGauss.ONE_TABLE_METADATA_SQL);
 
@@ -100,15 +104,19 @@ public class MetaSqlMapper {
             + " WHERE  table_schema=:databaseSchema ) info ON pk.id=info.id AND pk.TABLE_NAME=info.TABLE_NAME "
             + " ORDER BY info.table_rows ASC ";
 
-        String ONE_TABLE_METADATA_SQL = "select info.table_name tableName, info.table_rows tableRows "
+        String ONE_TABLE_METADATA_SQL = "select info.table_name tableName, info.table_rows tableRows, info.avg_row_length avgRowLength"
             + " from information_schema.tables info where info.table_schema=:databaseSchema and info.table_name=:tableName";
         /**
          * column metadata query SQL
          */
         String TABLES_COLUMN_META_DATA_SQL = "select table_name tableName ,column_name columnName,"
-            + " ordinal_position ordinalPosition, data_type dataType, column_type columnType,column_key columnKey"
+            + " ordinal_position ordinalPosition, data_type dataType, column_type columnType,column_key columnKey,"
+            + " extra extra"
             + " from information_schema.columns"
-            + " where table_schema=:databaseSchema and table_name in (:tableNames)";
+            + " where table_schema=:databaseSchema and table_name in (:tableName)";
+        
+        String TABLE_COUNTS = "select count(*) count from %s.%s";
+        String TABLE_MAX_COUNTS = "select (case when max(%s) is null then 1 else max(%s) end) as count from %s.%s";
     }
 
     interface DataBaseOpenGauss {
@@ -126,13 +134,17 @@ public class MetaSqlMapper {
             + " LEFT JOIN pg_namespace n on n.oid = c.relnamespace left join pg_index b on c.oid=b.indrelid "
             + " where n.nspname=:databaseSchema and b.indisprimary='t' order by c.reltuples asc;";
 
-        String ONE_TABLE_METADATA_SQL = "select c.relname tableName,c.reltuples tableRows from pg_class c "
+        String ONE_TABLE_METADATA_SQL = "select c.relname tableName,c.reltuples tableRows, 0 as avgRowLength"
+            + " from pg_class c "
             + " LEFT JOIN pg_namespace n on n.oid = c.relnamespace left join pg_index b on c.oid=b.indrelid "
             + " where n.nspname=:databaseSchema and b.indisprimary='t' and c.relname=:tableName; ";
         /**
          * column metadata query SQL
          */
-        String TABLES_COLUMN_META_DATA_SQL = "SELECT c.relname tableName ,a.attname columnName ,"
+        String TABLES_COLUMN_META_DATA_SQL = "select ca1.*,"
+            + "case when my_seq.sequence_name is null then '' else 'auto_increment' end as extra from "
+            +"("
+            + "( SELECT c.relname tableName ,a.attname columnName ,"
             + " a.attnum ordinalPosition,(CASE WHEN (t.typtype = 'd'::\"char\") "
             + " THEN CASE WHEN ((bt.typelem <> (0)::oid) AND (bt.typlen = (-1))) THEN 'ARRAY'::text "
             + " WHEN (nbt.nspname = 'pg_catalog'::name) THEN format_type(t.typbasetype, NULL::integer) "
@@ -147,7 +159,22 @@ public class MetaSqlMapper {
             + " left join pg_constraint co on c.oid = co.conrelid and a.attnum = any (array[co.conkey]) "
             + " WHERE a.attnum > 0 AND (NOT a.attisdropped)  "
             + " AND (c.relkind = ANY (ARRAY['r'::\"char\", 'm'::\"char\", 'v'::\"char\", 'f'::\"char\"]))"
-            + " and  nc.nspname=:databaseSchema and c.relname in (:tableNames) and c.relhaspkey=true;";
+            + " and  nc.nspname=:databaseSchema and c.relname in ( :tableName ) and c.relhaspkey=true"
+            + ") ca1 left join "
+            + "( select ts.nspname as object_schema, tbl.relname as table_name, col.attname as column_name,"
+            + " s.relname as sequence_name from pg_class s "
+            + " join pg_namespace sn on sn.oid = s.relnamespace "
+            + " join pg_depend d on d.refobjid = s.oid and d.refclassid='pg_class'::regclass "
+            + " join pg_attrdef ad on ad.oid = d.objid and d.classid = 'pg_attrdef'::regclass "
+            + " join pg_attribute col on col.attrelid = ad.adrelid and col.attnum = ad.adnum "
+            + " join pg_class tbl on tbl.oid = ad.adrelid "
+            + " join pg_namespace ts on ts.oid = tbl.relnamespace "
+            + " where s.relkind = 'S' and d.deptype in ('a', 'n') "
+            + " ) my_seq "
+            + " on ca1.tableName = my_seq.table_name and ca1.columnName=my_seq.column_name"
+            + ")";
+        String TABLE_COUNTS = "select count(*) count from %s.%s";
+        String TABLE_MAX_COUNTS = "select (case when max(%s) is null then 1 else max(%s) end) as count from %s.%s";
     }
 
     interface DataBaseO {

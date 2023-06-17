@@ -23,12 +23,14 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.core.annotation.Order;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.AsyncResult;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 /**
@@ -46,7 +48,7 @@ public class EnvironmentLoader {
     private volatile ExtractEnvironment extractEnvironment;
 
     @Async
-    public void load(CheckMode checkMode) {
+    public Future<Integer> load(CheckMode checkMode) {
         log.info("extract environment loader start");
         extractEnvironment.setCheckMode(checkMode);
         Map<String, ExtractLoader> loaders = SpringUtil.getBeans(ExtractLoader.class);
@@ -61,5 +63,6 @@ public class EnvironmentLoader {
             log.info("extract environment loader {} start", loader.getClass().getName());
             loader.load(extractEnvironment);
         });
+        return new AsyncResult<>(0);
     }
 }
