@@ -75,10 +75,17 @@ bin/connect-standalone -daemon etc/kafka/connect-standalone.properties etc/kafka
 	server.port 为校验服务web端口，默认可不修改
 	logging.config  设置校验服务日志路径为config/log4j2.xml文件绝对路径
 	bootstrap-servers 为kafka工作地址，默认安装可不修改
+	spring.memory-monitor-enable 打印校验进程内存使用情况，默认false,不打印
+	spring.check.core-pool-size: 1 并发线程数池设置，最小线程数，可不修改，默认1
+    spring.check.maximum-pool-size: 4 并发线程数池设置，最大线程数，可不修改，默认4
+    
 	data.check.data-path 校验结果输出地址，默认配置可不修改
 	data.check.source-uri 源端服务请求地址，默认配置可不修改
 	data.check.sink-uri 目标端服务请求地址，默认配置可不修改
-	data.check.core-pool-size 并发线程数设置，根据当前环境配置，可不修改
+	data.check.max-retry-times 心跳等最大尝试次数，默认1000
+	data.check.retry-interval-times 心跳、进度等最大间隔时间单位毫秒 10000
+    data.check.auto-delete-topic: 配置是否自动删除Topic，0不删除，1校验全部完成后删除，2表校验完成后删除，默认值为2
+    data.check.increment-max-diff-count: 配置增量校验最大处理差异记录数，范围[10,5000]
 ```
 
 **源端服务启动配置**
@@ -93,6 +100,15 @@ bin/connect-standalone -daemon etc/kafka/connect-standalone.properties etc/kafka
 	bootstrap-servers 为kafka工作地址，默认安装可不修改
 	
 	数据源配置
+	工具默认采用druid数据源，用户可以自定义配置连接池参数，可根据当前校验数据库任务数量（表数量）进行调整
+	driver-class-name: 数据库驱动名称，可根据源端数据库类型配置，具体见配置文件模板
+    url: jdbc连接串，可根据源端数据库类型及库名进行配置，具体见配置文件模板
+    username: 源端数据库用户名
+    password: 源端数据库密码，需加单引号
+    initialSize: jdbc连接池的连接数，默认可不修改
+    minIdle: 默认最小连接池数量
+    maxActive: 默认激活数据库连接数量
+    validationQuery: jdbc保活查询语句，不修改
 	
 ```
 
@@ -108,6 +124,14 @@ bin/connect-standalone -daemon etc/kafka/connect-standalone.properties etc/kafka
 	bootstrap-servers 为kafka工作地址，默认安装可不修改
 	
 	数据源配置
+	工具默认采用druid数据源，用户可以自定义配置连接池参数，可根据当前校验数据库任务数量（表数量）进行调整
+	driver-class-name: 数据库驱动名称，可根据目标端数据库类型配置，具体见配置文件模板
+    url: jdbc连接串，可根据目标端数据库类型及库名进行配置，具体见配置文件模板
+    username: 目标端数据库用户名
+    password: 目标端数据库密码，需加单引号
+    initialSize: jdbc连接池的连接数，默认可不修改
+    minIdle: 默认最小连接池数量
+    maxActive: 默认激活数据库连接数量
 ```
 
 
@@ -160,10 +184,10 @@ nohup java -jar datachecker-check-0.0.1.jar >/dev/null 2>&1 &
 
 ```
 JDK版本要求JDK11+
-当前版本仅支持对源端MySQL，目标端openGauss数据校验
+当前版本仅支持对源端是MySQL或openGauss，目标端也是MySQL或openGauss数据校验
 当前版本仅支持数据校验，不支持表对象校验
 MYSQL需要5.7+版本
-当前版本不支持地理位置几何图形数据校验
+当前版本地理位置几何图形只支持openGauss到openGauss的数据校验
 ```
 
 
