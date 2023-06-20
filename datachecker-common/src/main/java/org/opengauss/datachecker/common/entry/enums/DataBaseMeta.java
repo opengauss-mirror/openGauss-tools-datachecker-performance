@@ -34,6 +34,11 @@ public enum DataBaseMeta implements IEnum {
      * COUNT
      */
     COUNT("COUNT", "COUNT"),
+    
+    /**
+     *  Use max(id) to get max count.
+     */
+    MAX_ID_COUNT("MaxIdCount", "MaxIdCount"),
     /**
      * TableMetaData
      */

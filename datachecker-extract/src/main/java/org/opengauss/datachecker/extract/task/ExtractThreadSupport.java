@@ -16,6 +16,7 @@
 package org.opengauss.datachecker.extract.task;
 
 import lombok.Getter;
+import lombok.Setter;
 import org.opengauss.datachecker.common.entry.common.ExtractContext;
 import org.opengauss.datachecker.common.service.DynamicThreadPoolManager;
 import org.opengauss.datachecker.extract.client.CheckingFeignClient;
@@ -39,6 +40,7 @@ import javax.sql.DataSource;
  * @since ：11
  */
 @Getter
+@Setter
 @Service
 public class ExtractThreadSupport {
     private static final int DEFAULT_MAXIMUM_TABLE_SLICE_SIZE = 10000;

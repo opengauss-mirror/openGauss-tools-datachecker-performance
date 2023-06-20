@@ -29,7 +29,6 @@ public class TaskUtil {
     private static final int[] MAX_LIMIT =
         {50000, 100000, 150000, 200000, 250000, 300000, 350000, 400000, 450000, 500000, 550000, 600000, 650000, 700000,
             800000, 900000, 1000000};
-    private static final float TABLE_ROWS_DEVIATION_RATE = 1.3f;
     private static final double LASTED_TASK_DEVIATION_RATE = 0.2d;
 
     /**
@@ -66,34 +65,6 @@ public class TaskUtil {
         int maxLimitRowCount = calcMaxLimitRowCount(tableRows);
         final int taskCount = (int) Math.round(tableRows * 1.0 / maxLimitRowCount);
         return taskCount;
-    }
-
-    /**
-     * Calculate the number of segmented tasks according to the total number recorded in the table
-     *
-     * @param tableRows Total table records
-     * @return Total number of split tasks offset
-     */
-    public static int[][] calcAutoTaskOffset(long tableRows) {
-        return calcAutoTaskOffset(tableRows, MAX_LIMIT[1]);
-    }
-
-    public static int[][] calcAutoTaskOffset(long tableRows, int maxLimitRowCount) {
-        if (tableRows <= maxLimitRowCount) {
-            return new int[][] {{0, maxLimitRowCount}};
-        }
-        final int taskCount = (int) Math.round(tableRows * TABLE_ROWS_DEVIATION_RATE / maxLimitRowCount) + 1;
-        int[][] taskOffset = new int[taskCount][2];
-        IntStream.range(0, taskCount).forEach(taskCountIdx -> {
-            int start = taskCountIdx * maxLimitRowCount;
-            taskOffset[taskCountIdx] = new int[] {start, maxLimitRowCount};
-        });
-        if (taskOffset.length > 1) {
-            int[] lastOffset = taskOffset[taskOffset.length - 1];
-            taskOffset[taskOffset.length - 1] = taskOffset[0];
-            taskOffset[0] = lastOffset;
-        }
-        return taskOffset;
     }
 
     /**

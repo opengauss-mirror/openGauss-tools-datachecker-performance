@@ -78,7 +78,13 @@ public interface QuerySqlTemplate {
      */
     String QUERY_MULTIPLE_PRIMARY_KEY_OFF_SET = "SELECT :columnsList FROM :schema.:tableName a  RIGHT JOIN "
         + " (SELECT :primaryKey FROM :schema.:tableName order by :primaryKey LIMIT :start,:offset) b ON :joinOn";
-
+    
+    /**
+     * Query SQL statement fragment: SQL statement for fragment query using offset in single primary key scenario
+     */
+    String QUERY_BETWEEN_SET = "SELECT :columnsList FROM :schema.:tableName WHERE :primaryKey "
+            + " BETWEEN :start AND :offset "
+            +" :orderBy ";
     /**
      * Query SQL statement fragment: SQL statement field spacing symbol
      */

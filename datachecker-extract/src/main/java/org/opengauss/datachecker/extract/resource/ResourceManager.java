@@ -51,6 +51,7 @@ public class ResourceManager {
     private int queryDop;
     @Resource
     private DruidDataSourceConfig dataSourceConfig;
+    
     @Resource
     private ShutdownService shutdownService;
     private ReentrantLock lock = new ReentrantLock();
@@ -76,6 +77,14 @@ public class ResourceManager {
      */
     public int getParallelQueryDop() {
         return queryDop;
+    }
+    
+    /**
+     * Get max connection count, this must be then 1.
+     * @return
+     */
+    public int maxConnectionCount() {
+        return connectionCount.get();
     }
 
     /**

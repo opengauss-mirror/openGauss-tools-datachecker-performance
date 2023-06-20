@@ -15,6 +15,7 @@
 
 package org.opengauss.datachecker.extract.dao;
 
+import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.MetadataLoadProcess;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
@@ -56,7 +57,19 @@ public interface MetaDataDAO {
      * @return
      */
     List<TableMetadata> queryTableMetadataList();
-    TableMetadata queryTableMetadata(String tableName);
+    
+    /**
+     * Get table column meta data.
+     * @param tableName the table name for query
+     * @return the new Metadata.
+     */
+    TableMetadata queryTableMetadata(String tableName, CheckMode checkMode);
+    
+    /**
+     * Update table column meta data.
+     * @param tableMetadata need update table meta data.
+     */
+    void updateTableColumnMetaData(TableMetadata tableMetadata, CheckMode checkMode);
     /**
      * Query the metadata information of the corresponding column of the table
      *
@@ -71,5 +84,18 @@ public interface MetaDataDAO {
      * @param tableMetadataMap tableMetadataMap
      */
     void matchRowRules(Map<String, TableMetadata> tableMetadataMap);
-
+    
+    /**
+     * Query the table true lines.
+     * @param tableName the tablename
+     * @return the table row.
+     */
+    long queryTableRow(String tableName);
+    
+    /**
+     * Only use when primary key is auto increment.
+     * @param tableName
+     * @return
+     */
+    long queryTableMaxId(String tableName, String primaryColumnName);
 }

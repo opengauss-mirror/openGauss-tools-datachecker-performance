@@ -22,18 +22,25 @@ import org.opengauss.datachecker.common.entry.enums.ColumnKey;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.MetadataLoadProcess;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
+import org.opengauss.datachecker.common.thread.ThreadPoolFactory;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.opengauss.datachecker.extract.cache.MetaDataCache;
 import org.opengauss.datachecker.extract.dao.DataBaseMetaDataDAOImpl;
+import org.opengauss.datachecker.extract.load.ExtractEnvironment;
 import org.opengauss.datachecker.extract.resource.ResourceManager;
 import org.springframework.stereotype.Service;
 
 import java.util.Comparator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Future;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.stream.Collectors;
 
 /**
@@ -49,6 +56,7 @@ import java.util.stream.Collectors;
 public class MetaDataService {
     private final DataBaseMetaDataDAOImpl dataBaseMetadataDAOImpl;
     private final ResourceManager resourceManager;
+    private final ExtractEnvironment extractEnvironment;
 
     /**
      * Return database metadata information through cache
@@ -91,16 +99,32 @@ public class MetaDataService {
         if (CollectionUtils.isEmpty(tableMetadataList)) {
             return tableMetadataMap;
         }
+        List<Future<?>> futures = new LinkedList<>();
+        ThreadPoolExecutor executor = ThreadPoolFactory.newThreadPool("update-column",
+                Math.max(1, resourceManager.maxConnectionCount()/2),
+                resourceManager.maxConnectionCount(),
+                tableMetadataList.size());
         tableMetadataList.forEach(tableMetadata -> {
-            takeConnection();
-            if (resourceManager.isShutdown()) {
-                log.warn("extract service is shutdown ,task set table metadata of table is canceled!");
-            } else {
-                setTableMetadataByTableName(tableMetadata);
-                tableMetadataMap.put(tableMetadata.getTableName(), tableMetadata);
-            }
-            resourceManager.release();
+            Future<?> future = executor.submit(() -> {
+                takeConnection();
+                if (resourceManager.isShutdown()) {
+                    log.warn("extract service is shutdown ,task set table metadata of table is canceled!");
+                } else {
+                    dataBaseMetadataDAOImpl.updateTableColumnMetaData(tableMetadata, extractEnvironment.getCheckMode());
+                    tableMetadataMap.put(tableMetadata.getTableName(), tableMetadata);
+                }
+                resourceManager.release();
+            });
+            futures.add(future);
         });
+        futures.forEach(future -> {
+            try {
+                future.get();
+            } catch (InterruptedException | ExecutionException exp) {
+                log.warn("extract table column failed with exp: {}", exp);
+            }
+        });
+        executor.shutdown();
         log.info("query table column metadata {}", tableMetadataList.size());
         Map<String, TableMetadata> filterNoPrimary = tableMetadataMap.entrySet().stream().filter(
             entry -> CollectionUtils.isNotEmpty(entry.getValue().getPrimaryMetas())).collect(
@@ -123,16 +147,10 @@ public class MetaDataService {
         }
     }
 
-    private void setTableMetadataByTableName(TableMetadata tableMetadata) {
-        List<ColumnsMetaData> columnsMetadatas =
-            dataBaseMetadataDAOImpl.queryTableColumnsMetaData(tableMetadata.getTableName());
-        tableMetadata.setColumnsMetas(columnsMetadatas);
-        tableMetadata.setPrimaryMetas(getTablePrimaryColumn(columnsMetadatas));
-    }
-
     public TableMetadata getMetaDataOfSchemaByCache(String tableName) {
         if (!MetaDataCache.containsKey(tableName)) {
-            final TableMetadata tableMetadata = dataBaseMetadataDAOImpl.queryTableMetadata(tableName);
+            final TableMetadata tableMetadata = dataBaseMetadataDAOImpl.queryTableMetadata(
+                    tableName, extractEnvironment.getCheckMode());
             if (Objects.nonNull(tableMetadata)) {
                 MetaDataCache.put(tableName, tableMetadata);
             }
@@ -163,7 +181,7 @@ public class MetaDataService {
      * @return TableMetadata
      */
     public TableMetadata queryIncrementMetaData(String tableName) {
-        return dataBaseMetadataDAOImpl.queryTableMetadata(tableName);
+        return dataBaseMetadataDAOImpl.queryTableMetadata(tableName, extractEnvironment.getCheckMode());
     }
 
     /**
