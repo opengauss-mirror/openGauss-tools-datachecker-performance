@@ -65,6 +65,16 @@ public class KafkaConsumerHandler {
         return queryRowData(topic, partitions, false);
     }
 
+    public void poolTopicPartitionsData(String topic, int partitions, List<RowDataHash> list) {
+        final TopicPartition topicPartition = new TopicPartition(topic, partitions);
+        kafkaConsumer.assign(List.of(topicPartition));
+        long endOfOffset = getEndOfOffset(topicPartition);
+        long beginOfOffset = beginningOffsets(topicPartition);
+        consumerTopicRecords(list, kafkaConsumer, endOfOffset);
+        log.debug("consumer topic=[{}] partitions=[{}] dataList=[{}] ,beginOfOffset={},endOfOffset={}", topic,
+            partitions, list.size(), beginOfOffset, endOfOffset);
+    }
+
     /**
      * Query the Kafka partition data corresponding to the specified table
      *

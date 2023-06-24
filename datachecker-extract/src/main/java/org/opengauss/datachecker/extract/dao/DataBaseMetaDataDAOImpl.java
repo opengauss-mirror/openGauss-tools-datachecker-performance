@@ -15,20 +15,18 @@
 
 package org.opengauss.datachecker.extract.dao;
 
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.MapUtils;
-import org.opengauss.datachecker.common.constant.Constants;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.entry.enums.ColumnKey;
 import org.opengauss.datachecker.common.entry.enums.DataBaseMeta;
+import org.opengauss.datachecker.common.entry.enums.DataBaseType;
+import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.MetadataLoadProcess;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
-import org.opengauss.datachecker.common.util.EnumUtil;
 import org.opengauss.datachecker.extract.config.ExtractProperties;
-import org.opengauss.datachecker.extract.dao.MetaSqlMapper.DataBaseMySql;
 import org.opengauss.datachecker.extract.service.RuleAdapterService;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -48,10 +46,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.locks.Condition;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * DataBaseMetaDataDAOImpl
@@ -68,20 +63,21 @@ public class DataBaseMetaDataDAOImpl implements MetaDataDAO {
         public static final String TABLE_NAME = "tableName";
         public static final String DATABASE_SCHEMA = "databaseSchema";
         public static final String TABLE_COLUMN_NAME = "tableColumn";
-        
+
         private Map<String, Object> param = new HashMap<>();
+
         public ConditionBuild() {
             this(null, null, null);
         }
-        
+
         public ConditionBuild(Object schemaVal) {
             this(schemaVal, null, null);
         }
-        
+
         public ConditionBuild(Object schemaVal, Object tableVal) {
             this(schemaVal, tableVal, null);
         }
-        
+
         public ConditionBuild(Object schemaVal, Object tableVal, Object columnVal) {
             if (schemaVal != null) {
                 putSchema(schemaVal);
@@ -93,26 +89,27 @@ public class DataBaseMetaDataDAOImpl implements MetaDataDAO {
                 putTableColumn(columnVal);
             }
         }
+
         public ConditionBuild put(String key, Object val) {
             param.put(key, val);
             return this;
         }
-        
+
         public ConditionBuild putSchema(Object val) {
             param.put(DATABASE_SCHEMA, val);
             return this;
         }
-    
+
         public ConditionBuild putTableName(Object val) {
             param.put(TABLE_NAME, val);
             return this;
         }
-        
+
         public ConditionBuild putTableColumn(Object val) {
             param.put(TABLE_COLUMN_NAME, val);
             return this;
         }
-        
+
         public Map<String, Object> get() {
             return param;
         }
@@ -145,45 +142,45 @@ public class DataBaseMetaDataDAOImpl implements MetaDataDAO {
     @Override
     public List<TableMetadata> queryTableMetadataList() {
         DataBaseMeta type = DataBaseMeta.TABLE;
-        Map<String, Object> param = new ConditionBuild(getSchema()).get();
+        String schema = getSchema();
+        Map<String, Object> param = new ConditionBuild(schema).get();
         try {
-            List<TableMetadata> tableList = queryByCondition(type, param, (rs, rowNum) -> TableMetadata.parse(rs));
-            List<String> tableListNames = tableList.stream().map(meta ->meta.getTableName()).collect(Collectors.toList());
+            Endpoint endpoint = extractProperties.getEndpoint();
+            DataBaseType databaseType = extractProperties.getDatabaseType();
+            List<TableMetadata> tableList =
+                queryByCondition(type, param, (rs, rowNum) -> parseTableMetadata(rs, schema, endpoint, databaseType));
+            List<String> tableListNames =
+                tableList.stream().map(meta -> meta.getTableName()).collect(Collectors.toList());
             final List<String> tableNameList = filterByTableRules(tableListNames);
             return tableList.stream().filter(meta -> tableNameList.contains(meta.getTableName()))
-                    .collect(Collectors.toList());
+                            .collect(Collectors.toList());
         } catch (DataAccessException exception) {
             log.error("jdbc query table meta data [{}] error :", type, exception);
         }
         return new LinkedList<>();
     }
-    
+
+    private TableMetadata parseTableMetadata(ResultSet rs, String schema, Endpoint endpoint, DataBaseType dataBaseType)
+        throws SQLException {
+        return TableMetadata.parse(rs, schema, endpoint, dataBaseType);
+    }
+
     @Override
     public void updateTableColumnMetaData(final TableMetadata tableMetadata, CheckMode checkMode) {
         String tableName = tableMetadata.getTableName();
         final List<ColumnsMetaData> columnsMetaData = queryTableColumnsMetaData(tableName);
         tableMetadata.setColumnsMetas(columnsMetaData);
         tableMetadata.setPrimaryMetas(getTablePrimaryColumn(columnsMetaData));
-        if (checkMode == CheckMode.FULL) {
-            if (extractProperties.getCountRow()) {
-                tableMetadata.setRealRows(true);
-                tableMetadata.setTableRows(Math.max(queryTableRow(tableName), tableMetadata.getTableRows()));
-            }
-            if (tableMetadata.isAutoIncrement()) {
-                tableMetadata.setMaxTableId(
-                        queryTableMaxId(tableName, tableMetadata.getPrimaryMetas().get(0).getColumnName())
-                );
-            }
-        }
     }
-    
+
     @Override
     public TableMetadata queryTableMetadata(String tableName, CheckMode checkMode) {
         Map<String, Object> tableCondition = new ConditionBuild(getSchema(), tableName).get();
         String sql = MetaSqlMapper.getOneTableMetaSql(extractProperties.getDatabaseType());
         TableMetadata tableMetadata = null;
         try {
-            List<TableMetadata> tableMetadataList = queryByCondition(sql, tableCondition, (rs, rowNum) -> TableMetadata.parse(rs));
+            List<TableMetadata> tableMetadataList =
+                queryByCondition(sql, tableCondition, (rs, rowNum) -> TableMetadata.parse(rs));
             if (tableMetadataList.isEmpty()) {
                 return null;
             }
@@ -208,7 +205,7 @@ public class DataBaseMetaDataDAOImpl implements MetaDataDAO {
         }
         ruleAdapterService.executeRowRule(tableMetadataMap);
     }
-    
+
     @Override
     public long queryTableRow(final String tableName) {
         DataBaseMeta type = DataBaseMeta.COUNT;
@@ -221,7 +218,7 @@ public class DataBaseMetaDataDAOImpl implements MetaDataDAO {
         }
         return 0;
     }
-    
+
     @Override
     public long queryTableMaxId(final String tableName, final String primaryColumnName) {
         DataBaseMeta type = DataBaseMeta.MAX_ID_COUNT;
@@ -234,7 +231,7 @@ public class DataBaseMetaDataDAOImpl implements MetaDataDAO {
         }
         return 0;
     }
-    
+
     private List<String> queryAllTableNames() {
         Map<String, Object> condition = new ConditionBuild(getSchema()).get();
         DataBaseMeta type = DataBaseMeta.TABLE;
@@ -262,23 +259,24 @@ public class DataBaseMetaDataDAOImpl implements MetaDataDAO {
         }
         return new LinkedList<>();
     }
-    
+
     private <T> List<T> queryByCondition(String sql, Map<String, Object> paramMap, RowMapper<T> rowMapper) {
         LocalDateTime start = LocalDateTime.now();
         NamedParameterJdbcTemplate jdbc = new NamedParameterJdbcTemplate(JdbcTemplateOne);
         List<T> results = jdbc.query(sql, paramMap, rowMapper);
-        log.debug("query sql:<{}> size:{} cost:{}", sql, results.size(), Duration.between(start, LocalDateTime.now()).toSeconds());
+        log.debug("query sql:<{}> size:{} cost:{}", sql, results.size(),
+            Duration.between(start, LocalDateTime.now()).toSeconds());
         return results;
     }
-    
+
     private <T> List<T> queryByCondition(DataBaseMeta type, Map<String, Object> paramMap, RowMapper<T> rowMapper) {
         return queryByCondition(getSql(type), paramMap, rowMapper);
     }
-    
+
     private String getSql(DataBaseMeta type) {
         return MetaSqlMapper.getMetaSql(extractProperties.getDatabaseType(), type);
     }
-    
+
     /**
      * Dynamically obtain the schema information of the current data source
      *

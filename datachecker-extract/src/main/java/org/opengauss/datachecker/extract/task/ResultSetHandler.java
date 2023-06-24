@@ -56,13 +56,14 @@ public abstract class ResultSetHandler {
     /**
      * Convert the current query result set into map according to the metadata information of the result set
      *
+     * @param rsmd      JDBC Data query result set
      * @param resultSet JDBC Data query result set
+     * @param values    values
      * @return JDBC Data encapsulation results
      */
-    public Map<String, String> putOneResultSetToMap(ResultSet resultSet) {
-        Map<String, String> values = new TreeMap<>();
+    public Map<String, String> putOneResultSetToMap(ResultSetMetaData rsmd, ResultSet resultSet,
+        Map<String, String> values) {
         try {
-            final ResultSetMetaData rsmd = resultSet.getMetaData();
             IntStream.rangeClosed(1, rsmd.getColumnCount()).forEach(columnIdx -> {
                 try {
                     String columnLabel = rsmd.getColumnLabel(columnIdx);
@@ -76,6 +77,17 @@ public abstract class ResultSetHandler {
             log.error("putOneResultSetToMap get data metadata information exception", ex);
         }
         return values;
+    }
+
+    /**
+     * Convert the current query result set into map according to the metadata information of the result set
+     *
+     * @param resultSet JDBC Data query result set
+     * @return JDBC Data encapsulation results
+     */
+    public Map<String, String> putOneResultSetToMap(ResultSet resultSet) throws SQLException {
+        final ResultSetMetaData rsmd = resultSet.getMetaData();
+        return putOneResultSetToMap(rsmd, resultSet, new TreeMap<>());
     }
 
     protected abstract String convert(ResultSet resultSet, String columnTypeName, String columnLabel, int displaySize)

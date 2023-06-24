@@ -70,6 +70,7 @@ public class CheckStartLoader extends AbstractCheckLoader {
             log.info("check task execute success ,cost time ={}", Duration.between(startTime, endTime).toSeconds());
             checkResultManagerService.summaryCheckResult();
             kafkaTopicDeleteProvider.deleteTopicIfAllCheckedCompleted();
+            kafkaTopicDeleteProvider.waitDeleteTopicsEventCompleted();
             feignClient.shutdown(FULL_CHECK_COMPLETED);
             shutdown(FULL_CHECK_COMPLETED);
         }

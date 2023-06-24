@@ -62,6 +62,7 @@ public class KafkaConsumerConfig {
      * @return consumerConfigs
      */
     public Map<String, Object> consumerConfigs() {
+        Thread.currentThread().setContextClassLoader(null);
         Map<String, Object> propsMap = new HashMap<>(InitialCapacity.CAPACITY_8);
         propsMap.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, servers);
         propsMap.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, isEnableAutoCommit);

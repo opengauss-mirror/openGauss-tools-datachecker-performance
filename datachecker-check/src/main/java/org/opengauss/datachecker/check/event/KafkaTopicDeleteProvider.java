@@ -22,6 +22,7 @@ import org.opengauss.datachecker.check.config.DataCheckProperties;
 import org.opengauss.datachecker.check.modules.task.TaskManagerService;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.util.LogUtils;
+import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.opengauss.datachecker.common.util.TopicUtil;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
@@ -32,6 +33,7 @@ import javax.annotation.Resource;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -81,6 +83,21 @@ public class KafkaTopicDeleteProvider implements ApplicationContextAware {
         }
     }
 
+    /**
+     * wait delete topic event complete
+     */
+    public void waitDeleteTopicsEventCompleted() {
+        DeleteTopicsEventListener bean = applicationContext.getBean(DeleteTopicsEventListener.class);
+        Queue<DeleteTopicsEvent> events = bean.getEvents();
+        while (!events.isEmpty()) {
+            ThreadUtil.sleepOneSecond();
+            logKafka.warn("wait delete topic event complete ...");
+        }
+    }
+
+    /**
+     * deleteTopicIfTableCheckedCompleted
+     */
     public void deleteTopicIfTableCheckedCompleted() {
         if (properties.getAutoDeleteTopic() == DeleteMode.DELETE_IMMEDIATELY.code) {
             startDeleteTopicSchedule();

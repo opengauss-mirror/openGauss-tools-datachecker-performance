@@ -25,6 +25,7 @@ import org.opengauss.datachecker.common.entry.extract.RowDataHash;
 import org.opengauss.datachecker.common.entry.extract.Topic;
 import org.opengauss.datachecker.extract.cache.TopicCache;
 import org.opengauss.datachecker.extract.config.KafkaConsumerConfig;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
@@ -41,6 +42,7 @@ import java.util.List;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@ConditionalOnBean({KafkaConsumerConfig.class, TopicCache.class})
 public class KafkaConsumerService {
     private final KafkaConsumerConfig consumerConfig;
     private final TopicCache topicCache;

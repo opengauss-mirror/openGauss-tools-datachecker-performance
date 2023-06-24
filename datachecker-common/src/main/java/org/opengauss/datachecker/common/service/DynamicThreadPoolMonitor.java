@@ -19,9 +19,9 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.opengauss.datachecker.common.constant.DynamicTpConstant;
 import org.opengauss.datachecker.common.entry.memory.CpuInfo;
+import org.opengauss.datachecker.common.entry.memory.JvmInfo;
 
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.ThreadPoolExecutor;
 
 /**
@@ -53,15 +53,25 @@ public class DynamicThreadPoolMonitor implements Runnable {
     public void run() {
         while (isChecked) {
             CpuInfo cpuInfo = MemoryManager.getCpuInfo();
+            JvmInfo jvmInfo = MemoryManager.getJvmInfo();
             executors.forEach((name, tpExecutor) -> {
+                if (Double.compare(cpuInfo.getFree(), DynamicTpConstant.MIN_CPU_FREE) < 0) {
+                    decrementCorePoolSize(tpExecutor);
+                    return;
+                }
+                if (Double.compare(jvmInfo.getFree(), DynamicTpConstant.MIN_MEMORY_FREE) < 0) {
+                    decrementCorePoolSize(tpExecutor);
+                    return;
+                }
                 if (hasWaitTask(tpExecutor)) {
-                    incrementCorePoolSize(name, tpExecutor, cpuInfo);
+                    incrementCorePoolSize(tpExecutor, cpuInfo);
                 } else {
-                    decrementCorePoolSize(name, tpExecutor);
+                    decrementCorePoolSize(tpExecutor);
                 }
                 if (hasNoWaitTask(tpExecutor)) {
-                    setMinCorePoolSize(name, tpExecutor);
+                    setMinCorePoolSize(tpExecutor);
                 }
+                logInfo(name, tpExecutor);
             });
             Thread.sleep(DynamicTpConstant.MONITORING_PERIOD_MILLIS);
         }
@@ -74,44 +84,34 @@ public class DynamicThreadPoolMonitor implements Runnable {
         isChecked = false;
     }
 
-    private void logChange(String name, ThreadPoolExecutor tpExecutor, CpuInfo cpuInfo) {
-        if (tpExecutor.getActiveCount() < 1) {
-            return;
-        }
-        if (Objects.nonNull(cpuInfo)) {
-            log.debug("{} coreSize={}, maxSize={}, taskCount={}, completedCount={}, activeCount={},cpu-free={}", name,
-                tpExecutor.getCorePoolSize(), tpExecutor.getMaximumPoolSize(), tpExecutor.getTaskCount(),
-                tpExecutor.getCompletedTaskCount(), tpExecutor.getActiveCount(), cpuInfo.getFree());
-        } else {
-            log.debug("{} coreSize={}, maxSize={}, taskCount={}, completedCount={}, activeCount={}", name,
+    private void logInfo(String name, ThreadPoolExecutor tpExecutor) {
+        if (tpExecutor.getActiveCount() > 0) {
+            log.info("{} coreSize={}, maxSize={}, taskCount={}, completedCount={}, activeCount={}", name,
                 tpExecutor.getCorePoolSize(), tpExecutor.getMaximumPoolSize(), tpExecutor.getTaskCount(),
                 tpExecutor.getCompletedTaskCount(), tpExecutor.getActiveCount());
         }
     }
 
-    private void decrementCorePoolSize(String name, ThreadPoolExecutor tpExecutor) {
+    private void decrementCorePoolSize(ThreadPoolExecutor tpExecutor) {
         int corePoolSize = tpExecutor.getCorePoolSize();
         int activeCount = tpExecutor.getActiveCount();
         int resetCoreSize = Math.max(activeCount, initCorePoolSize);
         if (corePoolSize > initCorePoolSize && resetCoreSize != corePoolSize) {
             tpExecutor.setCorePoolSize(resetCoreSize);
-            logChange(name, tpExecutor, null);
         }
     }
 
-    private void setMinCorePoolSize(String name, ThreadPoolExecutor tpExecutor) {
+    private void setMinCorePoolSize(ThreadPoolExecutor tpExecutor) {
         if (tpExecutor.getCorePoolSize() != initCorePoolSize) {
             tpExecutor.setCorePoolSize(initCorePoolSize);
-            logChange(name, tpExecutor, null);
         }
     }
 
-    private void incrementCorePoolSize(String name, ThreadPoolExecutor tpExecutor, CpuInfo cpuInfo) {
+    private void incrementCorePoolSize(ThreadPoolExecutor tpExecutor, CpuInfo cpuInfo) {
         int corePoolSize = tpExecutor.getCorePoolSize();
         int maximumPoolSize = tpExecutor.getMaximumPoolSize();
         if (corePoolSize < maximumPoolSize && Double.compare(cpuInfo.getFree(), DynamicTpConstant.MIN_CPU_FREE) > 0) {
             tpExecutor.setCorePoolSize(corePoolSize + 1);
-            logChange(name, tpExecutor, cpuInfo);
         }
     }
 

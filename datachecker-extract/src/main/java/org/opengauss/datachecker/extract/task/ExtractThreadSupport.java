@@ -73,7 +73,9 @@ public class ExtractThreadSupport {
     }
 
     private int getMaximumTableSliceSize() {
-        if (maximumTableSliceSize >= DEFAULT_MAXIMUM_TABLE_SLICE_SIZE) {
+        if (maximumTableSliceSize == 0) {
+            return maximumTableSliceSize;
+        } else if (maximumTableSliceSize >= DEFAULT_MAXIMUM_TABLE_SLICE_SIZE) {
             return maximumTableSliceSize;
         } else {
             return DEFAULT_MAXIMUM_TABLE_SLICE_SIZE;

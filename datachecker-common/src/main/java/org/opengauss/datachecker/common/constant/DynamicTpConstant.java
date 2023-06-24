@@ -34,14 +34,15 @@ public interface DynamicTpConstant {
     int DEFAULT_MAXIMUM_POOL_SIZE = 20;
 
     /**
-     * min-cpu-free = 20%
+     * min-cpu-free = 10%
      */
-    int MIN_CPU_FREE = 20;
+    int MIN_CPU_FREE = 10;
+    int MIN_MEMORY_FREE = 500;
 
     /**
-     * monitoring period is 100 millis
+     * monitoring period is 1000 millis
      */
-    int MONITORING_PERIOD_MILLIS = 100;
+    int MONITORING_PERIOD_MILLIS = 1000;
 
     /**
      * check-executor
