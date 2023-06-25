@@ -123,19 +123,22 @@ public class DataManipulationService {
         Assert.isTrue(!CollectionUtils.isEmpty(primaryMetas),
             "The metadata information of the table primary key is abnormal, and the construction of select SQL failed");
         final SelectDmlBuilder dmlBuilder = new SelectDmlBuilder(databaseType);
+        List<Map<String, String>> resultMap;
         // Single primary key table data query
         if (primaryMetas.size() == 1) {
             final ColumnsMetaData primaryData = primaryMetas.get(0);
             String querySql = dmlBuilder.schema(extractProperties.getSchema()).columns(metadata.getColumnsMetas())
                                         .tableName(tableName).conditionPrimary(primaryData).build();
-            return queryColumnValuesSinglePrimaryKey(querySql, compositeKeys);
+            resultMap = queryColumnValuesSinglePrimaryKey(querySql, compositeKeys);
         } else {
             // Compound primary key table data query
             String querySql = dmlBuilder.schema(extractProperties.getSchema()).columns(metadata.getColumnsMetas())
                                         .tableName(tableName).conditionCompositePrimary(primaryMetas).build();
             List<Object[]> batchParam = dmlBuilder.conditionCompositePrimaryValue(primaryMetas, compositeKeys);
-            return queryColumnValuesByCompositePrimary(querySql, batchParam);
+            resultMap = queryColumnValuesByCompositePrimary(querySql, batchParam);
         }
+        rectifyValue(metadata, resultMap);
+        return resultMap;
     }
 
     /**
@@ -152,6 +155,24 @@ public class DataManipulationService {
         HashMap<String, Object> paramMap = new HashMap<>(InitialCapacity.CAPACITY_1);
         paramMap.put(DmlBuilder.PRIMARY_KEYS, batchParam);
         return queryColumnValues(selectDml, paramMap, tableMetadata);
+    }
+
+    private void rectifyValue(TableMetadata metadata, List<Map<String, String>> resultMap) {
+        List<ColumnsMetaData> columnsMetas = metadata.getColumnsMetas();
+        for (ColumnsMetaData columnsMetaData : columnsMetas) {
+            if ("tsquery".equals(columnsMetaData.getDataType()) || "tsvector".equals(columnsMetaData.getDataType())) {
+                for (Map<String, String> valueMap : resultMap) {
+                    String originString = valueMap.get(columnsMetaData.getColumnName());
+                    valueMap.put(columnsMetaData.getColumnName(), originString.replaceAll("\'", " "));
+                }
+            }
+            if ("bytea".equals(columnsMetaData.getDataType())) {
+                for (Map<String, String> valueMap : resultMap) {
+                    String originString = valueMap.get(columnsMetaData.getColumnName());
+                    valueMap.put(columnsMetaData.getColumnName(), "\\x" + originString);
+                }
+            }
+        }
     }
 
     private List<Map<String, String>> queryColumnValuesByCompositePrimary(String selectDml, List<Object[]> batchParam) {
