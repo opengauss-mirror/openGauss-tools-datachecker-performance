@@ -24,6 +24,7 @@ import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.check.client.FeignClientService;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.util.LogUtils;
+import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
@@ -32,6 +33,8 @@ import javax.annotation.Resource;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
 
 /**
@@ -42,7 +45,7 @@ import java.util.concurrent.ExecutionException;
 @Component
 public class DeleteTopicsEventListener implements ApplicationListener<DeleteTopicsEvent> {
     private static final Logger log = LogUtils.geKafkaLogger();
-
+    private Queue<DeleteTopicsEvent> events = new ConcurrentLinkedQueue();
     @Resource
     private FeignClientService feignClient;
     @Value("${spring.kafka.bootstrap-servers}")
@@ -52,16 +55,24 @@ public class DeleteTopicsEventListener implements ApplicationListener<DeleteTopi
     @Override
     public void onApplicationEvent(DeleteTopicsEvent event) {
         try {
+            events.add(event);
             log.info("delete topic event : {}", event.getMessage());
             final Object source = event.getSource();
             initAdminClient();
             final DeleteTopics deleteOption = (DeleteTopics) source;
             deleteTopic(deleteOption.getTopicList());
             feignClient.notifyCheckTableFinished(Endpoint.SOURCE, deleteOption.getTableName());
+            ThreadUtil.sleep(10);
             feignClient.notifyCheckTableFinished(Endpoint.SINK, deleteOption.getTableName());
         } catch (Exception exception) {
             log.error("delete topic has error ", exception);
+        } finally {
+            events.remove(event);
         }
+    }
+
+    public Queue<DeleteTopicsEvent> getEvents() {
+        return events;
     }
 
     private void deleteTopic(List<String> deleteTopicList) {

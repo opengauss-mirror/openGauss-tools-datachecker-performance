@@ -20,12 +20,16 @@ public class TaskUtilHelper {
     private static final float TABLE_ROWS_DEVIATION_RATE = 1.3f;
     private TableMetadata tableMetadata;
     private int maxLimitRowCount;
-    
+
     public TaskUtilHelper(TableMetadata tableMetadata, int maxLimitRowCount) {
         this.tableMetadata = tableMetadata;
         this.maxLimitRowCount = maxLimitRowCount;
     }
-    
+
+    public boolean noTableSlice() {
+        return tableMetadata.getTableRows() < maxLimitRowCount;
+    }
+
     public int[][] calcAutoTaskOffset() {
         long tableRows = tableMetadata.getTableRows();
         if (tableRows < maxLimitRowCount) {
@@ -33,14 +37,12 @@ public class TaskUtilHelper {
         }
         long calcTableRow = tableMetadata.canUseBetween() ? tableMetadata.getMaxTableId() : tableRows;
         return oldCalcAutoTaskOffset(calcTableRow, maxLimitRowCount);
-        
     }
-    
-    
+
     private float getTableRowsDeviationRate() {
         return tableMetadata.canUseBetween() ? 1.01f : TABLE_ROWS_DEVIATION_RATE;
     }
-    
+
     private int[][] oldCalcAutoTaskOffset(long tableRows, int maxLimitRowCount) {
         if (tableRows <= maxLimitRowCount) {
             return new int[][] {{0, maxLimitRowCount}};

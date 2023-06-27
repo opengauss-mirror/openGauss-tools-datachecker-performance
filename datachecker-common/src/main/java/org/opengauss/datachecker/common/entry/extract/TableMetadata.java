@@ -16,10 +16,11 @@
 package org.opengauss.datachecker.common.entry.extract;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.Builder;
 import lombok.Data;
 import lombok.ToString;
 import lombok.experimental.Accessors;
+import org.opengauss.datachecker.common.entry.enums.DataBaseType;
+import org.opengauss.datachecker.common.entry.enums.Endpoint;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -37,6 +38,9 @@ import java.util.List;
 @Accessors(chain = true)
 @ToString
 public class TableMetadata {
+    private Endpoint endpoint;
+    private DataBaseType dataBaseType;
+    private String schema;
     /**
      * tableName
      */
@@ -46,14 +50,14 @@ public class TableMetadata {
      * Total table data
      */
     private long tableRows;
-    
+
     /**
-     *  If config count_row this will be true.
+     * If config count_row this will be true.
      */
     private boolean realRows;
 
     private long avgRowLength;
-    
+
     private long maxTableId = 0;
 
     /**
@@ -67,10 +71,11 @@ public class TableMetadata {
     private List<ColumnsMetaData> columnsMetas;
 
     private ConditionLimit conditionLimit;
-    
+
     /**
      * Judge if this table is auto increment, if this true and no conditionLimit configured,
      * you can use id between start and end.
+     *
      * @return true if primary is auto increment.
      */
     public boolean isAutoIncrement() {
@@ -79,9 +84,10 @@ public class TableMetadata {
         }
         return primaryMetas.get(0).isAutoIncrementColumn();
     }
-    
+
     /**
      * If primary key can use between to iteractor resultset.
+     *
      * @return true if enable.
      */
     public boolean canUseBetween() {
@@ -90,12 +96,17 @@ public class TableMetadata {
         }
         return isAutoIncrement();
     }
-    
+
     public static TableMetadata parse(ResultSet rs) throws SQLException {
         TableMetadata tableMetadata = new TableMetadata();
         tableMetadata.setTableName(rs.getString(1));
         tableMetadata.setTableRows(rs.getLong(2));
         tableMetadata.setAvgRowLength(rs.getLong(3));
         return tableMetadata;
+    }
+
+    public static TableMetadata parse(ResultSet rs, String schema, Endpoint endpoint, DataBaseType databaseType)
+        throws SQLException {
+        return parse(rs).setSchema(schema).setEndpoint(endpoint).setDataBaseType(databaseType);
     }
 }

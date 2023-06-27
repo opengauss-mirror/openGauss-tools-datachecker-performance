@@ -37,7 +37,7 @@ public interface QuerySqlTemplate {
      * Query SQL statement primaryKey fragment
      */
     String PRIMARY_KEY = ":primaryKey";
-
+    String PK_CONDITION = ":pkCondition";
     /**
      * Query SQL statement schema fragment
      */
@@ -67,7 +67,7 @@ public interface QuerySqlTemplate {
      * Query SQL statement fragment: SQL statement for fragment query using offset in single primary key scenario
      */
     String QUERY_OFF_SET = "SELECT :columnsList FROM :schema.:tableName :orderBy LIMIT :start,:offset";
-
+    String QUERY_WHERE_BETWEEN = "SELECT :columnsList FROM :schema.:tableName where :pkCondition :orderBy ";
     /**
      * Query SQL statement fragment: SQL statement for fragment query using offset in single primary key scenario
      */

@@ -28,8 +28,10 @@ import lombok.Getter;
 public class QuerySqlEntry {
     private String table;
     private String sql;
-    private int start;
-    private int offset;
+    private long start;
+    private long offset;
+    private String seqStart;
+    private String seqEnd;
 
     /**
      * build query sql entry
@@ -39,10 +41,31 @@ public class QuerySqlEntry {
      * @param start  start
      * @param offset offset
      */
-    public QuerySqlEntry(String table, String sql, int start, int offset) {
+    public QuerySqlEntry(String table, String sql, long start, long offset) {
         this.table = table;
         this.sql = sql;
         this.start = start;
         this.offset = offset;
+    }
+
+    public QuerySqlEntry(String table, String sql, Object start, Object offset) {
+        this.table = table;
+        this.sql = sql;
+        if (start instanceof Long) {
+            this.start = (long) start;
+            this.offset = (long) offset;
+        } else {
+            this.seqStart = (String) start;
+            this.seqEnd = (String) offset;
+        }
+    }
+
+    @Override
+    public String toString() {
+        if (seqStart != null && !"".equals(seqStart)) {
+            return " [" + table + "] - [" + seqStart + ":" + seqEnd + "] ";
+        } else {
+            return " [" + table + "] - [" + start + "," + offset + "] ";
+        }
     }
 }

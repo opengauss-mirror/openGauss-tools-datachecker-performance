@@ -169,7 +169,7 @@ public class MetaSqlMapper {
             + " join pg_attribute col on col.attrelid = ad.adrelid and col.attnum = ad.adnum "
             + " join pg_class tbl on tbl.oid = ad.adrelid "
             + " join pg_namespace ts on ts.oid = tbl.relnamespace "
-            + " where s.relkind = 'S' and d.deptype in ('a', 'n') "
+            + " where s.relkind = 'S' and d.deptype in ('a', 'n') and  ts.nspname=:databaseSchema "
             + " ) my_seq "
             + " on ca1.tableName = my_seq.table_name and ca1.columnName=my_seq.column_name"
             + ")";

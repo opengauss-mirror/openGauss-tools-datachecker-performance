@@ -40,7 +40,7 @@ class SelectSqlBuilderTest extends MockTableMeta {
     @BeforeEach
     void setUp() {
         mockTableMetadata = mockSingleTablePrimaryMetadata();
-        selectSqlBuilder = new SelectSqlBuilder(mockTableMetadata, getSchema());
+        selectSqlBuilder = new SelectSqlBuilder(mockTableMetadata);
     }
 
     /**
@@ -49,7 +49,7 @@ class SelectSqlBuilderTest extends MockTableMeta {
     @DisplayName("openGauss no divisions single primary select SQL build")
     @Test
     void testSelectNoDivisionsSqlBuilder() {
-        String result = selectSqlBuilder.isDivisions(false).dataBaseType(DataBaseType.OG).builder();
+        String result = selectSqlBuilder.isDivisions(false).builder();
         // Verify the results
         assertThat(result).isEqualTo(
             "SELECT \"id\",\"c_date_time\",\"c_date_time_3\",\"c_timestamp\",\"c_date\",\"c_time\",\"c_year\" FROM \"test\".\"t_data_checker_time_0018_01\"");
@@ -57,7 +57,7 @@ class SelectSqlBuilderTest extends MockTableMeta {
     @DisplayName("mysql no divisions single primary select SQL build")
     @Test
     void testMysqlSelectNoDivisionsSqlBuilder() {
-        String result = selectSqlBuilder.isDivisions(false).dataBaseType(DataBaseType.MS).builder();
+        String result = selectSqlBuilder.isDivisions(false).builder();
         // Verify the results
         assertThat(result).isEqualTo(
             "SELECT `id`,`c_date_time`,`c_date_time_3`,`c_timestamp`,`c_date`,`c_time`,`c_year` FROM `test`.`t_data_checker_time_0018_01`");
@@ -65,7 +65,7 @@ class SelectSqlBuilderTest extends MockTableMeta {
     @DisplayName("openGauss divisions single primary select SQL build")
     @Test
     void testSelectDivisionsSqlBuilder() {
-        String result = selectSqlBuilder.isDivisions(false).dataBaseType(DataBaseType.OG)
+        String result = selectSqlBuilder.isDivisions(false)
                                         .buildSelectSqlOffset(mockTableMetadata, 0, 12);
         // Verify the results
         assertThat(result).isEqualTo(
@@ -74,7 +74,7 @@ class SelectSqlBuilderTest extends MockTableMeta {
     @DisplayName("mysql divisions single primary select SQL build")
     @Test
     void testMysqlSelectDivisionsSqlBuilder() {
-        String result = selectSqlBuilder.isDivisions(false).dataBaseType(DataBaseType.MS)
+        String result = selectSqlBuilder.isDivisions(false)
                                         .buildSelectSqlOffset(mockTableMetadata, 0, 12);
         // Verify the results
         assertThat(result).isEqualTo(
