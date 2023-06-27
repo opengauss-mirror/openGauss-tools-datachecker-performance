@@ -34,6 +34,8 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
     {
         TypeHandler byteaToString = (rs, columnLabel, displaySize) -> bytesToString(rs.getBytes(columnLabel));
         TypeHandler blobToString = (rs, columnLabel, displaySize) -> rs.getString(columnLabel);
+        TypeHandler clobToString = (rs, columnLabel, displaySize) -> rs.getString(columnLabel);
+        TypeHandler xmlToString = (rs, columnLabel, displaySize) -> rs.getString(columnLabel);
         TypeHandler booleanToString = (rs, columnLabel, displaySize) -> booleanToString(rs, columnLabel);
         TypeHandler numericToString = (rs, columnLabel, displaySize) -> numericToString(rs.getBigDecimal(columnLabel));
 
@@ -43,6 +45,8 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
         typeHandlers.put(OpenGaussType.BYTEA, byteaToString);
         typeHandlers.put(OpenGaussType.BLOB, blobToString);
         typeHandlers.put(OpenGaussType.BOOLEAN, booleanToString);
+        typeHandlers.put(OpenGaussType.CLOB, clobToString);
+        typeHandlers.put(OpenGaussType.XML, xmlToString);
 
         // The openGauss jdbc driver obtains the character,character varying  type as varchar
         typeHandlers.put(OpenGaussType.BPCHAR, this::trim);
@@ -80,5 +84,7 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
         String DATE = "date";
         String TIME = "time";
         String TIMESTAMP = "timestamp";
+        String CLOB = "clob";
+        String XML = "xml";
     }
 }
