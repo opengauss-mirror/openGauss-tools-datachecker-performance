@@ -21,9 +21,11 @@ import org.opengauss.datachecker.common.constant.Constants.InitialCapacity;
 import org.opengauss.datachecker.common.entry.check.CheckProgress;
 import org.opengauss.datachecker.common.entry.check.Pair;
 import org.opengauss.datachecker.common.exception.ExtractException;
+import org.opengauss.datachecker.common.service.ShutdownService;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.Resource;
 import javax.validation.constraints.NotEmpty;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -92,6 +94,8 @@ public class TableStatusRegister implements Cache<String, Integer> {
      * complete
      */
     private static final BlockingDeque<String> COMPLETED_TABLE_QUEUE = new LinkedBlockingDeque<>();
+    @Resource
+    private ShutdownService shutdownService;
 
     /**
      * The service starts to recover cached information. Recover historical data based on persistent cached data
@@ -107,6 +111,7 @@ public class TableStatusRegister implements Cache<String, Integer> {
      */
     public void selfCheck() {
         ScheduledExecutorService scheduledExecutor = ThreadUtil.newSingleThreadScheduledExecutor();
+        shutdownService.addExecutorService(scheduledExecutor);
         scheduledExecutor.scheduleWithFixedDelay(() -> {
             Thread.currentThread().setName(SELF_CHECK_THREAD_NAME);
             doCheckingStatus();
@@ -427,7 +432,7 @@ public class TableStatusRegister implements Cache<String, Integer> {
             TABLE_STATUS_CACHE.entrySet().stream().filter(entry -> entry.getValue() != 7).limit(10)
                               .map(entry -> entry.getKey().concat("=").concat(entry.getValue() + ""))
                               .collect(Collectors.toList());
-        if(CollectionUtils.isNotEmpty(tableStatus)){
+        if (CollectionUtils.isNotEmpty(tableStatus)) {
             log.debug("table_status :{} ", tableStatus);
         }
         return CHECK_COUNT.get();

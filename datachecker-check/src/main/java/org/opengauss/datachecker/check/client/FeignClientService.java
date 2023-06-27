@@ -315,4 +315,17 @@ public class FeignClientService {
             throw new DispatchClientException(endpoint, "notify error: " + ignored.getMessage());
         }
     }
+
+    public boolean isCheckTableEmpty(Endpoint endpoint, boolean isForced) {
+        try {
+            Result<Boolean> result = getClient(endpoint).isCheckTableEmpty(isForced);
+            if (result.isSuccess()) {
+                return result.getData();
+            } else {
+                throw new CheckingException("check database failed: " + endpoint.getDescription());
+            }
+        } catch (Exception ignored) {
+            throw new DispatchClientException(endpoint, "check database error: " + ignored.getMessage());
+        }
+    }
 }

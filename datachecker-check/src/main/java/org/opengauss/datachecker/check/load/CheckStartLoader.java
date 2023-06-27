@@ -62,15 +62,17 @@ public class CheckStartLoader extends AbstractCheckLoader {
     @Override
     public void load(CheckEnvironment checkEnvironment) {
         if (Objects.equals(CheckMode.FULL, checkEnvironment.getCheckMode())) {
-            memoryManagerService.startMemoryManager(isEnableMemoryMonitor);
-            final LocalDateTime startTime = LocalDateTime.now();
-            progressService.progressing(checkEnvironment, startTime);
-            checkService.start(CheckMode.FULL);
-            final LocalDateTime endTime = LocalDateTime.now();
-            log.info("check task execute success ,cost time ={}", Duration.between(startTime, endTime).toSeconds());
-            checkResultManagerService.summaryCheckResult();
-            kafkaTopicDeleteProvider.deleteTopicIfAllCheckedCompleted();
-            kafkaTopicDeleteProvider.waitDeleteTopicsEventCompleted();
+            if (!checkEnvironment.isCheckTableEmpty()) {
+                memoryManagerService.startMemoryManager(isEnableMemoryMonitor);
+                final LocalDateTime startTime = LocalDateTime.now();
+                progressService.progressing(checkEnvironment, startTime);
+                checkService.start(CheckMode.FULL);
+                final LocalDateTime endTime = LocalDateTime.now();
+                log.info("check task execute success ,cost time ={}", Duration.between(startTime, endTime).toSeconds());
+                checkResultManagerService.summaryCheckResult();
+                kafkaTopicDeleteProvider.deleteTopicIfAllCheckedCompleted();
+                kafkaTopicDeleteProvider.waitDeleteTopicsEventCompleted();
+            }
             feignClient.shutdown(FULL_CHECK_COMPLETED);
             shutdown(FULL_CHECK_COMPLETED);
         }

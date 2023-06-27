@@ -21,12 +21,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.opengauss.datachecker.common.entry.extract.SourceDataLog;
 import org.opengauss.datachecker.common.exception.ExtractException;
+import org.opengauss.datachecker.common.service.ShutdownService;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.opengauss.datachecker.extract.client.CheckingFeignClient;
 import org.opengauss.datachecker.extract.config.ExtractProperties;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
+import javax.annotation.Resource;
 import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -64,13 +66,15 @@ public class IncrementDataAnalysisService {
      * which is the starting point of the execution cycle of the next data consumption task
      */
     private volatile Long lastTimestamp = System.currentTimeMillis();
-
+    @Resource
+    private ShutdownService shutdownService;
     /**
      * Start the initialization load to verify the topic offset
      */
     public void startIncrDataAnalysis() {
         if (extractProperties.isDebeziumEnable() && consolidationService.isSourceEndpoint()) {
             SCHEDULED_EXECUTOR = ThreadUtil.newSingleThreadScheduledExecutor();
+            shutdownService.addExecutorService(SCHEDULED_EXECUTOR);
             log.info("Start incremental verification analysis");
             verificationConfiguration();
             // Start the initialization load to verify the topic offset

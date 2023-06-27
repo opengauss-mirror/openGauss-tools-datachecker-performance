@@ -9,8 +9,6 @@ spring:
     name: gs_datacheck_sink
   config:
     additional-location: file:config/application-sink.yml
-  lifecycle:
-    timeout-per-shutdown-phase: 5
   extract:
     schema: jack
     databaseType: OG  #OG opengauss

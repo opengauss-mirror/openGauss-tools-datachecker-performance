@@ -16,11 +16,11 @@
 package org.opengauss.datachecker.check.event;
 
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.check.config.DataCheckProperties;
 import org.opengauss.datachecker.check.modules.task.TaskManagerService;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
+import org.opengauss.datachecker.common.service.ShutdownService;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.opengauss.datachecker.common.util.TopicUtil;
@@ -36,7 +36,6 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -50,6 +49,8 @@ public class KafkaTopicDeleteProvider implements ApplicationContextAware {
     private static volatile Map<String, DeleteTopics> deleteTableMap = new ConcurrentHashMap<>();
 
     private ApplicationContext applicationContext;
+    @Resource
+    private ShutdownService shutdownService;
     @Resource
     private DataCheckProperties properties;
     @Resource
@@ -105,8 +106,9 @@ public class KafkaTopicDeleteProvider implements ApplicationContextAware {
     }
 
     private void startDeleteTopicSchedule() {
-        ScheduledExecutorService scheduledExecutor = new ScheduledThreadPoolExecutor(1, new BasicThreadFactory.
-            Builder().namingPattern("delete-topic-thread").build());
+        ScheduledExecutorService scheduledExecutor =
+            ThreadUtil.newSingleThreadScheduledExecutor("delete-topic-scheduled");
+        shutdownService.addExecutorService(scheduledExecutor);
         scheduledExecutor.scheduleWithFixedDelay(this::deleteTopicFromCache, 3L, 1, TimeUnit.SECONDS);
     }
 

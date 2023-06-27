@@ -225,4 +225,7 @@ public interface ExtractFeignClient {
 
     @PostMapping("/notify/check/finished")
     Result<Void> notifyCheckTableFinished(@RequestParam(name = "tableName") String tableName);
+
+    @GetMapping("/check/table/empty")
+    Result<Boolean> isCheckTableEmpty(@RequestParam(name = "isForced") boolean isForced);
 }

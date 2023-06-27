@@ -18,9 +18,8 @@ package org.opengauss.datachecker.check.load;
 import lombok.extern.slf4j.Slf4j;
 import org.opengauss.datachecker.check.service.EndpointMetaDataManager;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
-import org.opengauss.datachecker.common.exception.CheckMetaDataException;
+import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.exception.CheckingException;
-import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
@@ -28,16 +27,16 @@ import javax.annotation.Resource;
 import java.util.Objects;
 
 /**
- * MetaDataLoader
+ * EmptyDataBaseCheckLoader
  *
  * @author ：wangchao
  * @date ：Created in 2022/11/9
  * @since ：11
  */
 @Slf4j
-@Order(100)
+@Order(99)
 @Service
-public class MetaDataLoader extends AbstractCheckLoader {
+public class EmptyDataBaseCheckLoader extends AbstractCheckLoader {
     @Resource
     private EndpointMetaDataManager endpointMetaDataManager;
 
@@ -47,24 +46,12 @@ public class MetaDataLoader extends AbstractCheckLoader {
             return;
         }
         try {
-            int retry = 0;
-            log.info("check service is start to load metadata,place wait a moment.");
-            if (!checkEnvironment.isCheckTableEmpty()) {
-                while (endpointMetaDataManager.isMetaLoading()) {
-                    ThreadUtil.sleep(retryIntervalTimes);
-                    if (++retry > maxRetryTimes) {
-                        log.info("check service is loading metadata, try out of {}", maxRetryTimes);
-                        throw new CheckMetaDataException("loading metadata, try out of " + maxRetryTimes);
-                    }
-                    log.info("check service is loading metadata,place wait a moment.");
-                }
+            checkEnvironment.setCheckTableEmpty(
+                endpointMetaDataManager.isCheckTableEmpty(Endpoint.SINK) && endpointMetaDataManager
+                    .isCheckTableEmpty(Endpoint.SOURCE));
+            if (checkEnvironment.isCheckTableEmpty()) {
+                log.info("check database table is empty.");
             }
-            if (!endpointMetaDataManager.isMetaLoading()) {
-                log.info("start to load metadata from source and sink.");
-                endpointMetaDataManager.load();
-            }
-            checkEnvironment.setMetaLoading();
-            log.info("check service load metadata success.");
         } catch (CheckingException ex) {
             shutdown(ex.getMessage());
         }

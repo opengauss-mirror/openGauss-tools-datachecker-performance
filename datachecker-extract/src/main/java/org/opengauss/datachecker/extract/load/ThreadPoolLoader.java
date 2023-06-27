@@ -52,11 +52,13 @@ public class ThreadPoolLoader extends AbstractExtractLoader {
     @Override
     public void load(ExtractEnvironment extractEnvironment) {
         int retryTime = 0;
-        while (metaDataService.queryMetaDataOfSchemaCache().isEmpty()) {
-            ThreadUtil.sleepHalfSecond();
-            retryTime++;
-            if (retryTime > maxRetryTimes) {
-                shutdown("load table metadata cache is empty!");
+        if (!metaDataService.isCheckTableEmpty(true)) {
+            while (metaDataService.queryMetaDataOfSchemaCache().isEmpty()) {
+                ThreadUtil.sleepHalfSecond();
+                retryTime++;
+                if (retryTime > maxRetryTimes) {
+                    shutdown("load table metadata cache is empty!");
+                }
             }
         }
         final Map<String, TableMetadata> metadataMap = metaDataService.queryMetaDataOfSchemaCache();

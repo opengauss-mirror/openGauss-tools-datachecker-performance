@@ -244,4 +244,10 @@ public class ExtractController {
     Result<ExtractConfig> getEndpointConfig() {
         return Result.success(dataExtractService.getEndpointConfig());
     }
+
+    @GetMapping("/check/table/empty")
+    Result<Boolean> isCheckTableEmpty(@RequestParam(name = "isForced") boolean isForced) {
+        return Result.success(dataExtractService.isCheckTableEmpty(isForced));
+    }
+
 }
