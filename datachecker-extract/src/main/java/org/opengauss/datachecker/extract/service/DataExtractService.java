@@ -147,4 +147,12 @@ public interface DataExtractService {
      * @return TableMetadata
      */
     TableMetadata queryIncrementMetaData(String tableName);
+
+    /**
+     * check current database check table-count is zero
+     *
+     * @param isForced true is forced to query database
+     * @return result
+     */
+    Boolean isCheckTableEmpty(boolean isForced);
 }

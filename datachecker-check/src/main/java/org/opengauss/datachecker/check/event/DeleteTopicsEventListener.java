@@ -15,7 +15,6 @@
 
 package org.opengauss.datachecker.check.event;
 
-import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.DeleteTopicsResult;
 import org.apache.kafka.clients.admin.KafkaAdminClient;
@@ -29,7 +28,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.PreDestroy;
 import javax.annotation.Resource;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,7 +51,7 @@ public class DeleteTopicsEventListener implements ApplicationListener<DeleteTopi
     private FeignClientService feignClient;
     @Value("${spring.kafka.bootstrap-servers}")
     private String bootstrapServers;
-    private AdminClient adminClient = null;
+    private KafkaAdminClient adminClient = null;
 
     @Override
     public void onApplicationEvent(DeleteTopicsEvent event) {
@@ -91,8 +92,20 @@ public class DeleteTopicsEventListener implements ApplicationListener<DeleteTopi
         if (this.adminClient == null) {
             Map<String, Object> props = new HashMap<>(1);
             props.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-            this.adminClient = KafkaAdminClient.create(props);
+            this.adminClient = (KafkaAdminClient) KafkaAdminClient.create(props);
             log.info("init admin client [{}]", bootstrapServers);
+        }
+    }
+
+    @PreDestroy
+    public void closeAdminClient() {
+        if (adminClient != null) {
+            try {
+                adminClient.close(Duration.ZERO);
+                log.info("check kafkaAdminClient close.");
+            } catch (Exception e) {
+                log.error("check kafkaAdminClient close error: ", e);
+            }
         }
     }
 }

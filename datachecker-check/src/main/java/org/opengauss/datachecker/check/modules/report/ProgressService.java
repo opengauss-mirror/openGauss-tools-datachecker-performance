@@ -22,6 +22,7 @@ import org.opengauss.datachecker.check.load.CheckEnvironment;
 import org.opengauss.datachecker.check.service.EndpointMetaDataManager;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.entry.report.CheckProgress;
+import org.opengauss.datachecker.common.service.ShutdownService;
 import org.opengauss.datachecker.common.util.FileUtils;
 import org.opengauss.datachecker.common.util.JsonObjectUtil;
 import org.opengauss.datachecker.common.util.ThreadUtil;
@@ -59,6 +60,8 @@ public class ProgressService {
     @Resource
     private EndpointMetaDataManager endpointMetaDataManager;
     private final ScheduledExecutorService executorService = ThreadUtil.newSingleThreadScheduledExecutor();
+    @Resource
+    private ShutdownService shutdownService;
 
     /**
      * Schedule loading scheduled tasks
@@ -69,6 +72,7 @@ public class ProgressService {
         progressRef.set(new CheckProgress().setStartTime(startTime).setMode(checkEnvironment.getCheckMode())
                                            .setTableCount(endpointMetaDataManager.getCheckTaskCount())
                                            .setStatus(CheckProgressStatus.START));
+        shutdownService.addExecutorService(executorService);
         createProgressLog();
         if (isFullMode()) {
             executorService.scheduleWithFixedDelay(() -> {

@@ -183,4 +183,8 @@ public class EndpointMetaDataManager {
     public TableMetadata queryIncrementMetaData(Endpoint endpoint, String tableName) {
         return feignClientService.queryIncrementMetaData(endpoint, tableName);
     }
+
+    public boolean isCheckTableEmpty(Endpoint endpoint) {
+        return feignClientService.isCheckTableEmpty(endpoint, true);
+    }
 }

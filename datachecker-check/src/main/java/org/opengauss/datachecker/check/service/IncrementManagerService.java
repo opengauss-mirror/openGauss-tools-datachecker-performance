@@ -28,12 +28,12 @@ import org.opengauss.datachecker.check.modules.report.CheckResultManagerService;
 import org.opengauss.datachecker.common.entry.extract.SourceDataLog;
 import org.opengauss.datachecker.common.entry.report.CheckFailed;
 import org.opengauss.datachecker.common.exception.CheckingException;
+import org.opengauss.datachecker.common.service.DynamicThreadPoolManager;
 import org.opengauss.datachecker.common.service.ShutdownService;
 import org.opengauss.datachecker.common.util.FileUtils;
 import org.opengauss.datachecker.common.util.IdGenerator;
 import org.opengauss.datachecker.common.util.PhaserUtil;
 import org.opengauss.datachecker.common.util.ThreadUtil;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -47,6 +47,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
@@ -56,6 +57,7 @@ import static org.opengauss.datachecker.check.modules.check.CheckResultConstants
 import static org.opengauss.datachecker.check.modules.check.CheckResultConstants.FAILED_LOG_NAME;
 import static org.opengauss.datachecker.check.modules.check.CheckResultConstants.LEFT_SQUARE_BRACKET;
 import static org.opengauss.datachecker.check.modules.check.CheckResultConstants.RIGHT_SQUARE_BRACKET;
+import static org.opengauss.datachecker.common.constant.DynamicTpConstant.CHECK_EXECUTOR;
 
 /**
  * IncrementManagerService
@@ -72,8 +74,6 @@ public class IncrementManagerService {
     @Resource
     private DataCheckService dataCheckService;
     @Resource
-    private ThreadPoolTaskExecutor asyncCheckExecutor;
-    @Resource
     private FeignClientService feignClientService;
     @Resource
     private IncrementCheckProperties properties;
@@ -81,7 +81,8 @@ public class IncrementManagerService {
     private ShutdownService shutdownService;
     @Resource
     private CheckResultManagerService checkResultManagerService;
-
+    @Resource
+    private DynamicThreadPoolManager dynamicThreadPoolManager;
     private final AtomicInteger retryTimes = new AtomicInteger(0);
     private static final int RETRY_SLEEP_TIMES = 1000;
     private static final int MAX_RETRY_SLEEP_TIMES = 1000;
@@ -194,6 +195,7 @@ public class IncrementManagerService {
         String processNo = PROCESS_SIGNATURE.get();
         List<Runnable> taskList = new ArrayList<>();
         log.info("check increment {} data log", processNo);
+        ThreadPoolExecutor asyncCheckExecutor = dynamicThreadPoolManager.getExecutor(CHECK_EXECUTOR);
         dataLogList.forEach(dataLog -> {
             log.debug("increment process=[{}] , tableName=[{}], begin offset =[{}], diffSize=[{}]", processNo,
                 dataLog.getTableName(), dataLog.getBeginOffset(), dataLog.getCompositePrimaryValues().size());

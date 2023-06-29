@@ -23,6 +23,7 @@ import org.opengauss.datachecker.common.constant.WorkerSwitch;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.opengauss.datachecker.extract.config.KafkaConsumerConfig;
 
+import javax.annotation.PreDestroy;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -37,9 +38,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Slf4j
 public class DebeziumWorker implements Runnable {
     private static final AtomicBoolean PAUSE_OR_RESUME = new AtomicBoolean(WorkerSwitch.RESUME);
+    private static final AtomicBoolean RUNNING = new AtomicBoolean(false);
     private static final String NAME = "DebeziumWorker";
     private DebeziumConsumerListener debeziumConsumerListener;
     private KafkaConsumerConfig kafkaConsumerConfig;
+    private KafkaConsumer<String, Object> consumer = null;
 
     public DebeziumWorker(DebeziumConsumerListener debeziumConsumerListener, KafkaConsumerConfig kafkaConsumerConfig) {
         this.debeziumConsumerListener = debeziumConsumerListener;
@@ -50,8 +53,8 @@ public class DebeziumWorker implements Runnable {
     public void run() {
         Thread.currentThread().setName(NAME);
         log.info("The Debezium message listener task has started");
-        final KafkaConsumer<String, Object> consumer = kafkaConsumerConfig.getDebeziumConsumer();
-        while (true) {
+        consumer = kafkaConsumerConfig.getDebeziumConsumer();
+        while (RUNNING.get()) {
             if (Objects.equals(PAUSE_OR_RESUME.get(), WorkerSwitch.RESUME)) {
                 ConsumerRecords<String, Object> records = consumer.poll(Duration.ofMillis(50));
                 if (records.count() > 0) {
@@ -71,10 +74,19 @@ public class DebeziumWorker implements Runnable {
         }
     }
 
+    public void close() {
+        RUNNING.set(false);
+    }
+
+    @PreDestroy
+    public void preDestroy() {
+        consumer.close();
+    }
+
     /**
      * pause or resume the worker thread
      *
-     * @param pauseOrResume
+     * @param pauseOrResume pauseOrResume
      */
     public void switchPauseOrResume(Boolean pauseOrResume) {
         PAUSE_OR_RESUME.set(pauseOrResume);

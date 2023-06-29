@@ -135,6 +135,8 @@ public class KafkaConsumerHandler {
     }
 
     public void closeConsumer() {
-        kafkaConsumer.close(Duration.ofSeconds(1));
+        if (kafkaConsumer != null) {
+            kafkaConsumer.close(Duration.ofSeconds(1));
+        }
     }
 }

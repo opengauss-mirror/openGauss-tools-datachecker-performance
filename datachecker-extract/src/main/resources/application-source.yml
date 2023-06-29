@@ -9,9 +9,6 @@ spring:
     name: gs_datacheck_source
   config:
     additional-location: file:config/application-source.yml
-  lifecycle:
-    timeout-per-shutdown-phase: 5
-
   extract:
     schema: test
     databaseType: MS  # MS mysql

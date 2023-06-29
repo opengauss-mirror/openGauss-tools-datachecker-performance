@@ -72,7 +72,12 @@ public class DynamicThreadPoolManager {
      * close dynamic thread pool monitor
      */
     public void closeDynamicThreadPoolMonitor() {
-        monitor.closeMonitor();
+        if (monitor != null) {
+            monitor.closeMonitor();
+        }
+        EXECUTOR_SERVICE_CACHE.forEach((name, executor) -> {
+            executor.shutdownNow();
+        });
     }
 
     /**

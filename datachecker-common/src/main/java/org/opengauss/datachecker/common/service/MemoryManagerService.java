@@ -15,11 +15,15 @@
 
 package org.opengauss.datachecker.common.service;
 
-import org.springframework.scheduling.annotation.Scheduled;
+import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.springframework.stereotype.Service;
 import oshi.SystemInfo;
 import oshi.hardware.HardwareAbstractionLayer;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.Resource;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -34,12 +38,22 @@ public class MemoryManagerService {
     private AtomicBoolean isServerStarted = new AtomicBoolean(false);
     private AtomicBoolean isEnableMemoryMonitored = new AtomicBoolean(false);
     private SystemInfo systemInfo = new SystemInfo();
+    @Resource
+    private ShutdownService shutdownService;
+
+    @PostConstruct
+    public void memoryMonitorScheduled() {
+        ScheduledExecutorService scheduledExecutor = ThreadUtil.newSingleThreadScheduledExecutor();
+        shutdownService.addExecutorService(scheduledExecutor);
+        scheduledExecutor.scheduleWithFixedDelay(() -> {
+            memoryMonitor();
+        }, 5, 2, TimeUnit.SECONDS);
+    }
 
     /**
      * memory monitor schedule
      */
-    @Scheduled(cron = "0/2 * * * * ?")
-    public void memory() {
+    public void memoryMonitor() {
         HardwareAbstractionLayer hardware = systemInfo.getHardware();
         MemoryManager.setCpuInfo(hardware.getProcessor());
         if (isEnableMemoryMonitored.get() && isServerStarted.get()) {

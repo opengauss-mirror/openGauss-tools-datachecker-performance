@@ -34,6 +34,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
+import javax.annotation.PreDestroy;
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 import java.time.LocalDate;
@@ -43,6 +44,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
 /**
@@ -70,6 +72,7 @@ public class DataConsolidationServiceImpl implements DataConsolidationService {
     @Autowired
     private MetaDataService metaDataService;
     private DebeziumWorker worker = null;
+    private ExecutorService executorService = null;
 
     /**
      * initIncrementConfig
@@ -78,7 +81,18 @@ public class DataConsolidationServiceImpl implements DataConsolidationService {
     public void initIncrementConfig() {
         if (extractProperties.isDebeziumEnable()) {
             worker = new DebeziumWorker(debeziumListener, kafkaConfig);
-            ThreadUtil.newSingleThreadExecutor().submit(worker);
+            executorService = ThreadUtil.newSingleThreadExecutor();
+            executorService.submit(worker);
+        }
+    }
+
+    @PreDestroy
+    public void close() {
+        if (worker != null) {
+            worker.close();
+        }
+        if (executorService != null) {
+            executorService.shutdownNow();
         }
     }
 

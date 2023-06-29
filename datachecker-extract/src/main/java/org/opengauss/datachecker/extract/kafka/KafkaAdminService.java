@@ -15,8 +15,6 @@
 
 package org.opengauss.datachecker.extract.kafka;
 
-import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.CreateTopicsResult;
 import org.apache.kafka.clients.admin.DeleteTopicsResult;
@@ -32,6 +30,8 @@ import org.springframework.kafka.KafkaException;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -53,7 +53,7 @@ public class KafkaAdminService {
     private static final Logger log = LogUtils.geKafkaLogger();
     @Value("${spring.kafka.bootstrap-servers}")
     private String springKafkaBootstrapServers;
-    private AdminClient adminClient;
+    private KafkaAdminClient adminClient;
     private String endpointTopicPrefix = "";
     private ReentrantLock lock = new ReentrantLock();
 
@@ -69,7 +69,7 @@ public class KafkaAdminService {
     private void initAdminClient() {
         Map<String, Object> props = new HashMap<>(1);
         props.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, springKafkaBootstrapServers);
-        adminClient = KafkaAdminClient.create(props);
+        adminClient = (KafkaAdminClient) KafkaAdminClient.create(props);
         try {
             adminClient.listTopics().listings().get();
             log.info("init and listTopics  admin client [{}]", springKafkaBootstrapServers);
@@ -163,5 +163,17 @@ public class KafkaAdminService {
             log.error("admin client get topic error:", e);
         }
         return false;
+    }
+
+    @PreDestroy
+    public void closeAdminClient() {
+        if (adminClient != null) {
+            try {
+                adminClient.close(Duration.ZERO);
+                log.info("kafkaAdminClient close.");
+            } catch (Exception e) {
+                log.error("check kafkaAdminClient close error: ", e);
+            }
+        }
     }
 }

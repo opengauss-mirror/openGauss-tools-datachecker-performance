@@ -32,12 +32,6 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
  */
 @Slf4j
 public class ThreadUtil {
-    private static final int scheduled_core_pool_size = 5;
-
-    public static ScheduledExecutorService SCHEDULED_THREAD_POOL =
-        new ScheduledThreadPoolExecutor(scheduled_core_pool_size,
-            new BasicThreadFactory.Builder().daemon(true).build());
-
     /**
      * Thread hibernation
      *
@@ -81,10 +75,12 @@ public class ThreadUtil {
      * @return Scheduled task single thread
      */
     public static ScheduledExecutorService newSingleThreadScheduledExecutor() {
-        if (SCHEDULED_THREAD_POOL.isShutdown()) {
-            SCHEDULED_THREAD_POOL = new ScheduledThreadPoolExecutor(scheduled_core_pool_size,
-                new BasicThreadFactory.Builder().daemon(true).build());
-        }
-        return SCHEDULED_THREAD_POOL;
+        return new ScheduledThreadPoolExecutor(1, new BasicThreadFactory.Builder().daemon(true).build());
     }
+
+    public static ScheduledExecutorService newSingleThreadScheduledExecutor(String name) {
+        return new ScheduledThreadPoolExecutor(1, new BasicThreadFactory.
+            Builder().namingPattern(name).build());
+    }
+
 }

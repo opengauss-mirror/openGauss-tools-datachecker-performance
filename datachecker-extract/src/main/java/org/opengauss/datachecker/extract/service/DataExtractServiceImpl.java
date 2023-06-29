@@ -431,6 +431,11 @@ public class DataExtractServiceImpl implements DataExtractService {
     }
 
     @Override
+    public Boolean isCheckTableEmpty(boolean isForced) {
+        return metaDataService.isCheckTableEmpty(isForced);
+    }
+
+    @Override
     public TableMetadata queryIncrementMetaData(String tableName) {
         return metaDataService.queryIncrementMetaData(tableName);
     }

@@ -38,9 +38,9 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 /**
@@ -57,7 +57,7 @@ public class MetaDataService {
     private final DataBaseMetaDataDAOImpl dataBaseMetadataDAOImpl;
     private final ResourceManager resourceManager;
     private final ExtractEnvironment extractEnvironment;
-
+    private volatile AtomicBoolean isCheckTableEmpty = new AtomicBoolean(false);
     /**
      * Return database metadata information through cache
      *
@@ -100,10 +100,9 @@ public class MetaDataService {
             return tableMetadataMap;
         }
         List<Future<?>> futures = new LinkedList<>();
-        ThreadPoolExecutor executor = ThreadPoolFactory.newThreadPool("update-column",
-                Math.max(1, resourceManager.maxConnectionCount()/2),
-                resourceManager.maxConnectionCount(),
-                tableMetadataList.size());
+        ThreadPoolExecutor executor = ThreadPoolFactory
+            .newThreadPool("update-column", Math.max(1, resourceManager.maxConnectionCount() / 2),
+                resourceManager.maxConnectionCount(), tableMetadataList.size());
         tableMetadataList.forEach(tableMetadata -> {
             Future<?> future = executor.submit(() -> {
                 takeConnection();
@@ -149,8 +148,8 @@ public class MetaDataService {
 
     public TableMetadata getMetaDataOfSchemaByCache(String tableName) {
         if (!MetaDataCache.containsKey(tableName)) {
-            final TableMetadata tableMetadata = dataBaseMetadataDAOImpl.queryTableMetadata(
-                    tableName, extractEnvironment.getCheckMode());
+            final TableMetadata tableMetadata =
+                dataBaseMetadataDAOImpl.queryTableMetadata(tableName, extractEnvironment.getCheckMode());
             if (Objects.nonNull(tableMetadata)) {
                 MetaDataCache.put(tableName, tableMetadata);
             }
@@ -187,7 +186,7 @@ public class MetaDataService {
     /**
      * updateTableMetadata
      *
-     * @param table table
+     * @param table         table
      * @param tableMetadata tableMetadata
      */
     public void updateTableMetadata(String table, TableMetadata tableMetadata) {
@@ -196,5 +195,15 @@ public class MetaDataService {
         } else {
             MetaDataCache.put(tableMetadata.getTableName(), tableMetadata);
         }
+    }
+
+
+    public synchronized Boolean isCheckTableEmpty(boolean isForced) {
+        if (isForced) {
+            isCheckTableEmpty.set(CollectionUtils.isEmpty(queryAllTableNames()));
+            log.info("check database table (query) is {}", isCheckTableEmpty.get() ? "empty" : " not empty");
+        }
+        log.info("check database table is {}", isCheckTableEmpty.get() ? "empty" : " not empty");
+        return isCheckTableEmpty.get();
     }
 }
