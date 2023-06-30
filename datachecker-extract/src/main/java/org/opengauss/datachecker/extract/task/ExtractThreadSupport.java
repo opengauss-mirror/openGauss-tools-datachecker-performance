@@ -15,20 +15,17 @@
 
 package org.opengauss.datachecker.extract.task;
 
-import lombok.Getter;
-import lombok.Setter;
 import org.opengauss.datachecker.common.entry.common.ExtractContext;
 import org.opengauss.datachecker.common.service.DynamicThreadPoolManager;
 import org.opengauss.datachecker.extract.client.CheckingFeignClient;
 import org.opengauss.datachecker.extract.config.ExtractProperties;
-import org.opengauss.datachecker.extract.kafka.KafkaAdminService;
 import org.opengauss.datachecker.extract.resource.ResourceManager;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import javax.annotation.Resource;
 import javax.sql.DataSource;
 
@@ -39,8 +36,6 @@ import javax.sql.DataSource;
  * @date ：Created in 2022/5/30
  * @since ：11
  */
-@Getter
-@Setter
 @Service
 public class ExtractThreadSupport {
     private static final int DEFAULT_MAXIMUM_TABLE_SLICE_SIZE = 10000;
@@ -53,8 +48,6 @@ public class ExtractThreadSupport {
     private ResourceManager resourceManager;
     @Resource
     private KafkaTemplate<String, String> kafkaTemplate;
-    @Autowired
-    private KafkaAdminService kafkaAdminService;
     @Resource
     private CheckingFeignClient checkingFeignClient;
     @Resource
@@ -82,7 +75,32 @@ public class ExtractThreadSupport {
         }
     }
 
+    public DataSource getDataSource() {
+        return dataSource;
+    }
+
+    public ResourceManager getResourceManager() {
+        return resourceManager;
+    }
+
+    public KafkaTemplate<String, String> getKafkaTemplate() {
+        return kafkaTemplate;
+    }
+
+    public CheckingFeignClient getCheckingFeignClient() {
+        return checkingFeignClient;
+    }
+
+    public DynamicThreadPoolManager getDynamicThreadPoolManager() {
+        return dynamicThreadPoolManager;
+    }
+
     public ExtractContext getContext() {
         return context;
+    }
+
+    @PreDestroy
+    public void destroy() {
+        kafkaTemplate.destroy();
     }
 }

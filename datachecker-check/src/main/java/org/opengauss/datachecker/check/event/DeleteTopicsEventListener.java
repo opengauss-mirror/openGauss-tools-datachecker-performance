@@ -34,8 +34,6 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
 
 /**
@@ -46,7 +44,8 @@ import java.util.concurrent.ExecutionException;
 @Component
 public class DeleteTopicsEventListener implements ApplicationListener<DeleteTopicsEvent> {
     private static final Logger log = LogUtils.geKafkaLogger();
-    private Queue<DeleteTopicsEvent> events = new ConcurrentLinkedQueue();
+    @Resource
+    private CustomEventHistory customEventHistory;
     @Resource
     private FeignClientService feignClient;
     @Value("${spring.kafka.bootstrap-servers}")
@@ -56,24 +55,19 @@ public class DeleteTopicsEventListener implements ApplicationListener<DeleteTopi
     @Override
     public void onApplicationEvent(DeleteTopicsEvent event) {
         try {
-            events.add(event);
             log.info("delete topic event : {}", event.getMessage());
             final Object source = event.getSource();
             initAdminClient();
             final DeleteTopics deleteOption = (DeleteTopics) source;
             deleteTopic(deleteOption.getTopicList());
             feignClient.notifyCheckTableFinished(Endpoint.SOURCE, deleteOption.getTableName());
-            ThreadUtil.sleep(10);
+            ThreadUtil.sleep(100);
             feignClient.notifyCheckTableFinished(Endpoint.SINK, deleteOption.getTableName());
         } catch (Exception exception) {
             log.error("delete topic has error ", exception);
         } finally {
-            events.remove(event);
+            customEventHistory.completedEvent(event);
         }
-    }
-
-    public Queue<DeleteTopicsEvent> getEvents() {
-        return events;
     }
 
     private void deleteTopic(List<String> deleteTopicList) {
