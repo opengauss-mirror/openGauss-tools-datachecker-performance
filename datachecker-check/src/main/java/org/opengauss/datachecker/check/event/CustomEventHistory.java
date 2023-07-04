@@ -15,18 +15,30 @@
 
 package org.opengauss.datachecker.check.event;
 
-import lombok.Getter;
+import org.springframework.stereotype.Component;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * CustomApplicationEvent
+ * CustomEventHistory
  *
  * @author ：wangchao
  * @date ：Created in 2023/3/7
  * @since ：11
  */
-@Getter
-public class DeleteTopicsEvent extends CustomApplicationEvent {
-    public DeleteTopicsEvent(Object source, String message) {
-        super(source, message);
+@Component
+public class CustomEventHistory {
+    private static volatile Map<CustomApplicationEvent, Boolean> events = new ConcurrentHashMap<>();
+
+    public void addEvent(CustomApplicationEvent customEvent) {
+        events.put(customEvent, false);
+    }
+
+    public void completedEvent(CustomApplicationEvent customEvent) {
+        events.remove(customEvent);
+    }
+
+    public boolean checkAllEventCompleted() {
+        return events.values().stream().distinct().allMatch(complete -> complete);
     }
 }

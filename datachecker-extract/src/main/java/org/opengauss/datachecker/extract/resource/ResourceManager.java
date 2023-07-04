@@ -51,7 +51,7 @@ public class ResourceManager {
     private int queryDop;
     @Resource
     private DruidDataSourceConfig dataSourceConfig;
-    
+
     @Resource
     private ShutdownService shutdownService;
     private ReentrantLock lock = new ReentrantLock();
@@ -78,9 +78,10 @@ public class ResourceManager {
     public int getParallelQueryDop() {
         return queryDop;
     }
-    
+
     /**
      * Get max connection count, this must be then 1.
+     *
      * @return
      */
     public int maxConnectionCount() {
@@ -97,20 +98,21 @@ public class ResourceManager {
     public boolean canExecQuery(long freeSize) {
         lock.lock();
         try {
+            tryAvailableTimes.incrementAndGet();
             final JvmInfo memory = MemoryManager.getJvmInfo();
             if (connectionCount.get() > 2 && memory.isAvailable(freeSize)) {
                 connectionCount.decrementAndGet();
                 tryAvailableTimes.set(0);
                 return true;
+            } else {
+                if (tryAvailableTimes.get() >= MAX_AVAILABLE_TIMES) {
+                    Runtime.getRuntime().gc();
+                }
+                return false;
             }
         } finally {
-            if (tryAvailableTimes.get() >= MAX_AVAILABLE_TIMES) {
-                Runtime.getRuntime().gc();
-            }
             lock.unlock();
         }
-        tryAvailableTimes.incrementAndGet();
-        return false;
     }
 
     /**

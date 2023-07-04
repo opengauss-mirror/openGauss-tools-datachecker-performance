@@ -52,6 +52,8 @@ public class KafkaTopicDeleteProvider implements ApplicationContextAware {
     @Resource
     private ShutdownService shutdownService;
     @Resource
+    private CustomEventHistory customEventHistory;
+    @Resource
     private DataCheckProperties properties;
     @Resource
     private TaskManagerService taskManagerService;
@@ -86,14 +88,15 @@ public class KafkaTopicDeleteProvider implements ApplicationContextAware {
 
     /**
      * wait delete topic event complete
+     *
+     * @return complete
      */
-    public void waitDeleteTopicsEventCompleted() {
-        DeleteTopicsEventListener bean = applicationContext.getBean(DeleteTopicsEventListener.class);
-        Queue<DeleteTopicsEvent> events = bean.getEvents();
-        while (!events.isEmpty()) {
+    public boolean waitDeleteTopicsEventCompleted() {
+        while (!deleteTableMap.isEmpty() || !customEventHistory.checkAllEventCompleted()) {
             ThreadUtil.sleepOneSecond();
             logKafka.warn("wait delete topic event complete ...");
         }
+        return true;
     }
 
     /**
@@ -124,7 +127,9 @@ public class KafkaTopicDeleteProvider implements ApplicationContextAware {
             deleteOptions.forEach(deleteOption -> {
                 logKafka.info("publish delete-topic-event table = [{}] ,  current-pending-quantity = [{}]",
                     deleteOption.getTableName(), deleteTableMap.size());
-                applicationContext.publishEvent(new DeleteTopicsEvent(deleteOption, deleteOption.toString()));
+                DeleteTopicsEvent deleteTopicsEvent = new DeleteTopicsEvent(deleteOption, deleteOption.toString());
+                customEventHistory.addEvent(deleteTopicsEvent);
+                applicationContext.publishEvent(deleteTopicsEvent);
                 deleteTableMap.remove(deleteOption.getTableName());
             });
             deleteOptions.clear();

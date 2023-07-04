@@ -15,7 +15,10 @@
 
 package org.opengauss.datachecker.check.event;
 
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import org.opengauss.datachecker.common.util.IdGenerator;
+import org.springframework.context.ApplicationEvent;
 
 /**
  * CustomApplicationEvent
@@ -24,9 +27,15 @@ import lombok.Getter;
  * @date ：Created in 2023/3/7
  * @since ：11
  */
+@EqualsAndHashCode(of = "eventId", callSuper = false)
 @Getter
-public class DeleteTopicsEvent extends CustomApplicationEvent {
-    public DeleteTopicsEvent(Object source, String message) {
-        super(source, message);
+public class CustomApplicationEvent extends ApplicationEvent {
+    private String eventId;
+    private String message;
+
+    public CustomApplicationEvent(Object source, String message) {
+        super(source);
+        this.eventId = IdGenerator.nextId36();
+        this.message = message;
     }
 }

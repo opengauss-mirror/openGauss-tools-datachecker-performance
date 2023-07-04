@@ -17,6 +17,8 @@ package org.opengauss.datachecker.check.modules.check;
 
 import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.MapUtils;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.check.cache.CheckRateCache;
 import org.opengauss.datachecker.check.cache.TableStatusRegister;
@@ -46,7 +48,6 @@ import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.SpringUtil;
 import org.opengauss.datachecker.common.util.TopicUtil;
 import org.springframework.lang.NonNull;
-import org.springframework.util.CollectionUtils;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -59,6 +60,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
 
 /**
  * DataCheckRunnable
@@ -74,7 +76,6 @@ public class DataCheckRunnable implements Runnable {
 
     private final DifferencePair<Map<String, RowDataHash>, Map<String, RowDataHash>, Map<String, Pair<Node, Node>>>
         difference = DifferencePair.of(new HashMap<>(), new HashMap<>(), new HashMap<>());
-    private final Map<Integer, Pair<Integer, Integer>> bucketNumberDiffMap = new HashMap<>();
     private final StatisticalService statisticalService;
     private final TableStatusRegister tableStatusRegister;
     private final DataCheckParam checkParam;
@@ -112,6 +113,20 @@ public class DataCheckRunnable implements Runnable {
         endpointMetaDataManager = SpringUtil.getBean(EndpointMetaDataManager.class);
     }
 
+    private void paramInit() {
+        tableName = checkParam.getTableName();
+        partitions = checkParam.getPartitions();
+        sourceTopic = TopicUtil.buildTopicName(checkParam.getProcess(), Endpoint.SOURCE, tableName);
+        sinkTopic = TopicUtil.buildTopicName(checkParam.getProcess(), Endpoint.SINK, tableName);
+        sinkSchema = checkParam.getSchema();
+        rowCount = 0;
+        tablePartitionRowCount = checkParam.getTablePartitionRowCount();
+        errorRate = checkParam.getErrorRate();
+        bucketCapacity = checkParam.getBucketCapacity();
+        resetThreadName(tableName, partitions);
+        checkPartition = new CheckPartition(tableName, partitions);
+    }
+
     /**
      * When an object implementing interface <code>Runnable</code> is used
      * to create a thread, starting the thread causes the object's
@@ -141,14 +156,7 @@ public class DataCheckRunnable implements Runnable {
         }
     }
 
-    private CheckTable buildCheckTable() {
-        TableMetadata tableMetadata = endpointMetaDataManager.getTableMetadata(Endpoint.SINK, tableName);
-        return CheckTable.builder().tableName(tableName).partition(partitions).rowCount(rowCount).topicName(sinkTopic)
-                         .completeTimestamp(System.currentTimeMillis()).avgRowLength(tableMetadata.getAvgRowLength())
-                         .build();
-    }
-
-    private void checkTableData() {
+    private void checkTableData() throws InterruptedException {
         CheckTuple sourceTuple = CheckTuple.of(Endpoint.SOURCE, partitions, new LinkedList<>());
         CheckTuple sinkTuple = CheckTuple.of(Endpoint.SINK, partitions, new LinkedList<>());
         // Initialize bucket list
@@ -173,33 +181,23 @@ public class DataCheckRunnable implements Runnable {
         }
     }
 
-    private void paramInit() {
-        tableName = checkParam.getTableName();
-        partitions = checkParam.getPartitions();
-        sourceTopic = TopicUtil.buildTopicName(checkParam.getProcess(), Endpoint.SOURCE, tableName);
-        sinkTopic = TopicUtil.buildTopicName(checkParam.getProcess(), Endpoint.SINK, tableName);
-        sinkSchema = checkParam.getSchema();
-        rowCount = 0;
-        tablePartitionRowCount = checkParam.getTablePartitionRowCount();
-        errorRate = checkParam.getErrorRate();
-        bucketCapacity = checkParam.getBucketCapacity();
-        resetThreadName(tableName, partitions);
-        checkPartition = new CheckPartition(tableName, partitions);
-    }
-
     /**
      * Initialize bucket list
      */
-    private void initBucketList(CheckTuple sourceTuple, CheckTuple sinkTuple) {
+    private void initBucketList(CheckTuple sourceTuple, CheckTuple sinkTuple) throws InterruptedException {
         List<CheckTuple> checkTupleList = List.of(sourceTuple, sinkTuple);
+        Map<Integer, Pair<Integer, Integer>> bucketDiff = new ConcurrentHashMap<>();
         // Get the Kafka partition number corresponding to the current task
         // Initialize source bucket column list data
-        checkTupleList.parallelStream().forEach(checkTuple -> {
-            initBucketList(checkTuple.getEndpoint(), checkTuple.getPartitionNo(), checkTuple.getBuckets());
+        CountDownLatch countDownLatch = new CountDownLatch(checkTupleList.size());
+        checkTupleList.parallelStream().forEach(check -> {
+            initBucketList(check.getEndpoint(), check.getPartitionNo(), check.getBuckets(), bucketDiff);
+            countDownLatch.countDown();
         });
+        countDownLatch.await();
 
         // Align the source and destination bucket list
-        alignAllBuckets(sourceTuple, sinkTuple);
+        alignAllBuckets(sourceTuple, sinkTuple, bucketDiff);
         sortBuckets(sourceTuple.getBuckets());
         sortBuckets(sinkTuple.getBuckets());
         log.debug("initialize bucket construction is currently completed of table [{}-{}]", tableName, partitions);
@@ -220,25 +218,22 @@ public class DataCheckRunnable implements Runnable {
      * and destination bucket difference information {@code bucketNumberDiffMap}.
      * </pre>
      */
-    private void alignAllBuckets(CheckTuple sourceTuple, CheckTuple sinkTuple) {
-        alignAllBuckets(bucketNumberDiffMap, sourceTuple.getBuckets(), sinkTuple.getBuckets());
-    }
-
-    public void alignAllBuckets(Map<Integer, Pair<Integer, Integer>> bucketNumberDiffMap,
-        @NonNull List<Bucket> sourceBucketList, @NonNull List<Bucket> sinkBucketList) {
-        if (!CollectionUtils.isEmpty(bucketNumberDiffMap)) {
-            bucketNumberDiffMap.forEach((number, pair) -> {
+    private void alignAllBuckets(CheckTuple sourceTuple, CheckTuple sinkTuple,
+        Map<Integer, Pair<Integer, Integer>> bucketDiff) {
+        if (MapUtils.isNotEmpty(bucketDiff)) {
+            bucketDiff.forEach((number, pair) -> {
                 if (pair.getSource() == -1) {
-                    sourceBucketList.add(BuilderBucketHandler.builderEmpty(number));
+                    sourceTuple.getBuckets().add(BuilderBucketHandler.builderEmpty(number));
                 }
                 if (pair.getSink() == -1) {
-                    sinkBucketList.add(BuilderBucketHandler.builderEmpty(number));
+                    sinkTuple.getBuckets().add(BuilderBucketHandler.builderEmpty(number));
                 }
             });
         }
     }
 
-    private void initBucketList(Endpoint endpoint, int partitions, List<Bucket> bucketList) {
+    private void initBucketList(Endpoint endpoint, int partitions, List<Bucket> bucketList,
+        Map<Integer, Pair<Integer, Integer>> bucketDiff) {
         // Use feign client to pull Kafka data
         List<RowDataHash> dataList = new LinkedList<>();
         poolTopicPartitionsData(getTopicName(endpoint), partitions, dataList);
@@ -253,10 +248,10 @@ public class DataCheckRunnable implements Runnable {
         Map<Integer, Bucket> bucketMap = new ConcurrentHashMap<>(InitialCapacity.CAPACITY_128);
         // Use the pulled data to build the bucket list
         bucketBuilder.builder(dataList, tablePartitionRowCount, bucketMap);
-        // Statistics bucket list information
-        bucketNoStatistics(endpoint, bucketMap.keySet());
-        bucketList.addAll(bucketMap.values());
         dataList.clear();
+        // Statistics bucket list information
+        bucketList.addAll(bucketMap.values());
+        bucketNoStatistics(endpoint, bucketMap.keySet(), bucketDiff);
         bucketMap.clear();
     }
 
@@ -267,10 +262,6 @@ public class DataCheckRunnable implements Runnable {
         consumer.poolTopicPartitionsData(topicName, partitions, dataList);
         consumer.closeConsumer();
         logKafka.info("close consumer of topic, [{},{}] : [{} : {}] ", tableName, partitions, sourceTopic, sinkTopic);
-    }
-
-    private String getTopicName(Endpoint endpoint) {
-        return Objects.equals(Endpoint.SOURCE, endpoint) ? sourceTopic : sinkTopic;
     }
 
     /**
@@ -297,6 +288,37 @@ public class DataCheckRunnable implements Runnable {
         });
         log.debug("Complete the data verification of table [{}-{}]", tableName, partitions);
         diffNodeList.clear();
+    }
+
+    /**
+     * Comparison under Merkel tree constraints
+     *
+     * @param sourceTuple source bucket tuple
+     * @param sinkTuple   sink bucket tuple
+     */
+    private void compareNoMerkleTree(CheckTuple sourceTuple, CheckTuple sinkTuple) {
+        // Comparison without Merkel tree constraint
+        if (sourceTuple.getBucketSize() == sinkTuple.getBucketSize()) {
+            // sourceSize == 0, that is, all buckets are empty
+            if (sourceTuple.getBucketSize() == 0) {
+                // Table is empty, verification succeeded!
+                log.debug("table[{}-{}] is an empty table,this check successful!", tableName, partitions);
+            } else {
+                // sourceSize is less than thresholdMinBucketSize, that is, there is only one bucket. Compare
+                DifferencePair<Map, Map, Map> subDifference =
+                    compareBucket(sourceTuple.getBuckets().get(0), sinkTuple.getBuckets().get(0));
+                difference.getDiffering().putAll(subDifference.getDiffering());
+                difference.getOnlyOnLeft().putAll(subDifference.getOnlyOnLeft());
+                difference.getOnlyOnRight().putAll(subDifference.getOnlyOnRight());
+            }
+            refreshCheckStatus();
+        } else {
+            refreshCheckStatus();
+            throw new LargeDataDiffException(String.format(
+                "table[%s] source & sink data have large different," + "source-bucket-count=[%s] sink-bucket-count=[%s]"
+                    + " Please synchronize data again! ", tableName, sourceTuple.getBucketSize(),
+                sinkTuple.getBucketSize()));
+        }
     }
 
     /**
@@ -364,20 +386,21 @@ public class DataCheckRunnable implements Runnable {
      * @param endpoint    end point
      * @param bucketNoSet bucket numbers
      */
-    private void bucketNoStatistics(@NonNull Endpoint endpoint, @NonNull Set<Integer> bucketNoSet) {
+    private synchronized void bucketNoStatistics(@NonNull Endpoint endpoint, @NonNull Set<Integer> bucketNoSet,
+        Map<Integer, Pair<Integer, Integer>> bucketDiff) {
         bucketNoSet.forEach(bucketNo -> {
-            if (!bucketNumberDiffMap.containsKey(bucketNo)) {
+            if (!bucketDiff.containsKey(bucketNo)) {
                 if (endpoint == Endpoint.SOURCE) {
-                    bucketNumberDiffMap.put(bucketNo, Pair.of(bucketNo, -1));
+                    bucketDiff.put(bucketNo, Pair.of(bucketNo, -1));
                 } else {
-                    bucketNumberDiffMap.put(bucketNo, Pair.of(-1, bucketNo));
+                    bucketDiff.put(bucketNo, Pair.of(-1, bucketNo));
                 }
             } else {
-                Pair<Integer, Integer> pair = bucketNumberDiffMap.get(bucketNo);
+                Pair<Integer, Integer> pair = bucketDiff.get(bucketNo);
                 if (endpoint == Endpoint.SOURCE) {
-                    bucketNumberDiffMap.put(bucketNo, Pair.of(bucketNo, pair));
+                    bucketDiff.put(bucketNo, Pair.of(bucketNo, pair));
                 } else {
-                    bucketNumberDiffMap.put(bucketNo, Pair.of(pair, bucketNo));
+                    bucketDiff.put(bucketNo, Pair.of(pair, bucketNo));
                 }
             }
         });
@@ -385,37 +408,6 @@ public class DataCheckRunnable implements Runnable {
 
     private boolean shouldCheckMerkleTree(int sourceBucketCount, int sinkBucketCount) {
         return sourceBucketCount >= THRESHOLD_MIN_BUCKET_SIZE && sinkBucketCount >= THRESHOLD_MIN_BUCKET_SIZE;
-    }
-
-    /**
-     * Comparison under Merkel tree constraints
-     *
-     * @param sourceTuple source bucket tuple
-     * @param sinkTuple   sink bucket tuple
-     */
-    private void compareNoMerkleTree(CheckTuple sourceTuple, CheckTuple sinkTuple) {
-        // Comparison without Merkel tree constraint
-        if (sourceTuple.getBucketSize() == sinkTuple.getBucketSize()) {
-            // sourceSize == 0, that is, all buckets are empty
-            if (sourceTuple.getBucketSize() == 0) {
-                // Table is empty, verification succeeded!
-                log.debug("table[{}-{}] is an empty table,this check successful!", tableName, partitions);
-            } else {
-                // sourceSize is less than thresholdMinBucketSize, that is, there is only one bucket. Compare
-                DifferencePair<Map, Map, Map> subDifference =
-                    compareBucket(sourceTuple.getBuckets().get(0), sourceTuple.getBuckets().get(0));
-                difference.getDiffering().putAll(subDifference.getDiffering());
-                difference.getOnlyOnLeft().putAll(subDifference.getOnlyOnLeft());
-                difference.getOnlyOnRight().putAll(subDifference.getOnlyOnRight());
-            }
-            refreshCheckStatus();
-        } else {
-            refreshCheckStatus();
-            throw new LargeDataDiffException(String.format(
-                "table[%s] source & sink data have large different," + "source-bucket-count=[%s] sink-bucket-count=[%s]"
-                    + " Please synchronize data again! ", tableName, sourceTuple.getBucketSize(),
-                sinkTuple.getBucketSize()));
-        }
     }
 
     private void checkResult() {
@@ -446,10 +438,18 @@ public class DataCheckRunnable implements Runnable {
         return tableName.concat("_").concat(String.valueOf(partitions));
     }
 
+    private CheckTable buildCheckTable() {
+        TableMetadata tableMetadata = endpointMetaDataManager.getTableMetadata(Endpoint.SINK, tableName);
+        return CheckTable.builder().tableName(tableName).partition(partitions).rowCount(rowCount).topicName(sinkTopic)
+                         .completeTimestamp(System.currentTimeMillis()).avgRowLength(tableMetadata.getAvgRowLength())
+                         .build();
+    }
+
+    private String getTopicName(Endpoint endpoint) {
+        return Objects.equals(Endpoint.SOURCE, endpoint) ? sourceTopic : sinkTopic;
+    }
+
     private void cleanCheckThreadEnvironment() {
-        bucketNumberDiffMap.clear();
-        //        sourceBucketList.clear();
-        //        sinkBucketList.clear();
         difference.getOnlyOnLeft().clear();
         difference.getOnlyOnRight().clear();
         difference.getDiffering().clear();
