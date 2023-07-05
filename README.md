@@ -187,7 +187,7 @@ JDK版本要求JDK11+
 当前版本仅支持对源端是MySQL或openGauss，目标端也是MySQL或openGauss数据校验
 当前版本仅支持数据校验，不支持表对象校验
 MYSQL需要5.7+版本
-当前版本地理位置几何图形只支持openGauss到openGauss的数据校验
+当前版本地理位置几何图形只支持openGauss到openGauss的数据校验，bit类型不支持openGauss到MySQL的校验
 ```
 
 
