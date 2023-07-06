@@ -39,7 +39,7 @@ public class MysqlResultSetHandler extends ResultSetHandler {
         TypeHandler varbinaryToString = (rs, columnLabel, displaySize) -> bytesToString(rs.getBytes(columnLabel));
         TypeHandler blobToString = (rs, columnLabel, displaySize) -> HexUtil.byteToHexTrim(rs.getBytes(columnLabel));
         TypeHandler numericToString = (rs, columnLabel, displaySize) -> numericToString(rs.getBigDecimal(columnLabel));
-        TypeHandler bitBooleanToString = (rs, columnLabel, displaySize) -> bitToString(rs, columnLabel, displaySize);
+        TypeHandler bitBooleanToString = (rs, columnLabel, displaySize) -> rs.getString(columnLabel);
 
         typeHandlers.put(MysqlType.FLOAT, numericToString);
         typeHandlers.put(MysqlType.DOUBLE, numericToString);
