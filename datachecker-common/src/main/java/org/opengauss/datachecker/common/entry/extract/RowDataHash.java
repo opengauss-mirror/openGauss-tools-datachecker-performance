@@ -34,11 +34,6 @@ import static org.opengauss.datachecker.common.util.EncodeUtil.parseLong;
 @EqualsAndHashCode
 @Accessors(chain = true)
 public class RowDataHash {
-    private static final int HEADER_LENGTH = 6;
-
-    public RowDataHash() {
-    }
-
     /**
      * <pre>
      * If the primary key is a numeric type, it will be converted to a string.
@@ -46,16 +41,19 @@ public class RowDataHash {
      * and the corresponding values of the joint fields will be spliced. String splicing will be underlined
      * </pre>
      */
-    private String primaryKey;
+    private String key;
 
     /**
      * Hash value of the corresponding value of the primary key
      */
-    private long primaryKeyHash;
+    private long kHash;
     /**
      * Total hash value of the current record
      */
-    private long rowHash;
+    private long vHash;
 
-    private int partition;
+    /**
+     * slice no
+     */
+    private int sNo;
 }

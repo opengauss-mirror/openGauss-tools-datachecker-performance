@@ -49,7 +49,7 @@ public class ResultSetHashHandler {
         String primaryValue = hashHandler.value(rowData, primary);
         long primaryHash = hashHandler.xx3Hash(rowData, primary);
         RowDataHash hashData = new RowDataHash();
-        hashData.setPrimaryKey(primaryValue).setPrimaryKeyHash(primaryHash).setRowHash(rowHash);
+        hashData.setKey(primaryValue).setKHash(primaryHash).setVHash(rowHash);
         return hashData;
     }
 }

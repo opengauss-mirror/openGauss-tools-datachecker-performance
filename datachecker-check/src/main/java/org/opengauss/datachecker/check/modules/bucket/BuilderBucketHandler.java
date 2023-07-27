@@ -91,7 +91,7 @@ public class BuilderBucketHandler {
         // Average bucket capacity - used to initialize the bucket capacity size
         int averageCapacity = totalCount / maxBucketCount;
         rowDataHashList.forEach(row -> {
-            long primaryKeyHash = row.getPrimaryKeyHash();
+            long primaryKeyHash = row.getKHash();
             // Calculate bucket number information
             Integer bucketNumber = calculateBucketNumber(primaryKeyHash, maxBucketCount);
             // Obtain the bucket with the specified number according to the row information,

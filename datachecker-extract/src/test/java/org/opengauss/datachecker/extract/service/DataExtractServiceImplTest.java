@@ -311,10 +311,9 @@ class DataExtractServiceImplTest {
         dataLog.setCompositePrimaryValues(List.of("value"));
 
         final RowDataHash rowDataHash = new RowDataHash();
-        rowDataHash.setPrimaryKey("primaryKey");
-        rowDataHash.setPrimaryKeyHash(0L);
-        rowDataHash.setRowHash(0L);
-        rowDataHash.setPartition(0);
+        rowDataHash.setKey("primaryKey");
+        rowDataHash.setKHash(0L);
+        rowDataHash.setVHash(0L);
         final List<RowDataHash> expectedResult = List.of(rowDataHash);
 
         // Configure MetaDataService.getMetaDataOfSchemaByCache(...).
@@ -324,10 +323,9 @@ class DataExtractServiceImplTest {
 
         // Configure DataManipulationService.queryColumnHashValues(...).
         final RowDataHash rowDataHash1 = new RowDataHash();
-        rowDataHash1.setPrimaryKey("primaryKey");
-        rowDataHash1.setPrimaryKeyHash(0L);
-        rowDataHash1.setRowHash(0L);
-        rowDataHash1.setPartition(0);
+        rowDataHash1.setKey("primaryKey");
+        rowDataHash1.setKHash(0L);
+        rowDataHash1.setVHash(0L);
         final List<RowDataHash> rowDataHashes = List.of(rowDataHash1);
         when(mockDataManipulationService.queryColumnHashValues(table, List.of("value"), tableMetadata))
             .thenReturn(rowDataHashes);

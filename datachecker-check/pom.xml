@@ -20,12 +20,12 @@
     <parent>
         <groupId>org.opengauss</groupId>
         <artifactId>gs_datachecker</artifactId>
-        <version>0.0.1</version>
+        <version>5.0.0</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>datachecker-check</artifactId>
-    <version>0.0.1</version>
+    <version>${gs.datacheck.version}</version>
     <name>datachecker-check</name>
     <packaging>jar</packaging>
     <description>datachecker-check</description>
@@ -33,7 +33,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <java.version>11</java.version>
-        <datachecker.version>0.0.1</datachecker.version>
+        <datachecker.version>${project.version}</datachecker.version>
     </properties>
     <dependencies>
         <dependency>
@@ -53,7 +53,7 @@
         <dependency>
             <groupId>org.opengauss</groupId>
             <artifactId>datachecker-common</artifactId>
-            <version>${datachecker.version}</version>
+            <version>${gs.datacheck.version}</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -126,7 +126,7 @@
                             <artifactId>datachecker-common</artifactId>
                         </include>
                     </includes>
-                    <outputDirectory>${project.basedir}/../gs_datacheck</outputDirectory>
+                    <outputDirectory>${project.basedir}/../gs_datacheck_${gs.datacheck.version}</outputDirectory>
                 </configuration>
                 <executions>
                     <execution>
@@ -148,7 +148,7 @@
                             <goal>copy-dependencies</goal>
                         </goals>
                         <configuration>
-                            <outputDirectory>${project.basedir}/../gs_datacheck/lib</outputDirectory>
+                            <outputDirectory>${project.basedir}/../gs_datacheck_${gs.datacheck.version}/lib</outputDirectory>
                             <excludeGroupIds>datachecker-extract</excludeGroupIds>
                             <includeScope>runtime</includeScope>
                         </configuration>

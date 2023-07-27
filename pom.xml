@@ -11,7 +11,7 @@
 
     <groupId>org.opengauss</groupId>
     <artifactId>gs_datachecker</artifactId>
-    <version>0.0.1</version>
+    <version>5.0.0</version>
     <packaging>pom</packaging>
 
     <name>gs_datachecker</name>
@@ -20,28 +20,30 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <gs.datacheck.version>5.0.0</gs.datacheck.version>
         <spring.boot.version>2.6.15</spring.boot.version>
         <spring.cloud.version>2021.0.0</spring.cloud.version>
         <java.version>11</java.version>
-        <druid.version>1.2.11</druid.version>
+        <mysql.connector.java.version>8.0.30</mysql.connector.java.version>
+        <opengauss.jdbc.version>3.0.0</opengauss.jdbc.version>
+        <druid.version>1.2.8</druid.version>
+        <mybatis.version>2.2.2</mybatis.version>
         <lombok.version>1.18.24</lombok.version>
         <fastjson.version>1.2.75</fastjson.version>
         <guava.version>32.0.0-jre</guava.version>
         <springdoc.openapi.ui.version>1.6.8</springdoc.openapi.ui.version>
-        <mysql.connector.java.version>8.0.30</mysql.connector.java.version>
         <zero.allocation.hashing.version>0.15</zero.allocation.hashing.version>
         <io.confluent.version>7.0.1</io.confluent.version>
-        <opengauss.jdbc.version>3.0.0</opengauss.jdbc.version>
         <snakeyaml.version>2.0</snakeyaml.version>
         <powermock.version>2.0.0</powermock.version>
         <commons.cli.version>1.4</commons.cli.version>
         <oshi.version>5.3.6</oshi.version>
+        <opencsv.version>5.7.1</opencsv.version>
     </properties>
     <modules>
         <module>datachecker-common</module>
         <module>datachecker-extract</module>
         <module>datachecker-check</module>
-        <module>datachecker-mock-data</module>
     </modules>
     <repositories>
         <repository>
@@ -62,6 +64,11 @@
                 <groupId>com.github.oshi</groupId>
                 <artifactId>oshi-core</artifactId>
                 <version>${oshi.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.opencsv</groupId>
+                <artifactId>opencsv</artifactId>
+                <version>${opencsv.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.yaml</groupId>
@@ -89,8 +96,13 @@
                 <version>${opengauss.jdbc.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.mybatis.spring.boot</groupId>
+                <artifactId>mybatis-spring-boot-starter</artifactId>
+                <version>${mybatis.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>com.alibaba</groupId>
-                <artifactId>druid</artifactId>
+                <artifactId>druid-spring-boot-starter</artifactId>
                 <version>${druid.version}</version>
             </dependency>
             <dependency>
@@ -168,7 +180,8 @@
                             <goal>copy-resources</goal>
                         </goals>
                         <configuration>
-                            <outputDirectory>${project.basedir}/gs_datacheck/config</outputDirectory>
+                            <outputDirectory>${project.basedir}/gs_datacheck_${gs.datacheck.version}/config
+                            </outputDirectory>
                             <resources>
                                 <resource>
                                     <directory>${project.basedir}/config/</directory>
@@ -183,7 +196,7 @@
                             <goal>copy-resources</goal>
                         </goals>
                         <configuration>
-                            <outputDirectory>${project.basedir}/gs_datacheck/</outputDirectory>
+                            <outputDirectory>${project.basedir}/gs_datacheck_${gs.datacheck.version}/</outputDirectory>
                             <resources>
                                 <resource>
                                     <directory>${project.basedir}/</directory>
@@ -197,6 +210,22 @@
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-clean-plugin</artifactId>
+                <version>3.2.0</version>
+                <configuration>
+                    <filesets>
+                        <fileset>
+                            <directory>${basedir}</directory>
+                            <includes>
+                                <include>**/gs_datacheck_${gs.datacheck.version}/**</include>
+                            </includes>
+                            <followSymlinks>false</followSymlinks>
+                        </fileset>
+                    </filesets>
+                </configuration>
             </plugin>
         </plugins>
     </build>

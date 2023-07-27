@@ -82,8 +82,8 @@ public class Bucket implements Serializable {
      * @return Return Insert Collection Results
      */
     public RowDataHash put(@NotNull RowDataHash rowDataHash) {
-        signature = signature ^ rowDataHash.getRowHash();
-        return bucket.put(rowDataHash.getPrimaryKey(), rowDataHash);
+        signature = signature ^ rowDataHash.getVHash();
+        return bucket.put(rowDataHash.getKey(), rowDataHash);
     }
 
     /**
