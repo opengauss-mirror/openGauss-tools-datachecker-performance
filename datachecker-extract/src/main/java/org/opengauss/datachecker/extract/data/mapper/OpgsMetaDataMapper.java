@@ -13,31 +13,16 @@
  * See the Mulan PSL v2 for more details.
  */
 
-package org.opengauss.datachecker.common.entry.extract;
+package org.opengauss.datachecker.extract.data.mapper;
 
-import lombok.Data;
-import lombok.experimental.Accessors;
+import org.apache.ibatis.annotations.Mapper;
 
 /**
- * PrimaryMeta
+ * OpgsMetaDataMapper
  *
  * @author ：wangchao
- * @date ：Created in 2022/6/1
+ * @date ：Created in 2023/7/11
  * @since ：11
  */
-@Data
-@Accessors(chain = true)
-public class PrimaryMeta {
-    /**
-     * Primary key column name
-     */
-    private String columnName;
-    /**
-     * Primary key column data type
-     */
-    private String columnType;
-    /**
-     * Primary key table serial number
-     */
-    private int ordinalPosition;
-}
+@Mapper
+public interface OpgsMetaDataMapper extends MetaDataMapper {}

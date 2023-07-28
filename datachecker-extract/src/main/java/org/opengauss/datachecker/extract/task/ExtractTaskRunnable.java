@@ -100,7 +100,7 @@ public class ExtractTaskRunnable implements Runnable {
         this.dynamicThreadPoolManager = support.getDynamicThreadPoolManager();
         this.extractContext = support.getContext();
         this.kafkaOperate = new KafkaOperations(support.getKafkaTemplate());
-        this.checkPoint = new CheckPoint(support.getDataSource());
+        this.checkPoint = new CheckPoint(support.getDataAccessService());
 
     }
 

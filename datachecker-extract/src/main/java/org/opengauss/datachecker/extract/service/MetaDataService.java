@@ -15,7 +15,6 @@
 
 package org.opengauss.datachecker.extract.service;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.opengauss.datachecker.common.entry.enums.ColumnKey;
@@ -25,11 +24,11 @@ import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.thread.ThreadPoolFactory;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.opengauss.datachecker.extract.cache.MetaDataCache;
-import org.opengauss.datachecker.extract.dao.DataBaseMetaDataDAOImpl;
-import org.opengauss.datachecker.extract.load.ExtractEnvironment;
+import org.opengauss.datachecker.extract.data.BaseDataService;
 import org.opengauss.datachecker.extract.resource.ResourceManager;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.Resource;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
@@ -52,12 +51,14 @@ import java.util.stream.Collectors;
  **/
 @Service
 @Slf4j
-@RequiredArgsConstructor
 public class MetaDataService {
-    private final DataBaseMetaDataDAOImpl dataBaseMetadataDAOImpl;
-    private final ResourceManager resourceManager;
-    private final ExtractEnvironment extractEnvironment;
+    @Resource
+    private BaseDataService baseDataService;
+    @Resource
+    private ResourceManager resourceManager;
     private volatile AtomicBoolean isCheckTableEmpty = new AtomicBoolean(false);
+    private volatile MetadataLoadProcess metadataLoadProcess = new MetadataLoadProcess();
+
     /**
      * Return database metadata information through cache
      *
@@ -69,7 +70,7 @@ public class MetaDataService {
     }
 
     public List<String> queryAllTableNames() {
-        return dataBaseMetadataDAOImpl.queryTableNameList();
+        return baseDataService.queryTableNameList();
     }
 
     /**
@@ -89,12 +90,12 @@ public class MetaDataService {
      * @return metadata loading progress
      */
     public MetadataLoadProcess getMetadataLoadProcess() {
-        return dataBaseMetadataDAOImpl.getMetadataLoadProcess();
+        return metadataLoadProcess;
     }
 
     public Map<String, TableMetadata> queryMetaDataOfSchema() {
         Map<String, TableMetadata> tableMetadataMap = new ConcurrentHashMap<>();
-        final List<TableMetadata> tableMetadataList = dataBaseMetadataDAOImpl.queryTableMetadataList();
+        final List<TableMetadata> tableMetadataList = baseDataService.queryTableMetadataList();
         log.info("query table metadata {}", tableMetadataList.size());
         if (CollectionUtils.isEmpty(tableMetadataList)) {
             return tableMetadataMap;
@@ -103,13 +104,14 @@ public class MetaDataService {
         ThreadPoolExecutor executor = ThreadPoolFactory
             .newThreadPool("update-column", Math.max(1, resourceManager.maxConnectionCount() / 2),
                 resourceManager.maxConnectionCount(), tableMetadataList.size());
+        metadataLoadProcess.setTotal(tableMetadataList.size());
         tableMetadataList.forEach(tableMetadata -> {
             Future<?> future = executor.submit(() -> {
                 takeConnection();
                 if (resourceManager.isShutdown()) {
                     log.warn("extract service is shutdown ,task set table metadata of table is canceled!");
                 } else {
-                    dataBaseMetadataDAOImpl.updateTableColumnMetaData(tableMetadata, extractEnvironment.getCheckMode());
+                    baseDataService.updateTableColumnMetaData(tableMetadata);
                     tableMetadataMap.put(tableMetadata.getTableName(), tableMetadata);
                 }
                 resourceManager.release();
@@ -119,11 +121,13 @@ public class MetaDataService {
         futures.forEach(future -> {
             try {
                 future.get();
+                metadataLoadProcess.setLoadCount(metadataLoadProcess.getLoadCount() + 1);
             } catch (InterruptedException | ExecutionException exp) {
                 log.warn("extract table column failed with exp: {}", exp);
             }
         });
         executor.shutdown();
+        metadataLoadProcess.setLoadCount(metadataLoadProcess.getTotal());
         log.info("query table column metadata {}", tableMetadataList.size());
         Map<String, TableMetadata> filterNoPrimary = tableMetadataMap.entrySet().stream().filter(
             entry -> CollectionUtils.isNotEmpty(entry.getValue().getPrimaryMetas())).collect(
@@ -131,7 +135,7 @@ public class MetaDataService {
         log.info("filter table which does not have primary metadata {}", filterNoPrimary.size());
         tableMetadataMap.clear();
         tableMetadataMap.putAll(filterNoPrimary);
-        dataBaseMetadataDAOImpl.matchRowRules(tableMetadataMap);
+        baseDataService.matchRowRules(tableMetadataMap);
         log.info("build table metadata [{}]", tableMetadataMap.size());
         return tableMetadataMap;
     }
@@ -148,8 +152,7 @@ public class MetaDataService {
 
     public TableMetadata getMetaDataOfSchemaByCache(String tableName) {
         if (!MetaDataCache.containsKey(tableName)) {
-            final TableMetadata tableMetadata =
-                dataBaseMetadataDAOImpl.queryTableMetadata(tableName, extractEnvironment.getCheckMode());
+            final TableMetadata tableMetadata = baseDataService.queryTableMetadata(tableName);
             if (Objects.nonNull(tableMetadata)) {
                 MetaDataCache.put(tableName, tableMetadata);
             }
@@ -164,7 +167,7 @@ public class MetaDataService {
      * @return column Metadata info
      */
     public List<ColumnsMetaData> queryTableColumnMetaDataOfSchema(String tableName) {
-        return dataBaseMetadataDAOImpl.queryTableColumnsMetaData(tableName);
+        return baseDataService.queryTableColumnsMetaData(tableName);
     }
 
     private List<ColumnsMetaData> getTablePrimaryColumn(List<ColumnsMetaData> columnsMetaData) {
@@ -180,7 +183,7 @@ public class MetaDataService {
      * @return TableMetadata
      */
     public TableMetadata queryIncrementMetaData(String tableName) {
-        return dataBaseMetadataDAOImpl.queryTableMetadata(tableName, extractEnvironment.getCheckMode());
+        return baseDataService.queryTableMetadata(tableName);
     }
 
     /**
@@ -196,7 +199,6 @@ public class MetaDataService {
             MetaDataCache.put(tableMetadata.getTableName(), tableMetadata);
         }
     }
-
 
     public synchronized Boolean isCheckTableEmpty(boolean isForced) {
         if (isForced) {

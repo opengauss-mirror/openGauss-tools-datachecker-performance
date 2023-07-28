@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="org.opengauss.datachecker.extract.data.mapper.OpgsMetaDataMapper">
+    <resultMap id="tableMetadataMap" type="org.opengauss.datachecker.common.entry.extract.TableMetadata">
+        <id property="tableName" column="tableName"/>
+        <result property="schema" column="nspname"/>
+        <result property="tableRows" column="tableRows"/>
+        <result property="avgRowLength" column="avgRowLength"/>
+    </resultMap>
+
+    <resultMap id="columnMetadataMap" type="org.opengauss.datachecker.common.entry.extract.ColumnsMetaData">
+        <id property="tableName" column="tableName"/>
+        <result property="schema" column="tableSchema"/>
+        <result property="columnName" column="columnName"/>
+        <result property="ordinalPosition" column="ordinalPosition"/>
+        <result property="dataType" column="dataType"/>
+        <result property="columnType" column="columnType"/>
+        <result property="columnKey" column="columnKey" javaType="org.opengauss.datachecker.common.entry.enums.ColumnKey"
+                typeHandler="org.opengauss.datachecker.extract.data.mapper.handler.EnumKeyTypeHandler"/>
+        <result property="extra" column="extra"/>
+    </resultMap>
+    <select id="health" resultType="boolean">
+         SELECT 1
+    </select>
+
+    <select id="queryTableNameList" resultType="string">
+        select c.relname tableName from pg_class c
+            LEFT JOIN pg_namespace n on n.oid = c.relnamespace
+            left join pg_index b on c.oid=b.indrelid
+        where n.nspname=#{schema} and b.indisprimary='t' order by c.reltuples asc;
+    </select>
+
+    <select id="queryTableMetadataList" resultMap="tableMetadataMap">
+        select n.nspname , c.relname tableName,c.reltuples tableRows, case when c.reltuples>0 then pg_table_size(c.oid)/c.reltuples else 0 end as avgRowLength
+        from pg_class c
+             LEFT JOIN pg_namespace n on n.oid = c.relnamespace left join pg_index b on c.oid=b.indrelid
+        where n.nspname=#{schema} and b.indisprimary='t' order by c.reltuples asc;
+    </select>
+
+    <select id="queryTableMetadata" resultMap="tableMetadataMap">
+        select n.nspname , c.relname tableName,c.reltuples tableRows, case when c.reltuples>0 then pg_table_size(c.oid)/c.reltuples else 0 end as avgRowLength
+        from pg_class c
+             LEFT JOIN pg_namespace n on n.oid = c.relnamespace left join pg_index b on c.oid=b.indrelid
+        where n.nspname=#{schema} and c.relname=#{name} and b.indisprimary='t' order by c.reltuples asc;
+    </select>
+
+    <select id="queryTableColumnsMetaData" resultMap="columnMetadataMap">
+        select ca1.*,
+            case when my_seq.sequence_name is null then '' else 'auto_increment' end as extra from (( SELECT c.relname tableName ,a.attname columnName , a.attnum ordinalPosition,
+            (CASE WHEN (t.typtype = 'd'::"char")  THEN CASE WHEN ((bt.typelem <![CDATA[<>]]> (0)::oid) AND (bt.typlen = (-1))) THEN 'ARRAY'::text  WHEN (nbt.nspname = 'pg_catalog'::name)
+            THEN format_type(t.typbasetype, NULL::integer)  ELSE 'USER-DEFINED'::text END ELSE CASE WHEN ((t.typelem <![CDATA[<>]]> (0)::oid) AND (t.typlen = (-1)))
+            THEN 'ARRAY'::text WHEN (nt.nspname = 'pg_catalog'::name) THEN format_type(a.atttypid, NULL::integer)  ELSE 'USER-DEFINED'::text END END)::information_schema.character_data AS dataType ,
+            t.typname columnType, (case when co.contype='p'::"char" then 'PRI' end ) columnKey
+            FROM ((pg_attribute a JOIN (pg_class c JOIN pg_namespace nc ON c.relnamespace = nc.oid ) ON a.attrelid = c.oid )
+            JOIN (pg_type t JOIN pg_namespace nt ON t.typnamespace = nt.oid) ON a.atttypid = t.oid)
+            LEFT JOIN (pg_type bt JOIN pg_namespace nbt ON bt.typnamespace = nbt.oid)  ON (t.typtype = 'd'::"char" AND t.typbasetype = bt.oid)
+            left join pg_constraint co on c.oid = co.conrelid and a.attnum = any (array[co.conkey])
+            WHERE a.attnum > 0 AND (NOT a.attisdropped)   AND (c.relkind = ANY (ARRAY['r'::"char", 'm'::"char", 'v'::"char", 'f'::"char"]))
+            and  nc.nspname=#{schema} and c.relname =#{name} and c.relhaspkey=true) ca1
+            left join
+             ( select ts.nspname as object_schema, tbl.relname as table_name, col.attname as column_name, s.relname as sequence_name
+              from pg_class s  join pg_namespace sn on sn.oid = s.relnamespace
+              join pg_depend d on d.refobjid = s.oid and d.refclassid='pg_class'::regclass
+              join pg_attrdef ad on ad.oid = d.objid and d.classid = 'pg_attrdef'::regclass
+              join pg_attribute col on col.attrelid = ad.adrelid and col.attnum = ad.adnum
+              join pg_class tbl on tbl.oid = ad.adrelid
+              join pg_namespace ts on ts.oid = tbl.relnamespace  where s.relkind = 'S' and d.deptype in ('a', 'n') and  ts.nspname=#{schema}
+              ) my_seq
+              on ca1.tableName = my_seq.table_name and ca1.columnName=my_seq.column_name)
+    </select>
+
+    <select id="rowCount" resultType="long">
+        select count(1) from ${schema}.${name};
+    </select>
+
+    <select id="min" resultType="string">
+         select min(${param.colName}) from ${param.schema}.${param.name}
+    </select>
+
+    <select id="max" resultType="string">
+         select max(${param.colName}) from ${param.schema}.${param.name}
+    </select>
+
+    <select id="next" resultType="string">
+         select ${param.colName} from ${param.schema}.${param.name} where ${param.colName} >= #{param.preValue} order by ${param.colName} asc limit #{param.offset} ,1
+    </select>
+</mapper>
