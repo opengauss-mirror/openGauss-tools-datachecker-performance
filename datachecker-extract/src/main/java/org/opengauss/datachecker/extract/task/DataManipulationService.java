@@ -26,6 +26,7 @@ import org.opengauss.datachecker.common.entry.extract.TableMetadataHash;
 import org.opengauss.datachecker.common.util.LongHashFunctionWrapper;
 import org.opengauss.datachecker.extract.config.ExtractProperties;
 import org.opengauss.datachecker.extract.constants.ExtConstants;
+import org.opengauss.datachecker.extract.data.access.DataAccessService;
 import org.opengauss.datachecker.extract.dml.BatchDeleteDmlBuilder;
 import org.opengauss.datachecker.extract.dml.DeleteDmlBuilder;
 import org.opengauss.datachecker.extract.dml.DmlBuilder;
@@ -41,6 +42,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
+import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -66,11 +68,11 @@ public class DataManipulationService {
 
     @Value("${spring.extract.databaseType}")
     private DataBaseType databaseType;
-    @Autowired
-    private JdbcTemplate jdbcTemplateOne;
-    @Autowired
+    @Resource
+    private DataAccessService dataAccessService;
+    @Resource
     private MetaDataService metaDataService;
-    @Autowired
+    @Resource
     private ExtractProperties extractProperties;
 
     /**
@@ -217,16 +219,14 @@ public class DataManipulationService {
         List<String> columns = MetaDataUtil.getTableColumns(tableMetadata);
         List<String> primary = MetaDataUtil.getTablePrimaryColumns(tableMetadata);
         // Use JDBC to query the current task to extract data
-        NamedParameterJdbcTemplate jdbc = new NamedParameterJdbcTemplate(jdbcTemplateOne);
         ResultSetHandler resultSetHandler = resultSetFactory.createHandler(databaseType);
-        return jdbc.query(selectDml, paramMap,
+        return dataAccessService.query(selectDml, paramMap,
             (rs, rowNum) -> resultSetHashHandler.handler(primary, columns, resultSetHandler.putOneResultSetToMap(rs)));
     }
 
     private List<Map<String, String>> queryColumnValues(String selectDml, Map<String, Object> paramMap) {
         ResultSetHandler handler = resultSetFactory.createHandler(databaseType);
-        NamedParameterJdbcTemplate jdbc = new NamedParameterJdbcTemplate(jdbcTemplateOne);
-        return jdbc.query(selectDml, paramMap, (rs, rowNum) -> handler.putOneResultSetToMap(rs));
+        return dataAccessService.query(selectDml, paramMap, (rs, rowNum) -> handler.putOneResultSetToMap(rs));
     }
 
     /**

@@ -40,7 +40,9 @@ spring:
   mvc:
     async:
       request-timeout: 60000
-
+mybatis:
+  mapper-locations: classpath*:mapper/*Mapper.xml
+  configuration.map-underscore-to-camel-case: true
 feign:
   okhttp:
     enabled: true

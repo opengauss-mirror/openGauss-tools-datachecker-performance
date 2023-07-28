@@ -19,6 +19,7 @@ import org.opengauss.datachecker.common.entry.common.ExtractContext;
 import org.opengauss.datachecker.common.service.DynamicThreadPoolManager;
 import org.opengauss.datachecker.extract.client.CheckingFeignClient;
 import org.opengauss.datachecker.extract.config.ExtractProperties;
+import org.opengauss.datachecker.extract.data.access.DataAccessService;
 import org.opengauss.datachecker.extract.resource.ResourceManager;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -44,6 +45,8 @@ public class ExtractThreadSupport {
     private int maximumTableSliceSize = DEFAULT_MAXIMUM_TABLE_SLICE_SIZE;
     @Resource
     private DataSource dataSource;
+    @Resource
+    private DataAccessService dataAccessService;
     @Resource
     private ResourceManager resourceManager;
     @Resource
@@ -97,6 +100,10 @@ public class ExtractThreadSupport {
 
     public ExtractContext getContext() {
         return context;
+    }
+
+    public DataAccessService getDataAccessService() {
+        return dataAccessService;
     }
 
     @PreDestroy

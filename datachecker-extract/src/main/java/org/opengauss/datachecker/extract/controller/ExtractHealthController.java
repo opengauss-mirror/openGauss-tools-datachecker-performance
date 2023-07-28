@@ -16,12 +16,12 @@
 package org.opengauss.datachecker.extract.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import org.opengauss.datachecker.common.web.Result;
-import org.opengauss.datachecker.extract.dao.MetaDataDAO;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.opengauss.datachecker.extract.data.access.DataAccessService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import javax.annotation.Resource;
 
 /**
  * health check of the data extraction service
@@ -30,17 +30,15 @@ import org.springframework.web.bind.annotation.RestController;
  * @date ：Created in 2022/6/23
  * @since ：11
  */
-@Tag(name = "ExtractHealthController", description = "health check of the data extraction service")
 @RestController
 public class ExtractHealthController {
-    @Autowired
-    private MetaDataDAO baseMetaDataDAO;
+    @Resource
+    private DataAccessService dataAccessService;
 
     @Operation(summary = "data extraction health check")
     @GetMapping("/extract/health")
     public Result<Void> health() {
-        baseMetaDataDAO.health();
+        dataAccessService.health();
         return Result.success();
     }
-
 }

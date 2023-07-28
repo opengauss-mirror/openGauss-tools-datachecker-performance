@@ -13,31 +13,24 @@
  * See the Mulan PSL v2 for more details.
  */
 
-package org.opengauss.datachecker.common.entry.extract;
+package org.opengauss.datachecker.common.entry.common;
 
 import lombok.Data;
 import lombok.experimental.Accessors;
 
 /**
- * PrimaryMeta
+ * DataAccessParam
  *
  * @author ：wangchao
- * @date ：Created in 2022/6/1
+ * @date ：Created in 2023/7/27
  * @since ：11
  */
-@Data
 @Accessors(chain = true)
-public class PrimaryMeta {
-    /**
-     * Primary key column name
-     */
-    private String columnName;
-    /**
-     * Primary key column data type
-     */
-    private String columnType;
-    /**
-     * Primary key table serial number
-     */
-    private int ordinalPosition;
+@Data
+public class DataAccessParam {
+    private String schema;
+    private String name;
+    private String colName;
+    private String preValue;
+    private long offset;
 }
