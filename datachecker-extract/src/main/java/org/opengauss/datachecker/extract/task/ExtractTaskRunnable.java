@@ -613,8 +613,8 @@ public class ExtractTaskRunnable implements Runnable {
          * @param row row
          */
         public void sendMultiplePartitionsRowData(RowDataHash row) {
-            row.setPartition(calcSimplePartition(row.getPrimaryKeyHash()));
-            send(topicName, row.getPartition(), row.getPrimaryKey(), JSON.toJSONString(row));
+            int ptn = calcSimplePartition(row.getKHash());
+            send(topicName, ptn, row.getKey(), JSON.toJSONString(row));
         }
 
         /**
@@ -623,12 +623,11 @@ public class ExtractTaskRunnable implements Runnable {
          * @param row row
          */
         public void sendSinglePartitionRowData(RowDataHash row) {
-            row.setPartition(DEFAULT_PARTITION);
-            if (row.getPrimaryKeyHash() == 0) {
-                log.debug("row data hash zero :{}:{}", row.getPrimaryKey(), JSON.toJSONString(row));
+            if (row.getKHash() == 0) {
+                log.debug("row data hash zero :{}:{}", row.getKey(), JSON.toJSONString(row));
                 return;
             }
-            send(topicName, DEFAULT_PARTITION, row.getPrimaryKey(), JSON.toJSONString(row));
+            send(topicName, DEFAULT_PARTITION, row.getKey(), JSON.toJSONString(row));
         }
 
         private void send(String topicName, int partition, String key, String message) {
@@ -730,7 +729,7 @@ public class ExtractTaskRunnable implements Runnable {
             String primaryValue = hashHandler.value(rowData, primary);
             long primaryHash = hashHandler.xx3Hash(rowData, primary);
             RowDataHash hashData = new RowDataHash();
-            hashData.setPrimaryKey(primaryValue).setPrimaryKeyHash(primaryHash).setRowHash(rowHash);
+            hashData.setKey(primaryValue).setKHash(primaryHash).setVHash(rowHash);
             return hashData;
         }
 
