@@ -171,7 +171,7 @@
                             <artifactId>datachecker-common</artifactId>
                         </include>
                     </includes>
-                    <outputDirectory>${project.basedir}/../gs_datacheck_${gs.datacheck.version}</outputDirectory>
+                    <outputDirectory>${project.basedir}/../gs_datacheck-${gs.datacheck.version}</outputDirectory>
                 </configuration>
                 <executions>
                     <execution>
@@ -193,7 +193,7 @@
                             <goal>copy-dependencies</goal>
                         </goals>
                         <configuration>
-                            <outputDirectory>${project.basedir}/../gs_datacheck_${gs.datacheck.version}/lib</outputDirectory>
+                            <outputDirectory>${project.basedir}/../gs_datacheck-${gs.datacheck.version}/lib</outputDirectory>
                             <excludeGroupIds>datachecker-check</excludeGroupIds>
                             <includeScope>runtime</includeScope>
                         </configuration>
