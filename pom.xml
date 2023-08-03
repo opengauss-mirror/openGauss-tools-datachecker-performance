@@ -180,7 +180,7 @@
                             <goal>copy-resources</goal>
                         </goals>
                         <configuration>
-                            <outputDirectory>${project.basedir}/gs_datacheck_${gs.datacheck.version}/config
+                            <outputDirectory>${project.basedir}/gs_datacheck-${gs.datacheck.version}/config
                             </outputDirectory>
                             <resources>
                                 <resource>
@@ -196,7 +196,7 @@
                             <goal>copy-resources</goal>
                         </goals>
                         <configuration>
-                            <outputDirectory>${project.basedir}/gs_datacheck_${gs.datacheck.version}/</outputDirectory>
+                            <outputDirectory>${project.basedir}/gs_datacheck-${gs.datacheck.version}/</outputDirectory>
                             <resources>
                                 <resource>
                                     <directory>${project.basedir}/</directory>
@@ -220,7 +220,7 @@
                         <fileset>
                             <directory>${basedir}</directory>
                             <includes>
-                                <include>**/gs_datacheck_${gs.datacheck.version}/**</include>
+                                <include>**/gs_datacheck-${gs.datacheck.version}/**</include>
                             </includes>
                             <followSymlinks>false</followSymlinks>
                         </fileset>

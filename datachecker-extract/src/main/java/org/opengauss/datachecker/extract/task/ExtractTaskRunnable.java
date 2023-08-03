@@ -227,11 +227,7 @@ public class ExtractTaskRunnable implements Runnable {
                 throw new ExtractPrimaryKeyException(
                     "current not support primary key type  for this table " + tableMetadata.getTableName());
             }
-            if (tableMetadata.isAutoIncrement()) {
-                return new SinglePrimaryAutoIncrementSliceQueryStatement(checkPoint);
-            } else {
-                return new SinglePrimarySliceQueryStatement(checkPoint);
-            }
+            return new SinglePrimarySliceQueryStatement(checkPoint);
         }
 
         /**
