@@ -15,7 +15,10 @@
 
 package org.opengauss.datachecker.check.config;
 
+import com.alibaba.druid.spring.boot.autoconfigure.DruidDataSourceAutoConfigure;
+import org.mybatis.spring.boot.autoconfigure.MybatisAutoConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.autoconfigure.data.jdbc.JdbcRepositoriesAutoConfiguration;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.context.annotation.Configuration;
 
@@ -27,5 +30,6 @@ import org.springframework.context.annotation.Configuration;
  * @since ：11
  */
 @Configuration
-@EnableAutoConfiguration(exclude = {DataSourceAutoConfiguration.class})
+@EnableAutoConfiguration(exclude = {DataSourceAutoConfiguration.class,  DruidDataSourceAutoConfigure.class, MybatisAutoConfiguration.class,
+    JdbcRepositoriesAutoConfiguration.class})
 public class DataSourceConfig {}
