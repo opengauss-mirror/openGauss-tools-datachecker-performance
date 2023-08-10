@@ -171,11 +171,7 @@ public class SelectSqlBuilder {
         if (Objects.nonNull(conditionLimit)) {
             return buildSelectSqlConditionLimit(tableMetadata, conditionLimit);
         } else if (isDivisions) {
-            if (tableMetadata.canUseBetween()) {
-                return buildSelectSqlOffset(tableMetadata, start, offset);
-            } else {
-                return buildSelectSqlWherePrimary(tableMetadata);
-            }
+            return buildSelectSqlWherePrimary(tableMetadata);
         } else {
             return buildSelectSqlOffsetZero(columnsMetas, tableMetadata.getTableName());
         }
