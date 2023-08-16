@@ -19,8 +19,6 @@ import lombok.Data;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.springframework.stereotype.Component;
 
-import java.util.concurrent.ExecutorService;
-
 /**
  * ExtractEnvironment
  *
@@ -34,6 +32,5 @@ public class ExtractEnvironment {
     private int maxCorePoolSize = 0;
     private int queueSize = 0;
     private boolean loadSuccess = false;
-    private volatile ExecutorService threadPoolExecutor = null;
     private volatile CheckMode checkMode;
 }

@@ -1,22 +1,19 @@
 server:
   port: 9001
-  shutdown: graceful
-
 debug: false
 logging:
   config: classpath:log4j2-source.xml
 
 spring:
   application:
-    name: DATACHECKER-EXTRACT-${spring.extract.endpoint}
-  lifecycle:
-    timeout-per-shutdown-phase: 5
-
+    name: gs_datacheck_source
+  config:
+    additional-location: file:config/application-source.yml
   extract:
     schema: test
     databaseType: MS  # MS mysql
     endpoint: SOURCE
-    query-dop: 8 # jdbc Parallel Query  config
+    query-dop: 1 # jdbc Parallel Query  config
     debezium-enable: false # Whether to enable incremental debezium configuration (not enabled by default)
     debezium-topic:
     debezium-groupId: debezium-extract-group

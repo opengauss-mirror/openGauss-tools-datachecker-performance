@@ -17,6 +17,7 @@ package org.opengauss.datachecker.extract.client;
 
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.extract.SourceDataLog;
+import org.opengauss.datachecker.common.entry.extract.Topic;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -63,6 +64,19 @@ public interface CheckingFeignClient {
      */
     @PostMapping("/notify/source/increment/data/logs")
     void notifySourceIncrementDataLogs(@RequestBody @NotEmpty List<SourceDataLog> dataLogList);
+
+    /**
+     * register topic
+     *
+     * @param table           tableName
+     * @param topicPartitions topicPartitions
+     * @param endpoint        current endpoint
+     * @return topic
+     */
+    @PostMapping("/register/topic")
+    Topic registerTopic(@RequestParam(value = "tableName") @NotEmpty String table,
+        @RequestParam(value = "topicPartitions") int topicPartitions,
+        @RequestParam(value = "endpoint") @NonNull Endpoint endpoint);
 
     /**
      * health check

@@ -15,6 +15,7 @@
 
 package org.opengauss.datachecker.extract.kafka;
 
+import com.alibaba.fastjson.JSON;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -69,9 +70,8 @@ public class KafkaProducerWapper {
 
     private void sendRecordToSinglePartitionTopic(List<RowDataHash> recordHashList, String topicName) {
         recordHashList.forEach(record -> {
-            record.setPartition(DEFAULT_PARTITION);
             final ProducerRecord<String, String> producerRecord =
-                new ProducerRecord<>(topicName, DEFAULT_PARTITION, record.getPrimaryKey(), record.toEncode());
+                new ProducerRecord<>(topicName, DEFAULT_PARTITION, record.getKey(), JSON.toJSONString(record));
             kafkaTemplate.send(producerRecord);
         });
         kafkaTemplate.flush();
@@ -80,10 +80,9 @@ public class KafkaProducerWapper {
 
     private void sendMultiPartitionTopic(List<RowDataHash> recordHashList, String topicName, int partitions) {
         recordHashList.forEach(record -> {
-            int partition = calcSimplePartition(record.getPrimaryKeyHash(), partitions);
-            record.setPartition(partition);
+            int partition = calcSimplePartition(record.getKHash(), partitions);
             ProducerRecord<String, String> producerRecord =
-                new ProducerRecord<>(topicName, partition, record.getPrimaryKey(), record.toEncode());
+                new ProducerRecord<>(topicName, partition, record.getKey(), JSON.toJSONString(record));
             kafkaTemplate.send(producerRecord);
         });
         kafkaTemplate.flush();

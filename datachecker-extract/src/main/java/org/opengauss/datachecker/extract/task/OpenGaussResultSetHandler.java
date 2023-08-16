@@ -32,10 +32,13 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
     private final Map<String, TypeHandler> typeHandlers = new ConcurrentHashMap<>();
 
     {
-        TypeHandler byteaToString = (resultSet, columnLabel) -> bytesToString(resultSet.getBytes(columnLabel));
-        TypeHandler blobToString = (resultSet, columnLabel) -> resultSet.getString(columnLabel);
-        TypeHandler booleanToString = (resultSet, columnLabel) -> booleanToString(resultSet, columnLabel);
-        TypeHandler numericToString = (resultSet, columnLabel) -> numericToString(resultSet.getBigDecimal(columnLabel));
+        TypeHandler byteaToString = (rs, columnLabel, displaySize) -> bytesToString(rs.getBytes(columnLabel));
+        TypeHandler blobToString = (rs, columnLabel, displaySize) -> rs.getString(columnLabel);
+        TypeHandler clobToString = (rs, columnLabel, displaySize) -> rs.getString(columnLabel);
+        TypeHandler xmlToString = (rs, columnLabel, displaySize) -> rs.getString(columnLabel);
+        TypeHandler bitToString = (rs, columnLabel, displaySize) -> "B'" + rs.getString(columnLabel) + "'";
+        TypeHandler booleanToString = (rs, columnLabel, displaySize) -> booleanToString(rs, columnLabel);
+        TypeHandler numericToString = (rs, columnLabel, displaySize) -> numericToString(rs.getBigDecimal(columnLabel));
 
         typeHandlers.put(OpenGaussType.NUMERIC, numericToString);
 
@@ -43,6 +46,9 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
         typeHandlers.put(OpenGaussType.BYTEA, byteaToString);
         typeHandlers.put(OpenGaussType.BLOB, blobToString);
         typeHandlers.put(OpenGaussType.BOOLEAN, booleanToString);
+        typeHandlers.put(OpenGaussType.CLOB, clobToString);
+        typeHandlers.put(OpenGaussType.XML, xmlToString);
+        typeHandlers.put(OpenGaussType.BIT, bitToString);
 
         // The openGauss jdbc driver obtains the character,character varying  type as varchar
         typeHandlers.put(OpenGaussType.BPCHAR, this::trim);
@@ -54,12 +60,13 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
     }
 
     @Override
-    public String convert(ResultSet resultSet, String columnTypeName, String columnLabel) throws SQLException {
+    public String convert(ResultSet resultSet, String columnTypeName, String columnLabel, int displaySize)
+        throws SQLException {
         if (typeHandlers.containsKey(columnTypeName)) {
-            return typeHandlers.get(columnTypeName).convert(resultSet, columnLabel);
+            return typeHandlers.get(columnTypeName).convert(resultSet, columnLabel,displaySize);
         } else {
-            return Objects.isNull(resultSet.getObject(columnLabel)) ? NULL :
-                String.valueOf(resultSet.getObject(columnLabel));
+            Object object = resultSet.getObject(columnLabel);
+            return Objects.isNull(object) ? NULL : object.toString();
         }
     }
 
@@ -79,5 +86,8 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
         String DATE = "date";
         String TIME = "time";
         String TIMESTAMP = "timestamp";
+        String CLOB = "clob";
+        String XML = "xml";
+        String BIT = "bit";
     }
 }

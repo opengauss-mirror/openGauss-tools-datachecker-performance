@@ -26,7 +26,7 @@ import lombok.experimental.Accessors;
  * @since ：11
  */
 @Data
-@Accessors
+@Accessors(chain = true)
 public class PrimaryMeta {
     /**
      * Primary key column name

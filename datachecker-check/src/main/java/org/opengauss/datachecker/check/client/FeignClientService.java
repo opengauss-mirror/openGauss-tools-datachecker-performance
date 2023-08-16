@@ -24,6 +24,7 @@ import org.opengauss.datachecker.common.entry.enums.RuleType;
 import org.opengauss.datachecker.common.entry.extract.ExtractConfig;
 import org.opengauss.datachecker.common.entry.extract.ExtractTask;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
+import org.opengauss.datachecker.common.exception.CheckingException;
 import org.opengauss.datachecker.common.exception.DispatchClientException;
 import org.opengauss.datachecker.common.web.Result;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -284,6 +285,47 @@ public class FeignClientService {
         try {
             getClient(endpoint).shutdown(message);
         } catch (Exception ignored) {
+        }
+    }
+
+    /**
+     * queryIncrementMetaData
+     *
+     * @param endpoint  endpoint
+     * @param tableName tableName
+     * @return TableMetadata
+     */
+    public TableMetadata queryIncrementMetaData(Endpoint endpoint, String tableName) {
+        try {
+            Result<TableMetadata> result = getClient(endpoint).queryIncrementMetaData(tableName);
+            if (result.isSuccess()) {
+                return result.getData();
+            } else {
+                throw new CheckingException("query metadata failed: " + endpoint.getDescription() + " : " + tableName);
+            }
+        } catch (Exception ignored) {
+            throw new DispatchClientException(endpoint, "get table metadata error: " + ignored.getMessage());
+        }
+    }
+
+    public void notifyCheckTableFinished(Endpoint endpoint, String tableName) {
+        try {
+            getClient(endpoint).notifyCheckTableFinished(tableName);
+        } catch (Exception ignored) {
+            throw new DispatchClientException(endpoint, "notify error: " + ignored.getMessage());
+        }
+    }
+
+    public boolean isCheckTableEmpty(Endpoint endpoint, boolean isForced) {
+        try {
+            Result<Boolean> result = getClient(endpoint).isCheckTableEmpty(isForced);
+            if (result.isSuccess()) {
+                return result.getData();
+            } else {
+                throw new CheckingException("check database failed: " + endpoint.getDescription());
+            }
+        } catch (Exception ignored) {
+            throw new DispatchClientException(endpoint, "check database error: " + ignored.getMessage());
         }
     }
 }

@@ -17,6 +17,7 @@ package org.opengauss.datachecker.extract.service;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.constant.Constants;
 import org.opengauss.datachecker.common.entry.enums.DML;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
@@ -33,15 +34,16 @@ import org.opengauss.datachecker.common.exception.BuildRepairStatementException;
 import org.opengauss.datachecker.common.exception.ProcessMultipleException;
 import org.opengauss.datachecker.common.exception.TableNotExistException;
 import org.opengauss.datachecker.common.exception.TaskNotFoundException;
-import org.opengauss.datachecker.common.thread.ThreadPoolFactory;
+import org.opengauss.datachecker.common.service.DynamicThreadPoolManager;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.ThreadUtil;
+import org.opengauss.datachecker.common.util.TopicUtil;
 import org.opengauss.datachecker.extract.cache.MetaDataCache;
 import org.opengauss.datachecker.extract.cache.TableExtractStatusCache;
+import org.opengauss.datachecker.extract.cache.TopicCache;
 import org.opengauss.datachecker.extract.client.CheckingFeignClient;
 import org.opengauss.datachecker.extract.config.ExtractProperties;
 import org.opengauss.datachecker.extract.kafka.KafkaAdminService;
-import org.opengauss.datachecker.extract.kafka.KafkaCommonService;
-import org.opengauss.datachecker.extract.load.ExtractEnvironment;
 import org.opengauss.datachecker.extract.task.DataManipulationService;
 import org.opengauss.datachecker.extract.task.ExtractTaskBuilder;
 import org.opengauss.datachecker.extract.task.ExtractTaskRunnable;
@@ -64,6 +66,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
+import static org.opengauss.datachecker.common.constant.DynamicTpConstant.EXTRACT_EXECUTOR;
+
 /**
  * DataExtractServiceImpl
  *
@@ -74,7 +78,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 public class DataExtractServiceImpl implements DataExtractService {
-
+    private static final Logger logKafka = LogUtils.geKafkaLogger();
     /**
      * Maximum number of sleeps of threads executing data extraction tasks
      */
@@ -94,7 +98,6 @@ public class DataExtractServiceImpl implements DataExtractService {
     private final AtomicReference<String> atomicProcessNo = new AtomicReference<>(PROCESS_NO_RESET);
 
     private final AtomicReference<List<ExtractTask>> taskReference = new AtomicReference<>();
-
     @Autowired
     private ExtractTaskBuilder extractTaskBuilder;
     @Autowired
@@ -104,17 +107,19 @@ public class DataExtractServiceImpl implements DataExtractService {
     @Autowired
     private ExtractProperties extractProperties;
     @Autowired
-    private KafkaCommonService kafkaCommonService;
-    @Autowired
-    private KafkaAdminService kafkaAdminService;
-    @Autowired
     private MetaDataService metaDataService;
     @Autowired
     private DataManipulationService dataManipulationService;
+    @Resource
+    private TopicCache topicCache;
     @Value("${server.port}")
     private int serverPort = 0;
+    @Value("${spring.check.maximum-topic-size}")
+    private int maximumTopicSize = 10;
     @Resource
-    private ExtractEnvironment extractEnvironment;
+    private DynamicThreadPoolManager dynamicThreadPoolManager;
+    @Resource
+    private KafkaAdminService kafkaAdminService;
 
     /**
      * Data extraction service
@@ -140,9 +145,9 @@ public class DataExtractServiceImpl implements DataExtractService {
             log.info("The current endpoint is not the source endpoint, and the task cannot be built");
             return new ArrayList<>(0);
         }
+        topicCache.initEndpoint(extractProperties.getEndpoint());
         if (atomicProcessNo.compareAndSet(PROCESS_NO_RESET, processNo)) {
             Set<String> tableNames = MetaDataCache.getAllKeys();
-
             List<ExtractTask> taskList = extractTaskBuilder.builder(tableNames);
             if (CollectionUtils.isEmpty(taskList)) {
                 return taskList;
@@ -170,6 +175,9 @@ public class DataExtractServiceImpl implements DataExtractService {
     public void buildExtractTaskAllTables(String processNo, @NonNull List<ExtractTask> taskList)
         throws ProcessMultipleException {
         if (!Objects.equals(extractProperties.getEndpoint(), Endpoint.SINK)) {
+            return;
+        }
+        if (CollectionUtils.isEmpty(taskList)) {
             return;
         }
         // Verify whether the task list built on the source side exists on the destination side,
@@ -267,7 +275,6 @@ public class DataExtractServiceImpl implements DataExtractService {
     @Async
     @Override
     public void execExtractTaskAllTables(String processNo) throws TaskNotFoundException {
-        Thread.currentThread().setName("invoke-extract-" + serverPort + "-" + processNo.toLowerCase());
         if (Objects.equals(atomicProcessNo.get(), processNo)) {
             int sleepCount = 0;
             while (CollectionUtils.isEmpty(taskReference.get())) {
@@ -278,11 +285,13 @@ public class DataExtractServiceImpl implements DataExtractService {
                     break;
                 }
             }
+            kafkaAdminService.init(processNo, extractProperties.getEndpoint());
+            dynamicThreadPoolManager.dynamicThreadPoolMonitor();
             List<ExtractTask> taskList = taskReference.get();
             if (CollectionUtils.isEmpty(taskList)) {
                 return;
             }
-            final ExecutorService executorService = getExecutorService(extractEnvironment);
+            final ExecutorService executorService = dynamicThreadPoolManager.getExecutor(EXTRACT_EXECUTOR);
             Map<String, Integer> tableCheckStatus = checkingFeignClient.queryTableCheckStatus();
             taskList.forEach(task -> {
                 log.info("Perform data extraction tasks {}", task.getTaskName());
@@ -291,18 +300,26 @@ public class DataExtractServiceImpl implements DataExtractService {
                     log.info("Abnormal table[{}] status, ignoring the current table data extraction task", tableName);
                     return;
                 }
-                Topic topic = kafkaCommonService.getTopicInfo(processNo, tableName, task.getDivisionsTotalNumber());
-                kafkaAdminService.createTopic(topic.getTopicName(), topic.getPartitions());
-                executorService.submit(new ExtractTaskRunnable(task, topic, extractThreadSupport));
+                registerTopic(task);
+                while (!topicCache.canCreateTopic(maximumTopicSize)) {
+                    ThreadUtil.sleep(5000);
+                }
+                Topic topic = task.getTopic();
+                Endpoint endpoint = extractProperties.getEndpoint();
+                logKafka.info("try to create [{}] [{}]", topic.getTopicName(endpoint), topic.getPartitions());
+                kafkaAdminService.createTopic(topic.getTopicName(endpoint), topic.getPartitions());
+                topicCache.add(topic);
+                log.info("current topic cache size = {}", topicCache.size());
+                executorService.submit(new ExtractTaskRunnable(processNo, task, extractThreadSupport));
             });
         }
     }
 
-    private ExecutorService getExecutorService(ExtractEnvironment environment) {
-        final int core = Runtime.getRuntime().availableProcessors();
-        final int maxCorePoolSize = environment.getMaxCorePoolSize();
-        int corePoolSize = Math.min(core, maxCorePoolSize);
-        return ThreadPoolFactory.newThreadPool("extract", corePoolSize, environment.getQueueSize());
+    private void registerTopic(ExtractTask task) {
+        int topicPartitions = TopicUtil.calcPartitions(task.getDivisionsTotalNumber());
+        Endpoint currentEndpoint = extractProperties.getEndpoint();
+        Topic topic = checkingFeignClient.registerTopic(task.getTableName(), topicPartitions, currentEndpoint);
+        task.setTopic(topic);
     }
 
     @Override
@@ -411,5 +428,15 @@ public class DataExtractServiceImpl implements DataExtractService {
                 .setEndpoint(extractProperties.getEndpoint());
         config.setDebeziumEnable(extractProperties.isDebeziumEnable()).setDatabase(database);
         return config;
+    }
+
+    @Override
+    public Boolean isCheckTableEmpty(boolean isForced) {
+        return metaDataService.isCheckTableEmpty(isForced);
+    }
+
+    @Override
+    public TableMetadata queryIncrementMetaData(String tableName) {
+        return metaDataService.queryIncrementMetaData(tableName);
     }
 }

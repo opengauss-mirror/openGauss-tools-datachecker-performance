@@ -1,12 +1,18 @@
 server:
   port: 9000
   shutdown: graceful
-
-debug: true
-
+logging:
+  config: classpath:./config/log4j2.xml
+debug: false
 spring:
+  memory-monitor-enable: false
+  check:
+    core-pool-size: 2
+    maximum-pool-size: 10
   application:
-    name: datachecker-check
+    name: gs_datacheck
+  config:
+    additional-location: file:config/application.yml
   lifecycle:
     timeout-per-shutdown-phase: 5
   kafka:
@@ -22,12 +28,7 @@ spring:
       request-timeout-ms: 300000
       fetch-max-bytes: 536870912  # 512M
 
-feign:
-  okhttp:
-    enabled: true
 
-logging:
-  config: classpath:log4j2.xml
 
 data:
   check:
@@ -41,13 +42,13 @@ data:
     check-with-sync-extracting: true
     retry-fetch-record-times: 5
     error-rate: 30
-    max-core-pool-size: 10
     max-retry-times: 1000
     retry-interval-times: 1000
     # auto-delete-topic :  Configure whether to automatically delete topic.
     # 0 is not delete; 1 is delete when checked all completed ; 2 is deleted when checked a table
     auto-delete-topic: 2
     increment-max-diff-count: 10
+
 rules:
   # There are three types of filtering rules: table-level rules, row-level rules, and column-level rules.
   # Rules are configured in the form of List collection.

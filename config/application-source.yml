@@ -1,14 +1,19 @@
 server:
   port: 9001
 logging:
-  config: #absolute_path/log4j2source.xml
+  config: config/log4j2source.xml
 
 spring:
   check:
     server-uri: http://127.0.0.1:9000
+    core-pool-size: 1
+    maximum-pool-size: 5
+    maximum-topic-size: 5
+    maximum-table-slice-size: 100000
   extract:
     schema: test
-    databaseType: MS
+    databaseType: MS # For MySQL
+    # databaseType: OG # For openGauss
     query-dop: 8 # jdbc Parallel Query  config
     debezium-enable: false
     debezium-topic: data_check_avro_inc_topic_w1 # debezium topic
@@ -27,6 +32,8 @@ spring:
       dataSourceOne:
         driver-class-name: com.mysql.cj.jdbc.Driver
         url: jdbc:mysql://127.0.0.1:3306/mysql?useSSL=false&useUnicode=true&characterEncoding=utf-8&serverTimezone=UTC&allowPublicKeyRetrieval=true
+        # driver-class-name: org.opengauss.Driver # For openGauss
+        # url: # jdbc:opengauss://127.0.0.1:5432/postgres?useSSL=false&useUnicode=true&characterEncoding=utf-8&serverTimezone=UTC # For openGauss
         username:
         password: 'xxxx' # The password text may contain special characters, which need to be enclosed in quotation marks
         # Configure initialization connection pool size, minimum number of connections, and maximum number of connections
@@ -34,3 +41,4 @@ spring:
         initialSize: 5 # initialization connection pool size
         minIdle: 10 # minimum number of connections
         maxActive: 20 # maximum number of connections
+        validationQuery: SELECT 1

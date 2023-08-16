@@ -39,4 +39,7 @@ public interface ExtConstants {
      * query result parsing ResultSet data result set,default start index position
      */
     int COLUMN_INDEX_FIRST_ZERO = 0;
+
+    String PROFILE_SINK = "sink";
+    String PROFILE_SOURCE = "source";
 }

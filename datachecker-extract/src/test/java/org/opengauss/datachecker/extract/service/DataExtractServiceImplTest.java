@@ -1,3 +1,18 @@
+/*
+ * Copyright (c) 2022-2022 Huawei Technologies Co.,Ltd.
+ *
+ * openGauss is licensed under Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *
+ *           http://license.coscl.org.cn/MulanPSL2
+ *
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+ * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+ * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
+ */
+
 package org.opengauss.datachecker.extract.service;
 
 import org.junit.jupiter.api.BeforeAll;
@@ -19,14 +34,9 @@ import org.opengauss.datachecker.common.entry.extract.TableMetadataHash;
 import org.opengauss.datachecker.common.exception.ProcessMultipleException;
 import org.opengauss.datachecker.common.exception.TaskNotFoundException;
 import org.opengauss.datachecker.extract.cache.MetaDataCache;
-import org.opengauss.datachecker.extract.client.CheckingFeignClient;
 import org.opengauss.datachecker.extract.config.ExtractProperties;
-import org.opengauss.datachecker.extract.kafka.KafkaAdminService;
-import org.opengauss.datachecker.extract.kafka.KafkaCommonService;
-import org.opengauss.datachecker.extract.load.ExtractEnvironment;
 import org.opengauss.datachecker.extract.task.DataManipulationService;
 import org.opengauss.datachecker.extract.task.ExtractTaskBuilder;
-import org.opengauss.datachecker.extract.task.ExtractThreadSupport;
 import org.opengauss.datachecker.extract.util.TestJsonUtil;
 
 import java.util.Collections;
@@ -40,28 +50,23 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 import static org.opengauss.datachecker.extract.util.TestJsonUtil.KEY_META_DATA_13_TABLE;
 
+/**
+ * DataExtractServiceImplTest
+ *
+ * @author ：wangchao
+ * @date ：Created in 2023/4/24
+ * @since ：11
+ */
 @ExtendWith(MockitoExtension.class)
 class DataExtractServiceImplTest {
-
     @Mock
     private ExtractTaskBuilder mockExtractTaskBuilder;
     @Mock
-    private ExtractThreadSupport mockExtractThreadSupport;
-    @Mock
-    private CheckingFeignClient mockCheckingFeignClient;
-    @Mock
     private ExtractProperties mockExtractProperties;
-    @Mock
-    private KafkaCommonService mockKafkaCommonService;
-    @Mock
-    private KafkaAdminService mockKafkaAdminService;
     @Mock
     private MetaDataService mockMetaDataService;
     @Mock
     private DataManipulationService mockDataManipulationService;
-    @Mock
-    private ExtractEnvironment mockExtractEnvironment;
-
     @InjectMocks
     private DataExtractServiceImpl dataExtractServiceImplUnderTest;
 
@@ -86,7 +91,7 @@ class DataExtractServiceImplTest {
 
     @DisplayName("build extract task empty")
     @Test
-    void testBuildExtractTaskAllTables1_ExtractTaskBuilderReturnsNoItems() {
+    void test_ExtractTaskBuilderReturnsNoItems() {
         // Setup
         when(mockExtractProperties.getEndpoint()).thenReturn(Endpoint.SOURCE);
         when(mockExtractTaskBuilder.builder(MetaDataCache.getAllKeys())).thenReturn(Collections.emptyList());
@@ -98,7 +103,7 @@ class DataExtractServiceImplTest {
 
     @DisplayName("build extract task ProcessMultipleException")
     @Test
-    void testBuildExtractTaskAllTables1_ThrowsProcessMultipleException() {
+    void test_ThrowsProcessMultipleException() {
         // Setup
         when(mockExtractProperties.getEndpoint()).thenReturn(Endpoint.SOURCE);
         // Configure ExtractTaskBuilder.builder(...).
@@ -141,7 +146,7 @@ class DataExtractServiceImplTest {
     }
 
     @Test
-    void testBuildRepairStatementUpdateDml_DataManipulationServiceReturnsNoItems() {
+    void test_DataManipulationServiceReturnsNoItems() {
         // Setup
         // Configure MetaDataService.getMetaDataOfSchemaByCache(...).
         String table = "t_test_table_template";
@@ -181,7 +186,7 @@ class DataExtractServiceImplTest {
     }
 
     @Test
-    void testBuildRepairStatementInsertDml_DataManipulationServiceReturnsNoItems() {
+    void testInsertDml_DataManipulationServiceReturnsNoItems() {
         String table = "t_test_table_template";
         final TableMetadata tableMetadata = MetaDataCache.get(table);
         when(mockMetaDataService.getMetaDataOfSchemaByCache(table)).thenReturn(tableMetadata);
@@ -217,13 +222,12 @@ class DataExtractServiceImplTest {
     }
 
     @Test
-    void testBuildRepairStatementDeleteDml_DataManipulationServiceReturnsNoItems() {
+    void testDeleteDml_DataManipulationServiceReturnsNoItems() {
         // Setup
         // Configure MetaDataService.getMetaDataOfSchemaByCache(...).
         String table = "t_test_table_template";
         final TableMetadata tableMetadata = MetaDataCache.get(table);
         when(mockMetaDataService.getMetaDataOfSchemaByCache(table)).thenReturn(tableMetadata);
-
         when(mockDataManipulationService.buildDelete("schema", table, Set.of("value"), tableMetadata.getPrimaryMetas()))
             .thenReturn(Collections.emptyList());
 
@@ -258,13 +262,12 @@ class DataExtractServiceImplTest {
     }
 
     @Test
-    void testQueryTableColumnValues_DataManipulationServiceReturnsNoItems() {
+    void testQueryTableColumnValues_NoItems() {
         // Setup
         // Configure MetaDataService.getMetaDataOfSchemaByCache(...).
         String table = "t_test_table_template";
         final TableMetadata tableMetadata = MetaDataCache.get(table);
         when(mockMetaDataService.getMetaDataOfSchemaByCache(table)).thenReturn(tableMetadata);
-
         when(mockDataManipulationService.queryColumnValues(table, List.of("value"), tableMetadata))
             .thenReturn(Collections.emptyList());
 
@@ -308,10 +311,9 @@ class DataExtractServiceImplTest {
         dataLog.setCompositePrimaryValues(List.of("value"));
 
         final RowDataHash rowDataHash = new RowDataHash();
-        rowDataHash.setPrimaryKey("primaryKey");
-        rowDataHash.setPrimaryKeyHash(0L);
-        rowDataHash.setRowHash(0L);
-        rowDataHash.setPartition(0);
+        rowDataHash.setKey("primaryKey");
+        rowDataHash.setKHash(0L);
+        rowDataHash.setVHash(0L);
         final List<RowDataHash> expectedResult = List.of(rowDataHash);
 
         // Configure MetaDataService.getMetaDataOfSchemaByCache(...).
@@ -321,10 +323,9 @@ class DataExtractServiceImplTest {
 
         // Configure DataManipulationService.queryColumnHashValues(...).
         final RowDataHash rowDataHash1 = new RowDataHash();
-        rowDataHash1.setPrimaryKey("primaryKey");
-        rowDataHash1.setPrimaryKeyHash(0L);
-        rowDataHash1.setRowHash(0L);
-        rowDataHash1.setPartition(0);
+        rowDataHash1.setKey("primaryKey");
+        rowDataHash1.setKHash(0L);
+        rowDataHash1.setVHash(0L);
         final List<RowDataHash> rowDataHashes = List.of(rowDataHash1);
         when(mockDataManipulationService.queryColumnHashValues(table, List.of("value"), tableMetadata))
             .thenReturn(rowDataHashes);
@@ -337,7 +338,7 @@ class DataExtractServiceImplTest {
     }
 
     @Test
-    void testQuerySecondaryCheckRowData_DataManipulationServiceReturnsNoItems() {
+    void testQuerySecondaryCheckRowData_NoItems() {
         String table = "t_test_table_template";
 
         // Setup

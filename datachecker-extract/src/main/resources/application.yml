@@ -1,11 +1,17 @@
+server:
+  shutdown: graceful
 debug: false
 
 spring:
+  memory-monitor-enable: false
   check:
     server-uri: http://127.0.0.1:9000
-    max-core-pool-size: 10
+    core-pool-size: 2
+    maximum-pool-size: 20
     max-retry-times: 1000
     retry-interval-times: 10000
+    maximum-topic-size: 30
+    maximum-table-slice-size: 100000
   lifecycle:
     timeout-per-shutdown-phase: 5
   kafka:
@@ -14,10 +20,10 @@ spring:
       linger.ms: 10
       max.in.flight.requests.per.connection: 5
     producer:
-      retries: 1
+      retries: 3
       acks: all
-      batch-size: 1048576
-      buffer-memory: 536870912
+      batch-size: 65536 # 64K
+      buffer-memory: 67108864 # 64M
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
@@ -30,11 +36,13 @@ spring:
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       fetch-min-size: 1
       max-poll-records: 20000
-      fetch-max-bytes: 536870912  # 512M
+      fetch-max-bytes: 67108864  # 64M
   mvc:
     async:
       request-timeout: 60000
-
+mybatis:
+  mapper-locations: classpath*:mapper/*Mapper.xml
+  configuration.map-underscore-to-camel-case: true
 feign:
   okhttp:
     enabled: true

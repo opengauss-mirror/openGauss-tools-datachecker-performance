@@ -175,5 +175,20 @@ public class ExtractFallbackFactory implements FallbackFactory<ExtractFeignClien
         public Result<Void> shutdown(String message) {
             return null;
         }
+
+        @Override
+        public Result<TableMetadata> queryIncrementMetaData(String tableName) {
+            return Result.error("Remote call,  Distribution query Increment MetaData exception");
+        }
+
+        @Override
+        public Result<Void> notifyCheckTableFinished(String tableName) {
+            return Result.error("Remote call, notify Check Table Finished exception");
+        }
+
+        @Override
+        public Result<Boolean> isCheckTableEmpty(boolean isForced) {
+            return Result.error("Remote call, check table empty exception");
+        }
     }
 }

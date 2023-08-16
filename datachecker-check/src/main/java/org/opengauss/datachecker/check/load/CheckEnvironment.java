@@ -40,7 +40,7 @@ public class CheckEnvironment {
     private static final Map<Endpoint, Database> EXTRACT_DATABASE = new HashMap<>();
     private static final AtomicReference<CheckMode> CHECK_MODE_REF = new AtomicReference<>();
     private static final Map<RuleType, List<Rule>> RULES = new HashMap<>();
-
+    protected boolean checkTableEmpty;
     private static String exportCheckPath = "";
     private static boolean metaLoading = false;
 
@@ -138,5 +138,13 @@ public class CheckEnvironment {
 
     public void addRules(Map<RuleType, List<Rule>> rules) {
         RULES.putAll(rules);
+    }
+
+    public boolean isCheckTableEmpty() {
+        return checkTableEmpty;
+    }
+
+    public void setCheckTableEmpty(boolean checkTableEmpty) {
+        this.checkTableEmpty = checkTableEmpty;
     }
 }

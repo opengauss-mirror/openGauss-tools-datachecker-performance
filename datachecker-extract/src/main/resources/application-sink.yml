@@ -1,22 +1,19 @@
 server:
   port: 9002
-  shutdown: graceful
-
 debug: false
-
 logging:
   config: classpath:log4j2-sink.xml
 
 spring:
   application:
-    name: DATACHECKER-EXTRACT-${spring.extract.endpoint}
-  lifecycle:
-    timeout-per-shutdown-phase: 5
+    name: gs_datacheck_sink
+  config:
+    additional-location: file:config/application-sink.yml
   extract:
     schema: jack
     databaseType: OG  #OG opengauss
     endpoint: SINK
-    query-dop: 8 # jdbc Parallel Query  config
+    query-dop: 1 # jdbc Parallel Query  config
     debezium-enable: false
     debezium-topic:
     debezium-groupId:
@@ -38,7 +35,8 @@ spring:
         maxWait: 60000
         timeBetweenEvictionRunsMillis: 60000
         minEvictableIdleTimeMillis: 300000
-        testWhileIdle: false
+        validationQuery: SELECT 1
+        testWhileIdle: true
         testOnBorrow: false
         testOnReturn: false
         poolPreparedStatements: true

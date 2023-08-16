@@ -15,13 +15,18 @@
 
 package org.opengauss.datachecker.extract.task;
 
-import lombok.Getter;
+import org.opengauss.datachecker.common.entry.common.ExtractContext;
+import org.opengauss.datachecker.common.service.DynamicThreadPoolManager;
 import org.opengauss.datachecker.extract.client.CheckingFeignClient;
 import org.opengauss.datachecker.extract.config.ExtractProperties;
-import org.opengauss.datachecker.extract.load.ExtractEnvironment;
+import org.opengauss.datachecker.extract.data.access.DataAccessService;
+import org.opengauss.datachecker.extract.resource.ResourceManager;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import javax.annotation.Resource;
 import javax.sql.DataSource;
 
@@ -32,13 +37,18 @@ import javax.sql.DataSource;
  * @date ：Created in 2022/5/30
  * @since ：11
  */
-@Getter
 @Service
 public class ExtractThreadSupport {
+    private static final int DEFAULT_MAXIMUM_TABLE_SLICE_SIZE = 10000;
+
+    @Value("${spring.check.maximum-table-slice-size}")
+    private int maximumTableSliceSize = DEFAULT_MAXIMUM_TABLE_SLICE_SIZE;
     @Resource
-    private DataSource dataSourceOne;
+    private DataSource dataSource;
     @Resource
-    private ConnectionManager connectionManager;
+    private DataAccessService dataAccessService;
+    @Resource
+    private ResourceManager resourceManager;
     @Resource
     private KafkaTemplate<String, String> kafkaTemplate;
     @Resource
@@ -46,5 +56,58 @@ public class ExtractThreadSupport {
     @Resource
     private ExtractProperties extractProperties;
     @Resource
-    private ExtractEnvironment extractEnvironment;
+    private DynamicThreadPoolManager dynamicThreadPoolManager;
+    private ExtractContext context;
+
+    @PostConstruct
+    public void initContext() {
+        context = new ExtractContext();
+        context.setSchema(extractProperties.getSchema());
+        context.setEndpoint(extractProperties.getEndpoint());
+        context.setDatabaseType(extractProperties.getDatabaseType());
+        context.setMaximumTableSliceSize(getMaximumTableSliceSize());
+    }
+
+    private int getMaximumTableSliceSize() {
+        if (maximumTableSliceSize == 0) {
+            return maximumTableSliceSize;
+        } else if (maximumTableSliceSize >= DEFAULT_MAXIMUM_TABLE_SLICE_SIZE) {
+            return maximumTableSliceSize;
+        } else {
+            return DEFAULT_MAXIMUM_TABLE_SLICE_SIZE;
+        }
+    }
+
+    public DataSource getDataSource() {
+        return dataSource;
+    }
+
+    public ResourceManager getResourceManager() {
+        return resourceManager;
+    }
+
+    public KafkaTemplate<String, String> getKafkaTemplate() {
+        return kafkaTemplate;
+    }
+
+    public CheckingFeignClient getCheckingFeignClient() {
+        return checkingFeignClient;
+    }
+
+    public DynamicThreadPoolManager getDynamicThreadPoolManager() {
+        return dynamicThreadPoolManager;
+    }
+
+    public ExtractContext getContext() {
+        return context;
+    }
+
+    public DataAccessService getDataAccessService() {
+        return dataAccessService;
+    }
+
+    @PreDestroy
+    public void destroy() {
+        kafkaTemplate.destroy();
+    }
 }

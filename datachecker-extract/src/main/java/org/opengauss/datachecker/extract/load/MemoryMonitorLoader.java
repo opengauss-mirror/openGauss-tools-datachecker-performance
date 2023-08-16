@@ -13,31 +13,32 @@
  * See the Mulan PSL v2 for more details.
  */
 
-package org.opengauss.datachecker.check.load;
+package org.opengauss.datachecker.extract.load;
 
-import lombok.extern.slf4j.Slf4j;
-import org.opengauss.datachecker.common.thread.ThreadPoolFactory;
+import org.opengauss.datachecker.common.service.MemoryManagerService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.Resource;
+
 /**
- * ThreadPoolLoader
+ * MemoryMonitorLoader
  *
  * @author ：wangchao
- * @date ：Created in 2022/11/9
+ * @date ：Created in 2023/3/30
  * @since ：11
  */
-@Slf4j
-@Order(101)
+@Order(200)
 @Service
-public class ThreadPoolLoader extends AbstractCheckLoader {
-    @Value("${data.check.max-core-pool-size}")
-    protected int coreSize;
+public class MemoryMonitorLoader extends AbstractExtractLoader {
+    @Resource
+    private MemoryManagerService memoryManagerService;
+    @Value("${spring.memory-monitor-enable}")
+    private boolean isEnableMemoryMonitor;
 
     @Override
-    public void load(CheckEnvironment checkEnvironment) {
-        checkEnvironment.setCheckExecutorService(ThreadPoolFactory.newThreadPool("check", coreSize, Integer.MAX_VALUE));
-        log.info("check service load thread pool success");
+    public void load(ExtractEnvironment extractEnvironment) {
+        memoryManagerService.startMemoryManager(isEnableMemoryMonitor);
     }
 }

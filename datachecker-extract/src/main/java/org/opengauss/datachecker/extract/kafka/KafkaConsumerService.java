@@ -23,7 +23,9 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.TopicPartition;
 import org.opengauss.datachecker.common.entry.extract.RowDataHash;
 import org.opengauss.datachecker.common.entry.extract.Topic;
+import org.opengauss.datachecker.extract.cache.TopicCache;
 import org.opengauss.datachecker.extract.config.KafkaConsumerConfig;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
@@ -40,9 +42,10 @@ import java.util.List;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@ConditionalOnBean({KafkaConsumerConfig.class, TopicCache.class})
 public class KafkaConsumerService {
     private final KafkaConsumerConfig consumerConfig;
-    private final KafkaCommonService kafkaCommonService;
+    private final TopicCache topicCache;
 
     /**
      * Get the data of the specified topic partition
@@ -52,7 +55,7 @@ public class KafkaConsumerService {
      * @return kafka topic data
      */
     public List<RowDataHash> getTopicRecords(String tableName, int partitions) {
-        Topic topic = kafkaCommonService.getTopic(tableName);
+        Topic topic = topicCache.getTopic(tableName);
         KafkaConsumer<String, String> kafkaConsumer = consumerConfig.getKafkaConsumer(topic.getTopicName(), partitions);
         kafkaConsumer.assign(List.of(new TopicPartition(topic.getTopicName(), partitions)));
         List<RowDataHash> dataList = new LinkedList<>();

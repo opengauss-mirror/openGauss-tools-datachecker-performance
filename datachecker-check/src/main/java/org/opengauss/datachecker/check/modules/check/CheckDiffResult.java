@@ -17,18 +17,15 @@ package org.opengauss.datachecker.check.modules.check;
 
 import com.alibaba.fastjson.annotation.JSONType;
 import lombok.Data;
-import org.opengauss.datachecker.common.constant.Constants.InitialCapacity;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.extract.ConditionLimit;
 import org.springframework.util.CollectionUtils;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeSet;
 
 import static org.opengauss.datachecker.check.modules.check.CheckResultConstants.CHECKED_DIFF_TOO_LARGE;
 import static org.opengauss.datachecker.check.modules.check.CheckResultConstants.CHECKED_PARTITIONS;
@@ -107,9 +104,9 @@ public class CheckDiffResult {
     }
 
     private void initEmptyCollections() {
-        keyUpdateSet = new HashSet<>(InitialCapacity.EMPTY);
-        keyInsertSet = new HashSet<>(InitialCapacity.EMPTY);
-        keyDeleteSet = new HashSet<>(InitialCapacity.EMPTY);
+        keyUpdateSet = new TreeSet<>();
+        keyInsertSet = new TreeSet<>();
+        keyDeleteSet = new TreeSet<>();
     }
 
     private void resultTableStructureNotEquals() {

@@ -15,12 +15,14 @@
 
 package org.opengauss.datachecker.check.event;
 
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.concurrent.BasicThreadFactory;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.check.config.DataCheckProperties;
 import org.opengauss.datachecker.check.modules.task.TaskManagerService;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
+import org.opengauss.datachecker.common.service.ShutdownService;
+import org.opengauss.datachecker.common.util.LogUtils;
+import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.opengauss.datachecker.common.util.TopicUtil;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
@@ -31,9 +33,9 @@ import javax.annotation.Resource;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -41,11 +43,16 @@ import java.util.concurrent.TimeUnit;
  * @date ：Created in 2023/3/7
  * @since ：11
  */
-@Slf4j
 @Service
 public class KafkaTopicDeleteProvider implements ApplicationContextAware {
-    private ApplicationContext applicationContext;
+    private static final Logger logKafka = LogUtils.geKafkaLogger();
     private static volatile Map<String, DeleteTopics> deleteTableMap = new ConcurrentHashMap<>();
+
+    private ApplicationContext applicationContext;
+    @Resource
+    private ShutdownService shutdownService;
+    @Resource
+    private CustomEventHistory customEventHistory;
     @Resource
     private DataCheckProperties properties;
     @Resource
@@ -79,6 +86,22 @@ public class KafkaTopicDeleteProvider implements ApplicationContextAware {
         }
     }
 
+    /**
+     * wait delete topic event complete
+     *
+     * @return complete
+     */
+    public boolean waitDeleteTopicsEventCompleted() {
+        while (!deleteTableMap.isEmpty() || !customEventHistory.checkAllEventCompleted()) {
+            ThreadUtil.sleepOneSecond();
+            logKafka.warn("wait delete topic event complete ...");
+        }
+        return true;
+    }
+
+    /**
+     * deleteTopicIfTableCheckedCompleted
+     */
     public void deleteTopicIfTableCheckedCompleted() {
         if (properties.getAutoDeleteTopic() == DeleteMode.DELETE_IMMEDIATELY.code) {
             startDeleteTopicSchedule();
@@ -86,8 +109,9 @@ public class KafkaTopicDeleteProvider implements ApplicationContextAware {
     }
 
     private void startDeleteTopicSchedule() {
-        ScheduledExecutorService scheduledExecutor = new ScheduledThreadPoolExecutor(1, new BasicThreadFactory.
-            Builder().namingPattern("delete-topic-thread").build());
+        ScheduledExecutorService scheduledExecutor =
+            ThreadUtil.newSingleThreadScheduledExecutor("delete-topic-scheduled");
+        shutdownService.addExecutorService(scheduledExecutor);
         scheduledExecutor.scheduleWithFixedDelay(this::deleteTopicFromCache, 3L, 1, TimeUnit.SECONDS);
     }
 
@@ -101,9 +125,11 @@ public class KafkaTopicDeleteProvider implements ApplicationContextAware {
         });
         if (CollectionUtils.isNotEmpty(deleteOptions)) {
             deleteOptions.forEach(deleteOption -> {
-                log.info("publish delete-topic-event table = [{}] ,  current-pending-quantity = [{}]",
+                logKafka.info("publish delete-topic-event table = [{}] ,  current-pending-quantity = [{}]",
                     deleteOption.getTableName(), deleteTableMap.size());
-                applicationContext.publishEvent(new DeleteTopicsEvent(deleteOption, deleteOption.toString()));
+                DeleteTopicsEvent deleteTopicsEvent = new DeleteTopicsEvent(deleteOption, deleteOption.toString());
+                customEventHistory.addEvent(deleteTopicsEvent);
+                applicationContext.publishEvent(deleteTopicsEvent);
                 deleteTableMap.remove(deleteOption.getTableName());
             });
             deleteOptions.clear();

@@ -16,6 +16,7 @@
 package org.opengauss.datachecker.extract.task.sql;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 import org.opengauss.datachecker.common.entry.enums.DataBaseType;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.ConditionLimit;
@@ -35,6 +36,9 @@ import static org.opengauss.datachecker.extract.task.sql.QuerySqlTemplate.MYSQL_
 import static org.opengauss.datachecker.extract.task.sql.QuerySqlTemplate.OPENGAUSS_ESCAPE;
 import static org.opengauss.datachecker.extract.task.sql.QuerySqlTemplate.OFFSET;
 import static org.opengauss.datachecker.extract.task.sql.QuerySqlTemplate.ORDER_BY;
+import static org.opengauss.datachecker.extract.task.sql.QuerySqlTemplate.PK_CONDITION;
+import static org.opengauss.datachecker.extract.task.sql.QuerySqlTemplate.PRIMARY_KEY;
+import static org.opengauss.datachecker.extract.task.sql.QuerySqlTemplate.QUERY_BETWEEN_SET;
 import static org.opengauss.datachecker.extract.task.sql.QuerySqlTemplate.SCHEMA;
 import static org.opengauss.datachecker.extract.task.sql.QuerySqlTemplate.START;
 import static org.opengauss.datachecker.extract.task.sql.QuerySqlTemplate.TABLE_NAME;
@@ -66,6 +70,18 @@ public class SelectSqlBuilder {
     private static final SqlGenerate NO_OFFSET_GENERATE = (sqlGenerateMeta) -> NO_OFFSET_SQL_GENERATE_TEMPLATE
         .replace(QuerySqlTemplate.QUERY_NO_OFF_SET, sqlGenerateMeta);
 
+    private static final SqlGenerateTemplate QUERY_BETWEEN_TEMPLATE =
+        (template, sqlGenerateMeta) -> template.replace(COLUMN, sqlGenerateMeta.getColumns())
+                                               .replace(SCHEMA, sqlGenerateMeta.getSchema())
+                                               .replace(TABLE_NAME, sqlGenerateMeta.getTableName())
+                                               .replace(ORDER_BY, sqlGenerateMeta.getOrder())
+                                               .replace(PRIMARY_KEY, sqlGenerateMeta.getPrimaryKey())
+                                               .replace(START, String.valueOf(sqlGenerateMeta.getStart()))
+                                               .replace(OFFSET, String.valueOf(
+                                                   sqlGenerateMeta.getStart() + sqlGenerateMeta.getOffset() - 1));
+    private static final SqlGenerate QUERY_BETWEEN_GENERATE =
+        (sqlGenerateMeta -> QUERY_BETWEEN_TEMPLATE.replace(QUERY_BETWEEN_SET, sqlGenerateMeta));
+
     static {
         SQL_GENERATE.put(DataBaseType.MS, OFFSET_GENERATE);
         SQL_GENERATE.put(DataBaseType.OG, OFFSET_GENERATE);
@@ -79,18 +95,21 @@ public class SelectSqlBuilder {
     private TableMetadata tableMetadata;
     private long start = 0L;
     private long offset = 0L;
+    private String seqStart = "";
+    private String seqEnd = "";
     private DataBaseType dataBaseType;
     private boolean isDivisions;
+    private boolean isFullCondition;
 
     /**
      * Table fragment query SQL Statement Builder
      *
      * @param tableMetadata tableMetadata
-     * @param schema        schema
      */
-    public SelectSqlBuilder(TableMetadata tableMetadata, String schema) {
+    public SelectSqlBuilder(TableMetadata tableMetadata) {
         this.tableMetadata = tableMetadata;
-        this.schema = schema;
+        this.schema = tableMetadata.getSchema();
+        this.dataBaseType = tableMetadata.getDataBaseType();
     }
 
     /**
@@ -106,6 +125,23 @@ public class SelectSqlBuilder {
         return this;
     }
 
+    public SelectSqlBuilder offset(String start, String offset) {
+        this.seqStart = start;
+        this.seqEnd = offset;
+        return this;
+    }
+
+    public SelectSqlBuilder offset(Object start, Object offset) {
+        if (start instanceof Long) {
+            this.start = (long) start;
+            this.offset = (long) offset;
+        } else {
+            this.seqStart = (String) start;
+            this.seqEnd = (String) offset;
+        }
+        return this;
+    }
+
     /**
      * current table query sql is divisions
      *
@@ -117,14 +153,8 @@ public class SelectSqlBuilder {
         return this;
     }
 
-    /**
-     * set param dataBaseType
-     *
-     * @param dataBaseType dataBaseType
-     * @return builder
-     */
-    public SelectSqlBuilder dataBaseType(DataBaseType dataBaseType) {
-        this.dataBaseType = dataBaseType;
+    public SelectSqlBuilder isFullCondition(boolean isFullCondition) {
+        this.isFullCondition = isFullCondition;
         return this;
     }
 
@@ -140,11 +170,57 @@ public class SelectSqlBuilder {
         final ConditionLimit conditionLimit = tableMetadata.getConditionLimit();
         if (Objects.nonNull(conditionLimit)) {
             return buildSelectSqlConditionLimit(tableMetadata, conditionLimit);
-        } else if (offset == OFF_SET_ZERO || !isDivisions) {
-            return buildSelectSqlOffsetZero(columnsMetas, tableMetadata.getTableName());
+        } else if (isDivisions) {
+            if (tableMetadata.canUseBetween()) {
+                return buildSelectSqlOffset(tableMetadata, start, offset);
+            } else {
+                return buildSelectSqlWherePrimary(tableMetadata);
+            }
         } else {
-            return buildSelectSqlOffset(tableMetadata, start, offset);
+            return buildSelectSqlOffsetZero(columnsMetas, tableMetadata.getTableName());
         }
+    }
+
+    String QUERY_WHERE_BETWEEN = "SELECT :columnsList FROM :schema.:tableName where :pkCondition :orderBy ";
+
+    private String buildSelectSqlWherePrimary(TableMetadata tableMetadata) {
+        List<ColumnsMetaData> columnsMetas = tableMetadata.getColumnsMetas();
+        String schemaEscape = escape(schema, dataBaseType);
+        String tableName = escape(tableMetadata.getTableName(), dataBaseType);
+        String columnNames = getColumnNameList(columnsMetas, dataBaseType);
+        String primaryKey = escape(tableMetadata.getPrimaryMetas().get(0).getColumnName(), dataBaseType);
+        final String orderBy = getOrderBy(tableMetadata.getPrimaryMetas(), dataBaseType);
+        String pkCondition;
+        if (StringUtils.isNotEmpty(seqStart) && StringUtils.isNotEmpty(seqEnd)) {
+            pkCondition = getPkCondition(primaryKey);
+        } else {
+            pkCondition = getNumberPkCondition(primaryKey);
+        }
+        return QUERY_WHERE_BETWEEN.replace(COLUMN, columnNames).replace(SCHEMA, schemaEscape)
+                                  .replace(TABLE_NAME, tableName).replace(PK_CONDITION, pkCondition)
+                                  .replace(ORDER_BY, orderBy);
+    }
+
+    private String getNumberPkCondition(String primaryKey) {
+        if (isFullCondition) {
+            return getNumberPkConditionFull(primaryKey);
+        }
+        return primaryKey + ">= " + start + " and " + primaryKey + " < " + offset;
+    }
+
+    private String getNumberPkConditionFull(String primaryKey) {
+        return primaryKey + ">= " + start + " and " + primaryKey + " <= " + offset;
+    }
+
+    private String getPkConditionFull(String primaryKey) {
+        return primaryKey + ">= '" + seqStart + "' and " + primaryKey + " <= '" + seqEnd + "'";
+    }
+
+    private String getPkCondition(String primaryKey) {
+        if (isFullCondition) {
+            return getPkConditionFull(primaryKey);
+        }
+        return primaryKey + ">= '" + seqStart + "' and " + primaryKey + " < '" + seqEnd + "'";
     }
 
     private String buildSelectSqlConditionLimit(TableMetadata tableMetadata, ConditionLimit conditionLimit) {
@@ -171,9 +247,16 @@ public class SelectSqlBuilder {
         String tableName = escape(tableMetadata.getTableName(), dataBaseType);
         String columnNames = getColumnNameList(columnsMetas, dataBaseType);
         final String orderBy = getOrderBy(tableMetadata.getPrimaryMetas(), dataBaseType);
-        SqlGenerateMeta sqlGenerateMeta =
-            new SqlGenerateMeta(schemaEscape, tableName, columnNames, orderBy, start, offset);
-        return getSqlGenerate(dataBaseType).replace(sqlGenerateMeta);
+        SqlGenerateMeta sqlGenerateMeta = null;
+        if (!tableMetadata.canUseBetween()) {
+            sqlGenerateMeta = new SqlGenerateMeta(schemaEscape, tableName, columnNames, orderBy, start, offset);
+            return getSqlGenerate(dataBaseType).replace(sqlGenerateMeta);
+        } else {
+            String primaryKey = escape(tableMetadata.getPrimaryMetas().get(0).getColumnName(), dataBaseType);
+            sqlGenerateMeta =
+                new SqlGenerateMeta(schemaEscape, tableName, columnNames, orderBy, start, offset, primaryKey);
+            return QUERY_BETWEEN_GENERATE.replace(sqlGenerateMeta);
+        }
     }
 
     private String escape(String content, DataBaseType dataBaseType) {
@@ -202,32 +285,32 @@ public class SelectSqlBuilder {
         private String schema;
         private String tableName;
         private String columns;
+        private String primaryKey;
         private String order;
         private long start;
         private long offset;
 
         public SqlGenerateMeta(String schema, String tableName, String columns) {
-            this.schema = schema;
-            this.tableName = tableName;
-            this.columns = columns;
+            this(schema, tableName, columns, null, 0, 0, null);
         }
 
         public SqlGenerateMeta(String schema, String tableName, String columns, long start, long offset) {
-            this.schema = schema;
-            this.tableName = tableName;
-            this.columns = columns;
-            this.order = "";
-            this.start = start;
-            this.offset = offset;
+            this(schema, tableName, columns, "", start, offset, null);
         }
 
         public SqlGenerateMeta(String schema, String tableName, String columns, String order, long start, long offset) {
+            this(schema, tableName, columns, order, start, offset, null);
+        }
+
+        public SqlGenerateMeta(String schema, String tableName, String columns, String order, long start, long offset,
+            String primaryKey) {
             this.schema = schema;
             this.tableName = tableName;
             this.columns = columns;
             this.order = order;
             this.start = start;
             this.offset = offset;
+            this.primaryKey = primaryKey;
         }
     }
 

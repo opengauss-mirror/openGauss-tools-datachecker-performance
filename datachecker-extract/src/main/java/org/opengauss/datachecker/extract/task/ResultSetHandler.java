@@ -30,10 +30,10 @@ import java.sql.Time;
 import java.sql.Timestamp;
 import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TimeZone;
+import java.util.TreeMap;
 import java.util.stream.IntStream;
 
 /**
@@ -56,20 +56,19 @@ public abstract class ResultSetHandler {
     /**
      * Convert the current query result set into map according to the metadata information of the result set
      *
+     * @param rsmd      JDBC Data query result set
      * @param resultSet JDBC Data query result set
+     * @param values    values
      * @return JDBC Data encapsulation results
      */
-    public Map<String, String> putOneResultSetToMap(ResultSet resultSet) {
-        Map<String, String> values = new HashMap<>(InitialCapacity.CAPACITY_64);
+    public Map<String, String> putOneResultSetToMap(ResultSetMetaData rsmd, ResultSet resultSet,
+        Map<String, String> values) {
         try {
-            final ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
-            IntStream.rangeClosed(1, resultSetMetaData.getColumnCount()).forEach(columnIdx -> {
+            IntStream.rangeClosed(1, rsmd.getColumnCount()).forEach(columnIdx -> {
                 try {
-                    // Get the column and its corresponding column name
-                    String columnLabel = resultSetMetaData.getColumnLabel(columnIdx);
-                    // Get the corresponding value from the result set according to the column name
-                    final String columnTypeName = resultSetMetaData.getColumnTypeName(columnIdx);
-                    values.put(columnLabel, convert(resultSet, columnTypeName, columnLabel));
+                    String columnLabel = rsmd.getColumnLabel(columnIdx);
+                    values.put(columnLabel, convert(resultSet, rsmd.getColumnTypeName(columnIdx), columnLabel,
+                        rsmd.getColumnDisplaySize(columnIdx)));
                 } catch (SQLException ex) {
                     log.error("putOneResultSetToMap Convert data according to result set metadata information.", ex);
                 }
@@ -80,24 +79,38 @@ public abstract class ResultSetHandler {
         return values;
     }
 
-    protected abstract String convert(ResultSet resultSet, String columnTypeName, String columnLabel)
+    /**
+     * Convert the current query result set into map according to the metadata information of the result set
+     *
+     * @param resultSet JDBC Data query result set
+     * @return JDBC Data encapsulation results
+     */
+    public Map<String, String> putOneResultSetToMap(ResultSet resultSet) throws SQLException {
+        final ResultSetMetaData rsmd = resultSet.getMetaData();
+        return putOneResultSetToMap(rsmd, resultSet, new TreeMap<>());
+    }
+
+    protected abstract String convert(ResultSet resultSet, String columnTypeName, String columnLabel, int displaySize)
         throws SQLException;
 
     protected String numericToString(BigDecimal bigDecimal) {
         return Objects.isNull(bigDecimal) ? NULL : bigDecimal.stripTrailingZeros().toPlainString();
     }
 
-    protected String getDateFormat(@NonNull ResultSet resultSet, String columnLabel) throws SQLException {
+    protected String getDateFormat(@NonNull ResultSet resultSet, String columnLabel, int displaySize)
+        throws SQLException {
         final Date date = resultSet.getDate(columnLabel);
         return Objects.nonNull(date) ? DATE.format(date.toLocalDate()) : NULL;
     }
 
-    protected String getTimeFormat(@NonNull ResultSet resultSet, String columnLabel) throws SQLException {
+    protected String getTimeFormat(@NonNull ResultSet resultSet, String columnLabel, int displaySize)
+        throws SQLException {
         final Time time = resultSet.getTime(columnLabel);
         return Objects.nonNull(time) ? TIME.format(time.toLocalTime()) : NULL;
     }
 
-    protected String getTimestampFormat(@NonNull ResultSet resultSet, String columnLabel) throws SQLException {
+    protected String getTimestampFormat(@NonNull ResultSet resultSet, String columnLabel, int displaySize)
+        throws SQLException {
         final Timestamp timestamp =
             resultSet.getTimestamp(columnLabel, Calendar.getInstance(TimeZone.getTimeZone("GMT+8")));
         return Objects.nonNull(timestamp) ? formatTimestamp(timestamp) : NULL;
@@ -108,7 +121,8 @@ public abstract class ResultSetHandler {
             TIMESTAMP.format(timestamp.toLocalDateTime());
     }
 
-    protected String getYearFormat(@NonNull ResultSet resultSet, String columnLabel) throws SQLException {
+    protected String getYearFormat(@NonNull ResultSet resultSet, String columnLabel, int displaySize)
+        throws SQLException {
         final Date date = resultSet.getDate(columnLabel);
         return Objects.nonNull(date) ? YEAR.format(date.toLocalDate()) : NULL;
     }
@@ -123,7 +137,8 @@ public abstract class ResultSetHandler {
     protected String bytesToString(byte[] bytes) {
         return HexUtil.byteToHex(bytes);
     }
-    protected String trim(@NonNull ResultSet resultSet, String columnLabel) throws SQLException {
+
+    protected String trim(@NonNull ResultSet resultSet, String columnLabel, int displaySize) throws SQLException {
         final String string = resultSet.getString(columnLabel);
         return string == null ? NULL : string.stripTrailing();
     }
@@ -135,9 +150,10 @@ public abstract class ResultSetHandler {
          *
          * @param resultSet   resultSet
          * @param columnLabel columnLabel
+         * @param displaySize displaySize
          * @return result
          * @throws SQLException SQLException
          */
-        String convert(ResultSet resultSet, String columnLabel) throws SQLException;
+        String convert(ResultSet resultSet, String columnLabel, int displaySize) throws SQLException;
     }
 }

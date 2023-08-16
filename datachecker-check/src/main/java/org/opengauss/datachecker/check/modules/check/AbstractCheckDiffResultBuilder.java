@@ -22,9 +22,9 @@ import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.extract.ConditionLimit;
 
 import java.time.LocalDateTime;
-import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * AbstractCheckDiffResultBuilder
@@ -51,9 +51,9 @@ public abstract class AbstractCheckDiffResultBuilder<C extends CheckDiffResult, 
     private Endpoint onlyExistEndpoint;
     private CheckMode checkMode;
     private ConditionLimit conditionLimit;
-    private Set<String> keyUpdateSet = new HashSet<>();
-    private Set<String> keyInsertSet = new HashSet<>();
-    private Set<String> keyDeleteSet = new HashSet<>();
+    private Set<String> keyUpdateSet = new TreeSet<>();
+    private Set<String> keyInsertSet = new TreeSet<>();
+    private Set<String> keyDeleteSet = new TreeSet<>();
     private LocalDateTime startTime;
     private LocalDateTime endTime;
 

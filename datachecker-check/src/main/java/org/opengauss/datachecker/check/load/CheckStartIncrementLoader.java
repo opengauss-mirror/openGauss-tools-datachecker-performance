@@ -41,14 +41,15 @@ public class CheckStartIncrementLoader extends AbstractCheckLoader {
     private IncrementManagerService incrementManagerService;
     @Resource
     private ProgressService progressService;
-    
+
     @Override
     public void load(CheckEnvironment checkEnvironment) {
         if (Objects.equals(CheckMode.INCREMENT, checkEnvironment.getCheckMode())) {
             log.info("start data check increment");
-            progressService.progressing();
+            final LocalDateTime startTime = LocalDateTime.now();
+            progressService.progressing(checkEnvironment, startTime);
             incrementManagerService.startIncrementDataLogs();
-            log.info("enabled data check increment mode ,at {}", LocalDateTime.now());
+            log.info("enabled data check increment mode ,at {}", startTime);
         }
     }
 }

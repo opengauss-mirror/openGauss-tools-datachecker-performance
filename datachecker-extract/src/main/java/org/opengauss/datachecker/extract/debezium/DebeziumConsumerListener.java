@@ -20,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.opengauss.datachecker.common.exception.DebeziumConfigException;
 import org.opengauss.datachecker.extract.config.ExtractProperties;
+import org.opengauss.datachecker.extract.service.MetaDataService;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
@@ -39,7 +40,8 @@ public class DebeziumConsumerListener {
     private static final LinkedBlockingQueue<DebeziumDataBean> DATA_LOG_QUEUE = new LinkedBlockingQueue<>();
     private DeserializerAdapter adapter = new DeserializerAdapter();
     private DebeziumDataHandler debeziumDataHandler;
-
+    @Resource
+    private MetaDataService metaDataService;
     @Resource
     private ExtractProperties extractProperties;
 
@@ -47,8 +49,14 @@ public class DebeziumConsumerListener {
     public void initDebeziumDataHandler() {
         debeziumDataHandler = adapter.getHandler(extractProperties.getDebeziumSerializer());
         debeziumDataHandler.setSchema(extractProperties.getSchema());
+        debeziumDataHandler.injectMetaDataServiceInstanceToHandler(metaDataService);
     }
 
+    /**
+     * listen
+     *
+     * @param record record
+     */
     public void listen(ConsumerRecord<String, Object> record) {
         try {
             final long offset = record.offset();
@@ -60,10 +68,20 @@ public class DebeziumConsumerListener {
         }
     }
 
+    /**
+     * data log queue size
+     *
+     * @return size
+     */
     public int size() {
         return DATA_LOG_QUEUE.size();
     }
 
+    /**
+     * pool DebeziumDataBean from queue
+     *
+     * @return DebeziumDataBean
+     */
     public DebeziumDataBean poll() {
         return DATA_LOG_QUEUE.poll();
     }

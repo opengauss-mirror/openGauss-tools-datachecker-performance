@@ -39,22 +39,26 @@ import java.util.Map;
 public class ThreadPoolLoader extends AbstractExtractLoader {
     @Resource
     private MetaDataService metaDataService;
-    @Value("${spring.check.max-core-pool-size}")
-    protected int maxCorePoolSize;
+    @Value("${spring.check.core-pool-size}")
+    private int maxCorePoolSize;
     @Value("${spring.check.max-retry-times}")
-    protected int maxRetryTimes;
+    private int maxRetryTimes;
 
     /**
      * Initialize the verification result environment
+     *
+     * @param extractEnvironment extractEnvironment
      */
     @Override
     public void load(ExtractEnvironment extractEnvironment) {
         int retryTime = 0;
-        while (metaDataService.queryMetaDataOfSchemaCache().isEmpty()) {
-            ThreadUtil.sleepHalfSecond();
-            retryTime++;
-            if (retryTime > maxRetryTimes) {
-                shutdown("load table metadata cache is empty!");
+        if (!metaDataService.isCheckTableEmpty(true)) {
+            while (metaDataService.queryMetaDataOfSchemaCache().isEmpty()) {
+                ThreadUtil.sleepHalfSecond();
+                retryTime++;
+                if (retryTime > maxRetryTimes) {
+                    shutdown("load table metadata cache is empty!");
+                }
             }
         }
         final Map<String, TableMetadata> metadataMap = metaDataService.queryMetaDataOfSchemaCache();

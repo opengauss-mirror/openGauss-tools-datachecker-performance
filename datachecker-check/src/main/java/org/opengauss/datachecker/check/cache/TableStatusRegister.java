@@ -16,13 +16,16 @@
 package org.opengauss.datachecker.check.cache;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections4.CollectionUtils;
 import org.opengauss.datachecker.common.constant.Constants.InitialCapacity;
 import org.opengauss.datachecker.common.entry.check.CheckProgress;
 import org.opengauss.datachecker.common.entry.check.Pair;
 import org.opengauss.datachecker.common.exception.ExtractException;
+import org.opengauss.datachecker.common.service.ShutdownService;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.Resource;
 import javax.validation.constraints.NotEmpty;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -35,6 +38,7 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
@@ -90,6 +94,8 @@ public class TableStatusRegister implements Cache<String, Integer> {
      * complete
      */
     private static final BlockingDeque<String> COMPLETED_TABLE_QUEUE = new LinkedBlockingDeque<>();
+    @Resource
+    private ShutdownService shutdownService;
 
     /**
      * The service starts to recover cached information. Recover historical data based on persistent cached data
@@ -105,6 +111,7 @@ public class TableStatusRegister implements Cache<String, Integer> {
      */
     public void selfCheck() {
         ScheduledExecutorService scheduledExecutor = ThreadUtil.newSingleThreadScheduledExecutor();
+        shutdownService.addExecutorService(scheduledExecutor);
         scheduledExecutor.scheduleWithFixedDelay(() -> {
             Thread.currentThread().setName(SELF_CHECK_THREAD_NAME);
             doCheckingStatus();
@@ -421,11 +428,12 @@ public class TableStatusRegister implements Cache<String, Integer> {
                 log.debug("process check status running");
             }
         });
-        final int lastCheckCount = CHECK_COUNT.getAndSet(extractErrorList.size() + checkCompleteList.size());
-        if (CHECK_COUNT.get() > lastCheckCount) {
-            log.debug("progress info: {} is being extracted, {} is being verified, {} is completed,and {} is error",
-                notExtractCompleteList.size(), notCheckCompleteList.size(), checkCompleteList.size(),
-                extractErrorList.size());
+        List<String> tableStatus =
+            TABLE_STATUS_CACHE.entrySet().stream().filter(entry -> entry.getValue() != 7).limit(10)
+                              .map(entry -> entry.getKey().concat("=").concat(entry.getValue() + ""))
+                              .collect(Collectors.toList());
+        if (CollectionUtils.isNotEmpty(tableStatus)) {
+            log.debug("table_status :{} ", tableStatus);
         }
         return CHECK_COUNT.get();
     }

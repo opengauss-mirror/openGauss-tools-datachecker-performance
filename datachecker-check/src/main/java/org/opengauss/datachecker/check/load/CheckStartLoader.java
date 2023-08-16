@@ -22,6 +22,8 @@ import org.opengauss.datachecker.check.modules.report.ProgressService;
 import org.opengauss.datachecker.check.service.CheckService;
 import org.opengauss.datachecker.check.event.KafkaTopicDeleteProvider;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
+import org.opengauss.datachecker.common.service.MemoryManagerService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
@@ -42,6 +44,8 @@ import java.util.Objects;
 @Service
 public class CheckStartLoader extends AbstractCheckLoader {
     private static final String FULL_CHECK_COMPLETED = "full check completed";
+    @Value("${spring.memory-monitor-enable}")
+    private boolean isEnableMemoryMonitor;
     @Resource
     private CheckService checkService;
     @Resource
@@ -52,18 +56,28 @@ public class CheckStartLoader extends AbstractCheckLoader {
     private KafkaTopicDeleteProvider kafkaTopicDeleteProvider;
     @Resource
     private ProgressService progressService;
+    @Resource
+    private MemoryManagerService memoryManagerService;
+
     @Override
     public void load(CheckEnvironment checkEnvironment) {
-        if (Objects.equals(CheckMode.FULL, checkEnvironment.getCheckMode())) {
-            progressService.progressing();
+        if (!Objects.equals(CheckMode.FULL, checkEnvironment.getCheckMode())) {
+            return;
+        }
+        if (!checkEnvironment.isCheckTableEmpty()) {
+            memoryManagerService.startMemoryManager(isEnableMemoryMonitor);
             final LocalDateTime startTime = LocalDateTime.now();
+            progressService.progressing(checkEnvironment, startTime);
             checkService.start(CheckMode.FULL);
-            final LocalDateTime endTime = LocalDateTime.now();
-            log.info("check task execute success ,cost time ={}", Duration.between(startTime, endTime).toSeconds());
+            log.info("check task execute success ,cost time ={}",
+                Duration.between(startTime, LocalDateTime.now()).toSeconds());
             checkResultManagerService.summaryCheckResult();
             kafkaTopicDeleteProvider.deleteTopicIfAllCheckedCompleted();
-            feignClient.shutdown(FULL_CHECK_COMPLETED);
-            shutdown(FULL_CHECK_COMPLETED);
+            kafkaTopicDeleteProvider.waitDeleteTopicsEventCompleted();
+        } else {
+            log.info("check task execute success ,cost time =0");
         }
+        feignClient.shutdown(FULL_CHECK_COMPLETED);
+        shutdown(FULL_CHECK_COMPLETED);
     }
 }

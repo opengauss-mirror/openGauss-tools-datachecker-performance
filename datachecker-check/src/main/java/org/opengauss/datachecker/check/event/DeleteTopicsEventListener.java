@@ -15,63 +15,70 @@
 
 package org.opengauss.datachecker.check.event;
 
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.collections4.CollectionUtils;
-import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.DeleteTopicsResult;
 import org.apache.kafka.clients.admin.KafkaAdminClient;
-import org.apache.kafka.clients.admin.TopicListing;
 import org.apache.kafka.common.KafkaFuture;
+import org.apache.logging.log4j.Logger;
+import org.opengauss.datachecker.check.client.FeignClientService;
+import org.opengauss.datachecker.common.entry.enums.Endpoint;
+import org.opengauss.datachecker.common.util.LogUtils;
+import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.PreDestroy;
+import javax.annotation.Resource;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 /**
  * @author ：wangchao
  * @date ：Created in 2023/3/7
  * @since ：11
  */
-@Slf4j
 @Component
 public class DeleteTopicsEventListener implements ApplicationListener<DeleteTopicsEvent> {
+    private static final Logger log = LogUtils.geKafkaLogger();
+    @Resource
+    private CustomEventHistory customEventHistory;
+    @Resource
+    private FeignClientService feignClient;
     @Value("${spring.kafka.bootstrap-servers}")
     private String bootstrapServers;
-    private AdminClient adminClient = null;
-    private AtomicInteger retryTimes = new AtomicInteger(0);
+    private KafkaAdminClient adminClient = null;
 
     @Override
     public void onApplicationEvent(DeleteTopicsEvent event) {
-        log.debug("delete topic event listener : {}", event.getMessage());
-        final Object source = event.getSource();
-        initAdminClient();
-        final DeleteTopics deleteOption = (DeleteTopics) source;
-        deleteTopic(deleteOption.getTopicList());
+        try {
+            log.info("delete topic event : {}", event.getMessage());
+            final Object source = event.getSource();
+            initAdminClient();
+            final DeleteTopics deleteOption = (DeleteTopics) source;
+            deleteTopic(deleteOption.getTopicList());
+            feignClient.notifyCheckTableFinished(Endpoint.SOURCE, deleteOption.getTableName());
+            ThreadUtil.sleep(100);
+            feignClient.notifyCheckTableFinished(Endpoint.SINK, deleteOption.getTableName());
+        } catch (Exception exception) {
+            log.error("delete topic has error ", exception);
+        } finally {
+            customEventHistory.completedEvent(event);
+        }
     }
 
     private void deleteTopic(List<String> deleteTopicList) {
-        DeleteTopicsResult deleteTopicsResult = adminClient.deleteTopics(deleteTopicList);
-        final KafkaFuture<Void> kafkaFuture = deleteTopicsResult.all();
-        retryTimes.incrementAndGet();
         try {
+            log.info("delete topic [{}] start", deleteTopicList);
+            DeleteTopicsResult deleteTopicsResult = adminClient.deleteTopics(deleteTopicList);
+            final KafkaFuture<Void> kafkaFuture = deleteTopicsResult.all();
             kafkaFuture.get();
-            List<String> checkedList = adminClient.listTopics().listings().get().stream().map(TopicListing::name)
-                                                  .filter(deleteTopicList::contains).collect(Collectors.toList());
-            if (CollectionUtils.isNotEmpty(checkedList)) {
-                if (retryTimes.get() <= 3) {
-                    deleteTopic(checkedList);
-                } else {
-                    log.error("retry to delete {} topic error : delete too many times(3) ", checkedList);
-                }
-            }
+            log.info("delete topic [{}] finished", deleteTopicList);
         } catch (InterruptedException | ExecutionException ignore) {
+            log.error("delete topic [{}] error :  ", deleteTopicList, ignore);
         }
     }
 
@@ -79,7 +86,20 @@ public class DeleteTopicsEventListener implements ApplicationListener<DeleteTopi
         if (this.adminClient == null) {
             Map<String, Object> props = new HashMap<>(1);
             props.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-            this.adminClient = KafkaAdminClient.create(props);
+            this.adminClient = (KafkaAdminClient) KafkaAdminClient.create(props);
+            log.info("init admin client [{}]", bootstrapServers);
+        }
+    }
+
+    @PreDestroy
+    public void closeAdminClient() {
+        if (adminClient != null) {
+            try {
+                adminClient.close(Duration.ZERO);
+                log.info("check kafkaAdminClient close.");
+            } catch (Exception e) {
+                log.error("check kafkaAdminClient close error: ", e);
+            }
         }
     }
 }

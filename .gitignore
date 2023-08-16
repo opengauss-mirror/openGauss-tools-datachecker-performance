@@ -9,3 +9,5 @@
 /statistics
 /*.iml
 /check_result/*
+/gs_datacheck*
+*/gs_datacheck/*

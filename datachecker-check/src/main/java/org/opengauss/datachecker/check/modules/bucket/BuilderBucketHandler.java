@@ -15,6 +15,7 @@
 
 package org.opengauss.datachecker.check.modules.bucket;
 
+import lombok.extern.slf4j.Slf4j;
 import org.opengauss.datachecker.common.entry.extract.RowDataHash;
 import org.springframework.lang.NonNull;
 
@@ -90,22 +91,17 @@ public class BuilderBucketHandler {
         // Average bucket capacity - used to initialize the bucket capacity size
         int averageCapacity = totalCount / maxBucketCount;
         rowDataHashList.forEach(row -> {
-            long primaryKeyHash = row.getPrimaryKeyHash();
+            long primaryKeyHash = row.getKHash();
             // Calculate bucket number information
-            int bucketNumber = calculateBucketNumber(primaryKeyHash, maxBucketCount);
-            Bucket bucket;
+            Integer bucketNumber = calculateBucketNumber(primaryKeyHash, maxBucketCount);
             // Obtain the bucket with the specified number according to the row information,
             // and create the bucket if it does not exist
-            if (bucketMap.containsKey(bucketNumber)) {
-                bucket = bucketMap.get(bucketNumber);
-            } else {
-                bucket = new Bucket(averageCapacity).setNumber(bucketNumber);
-                bucketMap.put(bucketNumber, bucket);
+            if (!bucketMap.containsKey(bucketNumber)) {
+                bucketMap.put(bucketNumber, new Bucket(averageCapacity).setNumber(bucketNumber));
             }
             // Add row to the bucket with the specified bucket number
-            bucket.put(row);
+            bucketMap.get(bucketNumber).put(row);
         });
-
     }
 
     /**

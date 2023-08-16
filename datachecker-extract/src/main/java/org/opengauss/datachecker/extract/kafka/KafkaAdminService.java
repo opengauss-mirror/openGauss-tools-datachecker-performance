@@ -15,27 +15,30 @@
 
 package org.opengauss.datachecker.extract.kafka;
 
-import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
+import org.apache.kafka.clients.admin.CreateTopicsResult;
 import org.apache.kafka.clients.admin.DeleteTopicsResult;
 import org.apache.kafka.clients.admin.KafkaAdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.admin.TopicListing;
 import org.apache.kafka.common.KafkaFuture;
-import org.opengauss.datachecker.common.exception.CreateTopicException;
+import org.apache.logging.log4j.Logger;
+import org.opengauss.datachecker.common.entry.enums.Endpoint;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.KafkaException;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 /**
@@ -46,11 +49,18 @@ import java.util.stream.Collectors;
  * @since ：11
  */
 @Component
-@Slf4j
 public class KafkaAdminService {
+    private static final Logger log = LogUtils.geKafkaLogger();
     @Value("${spring.kafka.bootstrap-servers}")
     private String springKafkaBootstrapServers;
-    private AdminClient adminClient;
+    private KafkaAdminClient adminClient;
+    private String endpointTopicPrefix = "";
+    private ReentrantLock lock = new ReentrantLock();
+
+    public void init(String process, Endpoint endpoint) {
+        this.endpointTopicPrefix = "CHECK_" + process + "_" + endpoint.getCode() + "_";
+        log.info("init endpoint topic prefix [{}]", endpointTopicPrefix);
+    }
 
     /**
      * Initialize Admin Client
@@ -59,9 +69,10 @@ public class KafkaAdminService {
     private void initAdminClient() {
         Map<String, Object> props = new HashMap<>(1);
         props.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, springKafkaBootstrapServers);
-        adminClient = KafkaAdminClient.create(props);
+        adminClient = (KafkaAdminClient) KafkaAdminClient.create(props);
         try {
             adminClient.listTopics().listings().get();
+            log.info("init and listTopics  admin client [{}]", springKafkaBootstrapServers);
         } catch (ExecutionException | InterruptedException ex) {
             log.error("kafka Client link exception: ", ex);
             throw new KafkaException("kafka Client link exception");
@@ -73,21 +84,16 @@ public class KafkaAdminService {
      *
      * @param topic      topic
      * @param partitions partitions
-     * @return topic name
      */
-    public String createTopic(String topic, int partitions) {
+    public boolean createTopic(String topic, int partitions) {
+        lock.lock();
         try {
-            KafkaFuture<Set<String>> names = adminClient.listTopics().names();
-            if (names.get().contains(topic)) {
-                return topic;
-            } else {
+            CreateTopicsResult topicsResult =
                 adminClient.createTopics(List.of(new NewTopic(topic, partitions, (short) 1)));
-                log.info("topic={} create,numPartitions={}, short replicationFactor={}", topic, partitions, 1);
-                return topic;
-            }
-        } catch (InterruptedException | ExecutionException e) {
-            log.error("topic={} is delete error : {}", topic, e);
-            throw new CreateTopicException(topic);
+            log.info("create topic success , name= [{}] numPartitions = [{}]", topic, partitions);
+            return topicsResult.all().isDone();
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -117,7 +123,7 @@ public class KafkaAdminService {
      */
     public List<String> getAllTopic(String prefix) {
         try {
-            log.info("topic prefix :{}", prefix);
+            log.info("get topic from kafka list topics and  prefix [{}]", prefix);
             return adminClient.listTopics().listings().get().stream().map(TopicListing::name)
                               .filter(name -> name.startsWith(prefix)).collect(Collectors.toList());
         } catch (InterruptedException | ExecutionException e) {
@@ -133,6 +139,7 @@ public class KafkaAdminService {
      */
     public List<String> getAllTopic() {
         try {
+            log.info("get topic from kafka list topics");
             return adminClient.listTopics().listings().get().stream().map(TopicListing::name)
                               .collect(Collectors.toList());
         } catch (InterruptedException | ExecutionException e) {
@@ -149,11 +156,24 @@ public class KafkaAdminService {
      */
     public boolean isTopicExists(String topicName) {
         try {
+            log.info("check topic [{}] has exists --> check kafka list topics", topicName);
             return adminClient.listTopics().listings().get().stream().map(TopicListing::name)
                               .anyMatch(name -> name.equalsIgnoreCase(topicName));
         } catch (InterruptedException | ExecutionException e) {
             log.error("admin client get topic error:", e);
         }
         return false;
+    }
+
+    @PreDestroy
+    public void closeAdminClient() {
+        if (adminClient != null) {
+            try {
+                adminClient.close(Duration.ZERO);
+                log.info("kafkaAdminClient close.");
+            } catch (Exception e) {
+                log.error("check kafkaAdminClient close error: ", e);
+            }
+        }
     }
 }

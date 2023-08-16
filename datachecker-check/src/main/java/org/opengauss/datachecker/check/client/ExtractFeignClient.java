@@ -205,7 +205,7 @@ public interface ExtractFeignClient {
     /**
      * Distribution Data Extraction Filter Rules
      *
-     * @param rules     rules
+     * @param rules rules
      * @return void
      */
     @PostMapping("/extract/rules/distribute")
@@ -213,4 +213,19 @@ public interface ExtractFeignClient {
 
     @PostMapping("/extract/shutdown")
     Result<Void> shutdown(@RequestBody String message);
+
+    /**
+     * queryIncrementMetaData
+     *
+     * @param tableName tableName
+     * @return TableMetadata
+     */
+    @GetMapping("/extract/query/increment/metadata")
+    Result<TableMetadata> queryIncrementMetaData(@RequestParam(name = "tableName") String tableName);
+
+    @PostMapping("/notify/check/finished")
+    Result<Void> notifyCheckTableFinished(@RequestParam(name = "tableName") String tableName);
+
+    @GetMapping("/check/table/empty")
+    Result<Boolean> isCheckTableEmpty(@RequestParam(name = "isForced") boolean isForced);
 }

@@ -132,11 +132,11 @@ The extraction service must be started first, and then the verification service.
  **Background start command** 
 
 ```
-nohup java -Dspring.config.additional-location=config/application-source.yml -jar datachecker-extract-0.0.1.jar --spring.profiles.active=source  >/dev/null 2>&1 &
+nohup java  -jar datachecker-extract-0.0.1.jar --source  >/dev/null 2>&1 &
 
-nohup java -Dspring.config.additional-location=config/application-sink.yml -jar datachecker-extract-0.0.1.jar --spring.profiles.active=sink >/dev/null 2>&1 &
+nohup java  -jar datachecker-extract-0.0.1.jar --sink >/dev/null 2>&1 &
 
-nohup java -Dspring.config.additional-location=config/application.yml -jar datachecker-check-0.0.1.jar >/dev/null 2>&1 &
+nohup java  -jar datachecker-check-0.0.1.jar >/dev/null 2>&1 &
 ```
 
 
@@ -200,3 +200,8 @@ The current version does not support the verification of geographic location geo
 4.  The most valuable open source project [GVP](https://gitee.com/gvp)
 5.  The manual of Gitee [https://gitee.com/help](https://gitee.com/help)
 6.  The most popular members  [https://gitee.com/gitee-stars/](https://gitee.com/gitee-stars/)
+
+#### Download
+
+[download]: https://opengauss.obs.cn-south-1.myhuaweicloud.com/latest/tools/gs_datacheck-5.0.0.tar.gz
+

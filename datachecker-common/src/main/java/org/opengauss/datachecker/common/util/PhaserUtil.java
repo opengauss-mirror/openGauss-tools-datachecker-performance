@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadPoolExecutor;
 
 /**
  * PhaserUtil
@@ -44,10 +45,22 @@ public class PhaserUtil {
     public static void submit(ThreadPoolTaskExecutor executorService, List<Runnable> tasks, Runnable complete) {
         final List<Future<?>> futureList = new ArrayList<>();
         for (Runnable runnable : tasks) {
-            futureList.add(executorService.submit(() -> {
-                runnable.run();
-            }));
+            futureList.add(executorService.submit(runnable::run));
         }
+        getAllTaskFuture(futureList);
+        complete.run();
+    }
+
+    public static void submit(ThreadPoolExecutor executorService, List<Runnable> tasks, Runnable complete) {
+        final List<Future<?>> futureList = new ArrayList<>();
+        for (Runnable runnable : tasks) {
+            futureList.add(executorService.submit(runnable::run));
+        }
+        getAllTaskFuture(futureList);
+        complete.run();
+    }
+
+    private static void getAllTaskFuture(List<Future<?>> futureList) {
         futureList.forEach(future -> {
             try {
                 future.get();
@@ -55,7 +68,6 @@ public class PhaserUtil {
                 log.error("future  error: {}", e.getMessage());
             }
         });
-        complete.run();
     }
 
     /**
@@ -65,13 +77,7 @@ public class PhaserUtil {
      * @param futureList      futureList
      */
     public static void executorComplete(ExecutorService executorService, List<Future<?>> futureList) {
-        futureList.forEach(future -> {
-            try {
-                future.get();
-            } catch (InterruptedException | ExecutionException e) {
-                log.error("future  error: {}", e.getMessage());
-            }
-        });
+        getAllTaskFuture(futureList);
         executorService.shutdown();
     }
 

@@ -16,6 +16,7 @@
 package org.opengauss.datachecker.check.modules.check;
 
 import com.alibaba.fastjson.JSON;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -38,6 +39,7 @@ import java.util.Map;
  */
 @Slf4j
 public class KafkaConsumerHandler {
+
     private static final int KAFKA_CONSUMER_POLL_DURATION = 20;
 
     private final KafkaConsumer<String, String> kafkaConsumer;
@@ -61,6 +63,16 @@ public class KafkaConsumerHandler {
      */
     public List<RowDataHash> queryCheckRowData(String topic, int partitions) {
         return queryRowData(topic, partitions, false);
+    }
+
+    public void poolTopicPartitionsData(String topic, int partitions, List<RowDataHash> list) {
+        final TopicPartition topicPartition = new TopicPartition(topic, partitions);
+        kafkaConsumer.assign(List.of(topicPartition));
+        long endOfOffset = getEndOfOffset(topicPartition);
+        long beginOfOffset = beginningOffsets(topicPartition);
+        consumerTopicRecords(list, kafkaConsumer, endOfOffset);
+        log.debug("consumer topic=[{}] partitions=[{}] dataList=[{}] ,beginOfOffset={},endOfOffset={}", topic,
+            partitions, list.size(), beginOfOffset, endOfOffset);
     }
 
     /**
@@ -118,7 +130,13 @@ public class KafkaConsumerHandler {
         ConsumerRecords<String, String> consumerRecords =
             kafkaConsumer.poll(Duration.ofMillis(KAFKA_CONSUMER_POLL_DURATION));
         consumerRecords.forEach(record -> {
-            dataList.add(new RowDataHash(record.value()));
+            dataList.add(JSON.parseObject(record.value(), RowDataHash.class));
         });
+    }
+
+    public void closeConsumer() {
+        if (kafkaConsumer != null) {
+            kafkaConsumer.close(Duration.ofSeconds(1));
+        }
     }
 }

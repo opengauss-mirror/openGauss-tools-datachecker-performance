@@ -29,21 +29,22 @@ public enum ColumnKey implements IEnum {
     /**
      * PRI
      */
-    PRI("PRI"),
+    PRI("PRI", "primary key"),
     /**
      * UNI
      */
-    UNI("UNI"),
+    UNI("UNI", "union key"),
     /**
      * MUL
      */
-    MUL("MUL");
+    MUL("MUL", "composite primary key");
 
     private final String code;
     private String description;
 
-    ColumnKey(String code) {
+    ColumnKey(String code, String description) {
         this.code = code;
+        this.description = description;
     }
 
     /**

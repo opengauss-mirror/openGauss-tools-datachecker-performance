@@ -35,33 +35,12 @@ public class MetaSqlMapper {
 
     static {
         Map<DataBaseMeta, String> dataBaseMySql = new HashMap<>();
-        dataBaseMySql.put(DataBaseMeta.TABLE, DataBaseMySql.TABLE_METADATA_SQL);
-        dataBaseMySql.put(DataBaseMeta.COLUMN, DataBaseMySql.TABLES_COLUMN_META_DATA_SQL);
-        dataBaseMySql.put(DataBaseMeta.HEALTH, DataBaseMySql.HEALTH_SQL);
+        dataBaseMySql.put(DataBaseMeta.MAX_ID_COUNT, DataBaseMySql.TABLE_MAX_COUNTS);
         DATABASE_META_MAPPER.put(DataBaseType.MS, dataBaseMySql);
-        DATABASE_TABLE_META_MAPPER.put(DataBaseType.MS, DataBaseMySql.ONE_TABLE_METADATA_SQL);
 
         Map<DataBaseMeta, String> dataBaseOpenGauss = new HashMap<>();
-        dataBaseOpenGauss.put(DataBaseMeta.TABLE, DataBaseOpenGauss.TABLE_METADATA_SQL);
-        dataBaseOpenGauss.put(DataBaseMeta.COLUMN, DataBaseOpenGauss.TABLES_COLUMN_META_DATA_SQL);
-        dataBaseOpenGauss.put(DataBaseMeta.HEALTH, DataBaseOpenGauss.HEALTH_SQL);
+        dataBaseOpenGauss.put(DataBaseMeta.MAX_ID_COUNT, DataBaseOpenGauss.TABLE_MAX_COUNTS);
         DATABASE_META_MAPPER.put(DataBaseType.OG, dataBaseOpenGauss);
-        DATABASE_TABLE_META_MAPPER.put(DataBaseType.MS, DataBaseOpenGauss.ONE_TABLE_METADATA_SQL);
-
-        Map<DataBaseMeta, String> databaseO = new HashMap<>();
-        databaseO.put(DataBaseMeta.TABLE, DataBaseO.TABLE_METADATA_SQL);
-        databaseO.put(DataBaseMeta.COLUMN, DataBaseO.TABLES_COLUMN_META_DATA_SQL);
-        databaseO.put(DataBaseMeta.HEALTH, DataBaseO.HEALTH_SQL);
-        DATABASE_META_MAPPER.put(DataBaseType.O, databaseO);
-    }
-
-    /**
-     * build sql of query table row count
-     *
-     * @return table row count sql
-     */
-    public static String getTableCount() {
-        return "select count(1) rowCount from %s.%s";
     }
 
     /**
@@ -77,85 +56,11 @@ public class MetaSqlMapper {
         return DATABASE_META_MAPPER.get(databaseType).get(databaseMeta);
     }
 
-    public static String getOneTableMetaSql(DataBaseType databaseType) {
-        Assert.isTrue(DATABASE_TABLE_META_MAPPER.containsKey(databaseType), "Database type mismatch");
-        return DATABASE_TABLE_META_MAPPER.get(databaseType);
-    }
-
     interface DataBaseMySql {
-        /**
-         * Health check SQL
-         */
-        String HEALTH_SQL = "select table_name from information_schema.tables  WHERE table_schema=? limit 1";
-
-        /**
-         * Table metadata query SQL
-         */
-        String TABLE_METADATA_SQL = "select info.table_name tableName , info.table_rows tableRows  "
-            + "from  information_schema.tables info where info.table_schema=:databaseSchema";
-
-        String ONE_TABLE_METADATA_SQL = "select info.table_name tableName, info.table_rows tableRows"
-            + "from information_schema.tables info where info.table_schema=:databaseSchema and info.table_name=:tableName";
-        /**
-         * column metadata query SQL
-         */
-        String TABLES_COLUMN_META_DATA_SQL = "select table_name tableName ,column_name columnName,"
-            + " ordinal_position ordinalPosition, data_type dataType, column_type columnType,column_key columnKey"
-            + " from information_schema.columns"
-            + " where table_schema=:databaseSchema and table_name in (:tableNames)";
+        String TABLE_MAX_COUNTS = "select (case when max(%s) is null then 1 else max(%s) end) as count from %s.%s";
     }
 
     interface DataBaseOpenGauss {
-        /**
-         * Health check SQL
-         */
-        String HEALTH_SQL = "select table_name from information_schema.tables  WHERE table_schema=? limit 1";
-
-        /**
-         * Table metadata query SQL
-         */
-        String TABLE_METADATA_SQL = "select c.relname tableName,c.reltuples tableRows from pg_class c "
-            + "LEFT JOIN pg_namespace n on n.oid = c.relnamespace left join pg_index b on c.oid=b.indrelid "
-            + "where n.nspname=:databaseSchema and b.indisprimary='t';";
-
-        String ONE_TABLE_METADATA_SQL = "select c.relname tableName,c.reltuples tableRows from pg_class c "
-            + "LEFT JOIN pg_namespace n on n.oid = c.relnamespace left join pg_index b on c.oid=b.indrelid "
-            + "where n.nspname=:databaseSchema and b.indisprimary='t' and c.relname=:tableName; ";
-        /**
-         * column metadata query SQL
-         */
-        String TABLES_COLUMN_META_DATA_SQL = "SELECT c.relname tableName ,a.attname columnName ,"
-            + " a.attnum ordinalPosition,(CASE WHEN (t.typtype = 'd'::\"char\") "
-            + " THEN CASE WHEN ((bt.typelem <> (0)::oid) AND (bt.typlen = (-1))) THEN 'ARRAY'::text "
-            + "WHEN (nbt.nspname = 'pg_catalog'::name) THEN format_type(t.typbasetype, NULL::integer) "
-            + "ELSE 'USER-DEFINED'::text END ELSE CASE WHEN ((t.typelem <> (0)::oid) AND (t.typlen = (-1))) "
-            + "THEN 'ARRAY'::text WHEN (nt.nspname = 'pg_catalog'::name) THEN format_type(a.atttypid, NULL::integer) "
-            + "ELSE 'USER-DEFINED'::text END END)::information_schema.character_data AS dataType ,"
-            + " t.typname columnType, (case when co.contype='p'::\"char\" then 'PRI' end ) columnKey"
-            + " FROM ((pg_attribute a JOIN (pg_class c JOIN pg_namespace nc ON c.relnamespace = nc.oid ) ON a.attrelid = c.oid ) "
-            + "JOIN (pg_type t JOIN pg_namespace nt ON t.typnamespace = nt.oid) ON a.atttypid = t.oid) "
-            + "LEFT JOIN (pg_type bt JOIN pg_namespace nbt ON bt.typnamespace = nbt.oid) "
-            + "ON (t.typtype = 'd'::\"char\" AND t.typbasetype = bt.oid) "
-            + "left join pg_constraint co on c.oid = co.conrelid and a.attnum = any (array[co.conkey]) "
-            + "WHERE a.attnum > 0 AND (NOT a.attisdropped)  "
-            + "AND (c.relkind = ANY (ARRAY['r'::\"char\", 'm'::\"char\", 'v'::\"char\", 'f'::\"char\"]))"
-            + " and  nc.nspname=:databaseSchema and c.relname in (:tableNames) and c.relhaspkey=true;";
-    }
-
-    interface DataBaseO {
-        /**
-         * Health check SQL
-         */
-        String HEALTH_SQL = "";
-
-        /**
-         * Table metadata query SQL
-         */
-        String TABLE_METADATA_SQL = "";
-
-        /**
-         * column metadata query SQL
-         */
-        String TABLES_COLUMN_META_DATA_SQL = "";
+        String TABLE_MAX_COUNTS = "select (case when max(%s) is null then 1 else max(%s) end) as count from %s.%s";
     }
 }

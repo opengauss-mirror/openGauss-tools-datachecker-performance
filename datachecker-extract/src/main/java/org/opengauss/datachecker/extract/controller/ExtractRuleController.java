@@ -15,10 +15,9 @@
 
 package org.opengauss.datachecker.extract.controller;
 
+import lombok.extern.slf4j.Slf4j;
 import org.opengauss.datachecker.common.entry.common.DistributeRuleEntry;
-import org.opengauss.datachecker.common.entry.common.Rule;
-import org.opengauss.datachecker.common.entry.enums.CheckMode;
-import org.opengauss.datachecker.common.entry.enums.RuleType;
+import org.opengauss.datachecker.extract.cache.TopicCache;
 import org.opengauss.datachecker.extract.load.EnvironmentLoader;
 import org.opengauss.datachecker.extract.service.RuleAdapterService;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -27,8 +26,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
-import java.util.List;
-import java.util.Map;
 
 /**
  * Filter Rules service
@@ -37,12 +34,15 @@ import java.util.Map;
  * @date ：Created in 2022/6/23
  * @since ：11
  */
+@Slf4j
 @RestController
 public class ExtractRuleController {
     @Resource
     private RuleAdapterService ruleAdapterService;
     @Resource
     private EnvironmentLoader environmentLoader;
+    @Resource
+    private TopicCache topicCache;
 
     /**
      * Distribution Data Extraction Filter Rules
@@ -53,5 +53,11 @@ public class ExtractRuleController {
     public void distributeRules(@RequestBody DistributeRuleEntry rules) {
         ruleAdapterService.init(rules.getRules());
         environmentLoader.load(rules.getCheckMode());
+    }
+
+    @PostMapping("/notify/check/finished")
+    public void notifyCheckTableFinished(@RequestParam(name = "tableName") String tableName) {
+        topicCache.removeTopic(tableName);
+        log.info("remove topic cache of table [{}]", tableName);
     }
 }

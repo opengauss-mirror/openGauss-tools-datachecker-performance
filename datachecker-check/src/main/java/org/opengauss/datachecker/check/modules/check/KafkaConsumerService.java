@@ -22,6 +22,7 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.opengauss.datachecker.check.config.KafkaConsumerConfig;
 import org.opengauss.datachecker.common.util.IdGenerator;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Service;
 
 /**
@@ -34,6 +35,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@ConditionalOnBean({KafkaConsumerConfig.class})
 public class KafkaConsumerService {
     private static final String CLIENT_ID_SUFFIX = "Random";
 

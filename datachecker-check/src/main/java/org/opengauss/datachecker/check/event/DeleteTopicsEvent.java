@@ -16,20 +16,17 @@
 package org.opengauss.datachecker.check.event;
 
 import lombok.Getter;
-import org.springframework.context.ApplicationEvent;
 
 /**
+ * CustomApplicationEvent
+ *
  * @author ：wangchao
  * @date ：Created in 2023/3/7
  * @since ：11
  */
 @Getter
-public class DeleteTopicsEvent extends ApplicationEvent {
-    private String message;
-    private static final long serialVersionUID = 6927070437465506428L;
-
+public class DeleteTopicsEvent extends CustomApplicationEvent {
     public DeleteTopicsEvent(Object source, String message) {
-        super(source);
-        this.message = message;
+        super(source, message);
     }
 }

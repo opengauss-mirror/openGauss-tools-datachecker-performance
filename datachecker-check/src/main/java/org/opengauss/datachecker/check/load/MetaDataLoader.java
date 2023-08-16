@@ -17,12 +17,15 @@ package org.opengauss.datachecker.check.load;
 
 import lombok.extern.slf4j.Slf4j;
 import org.opengauss.datachecker.check.service.EndpointMetaDataManager;
+import org.opengauss.datachecker.common.entry.enums.CheckMode;
+import org.opengauss.datachecker.common.exception.CheckMetaDataException;
 import org.opengauss.datachecker.common.exception.CheckingException;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
+import java.util.Objects;
 
 /**
  * MetaDataLoader
@@ -40,15 +43,21 @@ public class MetaDataLoader extends AbstractCheckLoader {
 
     @Override
     public void load(CheckEnvironment checkEnvironment) {
+        if (Objects.equals(checkEnvironment.getCheckMode(), CheckMode.INCREMENT)) {
+            return;
+        }
         try {
             int retry = 0;
             log.info("check service is start to load metadata,place wait a moment.");
-            while (endpointMetaDataManager.isMetaLoading()) {
-                ThreadUtil.sleep(retryIntervalTimes);
-                if (++retry > maxRetryTimes) {
-                    break;
+            if (!checkEnvironment.isCheckTableEmpty()) {
+                while (endpointMetaDataManager.isMetaLoading()) {
+                    ThreadUtil.sleep(retryIntervalTimes);
+                    if (++retry > maxRetryTimes) {
+                        log.info("check service is loading metadata, try out of {}", maxRetryTimes);
+                        throw new CheckMetaDataException("loading metadata, try out of " + maxRetryTimes);
+                    }
+                    log.info("check service is loading metadata,place wait a moment.");
                 }
-                log.info("check service is loading metadata,place wait a moment.");
             }
             if (!endpointMetaDataManager.isMetaLoading()) {
                 log.info("start to load metadata from source and sink.");
