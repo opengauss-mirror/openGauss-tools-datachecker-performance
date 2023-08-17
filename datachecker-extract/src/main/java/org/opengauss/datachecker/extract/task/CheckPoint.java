@@ -22,6 +22,7 @@ import org.opengauss.datachecker.extract.data.access.DataAccessService;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * CheckPoint
@@ -68,18 +69,22 @@ public class CheckPoint {
         param.setOffset(slice);
         String preValue = checkPoint;
         List<Object> checkList = new LinkedList<>();
-        checkList.add(preValue);
+        addCheckList(checkList, preValue);
         while (preValue != null) {
             param.setPreValue(preValue);
             preValue = dataAccessService.next(param);
-            if (preValue != null) {
-                checkList.add(preValue);
-            }
+            addCheckList(checkList, preValue);
         }
         Object maxPoint = dataAccessService.max(param);
-        checkList.add(maxPoint);
+        addCheckList(checkList, maxPoint);
         log.info("table [{}] check-point-list : {} ", tableName, checkList);
         return checkList;
+    }
+
+    private void addCheckList(List<Object> checkList, Object value) {
+        if (Objects.nonNull(value)) {
+            checkList.add(value);
+        }
     }
 
     public boolean checkPkNumber(TableMetadata tableMetadata) {
