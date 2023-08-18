@@ -16,6 +16,7 @@
 package org.opengauss.datachecker.extract.task;
 
 import com.alibaba.fastjson.JSON;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.constant.DynamicTpConstant;
@@ -156,7 +157,9 @@ public class ExtractTaskRunnable implements Runnable {
             SliceQueryStatement sliceStatement =
                 factory.createSliceQueryStatement(checkPoint, context.getTableMetadata());
             List<QuerySqlEntry> querySqlList = sliceStatement.builderByTaskOffset(context.getTableMetadata(), slice);
-            totalRows = executeParallelTask(querySqlList, context);
+            if (CollectionUtils.isNotEmpty(querySqlList)) {
+                totalRows = executeParallelTask(querySqlList, context);
+            }
             querySqlList.clear();
         } catch (Exception ex) {
             log.error("jdbc parallel query has unknown error [{}] : ", context.getTableName(), ex);
@@ -296,6 +299,9 @@ public class ExtractTaskRunnable implements Runnable {
         public List<QuerySqlEntry> builderByTaskOffset(TableMetadata tableMetadata, int slice) {
             List<QuerySqlEntry> querySqlList = new LinkedList<>();
             List<Object> checkPointList = singlePrimaryCheckPoint.initCheckPointList(tableMetadata, slice);
+            if (CollectionUtils.isEmpty(checkPointList)) {
+                return querySqlList;
+            }
             final Object[][] taskOffset;
             if (singlePrimaryCheckPoint.checkPkNumber(tableMetadata)) {
                 taskOffset = singlePrimaryCheckPoint.translateBetween(checkPointList);
