@@ -35,10 +35,7 @@ import org.opengauss.datachecker.extract.dml.SelectDmlBuilder;
 import org.opengauss.datachecker.extract.dml.UpdateDmlBuilder;
 import org.opengauss.datachecker.extract.service.MetaDataService;
 import org.opengauss.datachecker.extract.util.MetaDataUtil;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
@@ -90,7 +87,7 @@ public class DataManipulationService {
 
         Assert.isTrue(!CollectionUtils.isEmpty(primaryMetas),
             "The metadata information of the table primary key is abnormal, and the construction of select SQL failed");
-        final SelectDmlBuilder dmlBuilder = new SelectDmlBuilder(databaseType);
+        final SelectDmlBuilder dmlBuilder = new SelectDmlBuilder(databaseType, tableMetadata.isOgCompatibilityB());
         // Single primary key table data query
         if (primaryMetas.size() == 1) {
             final ColumnsMetaData primaryData = primaryMetas.get(0);
@@ -124,7 +121,7 @@ public class DataManipulationService {
 
         Assert.isTrue(!CollectionUtils.isEmpty(primaryMetas),
             "The metadata information of the table primary key is abnormal, and the construction of select SQL failed");
-        final SelectDmlBuilder dmlBuilder = new SelectDmlBuilder(databaseType);
+        final SelectDmlBuilder dmlBuilder = new SelectDmlBuilder(databaseType, metadata.isOgCompatibilityB());
         List<Map<String, String>> resultMap;
         // Single primary key table data query
         if (primaryMetas.size() == 1) {
@@ -238,14 +235,14 @@ public class DataManipulationService {
      * @return Return to SQL list
      */
     public List<String> buildReplace(String schema, String tableName, Set<String> compositeKeySet,
-        TableMetadata metadata) {
+        TableMetadata metadata, boolean ogCompatibility) {
         List<String> resultList = new ArrayList<>();
         final String localSchema = getLocalSchema(schema);
         List<Map<String, String>> columnValues = queryColumnValues(tableName, List.copyOf(compositeKeySet), metadata);
         Map<String, Map<String, String>> compositeKeyValues =
             transtlateColumnValues(columnValues, metadata.getPrimaryMetas());
-        UpdateDmlBuilder builder = new UpdateDmlBuilder();
-        builder.metadata(metadata).tableName(tableName).dataBaseType(DataBaseType.OG).schema(localSchema);
+        UpdateDmlBuilder builder = new UpdateDmlBuilder(DataBaseType.OG, ogCompatibility);
+        builder.metadata(metadata).tableName(tableName).schema(localSchema);
         compositeKeySet.forEach(compositeKey -> {
             Map<String, String> columnValue = compositeKeyValues.get(compositeKey);
             if (Objects.nonNull(columnValue) && !columnValue.isEmpty()) {
@@ -265,13 +262,12 @@ public class DataManipulationService {
      * @return Return to SQL list
      */
     public List<String> buildInsert(String schema, String tableName, Set<String> compositeKeySet,
-        TableMetadata metadata) {
+        TableMetadata metadata, boolean ogCompatibility) {
 
         List<String> resultList = new ArrayList<>();
         final String localSchema = getLocalSchema(schema);
-        InsertDmlBuilder builder =
-            new InsertDmlBuilder().schema(localSchema).tableName(tableName).columns(metadata.getColumnsMetas());
-
+        InsertDmlBuilder builder = new InsertDmlBuilder(DataBaseType.OG, ogCompatibility);
+        builder.schema(localSchema).tableName(tableName).columns(metadata.getColumnsMetas());
         List<Map<String, String>> columnValues =
             queryColumnValues(tableName, new ArrayList<>(compositeKeySet), metadata);
         Map<String, Map<String, String>> compositeKeyValues =
@@ -339,25 +335,28 @@ public class DataManipulationService {
      * @param tableName       tableName
      * @param compositeKeySet composite key set
      * @param primaryMetas    Primary key metadata information
+     * @param ogCompatibility
      * @return Return to SQL list
      */
     public List<String> buildDelete(String schema, String tableName, Set<String> compositeKeySet,
-        List<ColumnsMetaData> primaryMetas) {
+        List<ColumnsMetaData> primaryMetas, boolean ogCompatibility) {
 
         List<String> resultList = new ArrayList<>();
         final String localSchema = getLocalSchema(schema);
         if (primaryMetas.size() == 1) {
             final ColumnsMetaData primaryMeta = primaryMetas.stream().findFirst().get();
             compositeKeySet.forEach(compositeKey -> {
+                DeleteDmlBuilder deleteDmlBuilder = new DeleteDmlBuilder(DataBaseType.OG, ogCompatibility);
                 final String deleteDml =
-                    new DeleteDmlBuilder().tableName(tableName).schema(localSchema).condition(primaryMeta, compositeKey)
-                                          .build();
+                    deleteDmlBuilder.tableName(tableName).schema(localSchema).condition(primaryMeta, compositeKey)
+                                    .build();
                 resultList.add(deleteDml);
             });
         } else {
             compositeKeySet.forEach(compositeKey -> {
-                resultList.add(new DeleteDmlBuilder().tableName(tableName).schema(localSchema)
-                                                     .conditionCompositePrimary(compositeKey, primaryMetas).build());
+                DeleteDmlBuilder deleteDmlBuilder = new DeleteDmlBuilder(DataBaseType.OG, ogCompatibility);
+                resultList.add(deleteDmlBuilder.tableName(tableName).schema(localSchema)
+                                               .conditionCompositePrimary(compositeKey, primaryMetas).build());
             });
         }
         return resultList;

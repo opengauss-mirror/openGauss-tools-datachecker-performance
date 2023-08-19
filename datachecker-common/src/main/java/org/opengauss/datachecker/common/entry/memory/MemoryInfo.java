@@ -35,19 +35,19 @@ public class MemoryInfo extends BaseMonitor implements MonitorFormatter {
     private long vmUse;
 
     public long getVmTotal() {
-        return byteToMb(vmTotal);
+        return vmTotal;
     }
 
     public long getVmFree() {
-        return byteToMb(vmFree);
+        return vmFree;
     }
 
     public long getVmMax() {
-        return byteToMb(vmMax);
+        return vmMax;
     }
 
     public long getVmUse() {
-        return byteToMb(vmUse);
+        return vmUse;
     }
 
     @Override
@@ -73,10 +73,10 @@ public class MemoryInfo extends BaseMonitor implements MonitorFormatter {
     @Override
     public List<Field> getFormatFields() {
         List<Field> memoryFields = new LinkedList<>();
-        memoryFields.add(Field.of("total", byteToMb(vmTotal) + " MB"));
-        memoryFields.add(Field.of("maximum", byteToMb(vmMax) + " MB "));
-        memoryFields.add(Field.of("used", byteToMb(vmUse) + " MB"));
-        memoryFields.add(Field.of("free", byteToMb(vmFree) + " MB"));
+        memoryFields.add(Field.of("total", vmTotal + " byte"));
+        memoryFields.add(Field.of("maximum", vmMax + " byte "));
+        memoryFields.add(Field.of("used", vmUse + " byte"));
+        memoryFields.add(Field.of("free", vmFree + " byte"));
         return memoryFields;
     }
 }

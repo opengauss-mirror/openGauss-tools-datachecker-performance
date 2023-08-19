@@ -70,6 +70,31 @@
               on ca1.tableName = my_seq.table_name and ca1.columnName=my_seq.column_name)
     </select>
 
+    <select id="queryTableColumnsMetaDataB" resultMap="columnMetadataMap">
+        select ca1.*,
+            case when my_seq.sequence_name is null then '' else 'auto_increment' end as extra from (( SELECT c.relname tableName ,a.attname columnName , a.attnum ordinalPosition,
+            (CASE WHEN (t.typtype = 'd'::`char`)  THEN CASE WHEN ((bt.typelem <![CDATA[<>]]> (0)::oid) AND (bt.typlen = (-1))) THEN 'ARRAY'::text  WHEN (nbt.nspname = 'pg_catalog'::name)
+            THEN format_type(t.typbasetype, NULL::integer)  ELSE 'USER-DEFINED'::text END ELSE CASE WHEN ((t.typelem <![CDATA[<>]]> (0)::oid) AND (t.typlen = (-1)))
+            THEN 'ARRAY'::text WHEN (nt.nspname = 'pg_catalog'::name) THEN format_type(a.atttypid, NULL::integer)  ELSE 'USER-DEFINED'::text END END)::information_schema.character_data AS dataType ,
+            t.typname columnType, (case when co.contype='p'::`char` then 'PRI' end ) columnKey
+            FROM ((pg_attribute a JOIN (pg_class c JOIN pg_namespace nc ON c.relnamespace = nc.oid ) ON a.attrelid = c.oid )
+            JOIN (pg_type t JOIN pg_namespace nt ON t.typnamespace = nt.oid) ON a.atttypid = t.oid)
+            LEFT JOIN (pg_type bt JOIN pg_namespace nbt ON bt.typnamespace = nbt.oid)  ON (t.typtype = 'd'::`char` AND t.typbasetype = bt.oid)
+            left join pg_constraint co on c.oid = co.conrelid and a.attnum = any (array[co.conkey])
+            WHERE a.attnum > 0 AND (NOT a.attisdropped)   AND (c.relkind = ANY (ARRAY['r'::`char`, 'm'::`char`, 'v'::`char`, 'f'::`char`]))
+            and  nc.nspname=#{schema} and c.relname =#{name} and c.relhaspkey=true) ca1
+            left join
+             ( select ts.nspname as object_schema, tbl.relname as table_name, col.attname as column_name, s.relname as sequence_name
+              from pg_class s  join pg_namespace sn on sn.oid = s.relnamespace
+              join pg_depend d on d.refobjid = s.oid and d.refclassid='pg_class'::regclass
+              join pg_attrdef ad on ad.oid = d.objid and d.classid = 'pg_attrdef'::regclass
+              join pg_attribute col on col.attrelid = ad.adrelid and col.attnum = ad.adnum
+              join pg_class tbl on tbl.oid = ad.adrelid
+              join pg_namespace ts on ts.oid = tbl.relnamespace  where s.relkind = 'S' and d.deptype in ('a', 'n') and  ts.nspname=#{schema}
+              ) my_seq
+              on ca1.tableName = my_seq.table_name and ca1.columnName=my_seq.column_name)
+    </select>
+
     <select id="rowCount" resultType="long">
         select count(1) from ${schema}.${name};
     </select>

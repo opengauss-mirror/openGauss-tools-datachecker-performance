@@ -55,6 +55,11 @@ public class ExtractFallbackFactory implements FallbackFactory<ExtractFeignClien
 
     private class ExtractFeignClientImpl implements ExtractFeignClient {
         @Override
+        public Result<Boolean> checkTargetOgCompatibility() {
+            return Result.error("Remote call, endpoint checkTargetOgCompatibility error");
+        }
+
+        @Override
         public Result<Void> health() {
             return Result.error("Remote call service health check exception");
         }
@@ -109,7 +114,7 @@ public class ExtractFallbackFactory implements FallbackFactory<ExtractFeignClien
          */
         @Override
         public Result<List<String>> buildRepairStatementUpdateDml(String schema, String tableName,
-            Set<String> diffSet) {
+            boolean ogCompatibility, Set<String> diffSet) {
             return Result.error("Remote call, build and repair statement exceptions according to parameters");
         }
 
@@ -123,7 +128,7 @@ public class ExtractFallbackFactory implements FallbackFactory<ExtractFeignClien
          */
         @Override
         public Result<List<String>> buildRepairStatementInsertDml(String schema, String tableName,
-            Set<String> diffSet) {
+            boolean ogCompatibility, Set<String> diffSet) {
             return Result.error("Remote call, build and repair statement exceptions according to parameters");
         }
 
@@ -137,7 +142,7 @@ public class ExtractFallbackFactory implements FallbackFactory<ExtractFeignClien
          */
         @Override
         public Result<List<String>> buildRepairStatementDeleteDml(String schema, String tableName,
-            Set<String> diffSet) {
+            boolean ogCompatibility, Set<String> diffSet) {
             return Result.error("Remote call, build and repair statement exceptions according to parameters");
         }
 

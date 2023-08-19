@@ -41,7 +41,7 @@ public class UpdateDmlBuilderTest extends MockTableMeta {
     @BeforeEach
     void setUp() {
         mockTableMetadata = mockSingleTablePrimaryMetadata();
-        updateDmlBuilder = new UpdateDmlBuilder();
+        updateDmlBuilder = new UpdateDmlBuilder(DataBaseType.OG, true);
     }
 
     @DisplayName("openGauss update SQL build")

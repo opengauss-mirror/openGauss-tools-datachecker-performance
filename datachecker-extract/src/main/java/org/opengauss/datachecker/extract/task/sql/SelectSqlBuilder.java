@@ -33,6 +33,7 @@ import java.util.stream.Collectors;
 import static org.opengauss.datachecker.extract.task.sql.QuerySqlTemplate.COLUMN;
 import static org.opengauss.datachecker.extract.task.sql.QuerySqlTemplate.DELIMITER;
 import static org.opengauss.datachecker.extract.task.sql.QuerySqlTemplate.MYSQL_ESCAPE;
+import static org.opengauss.datachecker.extract.task.sql.QuerySqlTemplate.OPENGAUSS_B_ESCAPE;
 import static org.opengauss.datachecker.extract.task.sql.QuerySqlTemplate.OPENGAUSS_ESCAPE;
 import static org.opengauss.datachecker.extract.task.sql.QuerySqlTemplate.OFFSET;
 import static org.opengauss.datachecker.extract.task.sql.QuerySqlTemplate.ORDER_BY;
@@ -53,6 +54,7 @@ import static org.opengauss.datachecker.extract.task.sql.QuerySqlTemplate.TABLE_
 public class SelectSqlBuilder {
     private static final Map<DataBaseType, SqlGenerate> SQL_GENERATE = new HashMap<>();
     private static final Map<DataBaseType, SqlEscape> ESCAPE = new HashMap<>();
+    private static final Map<DataBaseType, SqlEscape> ESCAPEB = new HashMap<>();
     private static final long OFF_SET_ZERO = 0L;
     private static final SqlGenerateTemplate GENERATE_TEMPLATE =
         (template, sqlGenerateMeta) -> template.replace(COLUMN, sqlGenerateMeta.getColumns())
@@ -82,12 +84,13 @@ public class SelectSqlBuilder {
     private static final SqlGenerate QUERY_BETWEEN_GENERATE =
         (sqlGenerateMeta -> QUERY_BETWEEN_TEMPLATE.replace(QUERY_BETWEEN_SET, sqlGenerateMeta));
 
-    static {
+    {
         SQL_GENERATE.put(DataBaseType.MS, OFFSET_GENERATE);
         SQL_GENERATE.put(DataBaseType.OG, OFFSET_GENERATE);
         SQL_GENERATE.put(DataBaseType.O, OFFSET_GENERATE);
         ESCAPE.put(DataBaseType.MS, (key) -> MYSQL_ESCAPE + key + MYSQL_ESCAPE);
         ESCAPE.put(DataBaseType.OG, (key) -> OPENGAUSS_ESCAPE + key + OPENGAUSS_ESCAPE);
+        ESCAPEB.put(DataBaseType.OG, (key) -> OPENGAUSS_B_ESCAPE + key + OPENGAUSS_B_ESCAPE);
         ESCAPE.put(DataBaseType.O, (key) -> key);
     }
 
@@ -256,6 +259,9 @@ public class SelectSqlBuilder {
     }
 
     private String escape(String content, DataBaseType dataBaseType) {
+        if (tableMetadata.isOgCompatibilityB()) {
+            return ESCAPEB.get(dataBaseType).escape(content);
+        }
         return ESCAPE.get(dataBaseType).escape(content);
     }
 

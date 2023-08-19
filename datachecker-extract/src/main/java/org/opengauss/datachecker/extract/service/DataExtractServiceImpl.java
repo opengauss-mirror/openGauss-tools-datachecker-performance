@@ -300,9 +300,10 @@ public class DataExtractServiceImpl implements DataExtractService {
                     log.info("Abnormal table[{}] status, ignoring the current table data extraction task", tableName);
                     return;
                 }
+                ThreadUtil.requestConflictingSleeping();
                 registerTopic(task);
                 while (!topicCache.canCreateTopic(maximumTopicSize)) {
-                    ThreadUtil.sleep(5000);
+                    ThreadUtil.sleep(1000);
                 }
                 Topic topic = task.getTopic();
                 Endpoint endpoint = extractProperties.getEndpoint();
@@ -323,32 +324,35 @@ public class DataExtractServiceImpl implements DataExtractService {
     }
 
     @Override
-    public List<String> buildRepairStatementUpdateDml(String schema, String tableName, Set<String> diffSet) {
+    public List<String> buildRepairStatementUpdateDml(String schema, String tableName, boolean ogCompatibility,
+        Set<String> diffSet) {
         repairStatementLog(schema, tableName, DML.REPLACE, diffSet.size());
         if (CollectionUtils.isEmpty(diffSet)) {
             return new ArrayList<>();
         }
         final TableMetadata metadata = metaDataService.getMetaDataOfSchemaByCache(tableName);
-        return dataManipulationService.buildReplace(schema, tableName, diffSet, metadata);
+        return dataManipulationService.buildReplace(schema, tableName, diffSet, metadata, ogCompatibility);
     }
 
     @Override
-    public List<String> buildRepairStatementInsertDml(String schema, String tableName, Set<String> diffSet) {
+    public List<String> buildRepairStatementInsertDml(String schema, String tableName, boolean ogCompatibility,
+        Set<String> diffSet) {
         repairStatementLog(schema, tableName, DML.INSERT, diffSet.size());
         if (CollectionUtils.isEmpty(diffSet)) {
             return new ArrayList<>();
         }
         final TableMetadata metadata = metaDataService.getMetaDataOfSchemaByCache(tableName);
-        return dataManipulationService.buildInsert(schema, tableName, diffSet, metadata);
+        return dataManipulationService.buildInsert(schema, tableName, diffSet, metadata, ogCompatibility);
     }
 
     @Override
-    public List<String> buildRepairStatementDeleteDml(String schema, String tableName, Set<String> diffSet) {
+    public List<String> buildRepairStatementDeleteDml(String schema, String tableName, boolean ogCompatibility,
+        Set<String> diffSet) {
         repairStatementLog(schema, tableName, DML.DELETE, diffSet.size());
         final TableMetadata metadata = metaDataService.getMetaDataOfSchemaByCache(tableName);
         if (Objects.nonNull(metadata)) {
             final List<ColumnsMetaData> primaryMetas = metadata.getPrimaryMetas();
-            return dataManipulationService.buildDelete(schema, tableName, diffSet, primaryMetas);
+            return dataManipulationService.buildDelete(schema, tableName, diffSet, primaryMetas, ogCompatibility);
         } else {
             throw new BuildRepairStatementException(tableName);
         }

@@ -200,9 +200,9 @@ public class FeignClientService {
      * @param diffSet   Differential primary key set
      * @return Return to repair statement collection
      */
-    public List<String> buildRepairStatementInsertDml(Endpoint endpoint, String schema, String tableName,
+    public List<String> buildRepairStatementInsertDml(Endpoint endpoint, String schema, String tableName,boolean ogCompatibility,
         Set<String> diffSet) {
-        Result<List<String>> result = getClient(endpoint).buildRepairStatementInsertDml(schema, tableName, diffSet);
+        Result<List<String>> result = getClient(endpoint).buildRepairStatementInsertDml(schema, tableName,ogCompatibility, diffSet);
         if (result.isSuccess()) {
             return result.getData();
         } else {
@@ -219,9 +219,9 @@ public class FeignClientService {
      * @param diffSet   Differential primary key set
      * @return Return to repair statement collection
      */
-    public List<String> buildRepairStatementDeleteDml(Endpoint endpoint, String schema, String tableName,
+    public List<String> buildRepairStatementDeleteDml(Endpoint endpoint, String schema, String tableName,boolean ogCompatibility,
         Set<String> diffSet) {
-        Result<List<String>> result = getClient(endpoint).buildRepairStatementDeleteDml(schema, tableName, diffSet);
+        Result<List<String>> result = getClient(endpoint).buildRepairStatementDeleteDml(schema, tableName, ogCompatibility,diffSet);
         if (result.isSuccess()) {
             return result.getData();
         } else {
@@ -236,11 +236,12 @@ public class FeignClientService {
      * @param schema    The corresponding schema of the end DB to be repaired
      * @param tableName table Name
      * @param diffSet   Differential primary key set
+     * @param ogCompatibility
      * @return Return to repair statement collection
      */
-    public List<String> buildRepairStatementUpdateDml(Endpoint endpoint, String schema, String tableName,
+    public List<String> buildRepairStatementUpdateDml(Endpoint endpoint, String schema, String tableName,boolean ogCompatibility,
         Set<String> diffSet) {
-        Result<List<String>> result = getClient(endpoint).buildRepairStatementUpdateDml(schema, tableName, diffSet);
+        Result<List<String>> result = getClient(endpoint).buildRepairStatementUpdateDml(schema, tableName ,ogCompatibility, diffSet);
         if (result.isSuccess()) {
             return result.getData();
         } else {
@@ -326,6 +327,20 @@ public class FeignClientService {
             }
         } catch (Exception ignored) {
             throw new DispatchClientException(endpoint, "check database error: " + ignored.getMessage());
+        }
+    }
+
+    public boolean checkTargetOgCompatibility() {
+        try {
+            Result<Boolean> result = getClient(Endpoint.SINK).checkTargetOgCompatibility();
+            if (result.isSuccess()) {
+                return result.getData();
+            } else {
+                throw new CheckingException("check target OgCompatibility failed: ");
+            }
+        } catch (Exception ignored) {
+            throw new DispatchClientException(Endpoint.SINK,
+                "check target OgCompatibility failed: " + ignored.getMessage());
         }
     }
 }

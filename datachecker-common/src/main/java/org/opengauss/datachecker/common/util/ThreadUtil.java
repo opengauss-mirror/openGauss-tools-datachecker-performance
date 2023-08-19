@@ -16,6 +16,7 @@
 package org.opengauss.datachecker.common.util;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 
 import java.util.concurrent.ExecutorService;
@@ -32,6 +33,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
  */
 @Slf4j
 public class ThreadUtil {
+
     /**
      * Thread hibernation
      *
@@ -40,6 +42,17 @@ public class ThreadUtil {
     public static void sleep(int millisTime) {
         try {
             Thread.sleep(millisTime);
+        } catch (InterruptedException ie) {
+            log.error("thread sleep interrupted exception ");
+        }
+    }
+
+    /**
+     * The current thread sleeps for 10 - 500 milliseconds
+     */
+    public static void requestConflictingSleeping() {
+        try {
+            Thread.sleep(RandomUtils.nextLong(50, 500));
         } catch (InterruptedException ie) {
             log.error("thread sleep interrupted exception ");
         }

@@ -23,18 +23,5 @@ package org.opengauss.datachecker.common.entry.memory;
  * @since ：11
  */
 public class BaseMonitor {
-    /**
-     * byte to mb
-     */
-    protected static final int BYTE_TO_MB = 1024 * 1024;
 
-    /**
-     * byte to Mb
-     *
-     * @param value byte value
-     * @return mb
-     */
-    protected static long byteToMb(long value) {
-        return value / BYTE_TO_MB;
-    }
 }

@@ -41,6 +41,7 @@ public class TableMetadata {
     private Endpoint endpoint;
     private DataBaseType dataBaseType;
     private String schema;
+    private boolean isOgCompatibilityB = false;
     /**
      * tableName
      */

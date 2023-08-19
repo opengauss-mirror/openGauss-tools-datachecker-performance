@@ -35,7 +35,7 @@ import java.util.stream.IntStream;
  * @since ：11
  */
 public class SelectDmlBuilder extends DmlBuilder {
-    public SelectDmlBuilder(DataBaseType databaseType) {super(databaseType);}
+    public SelectDmlBuilder(DataBaseType databaseType, boolean ogCompatibility) {super(databaseType, ogCompatibility);}
 
     /**
      * build SQL column statement fragment

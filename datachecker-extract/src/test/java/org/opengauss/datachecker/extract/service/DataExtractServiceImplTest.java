@@ -69,6 +69,7 @@ class DataExtractServiceImplTest {
     private DataManipulationService mockDataManipulationService;
     @InjectMocks
     private DataExtractServiceImpl dataExtractServiceImplUnderTest;
+    boolean ogCompatibility = false;
 
     @BeforeAll
     static void setUp() {
@@ -136,11 +137,11 @@ class DataExtractServiceImplTest {
         // Configure MetaDataService.getMetaDataOfSchemaByCache(...).
         final TableMetadata tableMetadata = MetaDataCache.get(table);
         when(mockMetaDataService.getMetaDataOfSchemaByCache(table)).thenReturn(tableMetadata);
-        when(mockDataManipulationService.buildReplace("schema", table, Set.of("value"), tableMetadata))
+        when(mockDataManipulationService.buildReplace("schema", table, Set.of("value"), tableMetadata, ogCompatibility))
             .thenReturn(List.of("value"));
         // Run the test
-        final List<String> result =
-            dataExtractServiceImplUnderTest.buildRepairStatementUpdateDml("schema", table, Set.of("value"));
+        final List<String> result = dataExtractServiceImplUnderTest
+            .buildRepairStatementUpdateDml("schema", table, ogCompatibility, Set.of("value"));
         // Verify the results
         assertThat(result).isEqualTo(List.of("value"));
     }
@@ -154,12 +155,12 @@ class DataExtractServiceImplTest {
         final TableMetadata tableMetadata = MetaDataCache.get(table);
         when(mockMetaDataService.getMetaDataOfSchemaByCache(table)).thenReturn(tableMetadata);
 
-        when(mockDataManipulationService.buildReplace("schema", table, Set.of("value"), tableMetadata))
+        when(mockDataManipulationService.buildReplace("schema", table, Set.of("value"), tableMetadata, ogCompatibility))
             .thenReturn(Collections.emptyList());
 
         // Run the test
-        final List<String> result =
-            dataExtractServiceImplUnderTest.buildRepairStatementUpdateDml("schema", table, Set.of("value"));
+        final List<String> result = dataExtractServiceImplUnderTest
+            .buildRepairStatementUpdateDml("schema", table, ogCompatibility, Set.of("value"));
 
         // Verify the results
         assertThat(result).isEqualTo(Collections.emptyList());
@@ -174,12 +175,12 @@ class DataExtractServiceImplTest {
         final TableMetadata tableMetadata = MetaDataCache.get(table);
         when(mockMetaDataService.getMetaDataOfSchemaByCache(table)).thenReturn(tableMetadata);
 
-        when(mockDataManipulationService.buildInsert("schema", table, Set.of("value"), tableMetadata))
+        when(mockDataManipulationService.buildInsert("schema", table, Set.of("value"), tableMetadata, ogCompatibility))
             .thenReturn(List.of("value"));
 
         // Run the test
-        final List<String> result =
-            dataExtractServiceImplUnderTest.buildRepairStatementInsertDml("schema", table, Set.of("value"));
+        final List<String> result = dataExtractServiceImplUnderTest
+            .buildRepairStatementInsertDml("schema", table, ogCompatibility, Set.of("value"));
 
         // Verify the results
         assertThat(result).isEqualTo(List.of("value"));
@@ -191,12 +192,12 @@ class DataExtractServiceImplTest {
         final TableMetadata tableMetadata = MetaDataCache.get(table);
         when(mockMetaDataService.getMetaDataOfSchemaByCache(table)).thenReturn(tableMetadata);
 
-        when(mockDataManipulationService.buildInsert("schema", table, Set.of("value"), tableMetadata))
+        when(mockDataManipulationService.buildInsert("schema", table, Set.of("value"), tableMetadata, ogCompatibility))
             .thenReturn(Collections.emptyList());
 
         // Run the test
-        final List<String> result =
-            dataExtractServiceImplUnderTest.buildRepairStatementInsertDml("schema", table, Set.of("value"));
+        final List<String> result = dataExtractServiceImplUnderTest
+            .buildRepairStatementInsertDml("schema", table, ogCompatibility, Set.of("value"));
 
         // Verify the results
         assertThat(result).isEqualTo(Collections.emptyList());
@@ -210,12 +211,13 @@ class DataExtractServiceImplTest {
         final TableMetadata tableMetadata = MetaDataCache.get(table);
         when(mockMetaDataService.getMetaDataOfSchemaByCache(table)).thenReturn(tableMetadata);
 
-        when(mockDataManipulationService.buildDelete("schema", table, Set.of("value"), tableMetadata.getPrimaryMetas()))
+        when(mockDataManipulationService
+            .buildDelete("schema", table, Set.of("value"), tableMetadata.getPrimaryMetas(), ogCompatibility))
             .thenReturn(List.of("value"));
 
         // Run the test
-        final List<String> result =
-            dataExtractServiceImplUnderTest.buildRepairStatementDeleteDml("schema", table, Set.of("value"));
+        final List<String> result = dataExtractServiceImplUnderTest
+            .buildRepairStatementDeleteDml("schema", table, ogCompatibility, Set.of("value"));
 
         // Verify the results
         assertThat(result).isEqualTo(List.of("value"));
@@ -228,12 +230,13 @@ class DataExtractServiceImplTest {
         String table = "t_test_table_template";
         final TableMetadata tableMetadata = MetaDataCache.get(table);
         when(mockMetaDataService.getMetaDataOfSchemaByCache(table)).thenReturn(tableMetadata);
-        when(mockDataManipulationService.buildDelete("schema", table, Set.of("value"), tableMetadata.getPrimaryMetas()))
+        when(mockDataManipulationService
+            .buildDelete("schema", table, Set.of("value"), tableMetadata.getPrimaryMetas(), ogCompatibility))
             .thenReturn(Collections.emptyList());
 
         // Run the test
-        final List<String> result =
-            dataExtractServiceImplUnderTest.buildRepairStatementDeleteDml("schema", table, Set.of("value"));
+        final List<String> result = dataExtractServiceImplUnderTest
+            .buildRepairStatementDeleteDml("schema", table, ogCompatibility, Set.of("value"));
 
         // Verify the results
         assertThat(result).isEqualTo(Collections.emptyList());

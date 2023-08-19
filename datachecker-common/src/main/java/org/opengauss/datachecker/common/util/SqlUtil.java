@@ -31,15 +31,27 @@ import java.util.function.Function;
 public class SqlUtil {
     private static final String MYSQL_ESCAPE = "`";
     private static final String OPENGAUSS_ESCAPE = "\"";
+    private static final String OPENGAUSS_B_ESCAPE = "`";
     private static final Map<DataBaseType, Function<String, String>> ESCAPE = new HashMap<>();
+    private static final Map<DataBaseType, Function<String, String>> ESCAPEB = new HashMap<>();
 
     static {
         ESCAPE.put(DataBaseType.MS, (key) -> MYSQL_ESCAPE + key + MYSQL_ESCAPE);
         ESCAPE.put(DataBaseType.OG, (key) -> OPENGAUSS_ESCAPE + key + OPENGAUSS_ESCAPE);
+        ESCAPEB.put(DataBaseType.OG, (key) -> OPENGAUSS_B_ESCAPE + key + OPENGAUSS_B_ESCAPE);
     }
 
     public static String escape(String content, DataBaseType dataBaseType) {
         if (ESCAPE.containsKey(dataBaseType)) {
+            return ESCAPE.get(dataBaseType).apply(content);
+        }
+        return content;
+    }
+
+    public static String escape(String content, DataBaseType dataBaseType, boolean isOgCompatibilityB) {
+        if (isOgCompatibilityB) {
+            return ESCAPEB.get(dataBaseType).apply(content);
+        } else if (ESCAPE.containsKey(dataBaseType)) {
             return ESCAPE.get(dataBaseType).apply(content);
         }
         return content;

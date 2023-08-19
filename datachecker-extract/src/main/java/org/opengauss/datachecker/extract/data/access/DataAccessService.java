@@ -37,7 +37,7 @@ public interface DataAccessService {
      * @return true | false
      */
     boolean health();
-
+    boolean isOgCompatibilityB();
     /**
      * query schema table list
      * filter no primary key tables

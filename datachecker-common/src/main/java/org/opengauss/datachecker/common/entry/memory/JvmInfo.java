@@ -39,30 +39,30 @@ public class JvmInfo extends BaseMonitor implements MonitorFormatter {
     private String home;
 
     /**
-     * The total amount of memory currently occupied by the JVM (M)
+     * The total amount of memory currently occupied by the JVM (byte)
      *
      * @return total
      */
     public double getTotal() {
-        return MathUtils.divRound(total, BYTE_TO_MB);
+        return total;
     }
 
     /**
-     * JVM Maximum Total Free Memory (M)
+     * JVM Maximum Total Free Memory (byte)
      *
-     * @return JVM Maximum Total Free Memory (M)
+     * @return JVM Maximum Total Free Memory (byte)
      */
     public double getMax() {
-        return MathUtils.divRound(max, BYTE_TO_MB);
+        return max;
     }
 
     /**
-     * JVM Free Memory (M)
+     * JVM Free Memory (byte)
      *
-     * @return JVM Free Memory (M)
+     * @return JVM Free Memory (byte)
      */
     public double getFree() {
-        return MathUtils.divRound(free, BYTE_TO_MB);
+        return free;
     }
 
     /**
@@ -71,7 +71,7 @@ public class JvmInfo extends BaseMonitor implements MonitorFormatter {
      * @return Used
      */
     public double getUsed() {
-        return MathUtils.divRound(MathUtils.sub(total, free), BYTE_TO_MB);
+        return MathUtils.sub(total, free);
     }
 
     /**

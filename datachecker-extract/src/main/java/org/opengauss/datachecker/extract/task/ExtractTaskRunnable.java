@@ -120,6 +120,7 @@ public class ExtractTaskRunnable implements Runnable {
             }
             checkingFeignClient.refreshTableExtractStatus(task.getTableName(), extractContext.getEndpoint(),
                 extractContext.getEndpoint().getCode());
+            log.info("refresh table {} extract status success", task.getTableName());
         } catch (Exception ex) {
             checkingFeignClient.refreshTableExtractStatus(task.getTableName(), extractContext.getEndpoint(), -1);
             log.error("extract", ex);

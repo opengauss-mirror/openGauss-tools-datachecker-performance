@@ -37,6 +37,10 @@ public class UpdateDmlBuilder extends DmlBuilder {
     private TableMetadata metadata;
     private Map<String, String> columnsValues;
 
+    public UpdateDmlBuilder(DataBaseType databaseType, boolean ogCompatibility) {
+        super(databaseType, ogCompatibility);
+    }
+
     /**
      * build Schema
      *
@@ -56,6 +60,11 @@ public class UpdateDmlBuilder extends DmlBuilder {
      */
     public UpdateDmlBuilder dataBaseType(@NotNull DataBaseType dataBaseType) {
         super.buildDataBaseType(dataBaseType);
+        return this;
+    }
+
+    public UpdateDmlBuilder isOgCompatibilityB(boolean isOgCompatibilityB) {
+        this.isOgCompatibilityB = isOgCompatibilityB;
         return this;
     }
 

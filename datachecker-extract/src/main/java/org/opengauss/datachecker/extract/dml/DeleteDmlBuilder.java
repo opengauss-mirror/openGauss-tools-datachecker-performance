@@ -16,6 +16,7 @@
 package org.opengauss.datachecker.extract.dml;
 
 import org.apache.commons.lang3.StringUtils;
+import org.opengauss.datachecker.common.entry.enums.DataBaseType;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.extract.constants.ExtConstants;
 import org.springframework.lang.NonNull;
@@ -31,7 +32,9 @@ import java.util.stream.IntStream;
  * @since ：11
  */
 public class DeleteDmlBuilder extends DmlBuilder {
-
+    public DeleteDmlBuilder(DataBaseType databaseType, boolean ogCompatibility) {
+        super(databaseType, ogCompatibility);
+    }
     /**
      * build Schema
      *

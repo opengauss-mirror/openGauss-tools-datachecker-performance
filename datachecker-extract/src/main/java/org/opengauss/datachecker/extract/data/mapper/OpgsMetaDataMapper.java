@@ -16,6 +16,12 @@
 package org.opengauss.datachecker.extract.data.mapper;
 
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
+import org.opengauss.datachecker.common.entry.enums.OgCompatibility;
+import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
+
+import java.util.List;
 
 /**
  * OpgsMetaDataMapper
@@ -25,4 +31,22 @@ import org.apache.ibatis.annotations.Mapper;
  * @since ：11
  */
 @Mapper
-public interface OpgsMetaDataMapper extends MetaDataMapper {}
+public interface OpgsMetaDataMapper extends MetaDataMapper {
+
+    /**
+     * check og database compatibility
+     *
+     * @return compatibility
+     */
+    @Select("show sql_compatibility;")
+    OgCompatibility sqlCompatibility();
+
+    /**
+     * query table ColumnsMetaData
+     *
+     * @param schema    schema
+     * @param tableName tableName
+     * @return ColumnsMetaData
+     */
+    List<ColumnsMetaData> queryTableColumnsMetaDataB(@Param("schema") String schema, @Param("name") String tableName);
+}
