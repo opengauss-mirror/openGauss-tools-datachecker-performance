@@ -40,7 +40,7 @@ public class SelectDmlBuilderTest extends MockTableMeta {
     @BeforeEach
     void setUp() {
         mockTableMetadata = mockSingleTablePrimaryMetadata();
-        selectDmlBuilder = new SelectDmlBuilder(DataBaseType.MS);
+        selectDmlBuilder = new SelectDmlBuilder(DataBaseType.MS, false);
     }
 
     @DisplayName("openGauss no divisions single primary select SQL build")

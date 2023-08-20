@@ -17,6 +17,7 @@ package org.opengauss.datachecker.extract.data.access;
 
 import lombok.extern.slf4j.Slf4j;
 import org.opengauss.datachecker.common.entry.common.DataAccessParam;
+import org.opengauss.datachecker.common.entry.enums.OgCompatibility;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.extract.config.DruidDataSourceConfig;
@@ -27,6 +28,7 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * MysqlDataAccessService
@@ -47,6 +49,11 @@ public class MysqlDataAccessService extends AbstractDataAccessService {
     @Override
     public boolean health() {
         return mysqlMetaDataMapper.health();
+    }
+
+    @Override
+    public boolean isOgCompatibilityB() {
+        return false;
     }
 
     @Override

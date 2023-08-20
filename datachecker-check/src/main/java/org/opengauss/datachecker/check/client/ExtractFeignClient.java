@@ -133,7 +133,7 @@ public interface ExtractFeignClient {
      */
     @PostMapping("/extract/build/repair/statement/update")
     Result<List<String>> buildRepairStatementUpdateDml(@RequestParam(name = "schema") String schema,
-        @RequestParam(name = "tableName") String tableName, @RequestBody Set<String> diffSet);
+        @RequestParam(name = "tableName") String tableName,@RequestParam(name = "ogCompatibility") boolean ogCompatibility, @RequestBody Set<String> diffSet);
 
     /**
      * Build repair statements based on parameters
@@ -145,7 +145,7 @@ public interface ExtractFeignClient {
      */
     @PostMapping("/extract/build/repair/statement/insert")
     Result<List<String>> buildRepairStatementInsertDml(@RequestParam(name = "schema") String schema,
-        @RequestParam(name = "tableName") String tableName, @RequestBody Set<String> diffSet);
+        @RequestParam(name = "tableName") String tableName,@RequestParam(name = "ogCompatibility") boolean ogCompatibility, @RequestBody Set<String> diffSet);
 
     /**
      * Build repair statements based on parameters
@@ -157,7 +157,7 @@ public interface ExtractFeignClient {
      */
     @PostMapping("/extract/build/repair/statement/delete")
     Result<List<String>> buildRepairStatementDeleteDml(@RequestParam(name = "schema") String schema,
-        @RequestParam(name = "tableName") String tableName, @RequestBody Set<String> diffSet);
+        @RequestParam(name = "tableName") String tableName, @RequestParam(name = "ogCompatibility") boolean ogCompatibility, @RequestBody Set<String> diffSet);
 
     /**
      * Query table metadata hash information
@@ -228,4 +228,7 @@ public interface ExtractFeignClient {
 
     @GetMapping("/check/table/empty")
     Result<Boolean> isCheckTableEmpty(@RequestParam(name = "isForced") boolean isForced);
+
+    @GetMapping("/check/target/og/compatibility")
+    Result<Boolean> checkTargetOgCompatibility();
 }

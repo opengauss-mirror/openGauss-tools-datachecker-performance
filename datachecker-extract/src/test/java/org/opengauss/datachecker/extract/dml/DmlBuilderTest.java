@@ -19,8 +19,8 @@ class DmlBuilderTest {
 
     @BeforeEach
     void setUp() {
-        dmlBuilderMsTest = new DmlBuilder(DataBaseType.MS);
-        dmlBuilderOgTest = new DmlBuilder(DataBaseType.OG);
+        dmlBuilderMsTest = new DmlBuilder(DataBaseType.MS, false);
+        dmlBuilderOgTest = new DmlBuilder(DataBaseType.OG, true);
     }
 
     @DisplayName("test build columns")
@@ -124,7 +124,7 @@ class DmlBuilderTest {
         columnsMetaData2.setOrdinalPosition(0);
         columnsMetaData2.setColumnKey(ColumnKey.PRI);
 
-        final List<ColumnsMetaData> primaryMetas = List.of(columnsMetaData,columnsMetaData2);
+        final List<ColumnsMetaData> primaryMetas = List.of(columnsMetaData, columnsMetaData2);
 
         // Run the test
         final String result = dmlBuilderMsTest.buildConditionCompositePrimary(primaryMetas);

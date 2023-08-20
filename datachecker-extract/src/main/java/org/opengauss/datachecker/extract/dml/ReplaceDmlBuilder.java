@@ -41,6 +41,11 @@ public class ReplaceDmlBuilder extends DmlBuilder {
         return this;
     }
 
+    public ReplaceDmlBuilder isOgCompatibilityB(boolean isOgCompatibilityB) {
+        this.isOgCompatibilityB = isOgCompatibilityB;
+        return this;
+    }
+
     /**
      * build tableName
      *

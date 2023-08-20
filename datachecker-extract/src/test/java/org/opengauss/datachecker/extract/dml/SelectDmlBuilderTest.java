@@ -18,8 +18,8 @@ class SelectDmlBuilderTest {
 
     @BeforeEach
     void setUp() {
-        selectDmlBuilderMysql = new SelectDmlBuilder(DataBaseType.MS);
-        selectDmlBuilderOpenGauss = new SelectDmlBuilder(DataBaseType.OG);
+        selectDmlBuilderMysql = new SelectDmlBuilder(DataBaseType.MS,false);
+        selectDmlBuilderOpenGauss = new SelectDmlBuilder(DataBaseType.OG,true);
     }
 
     @DisplayName("test build columns")

@@ -100,7 +100,8 @@ public class CheckResultManagerService implements ApplicationContextAware {
             String logFilePath = getLogRootPath();
             final List<CheckDiffResult> successList = filterResultByResult(CheckResultConstants.RESULT_SUCCESS);
             final List<CheckDiffResult> failedList = filterResultByResult(CheckResultConstants.RESULT_FAILED);
-            reduceFailedRepair(logFilePath, failedList);
+            boolean ogCompatibility = feignClient.checkTargetOgCompatibility();
+            reduceFailedRepair(logFilePath, failedList, ogCompatibility);
             reduceSummary(successList, failedList);
         } catch (Exception exception) {
             log.error("summaryCheckResult ", exception);
@@ -110,44 +111,44 @@ public class CheckResultManagerService implements ApplicationContextAware {
         }
     }
 
-    private void reduceFailedRepair(String logFilePath, List<CheckDiffResult> failedList) {
+    private void reduceFailedRepair(String logFilePath, List<CheckDiffResult> failedList, boolean ogCompatibility) {
         failedList.forEach(tableFailed -> {
             final String repairFile = logFilePath + getRepairFileName(tableFailed);
-            repairDeleteDiff(repairFile, tableFailed);
-            repairInsertDiff(repairFile, tableFailed);
-            repairUpdateDiff(repairFile, tableFailed);
+            repairDeleteDiff(repairFile, tableFailed, ogCompatibility);
+            repairInsertDiff(repairFile, tableFailed, ogCompatibility);
+            repairUpdateDiff(repairFile, tableFailed, ogCompatibility);
         });
     }
 
-    private void repairUpdateDiff(String repairFile, CheckDiffResult tableFailed) {
+    private void repairUpdateDiff(String repairFile, CheckDiffResult tableFailed, boolean ogCompatibility) {
         final Set<String> updateDiffs = tableFailed.getKeyUpdateSet();
         if (CollectionUtils.isNotEmpty(updateDiffs)) {
             final String schema = tableFailed.getSchema();
             final String table = tableFailed.getTable();
             final List<String> updateRepairs =
-                feignClient.buildRepairStatementUpdateDml(Endpoint.SOURCE, schema, table, updateDiffs);
+                feignClient.buildRepairStatementUpdateDml(Endpoint.SOURCE, schema, table, ogCompatibility, updateDiffs);
             appendLogFile(repairFile, updateRepairs);
         }
     }
 
-    private void repairInsertDiff(String repairFile, CheckDiffResult tableFailed) {
+    private void repairInsertDiff(String repairFile, CheckDiffResult tableFailed, boolean ogCompatibility) {
         final Set<String> insertDiffs = tableFailed.getKeyInsertSet();
         if (CollectionUtils.isNotEmpty(insertDiffs)) {
             final String schema = tableFailed.getSchema();
             final String table = tableFailed.getTable();
             final List<String> insertRepairs =
-                feignClient.buildRepairStatementInsertDml(Endpoint.SOURCE, schema, table, insertDiffs);
+                feignClient.buildRepairStatementInsertDml(Endpoint.SOURCE, schema, table, ogCompatibility, insertDiffs);
             appendLogFile(repairFile, insertRepairs);
         }
     }
 
-    private void repairDeleteDiff(String repairFile, CheckDiffResult tableFailed) {
+    private void repairDeleteDiff(String repairFile, CheckDiffResult tableFailed, boolean ogCompatibility) {
         final Set<String> deleteDiffs = tableFailed.getKeyDeleteSet();
         if (CollectionUtils.isNotEmpty(deleteDiffs)) {
             final String schema = tableFailed.getSchema();
             final String table = tableFailed.getTable();
             final List<String> deleteRepairs =
-                feignClient.buildRepairStatementDeleteDml(Endpoint.SOURCE, schema, table, deleteDiffs);
+                feignClient.buildRepairStatementDeleteDml(Endpoint.SOURCE, schema, table, ogCompatibility, deleteDiffs);
             appendLogFile(repairFile, deleteRepairs);
         }
     }

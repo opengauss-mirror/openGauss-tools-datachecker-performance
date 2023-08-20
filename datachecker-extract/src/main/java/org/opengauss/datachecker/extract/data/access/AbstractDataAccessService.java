@@ -46,6 +46,7 @@ import java.util.Map;
 @Slf4j
 @ConditionalOnBean(DruidDataSourceConfig.class)
 public abstract class AbstractDataAccessService implements DataAccessService {
+    protected boolean isOgCompatibilityB = false;
     @Resource
     protected JdbcTemplate jdbcTemplate;
     @Resource
@@ -66,7 +67,8 @@ public abstract class AbstractDataAccessService implements DataAccessService {
      * @return tableMetadata
      */
     protected TableMetadata wrapperTableMetadata(TableMetadata tableMetadata) {
-        return tableMetadata.setDataBaseType(properties.getDatabaseType()).setEndpoint(properties.getEndpoint());
+        return tableMetadata.setDataBaseType(properties.getDatabaseType()).setEndpoint(properties.getEndpoint())
+                            .setOgCompatibilityB(isOgCompatibilityB);
     }
 
     /**
@@ -77,7 +79,8 @@ public abstract class AbstractDataAccessService implements DataAccessService {
      */
     protected List<TableMetadata> wrapperTableMetadata(List<TableMetadata> list) {
         list.stream().forEach(meta -> {
-            meta.setDataBaseType(properties.getDatabaseType()).setEndpoint(properties.getEndpoint());
+            meta.setDataBaseType(properties.getDatabaseType()).setEndpoint(properties.getEndpoint())
+                .setOgCompatibilityB(isOgCompatibilityB);
         });
         return list;
     }

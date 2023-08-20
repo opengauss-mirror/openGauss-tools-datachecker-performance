@@ -15,6 +15,7 @@
 
 package org.opengauss.datachecker.extract.dml;
 
+import org.opengauss.datachecker.common.entry.enums.DataBaseType;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 
 import javax.validation.constraints.NotNull;
@@ -29,6 +30,9 @@ import java.util.stream.Collectors;
  * @since ：11
  */
 public class InsertDmlBuilder extends DmlBuilder {
+    public InsertDmlBuilder(DataBaseType databaseType, boolean ogCompatibility) {
+        super(databaseType, ogCompatibility);
+    }
 
     /**
      * build Schema

@@ -159,8 +159,8 @@ public class ExtractController {
      */
     @PostMapping("/extract/build/repair/statement/update")
     Result<List<String>> buildRepairStatementUpdateDml(@NotEmpty @RequestParam(name = "schema") String schema,
-        @NotEmpty @RequestParam(name = "tableName") String tableName, @NotEmpty @RequestBody Set<String> diffSet) {
-        return Result.success(dataExtractService.buildRepairStatementUpdateDml(schema, tableName, diffSet));
+        @NotEmpty @RequestParam(name = "tableName") String tableName, @RequestParam(name = "ogCompatibility") boolean ogCompatibility,@NotEmpty @RequestBody Set<String> diffSet) {
+        return Result.success(dataExtractService.buildRepairStatementUpdateDml(schema, tableName,ogCompatibility, diffSet));
     }
 
     /**
@@ -172,8 +172,8 @@ public class ExtractController {
      */
     @PostMapping("/extract/build/repair/statement/insert")
     Result<List<String>> buildRepairStatementInsertDml(@NotEmpty @RequestParam(name = "schema") String schema,
-        @NotEmpty @RequestParam(name = "tableName") String tableName, @NotEmpty @RequestBody Set<String> diffSet) {
-        return Result.success(dataExtractService.buildRepairStatementInsertDml(schema, tableName, diffSet));
+        @NotEmpty @RequestParam(name = "tableName") String tableName,@RequestParam(name = "ogCompatibility") boolean ogCompatibility, @NotEmpty @RequestBody Set<String> diffSet) {
+        return Result.success(dataExtractService.buildRepairStatementInsertDml(schema, tableName,ogCompatibility, diffSet));
     }
 
     /**
@@ -185,8 +185,8 @@ public class ExtractController {
      */
     @PostMapping("/extract/build/repair/statement/delete")
     Result<List<String>> buildRepairStatementDeleteDml(@NotEmpty @RequestParam(name = "schema") String schema,
-        @NotEmpty @RequestParam(name = "tableName") String tableName, @NotEmpty @RequestBody Set<String> diffSet) {
-        return Result.success(dataExtractService.buildRepairStatementDeleteDml(schema, tableName, diffSet));
+        @NotEmpty @RequestParam(name = "tableName") String tableName,@RequestParam(name = "ogCompatibility") boolean ogCompatibility, @NotEmpty @RequestBody Set<String> diffSet) {
+        return Result.success(dataExtractService.buildRepairStatementDeleteDml(schema, tableName,ogCompatibility, diffSet));
     }
 
     /**

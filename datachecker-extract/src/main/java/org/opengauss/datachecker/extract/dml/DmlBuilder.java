@@ -104,13 +104,16 @@ public class DmlBuilder {
      * dataBaseType
      */
     protected DataBaseType dataBaseType;
+    protected boolean isOgCompatibilityB;
 
     public DmlBuilder() {
     }
 
-    public DmlBuilder(DataBaseType databaseType) {
+    public DmlBuilder(DataBaseType databaseType,boolean ogCompatibility) {
         this.dataBaseType = databaseType;
+        this.isOgCompatibilityB = ogCompatibility;
     }
+
 
     /**
      * Build SQL column statement fragment
@@ -123,7 +126,7 @@ public class DmlBuilder {
     }
 
     private String escape(String content, DataBaseType dataBase_type) {
-        return SqlUtil.escape(content, dataBase_type);
+        return SqlUtil.escape(content, dataBase_type, isOgCompatibilityB);
     }
 
     protected void buildDataBaseType(@NotNull DataBaseType dataBaseType) {

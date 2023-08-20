@@ -41,4 +41,9 @@ public class ExtractHealthController {
         dataAccessService.health();
         return Result.success();
     }
+
+    @GetMapping("/check/target/og/compatibility")
+    Result<Boolean> checkTargetOgCompatibility() {
+        return Result.success(dataAccessService.isOgCompatibilityB());
+    }
 }

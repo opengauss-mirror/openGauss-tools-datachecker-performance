@@ -91,4 +91,10 @@ public interface CheckingFeignClient {
      */
     @GetMapping("/query/all/table/status")
     Map<String, Integer> queryTableCheckStatus();
+
+    @GetMapping("/get/feign/request")
+    boolean getFeignRequest(@RequestParam(value = "requestName") String requestName, @RequestParam(value = "value") String value);
+
+    @GetMapping("/release/feign/request")
+    boolean releaseFeignRequest(@RequestParam(value = "requestName") String requestName);
 }

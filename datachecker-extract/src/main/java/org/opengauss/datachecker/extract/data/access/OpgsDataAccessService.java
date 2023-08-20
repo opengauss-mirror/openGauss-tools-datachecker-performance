@@ -17,6 +17,7 @@ package org.opengauss.datachecker.extract.data.access;
 
 import lombok.extern.slf4j.Slf4j;
 import org.opengauss.datachecker.common.entry.common.DataAccessParam;
+import org.opengauss.datachecker.common.entry.enums.OgCompatibility;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.extract.config.DruidDataSourceConfig;
@@ -25,8 +26,10 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * OpgsDataAccessService
@@ -40,8 +43,16 @@ import java.util.List;
 @ConditionalOnBean(DruidDataSourceConfig.class)
 @ConditionalOnProperty(prefix = "spring.extract", name = "databaseType", havingValue = "OG")
 public class OpgsDataAccessService extends AbstractDataAccessService {
+
     @Resource
     private OpgsMetaDataMapper opgsMetaDataMapper;
+
+    @Override
+    @PostConstruct
+    public boolean isOgCompatibilityB() {
+        isOgCompatibilityB = Objects.equals(OgCompatibility.B, opgsMetaDataMapper.sqlCompatibility());
+        return false;
+    }
 
     @Override
     public boolean health() {
@@ -55,6 +66,9 @@ public class OpgsDataAccessService extends AbstractDataAccessService {
 
     @Override
     public List<ColumnsMetaData> queryTableColumnsMetaData(String tableName) {
+        if (isOgCompatibilityB) {
+            return opgsMetaDataMapper.queryTableColumnsMetaDataB(properties.getSchema(), tableName);
+        }
         return opgsMetaDataMapper.queryTableColumnsMetaData(properties.getSchema(), tableName);
     }
 
