@@ -15,6 +15,7 @@
 
 package org.opengauss.datachecker.extract.task;
 
+import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Map;
@@ -39,8 +40,12 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
         TypeHandler bitToString = (rs, columnLabel, displaySize) -> "B'" + rs.getString(columnLabel) + "'";
         TypeHandler booleanToString = (rs, columnLabel, displaySize) -> booleanToString(rs, columnLabel);
         TypeHandler numericToString = (rs, columnLabel, displaySize) -> numericToString(rs.getBigDecimal(columnLabel));
+        TypeHandler floatToString = (rs, columnLabel, displaySize) -> floatToString(rs.getFloat(columnLabel));
 
         typeHandlers.put(OpenGaussType.NUMERIC, numericToString);
+        typeHandlers.put(OpenGaussType.FLOAT, floatToString);
+        typeHandlers.put(OpenGaussType.FLOAT4, floatToString);
+        typeHandlers.put(OpenGaussType.FLOAT8, floatToString);
 
         // byte binary blob
         typeHandlers.put(OpenGaussType.BYTEA, byteaToString);
@@ -58,6 +63,8 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
         typeHandlers.put(OpenGaussType.TIME, this::getTimeFormat);
         typeHandlers.put(OpenGaussType.TIMESTAMP, this::getTimestampFormat);
     }
+
+
 
     @Override
     public String convert(ResultSet resultSet, String columnTypeName, String columnLabel, int displaySize)
@@ -89,5 +96,8 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
         String CLOB = "clob";
         String XML = "xml";
         String BIT = "bit";
+        String FLOAT = "float";
+        String FLOAT4 = "float4";
+        String FLOAT8 = "float8";
     }
 }

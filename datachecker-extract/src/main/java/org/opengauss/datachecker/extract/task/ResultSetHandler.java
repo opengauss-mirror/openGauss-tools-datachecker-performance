@@ -96,7 +96,9 @@ public abstract class ResultSetHandler {
     protected String numericToString(BigDecimal bigDecimal) {
         return Objects.isNull(bigDecimal) ? NULL : bigDecimal.stripTrailingZeros().toPlainString();
     }
-
+    protected String floatToString(float value) {
+        return String.valueOf(value);
+    }
     protected String getDateFormat(@NonNull ResultSet resultSet, String columnLabel, int displaySize)
         throws SQLException {
         final Date date = resultSet.getDate(columnLabel);
