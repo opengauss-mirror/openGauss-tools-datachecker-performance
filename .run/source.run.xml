@@ -1,0 +1,11 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="source" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" singleton="false">
+    <module name="datachecker-extract" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="org.opengauss.datachecker.extract.ExtractApplication" />
+    <option name="PROGRAM_PARAMETERS" value="--source" />
+    <option name="ALTERNATIVE_JRE_PATH" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

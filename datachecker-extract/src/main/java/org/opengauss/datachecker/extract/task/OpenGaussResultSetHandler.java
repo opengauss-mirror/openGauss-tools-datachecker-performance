@@ -62,6 +62,7 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
         typeHandlers.put(OpenGaussType.DATE, this::getDateFormat);
         typeHandlers.put(OpenGaussType.TIME, this::getTimeFormat);
         typeHandlers.put(OpenGaussType.TIMESTAMP, this::getTimestampFormat);
+        typeHandlers.put(OpenGaussType.TIMESTAMPTZ, this::getTimestampFormat);
     }
 
 
@@ -93,6 +94,7 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
         String DATE = "date";
         String TIME = "time";
         String TIMESTAMP = "timestamp";
+        String TIMESTAMPTZ = "timestamptz";
         String CLOB = "clob";
         String XML = "xml";
         String BIT = "bit";
