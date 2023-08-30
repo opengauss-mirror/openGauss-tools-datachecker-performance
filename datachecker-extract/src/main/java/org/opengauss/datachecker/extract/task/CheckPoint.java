@@ -34,9 +34,9 @@ import java.util.Objects;
 @Slf4j
 public class CheckPoint {
     private static final List<String> numberDataTypes =
-        List.of("integer", "int", "long", "smallint", "mediumint", "bigint");
+        List.of("integer", "int", "uint4", "long", "smallint", "mediumint", "bigint");
     private static final List<String> dataTypes =
-        List.of("integer", "int", "long", "smallint", "mediumint", "bigint", "character", "char", "varchar",
+        List.of("integer", "int", "uint4", "long", "smallint", "mediumint", "bigint", "character", "char", "varchar",
             "character varying");
     private final DataAccessService dataAccessService;
 

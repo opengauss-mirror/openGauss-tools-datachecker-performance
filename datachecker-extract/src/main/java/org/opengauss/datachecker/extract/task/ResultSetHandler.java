@@ -48,7 +48,7 @@ public abstract class ResultSetHandler {
     protected static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     protected static final DateTimeFormatter YEAR = DateTimeFormatter.ofPattern("yyyy");
     protected static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm:ss");
-    protected static final DateTimeFormatter TIMESTAMP_NANOS = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
+    protected static final DateTimeFormatter TIMESTAMP_NANOS = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS");
     protected static final DateTimeFormatter TIMESTAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     protected static final String EMPTY = "";
     protected static final String NULL = null;
