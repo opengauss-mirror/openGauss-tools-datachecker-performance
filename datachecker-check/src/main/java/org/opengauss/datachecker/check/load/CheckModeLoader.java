@@ -15,15 +15,18 @@
 
 package org.opengauss.datachecker.check.load;
 
-import lombok.extern.slf4j.Slf4j;
 import org.opengauss.datachecker.check.client.FeignClientService;
+import org.opengauss.datachecker.common.config.ConfigCache;
+import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
+import org.opengauss.datachecker.common.entry.enums.DataLoad;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.extract.ExtractConfig;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
+import java.util.Objects;
 
 /**
  * CheckModeLoader
@@ -32,7 +35,6 @@ import javax.annotation.Resource;
  * @date ：Created in 2022/10/31
  * @since ：11
  */
-@Slf4j
 @Order(98)
 @Service
 public class CheckModeLoader extends AbstractCheckLoader {
@@ -48,8 +50,15 @@ public class CheckModeLoader extends AbstractCheckLoader {
         if (sourceConfig.isDebeziumEnable()) {
             checkEnvironment.setCheckMode(CheckMode.INCREMENT);
         } else {
-            checkEnvironment.setCheckMode(CheckMode.FULL);
+            CheckMode checkMode;
+            if (Objects.equals(sourceConfig.getDataLoadMode(), DataLoad.CSV)) {
+                checkMode = CheckMode.CSV;
+            } else {
+                checkMode = CheckMode.FULL;
+            }
+            checkEnvironment.setCheckMode(checkMode);
         }
+        ConfigCache.put(ConfigConstants.CHECK_MODE, checkEnvironment.getCheckMode());
         log.info("check service load check mode success.");
     }
 }

@@ -27,15 +27,16 @@ import org.opengauss.datachecker.common.entry.extract.TableMetadataHash;
 import org.opengauss.datachecker.common.exception.ProcessMultipleException;
 import org.opengauss.datachecker.common.exception.TaskNotFoundException;
 import org.opengauss.datachecker.common.web.Result;
+import org.opengauss.datachecker.extract.cache.TopicCache;
 import org.opengauss.datachecker.extract.service.DataExtractService;
 import org.opengauss.datachecker.extract.service.MetaDataService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.annotation.Resource;
 import javax.validation.constraints.NotEmpty;
 import java.util.ArrayList;
 import java.util.List;
@@ -52,10 +53,12 @@ import java.util.Set;
 @Tag(name = "data extracton service")
 @RestController
 public class ExtractController {
-    @Autowired
+    @Resource
     private MetaDataService metaDataService;
-    @Autowired
+    @Resource
     private DataExtractService dataExtractService;
+    @Resource
+    private TopicCache topicCache;
 
     /**
      * loading database metadata information
@@ -151,45 +154,6 @@ public class ExtractController {
     }
 
     /**
-     * DML statements required to generate a repair report
-     *
-     * @param tableName table name
-     * @param diffSet   primary key set
-     * @return DML statement
-     */
-    @PostMapping("/extract/build/repair/statement/update")
-    Result<List<String>> buildRepairStatementUpdateDml(@NotEmpty @RequestParam(name = "schema") String schema,
-        @NotEmpty @RequestParam(name = "tableName") String tableName, @RequestParam(name = "ogCompatibility") boolean ogCompatibility,@NotEmpty @RequestBody Set<String> diffSet) {
-        return Result.success(dataExtractService.buildRepairStatementUpdateDml(schema, tableName,ogCompatibility, diffSet));
-    }
-
-    /**
-     * DML statements required to generate a repair report
-     *
-     * @param tableName table name
-     * @param diffSet   primary key set
-     * @return DML statement
-     */
-    @PostMapping("/extract/build/repair/statement/insert")
-    Result<List<String>> buildRepairStatementInsertDml(@NotEmpty @RequestParam(name = "schema") String schema,
-        @NotEmpty @RequestParam(name = "tableName") String tableName,@RequestParam(name = "ogCompatibility") boolean ogCompatibility, @NotEmpty @RequestBody Set<String> diffSet) {
-        return Result.success(dataExtractService.buildRepairStatementInsertDml(schema, tableName,ogCompatibility, diffSet));
-    }
-
-    /**
-     * DML statements required to generate a repair report
-     *
-     * @param tableName table name
-     * @param diffSet   primary key set
-     * @return DML statement
-     */
-    @PostMapping("/extract/build/repair/statement/delete")
-    Result<List<String>> buildRepairStatementDeleteDml(@NotEmpty @RequestParam(name = "schema") String schema,
-        @NotEmpty @RequestParam(name = "tableName") String tableName,@RequestParam(name = "ogCompatibility") boolean ogCompatibility, @NotEmpty @RequestBody Set<String> diffSet) {
-        return Result.success(dataExtractService.buildRepairStatementDeleteDml(schema, tableName,ogCompatibility, diffSet));
-    }
-
-    /**
      * querying table data
      *
      * @param tableName       table name
@@ -245,9 +209,24 @@ public class ExtractController {
         return Result.success(dataExtractService.getEndpointConfig());
     }
 
+    /**
+     * check schema whether has tables; if isForced is true,query by jdbc, else queried in cache
+     *
+     * @param isForced isForced
+     * @return has tables
+     */
     @GetMapping("/check/table/empty")
     Result<Boolean> isCheckTableEmpty(@RequestParam(name = "isForced") boolean isForced) {
         return Result.success(dataExtractService.isCheckTableEmpty(isForced));
     }
 
+    /**
+     * notify extract endpoint current table had checked finished
+     *
+     * @param tableName table
+     */
+    @PostMapping("/notify/check/finished")
+    public void notifyCheckTableFinished(@RequestParam(name = "tableName") String tableName) {
+        topicCache.removeTopic(tableName);
+    }
 }

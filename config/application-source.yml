@@ -1,7 +1,7 @@
 server:
   port: 9001
 logging:
-  config: config/log4j2source.xml
+  config: config/log4j2.xml
 
 spring:
   check:
@@ -15,6 +15,7 @@ spring:
     databaseType: MS # For MySQL
     # databaseType: OG # For openGauss
     query-dop: 8 # jdbc Parallel Query  config
+    dataLoadMode: jdbc # jdbc or csv
     debezium-enable: false
     debezium-topic: data_check_avro_inc_topic_w1 # debezium topic
     debezium-serializer: AvroSerializer # StringSerializer or AvroSerializer
@@ -28,17 +29,24 @@ spring:
   kafka:
     bootstrap-servers: localhost:9092
   datasource:
-    druid:
-      dataSourceOne:
-        driver-class-name: com.mysql.cj.jdbc.Driver
-        url: jdbc:mysql://127.0.0.1:3306/mysql?useSSL=false&useUnicode=true&characterEncoding=utf-8&serverTimezone=UTC&allowPublicKeyRetrieval=true
-        # driver-class-name: org.opengauss.Driver # For openGauss
-        # url: # jdbc:opengauss://127.0.0.1:5432/postgres?useSSL=false&useUnicode=true&characterEncoding=utf-8&serverTimezone=UTC # For openGauss
-        username:
-        password: 'xxxx' # The password text may contain special characters, which need to be enclosed in quotation marks
-        # Configure initialization connection pool size, minimum number of connections, and maximum number of connections
-        # Users can make appropriate adjustments according to the number of current database tables
-        initialSize: 5 # initialization connection pool size
-        minIdle: 10 # minimum number of connections
-        maxActive: 20 # maximum number of connections
-        validationQuery: SELECT 1
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://127.0.0.1:3306/mysql?useSSL=false&useUnicode=true&characterEncoding=utf-8&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      # driver-class-name: org.opengauss.Driver # For openGauss
+      # url: # jdbc:opengauss://127.0.0.1:5432/postgres?useSSL=false&useUnicode=true&characterEncoding=utf-8&serverTimezone=UTC # For openGauss
+      username:
+      password: 'xxxx' # The password text may contain special characters, which need to be enclosed in quotation marks
+      # Configure initialization connection pool size, minimum number of connections, and maximum number of connections
+      # Users can make appropriate adjustments according to the number of current database tables
+      druid:
+        initial-size: 20 # initialization connection pool size
+        min-idle: 20 # minimum number of connections
+        max-active: 100 # maximum number of connections
+        test-while-idle: true
+        test-on-borrow: true
+        validation-query: "SELECT 1 FROM DUAL"
+        validation-query-timeout: 10000
+        connection-error-retry-attempts: 0
+        break-after-acquire-failure: true
+        max-wait: 6000
+        keep-alive: true
+        min-evictable-idle-time-millis: 600000

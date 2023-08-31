@@ -19,7 +19,9 @@ import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.reflect.FieldUtils;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.exception.CommonException;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.util.ReflectionUtils;
@@ -37,9 +39,9 @@ import java.util.List;
  * @date ：Created in 2022/5/17
  * @since ：11
  */
-@Slf4j
 @Configuration
 public class SpringDocConfig implements WebMvcConfigurer {
+    private static final Logger log = LogUtils.getLogger();
     /**
      * mallTinyOpenAPI
      *

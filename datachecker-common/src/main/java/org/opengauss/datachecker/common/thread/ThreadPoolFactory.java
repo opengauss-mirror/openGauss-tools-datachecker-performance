@@ -15,7 +15,8 @@
 
 package org.opengauss.datachecker.common.thread;
 
-import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.Logger;
+import org.opengauss.datachecker.common.util.LogUtils;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -33,8 +34,8 @@ import java.util.concurrent.atomic.AtomicLong;
  * @date ：Created in 2022/11/17
  * @since ：11
  */
-@Slf4j
 public class ThreadPoolFactory {
+    private static final Logger log = LogUtils.getLogger();
     private static final double TARGET_UTILIZATION = 0.5d;
     private static final double IO_WAIT_TIME = 1.0d;
     private static final double CPU_TIME = 1.0d;

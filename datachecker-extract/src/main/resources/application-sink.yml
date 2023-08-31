@@ -1,8 +1,6 @@
 server:
   port: 9002
 debug: false
-logging:
-  config: classpath:log4j2-sink.xml
 
 spring:
   application:
@@ -13,6 +11,7 @@ spring:
     schema: jack
     databaseType: OG  #OG opengauss
     endpoint: SINK
+    dataLoadMode: jdbc # jdbc or csv
     query-dop: 1 # jdbc Parallel Query  config
     debezium-enable: false
     debezium-topic:
@@ -22,27 +21,25 @@ spring:
     sync-extract: true
 
   datasource:
-    druid:
-      dataSourceOne:
-        driver-class-name: org.opengauss.Driver
-        url: jdbc:opengauss://xxxxx:xxx/xxxx?useSSL=false&useUnicode=true&characterEncoding=utf-8&serverTimezone=UTC
-        username: xxxxx
-        password: xxxxxxxx
-        type: com.alibaba.druid.pool.DruidDataSource
+      driver-class-name: org.opengauss.Driver
+      url: jdbc:opengauss://xxxxx:xxx/xxxx?useSSL=false&useUnicode=true&characterEncoding=utf-8&serverTimezone=UTC
+      username: xxxxx
+      password: xxxxxxxx
+      type: com.alibaba.druid.pool.DruidDataSource
+      druid:
         initialSize: 5
         minIdle: 10
         maxActive: 20
-        maxWait: 60000
+        max-wait: 60000
+        keep-alive: true
         timeBetweenEvictionRunsMillis: 60000
-        minEvictableIdleTimeMillis: 300000
+        min-evictable-idle-time-millis: 600000
         validationQuery: SELECT 1
-        testWhileIdle: true
+        test-while-idle: true
         testOnBorrow: false
         testOnReturn: false
         poolPreparedStatements: true
-
-      filters: stat,wall,log4j
-      maxPoolPreparedStatementPerConnectionSize: 20
-      useGlobalDataSourceStat: true
-      connectionProperties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=500
+        maxPoolPreparedStatementPerConnectionSize: 20
+        useGlobalDataSourceStat: true
+        connectionProperties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=500
 

@@ -15,7 +15,6 @@
 
 package org.opengauss.datachecker.check.config;
 
-import lombok.extern.slf4j.Slf4j;
 import org.opengauss.datachecker.common.entry.enums.ResultEnum;
 import org.opengauss.datachecker.common.exception.*;
 import org.opengauss.datachecker.common.web.Result;
@@ -31,7 +30,6 @@ import javax.servlet.http.HttpServletRequest;
  * @date ：Created in 2022/7/1
  * @since ：11
  */
-@Slf4j
 @RestControllerAdvice
 public class GlobalCheckingExceptionHandler extends GlobalCommonExceptionHandler {
 

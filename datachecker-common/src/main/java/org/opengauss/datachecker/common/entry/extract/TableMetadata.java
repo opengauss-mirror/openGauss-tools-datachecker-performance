@@ -24,7 +24,9 @@ import org.opengauss.datachecker.common.entry.enums.Endpoint;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Table metadata information
@@ -33,7 +35,6 @@ import java.util.List;
  * @date ：Created in 2022/6/14
  * @since ：11
  */
-@Schema(name = "Table metadata information")
 @Data
 @Accessors(chain = true)
 @ToString
@@ -60,6 +61,7 @@ public class TableMetadata {
     private long avgRowLength;
 
     private long maxTableId = 0;
+    private long tableHash = 0;
 
     /**
      * Primary key column properties
@@ -73,6 +75,10 @@ public class TableMetadata {
 
     private ConditionLimit conditionLimit;
 
+    public void setColumnsMetas(List<ColumnsMetaData> columnsMetas) {
+        this.columnsMetas = columnsMetas;
+    }
+
     /**
      * Judge if this table is auto increment, if this true and no conditionLimit configured,
      * you can use id between start and end.
@@ -83,7 +89,23 @@ public class TableMetadata {
         if (primaryMetas == null || primaryMetas.size() != 1) {
             return false;
         }
-        return primaryMetas.get(0).isAutoIncrementColumn();
+        return primaryMetas.get(0)
+                           .isAutoIncrementColumn();
+    }
+
+    public ColumnsMetaData getSinglePrimary() {
+        if (hasPrimary()) {
+            return primaryMetas.get(0);
+        }
+        return null;
+    }
+
+    public boolean hasPrimary() {
+        return Objects.nonNull(primaryMetas) && !primaryMetas.isEmpty();
+    }
+
+    public boolean hasSinglePrimary() {
+        return Objects.nonNull(primaryMetas) && primaryMetas.size() == 1;
     }
 
     /**
@@ -108,6 +130,8 @@ public class TableMetadata {
 
     public static TableMetadata parse(ResultSet rs, String schema, Endpoint endpoint, DataBaseType databaseType)
         throws SQLException {
-        return parse(rs).setSchema(schema).setEndpoint(endpoint).setDataBaseType(databaseType);
+        return parse(rs).setSchema(schema)
+                        .setEndpoint(endpoint)
+                        .setDataBaseType(databaseType);
     }
 }

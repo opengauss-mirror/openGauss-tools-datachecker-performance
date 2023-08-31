@@ -17,7 +17,6 @@ package org.opengauss.datachecker.check.event;
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
-import lombok.extern.slf4j.Slf4j;
 import org.opengauss.datachecker.check.load.CheckEnvironment;
 import org.opengauss.datachecker.check.modules.check.CheckDiffResult;
 import org.opengauss.datachecker.check.modules.check.CheckResultConstants;
@@ -36,7 +35,6 @@ import java.util.Set;
  * @date ：Created in 2023/3/7
  * @since ：11
  */
-@Slf4j
 @Component
 public class CheckFailedReportEventListener extends CheckReportEventAdapter
     implements ApplicationListener<CheckFailedReportEvent> {
@@ -63,7 +61,7 @@ public class CheckFailedReportEventListener extends CheckReportEventAdapter
         StringBuffer hasMore = new StringBuffer();
         return new CheckFailed().setProcess(result.getProcess()).setSchema(result.getSchema())
                                 .setTopic(new String[] {result.getTopic()}).setPartition(result.getPartitions())
-                                .setBeginOffset(result.getBeginOffset()).setTableName(result.getTable()).setCost(cost)
+                                .setBeginOffset(result.getBeginOffset()).setTable(result.getTable()).setCost(cost)
                                 .setDiffCount(result.getTotalRepair()).setEndTime(result.getEndTime())
                                 .setStartTime(result.getStartTime())
                                 .setKeyInsertSet(getKeyList(result.getKeyInsertSet(), hasMore, "insert key has more;"))

@@ -15,13 +15,14 @@
 
 package org.opengauss.datachecker.extract.service;
 
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.entry.enums.ColumnKey;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.MetadataLoadProcess;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.thread.ThreadPoolFactory;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.opengauss.datachecker.extract.cache.MetaDataCache;
 import org.opengauss.datachecker.extract.data.BaseDataService;
@@ -50,8 +51,8 @@ import java.util.stream.Collectors;
  * @since 11
  **/
 @Service
-@Slf4j
 public class MetaDataService {
+    private static final Logger log = LogUtils.getLogger();
     @Resource
     private BaseDataService baseDataService;
     @Resource
@@ -101,9 +102,10 @@ public class MetaDataService {
             return tableMetadataMap;
         }
         List<Future<?>> futures = new LinkedList<>();
-        ThreadPoolExecutor executor = ThreadPoolFactory
-            .newThreadPool("update-column", Math.max(1, resourceManager.maxConnectionCount() / 2),
-                resourceManager.maxConnectionCount(), tableMetadataList.size());
+        int maxConnection = resourceManager.maxConnectionCount();
+        ThreadPoolExecutor executor =
+            ThreadPoolFactory.newThreadPool("update-column", Math.max(1, maxConnection / 2), maxConnection,
+                tableMetadataList.size());
         metadataLoadProcess.setTotal(tableMetadataList.size());
         tableMetadataList.forEach(tableMetadata -> {
             Future<?> future = executor.submit(() -> {
@@ -129,9 +131,13 @@ public class MetaDataService {
         executor.shutdown();
         metadataLoadProcess.setLoadCount(metadataLoadProcess.getTotal());
         log.info("query table column metadata {}", tableMetadataList.size());
-        Map<String, TableMetadata> filterNoPrimary = tableMetadataMap.entrySet().stream().filter(
-            entry -> CollectionUtils.isNotEmpty(entry.getValue().getPrimaryMetas())).collect(
-            Collectors.toMap(Entry::getKey, Entry::getValue));
+        Map<String, TableMetadata> filterNoPrimary = tableMetadataMap.entrySet()
+                                                                     .stream()
+                                                                     .filter(entry -> CollectionUtils.isNotEmpty(
+                                                                         entry.getValue()
+                                                                              .getPrimaryMetas()))
+                                                                     .collect(Collectors.toMap(Entry::getKey,
+                                                                         Entry::getValue));
         log.info("filter table which does not have primary metadata {}", filterNoPrimary.size());
         tableMetadataMap.clear();
         tableMetadataMap.putAll(filterNoPrimary);
@@ -171,7 +177,8 @@ public class MetaDataService {
     }
 
     private List<ColumnsMetaData> getTablePrimaryColumn(List<ColumnsMetaData> columnsMetaData) {
-        return columnsMetaData.stream().filter(meta -> ColumnKey.PRI.equals(meta.getColumnKey()))
+        return columnsMetaData.stream()
+                              .filter(meta -> ColumnKey.PRI.equals(meta.getColumnKey()))
                               .sorted(Comparator.comparing(ColumnsMetaData::getOrdinalPosition))
                               .collect(Collectors.toList());
     }

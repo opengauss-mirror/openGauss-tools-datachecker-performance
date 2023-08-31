@@ -15,9 +15,9 @@
 
 package org.opengauss.datachecker.check.modules.report;
 
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.check.client.FeignClientService;
 import org.opengauss.datachecker.check.event.CheckFailedReportEvent;
 import org.opengauss.datachecker.check.event.CheckSuccessReportEvent;
@@ -25,11 +25,13 @@ import org.opengauss.datachecker.check.load.CheckEnvironment;
 import org.opengauss.datachecker.check.modules.check.CheckDiffResult;
 import org.opengauss.datachecker.check.modules.check.CheckResultConstants;
 import org.opengauss.datachecker.common.entry.check.CheckPartition;
+import org.opengauss.datachecker.common.entry.common.RepairEntry;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.report.CheckProgress;
 import org.opengauss.datachecker.common.entry.report.CheckSummary;
 import org.opengauss.datachecker.common.util.FileUtils;
 import org.opengauss.datachecker.common.util.JsonObjectUtil;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.TopicUtil;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
@@ -50,11 +52,12 @@ import java.util.stream.Collectors;
  * @date ：Created in 2023/2/24
  * @since ：11
  */
-@Slf4j
 @Service
 public class CheckResultManagerService implements ApplicationContextAware {
+    private static final Logger log = LogUtils.getLogger();
     private static final String SUMMARY_LOG_NAME = "summary.log";
     private static final String REPAIR_LOG_TEMPLATE = "repair_%s_%s_%s.txt";
+
     private ApplicationContext context;
     @Resource
     private ProgressService progressService;
@@ -123,10 +126,10 @@ public class CheckResultManagerService implements ApplicationContextAware {
     private void repairUpdateDiff(String repairFile, CheckDiffResult tableFailed, boolean ogCompatibility) {
         final Set<String> updateDiffs = tableFailed.getKeyUpdateSet();
         if (CollectionUtils.isNotEmpty(updateDiffs)) {
-            final String schema = tableFailed.getSchema();
-            final String table = tableFailed.getTable();
-            final List<String> updateRepairs =
-                feignClient.buildRepairStatementUpdateDml(Endpoint.SOURCE, schema, table, ogCompatibility, updateDiffs);
+            RepairEntry update = new RepairEntry();
+            update.setTable(tableFailed.getTable()).setSchema(tableFailed.getSchema())
+                  .setOgCompatibility(ogCompatibility).setDiffSet(updateDiffs);
+            final List<String> updateRepairs = feignClient.buildRepairStatementUpdateDml(Endpoint.SOURCE, update);
             appendLogFile(repairFile, updateRepairs);
         }
     }
@@ -134,10 +137,10 @@ public class CheckResultManagerService implements ApplicationContextAware {
     private void repairInsertDiff(String repairFile, CheckDiffResult tableFailed, boolean ogCompatibility) {
         final Set<String> insertDiffs = tableFailed.getKeyInsertSet();
         if (CollectionUtils.isNotEmpty(insertDiffs)) {
-            final String schema = tableFailed.getSchema();
-            final String table = tableFailed.getTable();
-            final List<String> insertRepairs =
-                feignClient.buildRepairStatementInsertDml(Endpoint.SOURCE, schema, table, ogCompatibility, insertDiffs);
+            RepairEntry insert = new RepairEntry();
+            insert.setTable(tableFailed.getTable()).setSchema(tableFailed.getSchema())
+                  .setOgCompatibility(ogCompatibility).setDiffSet(insertDiffs);
+            final List<String> insertRepairs = feignClient.buildRepairStatementInsertDml(Endpoint.SOURCE, insert);
             appendLogFile(repairFile, insertRepairs);
         }
     }
@@ -145,10 +148,10 @@ public class CheckResultManagerService implements ApplicationContextAware {
     private void repairDeleteDiff(String repairFile, CheckDiffResult tableFailed, boolean ogCompatibility) {
         final Set<String> deleteDiffs = tableFailed.getKeyDeleteSet();
         if (CollectionUtils.isNotEmpty(deleteDiffs)) {
-            final String schema = tableFailed.getSchema();
-            final String table = tableFailed.getTable();
-            final List<String> deleteRepairs =
-                feignClient.buildRepairStatementDeleteDml(Endpoint.SOURCE, schema, table, ogCompatibility, deleteDiffs);
+            RepairEntry delete = new RepairEntry();
+            delete.setTable(tableFailed.getTable()).setSchema(tableFailed.getSchema())
+                  .setOgCompatibility(ogCompatibility).setDiffSet(deleteDiffs);
+            final List<String> deleteRepairs = feignClient.buildRepairStatementDeleteDml(Endpoint.SOURCE, delete);
             appendLogFile(repairFile, deleteRepairs);
         }
     }

@@ -20,6 +20,7 @@ import com.alibaba.fastjson.JSONObject;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.check.client.FeignClientService;
 import org.opengauss.datachecker.check.config.IncrementCheckProperties;
 import org.opengauss.datachecker.check.modules.check.DataCheckService;
@@ -32,6 +33,7 @@ import org.opengauss.datachecker.common.service.DynamicThreadPoolManager;
 import org.opengauss.datachecker.common.service.ShutdownService;
 import org.opengauss.datachecker.common.util.FileUtils;
 import org.opengauss.datachecker.common.util.IdGenerator;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.PhaserUtil;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.springframework.stereotype.Service;
@@ -66,9 +68,9 @@ import static org.opengauss.datachecker.common.constant.DynamicTpConstant.CHECK_
  * @date ：Created in 2022/6/14
  * @since ：11
  */
-@Slf4j
 @Service
 public class IncrementManagerService {
+    private static final Logger log = LogUtils.getLogger();
     private static final AtomicReference<String> PROCESS_SIGNATURE = new AtomicReference<>();
     private static final BlockingQueue<List<SourceDataLog>> INC_LOG_QUEUE = new LinkedBlockingQueue<>();
     @Resource
@@ -254,7 +256,7 @@ public class IncrementManagerService {
         Map<String, SourceDataLog> dataLogMap = new HashMap<>();
         historyDataList.forEach(dataLog -> {
             final Set<String> diffKeyValues = getDiffKeyValues(dataLog);
-            final String tableName = dataLog.getTableName();
+            final String tableName = dataLog.getTable();
             if (dataLogMap.containsKey(tableName)) {
                 final SourceDataLog dataLogMarge = dataLogMap.get(tableName);
                 final long beginOffset = Math.min(dataLogMarge.getBeginOffset(), dataLog.getBeginOffset());

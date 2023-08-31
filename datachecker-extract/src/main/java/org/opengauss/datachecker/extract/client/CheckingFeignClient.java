@@ -16,6 +16,8 @@
 package org.opengauss.datachecker.extract.client;
 
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
+import org.opengauss.datachecker.common.entry.extract.SliceExtend;
+import org.opengauss.datachecker.common.entry.extract.SliceVo;
 import org.opengauss.datachecker.common.entry.extract.SourceDataLog;
 import org.opengauss.datachecker.common.entry.extract.Topic;
 import org.springframework.cloud.openfeign.FeignClient;
@@ -69,13 +71,13 @@ public interface CheckingFeignClient {
      * register topic
      *
      * @param table           tableName
-     * @param topicPartitions topicPartitions
+     * @param ptnNum ptnNum
      * @param endpoint        current endpoint
      * @return topic
      */
     @PostMapping("/register/topic")
     Topic registerTopic(@RequestParam(value = "tableName") @NotEmpty String table,
-        @RequestParam(value = "topicPartitions") int topicPartitions,
+        @RequestParam(value = "ptnNum") int ptnNum,
         @RequestParam(value = "endpoint") @NonNull Endpoint endpoint);
 
     /**
@@ -97,4 +99,23 @@ public interface CheckingFeignClient {
 
     @GetMapping("/release/feign/request")
     boolean releaseFeignRequest(@RequestParam(value = "requestName") String requestName);
+
+    /**
+     * register slice
+     *
+     * @param sliceVo sliceVo
+     */
+    @PostMapping("/register/slice")
+    void registerSlice(@RequestBody SliceVo sliceVo);
+
+    /**
+     * register slice
+     *
+     * @param sliceExt sliceExt
+     */
+    @PostMapping("/update/register/slice")
+    void refreshRegisterSlice(@RequestBody SliceExtend sliceExt);
+
+    @PostMapping("/notify/dispatch/csv/slice/finished")
+    void notifyDispatchCsvSliceFinished();
 }

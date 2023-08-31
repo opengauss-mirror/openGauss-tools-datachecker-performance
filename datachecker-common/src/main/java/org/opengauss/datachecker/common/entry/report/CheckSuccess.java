@@ -28,14 +28,14 @@ import java.time.LocalDateTime;
  */
 @Data
 @Accessors(chain = true)
-@JSONType(orders = {"process","schema", "tableName","topic","partition", "rowCount",  "cost", "startTime", "endTime", "message"})
+@JSONType(orders = {"process","schema", "table","topic","partition", "rowCount",  "cost", "startTime", "endTime", "message"})
 public class CheckSuccess {
     private String process;
     private String schema;
-    private String tableName;
+    private String table;
     private String[] topic;
     private int partition;
-    private int rowCount;
+    private long rowCount;
     private long cost;
     private String message;
     private LocalDateTime startTime;

@@ -15,7 +15,6 @@
 
 package org.opengauss.datachecker.check.modules.rule;
 
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.opengauss.datachecker.check.config.RuleConfig;
 import org.opengauss.datachecker.common.entry.common.Rule;
@@ -33,9 +32,7 @@ import java.util.Map;
  * @date ：Created in 2022/11/30
  * @since ：11
  */
-@Slf4j
 public class RuleParser {
-
     /**
      * Filter Rule Configuration Resolution
      *

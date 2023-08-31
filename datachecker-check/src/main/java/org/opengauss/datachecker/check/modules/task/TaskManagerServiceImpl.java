@@ -15,11 +15,11 @@
 
 package org.opengauss.datachecker.check.modules.task;
 
-import com.alibaba.fastjson.JSON;
-import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.check.cache.TableStatusRegister;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.exception.CheckingException;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -36,9 +36,9 @@ import static org.opengauss.datachecker.check.cache.TableStatusRegister.TASK_STA
  * @date ：Created in 2022/5/25
  * @since ：11
  */
-@Slf4j
 @Service
 public class TaskManagerServiceImpl implements TaskManagerService {
+    private static final Logger log = LogUtils.getLogger();
     @Autowired
     private TableStatusRegister tableStatusRegister;
 

@@ -15,9 +15,10 @@
 
 package org.opengauss.datachecker.extract.config;
 
-import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.entry.enums.ResultEnum;
 import org.opengauss.datachecker.common.exception.*;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.web.Result;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -31,11 +32,10 @@ import javax.servlet.http.HttpServletRequest;
  * @date ：Created in 2022/7/1
  * @since ：11
  */
-@Slf4j
 @RestControllerAdvice
 public class GlobalExtractExceptionHandler extends GlobalCommonExceptionHandler {
     private static final String MESSAGE_TEMPLATE = "path:{}, queryParam:[{}] , error:";
-
+    private static final Logger log = LogUtils.getLogger();
     /**
      * service ExtractException exception handing
      *

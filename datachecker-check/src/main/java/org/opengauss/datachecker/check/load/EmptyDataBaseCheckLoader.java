@@ -15,7 +15,6 @@
 
 package org.opengauss.datachecker.check.load;
 
-import lombok.extern.slf4j.Slf4j;
 import org.opengauss.datachecker.check.service.EndpointMetaDataManager;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
@@ -33,7 +32,6 @@ import java.util.Objects;
  * @date ：Created in 2022/11/9
  * @since ：11
  */
-@Slf4j
 @Order(99)
 @Service
 public class EmptyDataBaseCheckLoader extends AbstractCheckLoader {

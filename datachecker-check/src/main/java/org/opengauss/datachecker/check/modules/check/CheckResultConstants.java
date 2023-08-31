@@ -25,6 +25,7 @@ package org.opengauss.datachecker.check.modules.check;
 public interface CheckResultConstants {
     String RESULT_FAILED = "failed";
     String FAILED_LOG_NAME = "failed.log";
+    String CSV_FAILED_DETAIL_NAME = "failed_detail.log";
     String RESULT_SUCCESS = "success";
     String FAILED_MESSAGE = " failed (insert=%d update=%d delete=%d)";
     String STRUCTURE_NOT_EQUALS = "table structure is not equals , please check the database sync !";

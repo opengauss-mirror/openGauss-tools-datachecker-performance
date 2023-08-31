@@ -15,9 +15,7 @@
 
 package org.opengauss.datachecker.extract.data.access;
 
-import lombok.extern.slf4j.Slf4j;
 import org.opengauss.datachecker.common.entry.common.DataAccessParam;
-import org.opengauss.datachecker.common.entry.enums.OgCompatibility;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.extract.config.DruidDataSourceConfig;
@@ -28,7 +26,6 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import java.util.List;
-import java.util.Objects;
 
 /**
  * MysqlDataAccessService
@@ -37,12 +34,10 @@ import java.util.Objects;
  * @date ：Created in 2023/7/10
  * @since ：11
  */
-@Slf4j
 @Service
 @ConditionalOnBean(DruidDataSourceConfig.class)
 @ConditionalOnProperty(prefix = "spring.extract", name = "databaseType", havingValue = "MS")
 public class MysqlDataAccessService extends AbstractDataAccessService {
-
     @Resource
     private MysqlMetaDataMapper mysqlMetaDataMapper;
 

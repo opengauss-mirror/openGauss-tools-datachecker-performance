@@ -92,6 +92,7 @@ public class UpdateDmlBuilder extends DmlBuilder {
 
     public UpdateDmlBuilder metadata(@NotNull TableMetadata metadata) {
         this.metadata = metadata;
+        tableName(metadata.getTableName());
         return this;
     }
 

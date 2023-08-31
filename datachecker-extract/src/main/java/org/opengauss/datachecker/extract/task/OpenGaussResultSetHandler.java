@@ -15,7 +15,6 @@
 
 package org.opengauss.datachecker.extract.task;
 
-import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Map;
@@ -39,13 +38,12 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
         TypeHandler xmlToString = (rs, columnLabel, displaySize) -> rs.getString(columnLabel);
         TypeHandler bitToString = (rs, columnLabel, displaySize) -> "B'" + rs.getString(columnLabel) + "'";
         TypeHandler booleanToString = (rs, columnLabel, displaySize) -> booleanToString(rs, columnLabel);
-        TypeHandler numericToString = (rs, columnLabel, displaySize) -> numericToString(rs.getBigDecimal(columnLabel));
-        TypeHandler floatToString = (rs, columnLabel, displaySize) -> floatToString(rs.getFloat(columnLabel));
+        TypeHandler numericToString = (rs, columnLabel, displaySize) -> floatingPointNumberToString(rs, columnLabel);
+        TypeHandler float4ToString = (rs, columnLabel, displaySize) -> float4ToString(rs, columnLabel);
 
+        // float4 - float real
+        typeHandlers.put(OpenGaussType.FLOAT4, float4ToString);
         typeHandlers.put(OpenGaussType.NUMERIC, numericToString);
-        typeHandlers.put(OpenGaussType.FLOAT, floatToString);
-        typeHandlers.put(OpenGaussType.FLOAT4, floatToString);
-        typeHandlers.put(OpenGaussType.FLOAT8, floatToString);
 
         // byte binary blob
         typeHandlers.put(OpenGaussType.BYTEA, byteaToString);
@@ -65,13 +63,16 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
         typeHandlers.put(OpenGaussType.TIMESTAMPTZ, this::getTimestampFormat);
     }
 
-
+    private String float4ToString(ResultSet rs, String columnLabel) throws SQLException {
+        return Float.toString(rs.getFloat(columnLabel));
+    }
 
     @Override
     public String convert(ResultSet resultSet, String columnTypeName, String columnLabel, int displaySize)
         throws SQLException {
         if (typeHandlers.containsKey(columnTypeName)) {
-            return typeHandlers.get(columnTypeName).convert(resultSet, columnLabel,displaySize);
+            return typeHandlers.get(columnTypeName)
+                               .convert(resultSet, columnLabel, displaySize);
         } else {
             Object object = resultSet.getObject(columnLabel);
             return Objects.isNull(object) ? NULL : object.toString();
@@ -89,6 +90,7 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
         String BOOLEAN = "bool";
         String BLOB = "blob";
         String NUMERIC = "numeric";
+        String FLOAT4 = "float4";
         String VARCHAR = "varchar";
         String BPCHAR = "bpchar";
         String DATE = "date";
@@ -98,8 +100,5 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
         String CLOB = "clob";
         String XML = "xml";
         String BIT = "bit";
-        String FLOAT = "float";
-        String FLOAT4 = "float4";
-        String FLOAT8 = "float8";
     }
 }

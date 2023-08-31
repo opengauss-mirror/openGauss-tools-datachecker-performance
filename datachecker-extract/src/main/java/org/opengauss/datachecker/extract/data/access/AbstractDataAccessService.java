@@ -15,22 +15,23 @@
 
 package org.opengauss.datachecker.extract.data.access;
 
-import lombok.extern.slf4j.Slf4j;
-import org.opengauss.datachecker.common.entry.common.DataAccessParam;
+import org.apache.logging.log4j.Logger;
+import org.opengauss.datachecker.common.entry.check.Difference;
 import org.opengauss.datachecker.common.entry.enums.DataBaseMeta;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.extract.config.DruidDataSourceConfig;
 import org.opengauss.datachecker.extract.config.ExtractProperties;
 import org.opengauss.datachecker.extract.dao.MetaSqlMapper;
 import org.opengauss.datachecker.extract.task.ResultSetHandlerFactory;
 import org.opengauss.datachecker.extract.task.ResultSetHashHandler;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
-import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 import javax.annotation.Resource;
+import javax.sql.DataSource;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -43,9 +44,9 @@ import java.util.Map;
  * @date ：Created in 2023/7/10
  * @since ：11
  */
-@Slf4j
 @ConditionalOnBean(DruidDataSourceConfig.class)
 public abstract class AbstractDataAccessService implements DataAccessService {
+    private static final Logger log = LogUtils.getLogger();
     protected boolean isOgCompatibilityB = false;
     @Resource
     protected JdbcTemplate jdbcTemplate;
@@ -60,6 +61,11 @@ public abstract class AbstractDataAccessService implements DataAccessService {
         return jdbc.query(sql, param, rowMapper);
     }
 
+    @Override
+    public DataSource getDataSource() {
+        return jdbcTemplate.getDataSource();
+    }
+
     /**
      * wrapper table metadata of endpoint and databaseType
      *
@@ -69,6 +75,19 @@ public abstract class AbstractDataAccessService implements DataAccessService {
     protected TableMetadata wrapperTableMetadata(TableMetadata tableMetadata) {
         return tableMetadata.setDataBaseType(properties.getDatabaseType()).setEndpoint(properties.getEndpoint())
                             .setOgCompatibilityB(isOgCompatibilityB);
+    }
+
+    /**
+     * jdbc mode does not use it
+     *
+     * @param table       table
+     * @param fileName       fileName
+     * @param differenceList differenceList
+     * @return
+     */
+    @Override
+    public List<Map<String, String>> query(String table, String fileName, List<Difference> differenceList) {
+        return null;
     }
 
     /**

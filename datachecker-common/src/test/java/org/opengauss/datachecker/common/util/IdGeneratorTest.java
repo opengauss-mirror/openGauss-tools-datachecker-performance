@@ -15,7 +15,7 @@
 
 package org.opengauss.datachecker.common.util;
 
-import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -25,8 +25,8 @@ import org.junit.jupiter.api.Test;
  * @date ：Created in 2022/8/9
  * @since ：11
  */
-@Slf4j
 public class IdGeneratorTest {
+    private static final Logger log = LogUtils.getLogger();
     /**
      * Data center identification digit
      */

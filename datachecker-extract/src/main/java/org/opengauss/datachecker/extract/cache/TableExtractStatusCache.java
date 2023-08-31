@@ -15,8 +15,9 @@
 
 package org.opengauss.datachecker.extract.cache;
 
-import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.constant.Constants.InitialCapacity;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.lang.NonNull;
 import org.springframework.util.Assert;
 
@@ -42,8 +43,8 @@ import java.util.stream.IntStream;
  * @date ：Created in 2022/5/14
  * @since ：11
  */
-@Slf4j
 public class TableExtractStatusCache {
+    private static final Logger log = LogUtils.getLogger();
     /**
      * data extraction task completion status
      */

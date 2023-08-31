@@ -18,9 +18,11 @@ import java.util.Objects;
 public class TestJsonUtil {
     public static final String KEY_UPDATE_DML_BUILDER_TEST = "update_dml_builder_test";
     public static final String KEY_META_DATA_13_TABLE = "meta_data_13_table";
+    public static final String KEY_DATA_TEST_DEMO_SLICE1_CSV = "test_demo_slice1.csv";
     public static final String KEY_DEBEZIUM_ONE_TABLE_RECORD = "debezium_one_table_record";
     public static final String KEY_DEBEZIUM_AVRO_ONE_TABLE_RECORD = "debezium_avro_one_table_record";
 
+    private static final String RESOURCE_DATA_TEST_DEMO_SLICE1_CSV = "data/csv.data/test_demo_slice1.csv";
     private static final String RESOURCE_META_JSON = "data/update_dml_builder_test/metadata.json";
     private static final String RESOURCE_DEBEZIUM_ONE_TABLE_RECORD = "data/debezium_data/one_table_record.json";
     private static final String RESOURCE_DEBEZIUM_AVRO_ONE_TABLE_RECORD = "data/debezium_avro/one_record.json";
@@ -29,12 +31,15 @@ public class TestJsonUtil {
     private static final Map<String, String> JSON_RESOURCE = new HashMap<>();
 
     static {
+        JSON_RESOURCE.put(KEY_DATA_TEST_DEMO_SLICE1_CSV, RESOURCE_DATA_TEST_DEMO_SLICE1_CSV);
         JSON_RESOURCE.put(KEY_UPDATE_DML_BUILDER_TEST, RESOURCE_META_JSON);
         JSON_RESOURCE.put(KEY_META_DATA_13_TABLE, RESOURCE_META_DATA_13_TABLE);
         JSON_RESOURCE.put(KEY_DEBEZIUM_ONE_TABLE_RECORD, RESOURCE_DEBEZIUM_ONE_TABLE_RECORD);
         JSON_RESOURCE.put(KEY_DEBEZIUM_AVRO_ONE_TABLE_RECORD, RESOURCE_DEBEZIUM_AVRO_ONE_TABLE_RECORD);
     }
-
+    public static String getFileName(String key) {
+        return JSON_RESOURCE.get(key);
+    }
     public static String getJsonText(String key) {
         return mockDataJson(JSON_RESOURCE.get(key));
     }

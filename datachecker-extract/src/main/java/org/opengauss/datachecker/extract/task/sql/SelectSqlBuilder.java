@@ -69,8 +69,9 @@ public class SelectSqlBuilder {
                                                .replace(TABLE_NAME, sqlGenerateMeta.getTableName());
     private static final SqlGenerate OFFSET_GENERATE =
         (sqlGenerateMeta) -> GENERATE_TEMPLATE.replace(QuerySqlTemplate.QUERY_OFF_SET, sqlGenerateMeta);
-    private static final SqlGenerate NO_OFFSET_GENERATE = (sqlGenerateMeta) -> NO_OFFSET_SQL_GENERATE_TEMPLATE
-        .replace(QuerySqlTemplate.QUERY_NO_OFF_SET, sqlGenerateMeta);
+    private static final SqlGenerate NO_OFFSET_GENERATE =
+        (sqlGenerateMeta) -> NO_OFFSET_SQL_GENERATE_TEMPLATE.replace(QuerySqlTemplate.QUERY_NO_OFF_SET,
+            sqlGenerateMeta);
 
     private static final SqlGenerateTemplate QUERY_BETWEEN_TEMPLATE =
         (template, sqlGenerateMeta) -> template.replace(COLUMN, sqlGenerateMeta.getColumns())
@@ -103,6 +104,9 @@ public class SelectSqlBuilder {
     private DataBaseType dataBaseType;
     private boolean isDivisions;
     private boolean isFullCondition;
+    private boolean isHalfOpenHalfClosed = true;
+    private boolean isFirst = false;
+    private boolean isEnd = false;
 
     /**
      * Table fragment query SQL Statement Builder
@@ -161,6 +165,11 @@ public class SelectSqlBuilder {
         return this;
     }
 
+    public SelectSqlBuilder isHalfOpenHalfClosed(boolean isHalfOpenHalfClosed) {
+        this.isHalfOpenHalfClosed = isHalfOpenHalfClosed;
+        return this;
+    }
+
     /**
      * Table fragment query SQL Statement Builder
      *
@@ -187,7 +196,9 @@ public class SelectSqlBuilder {
         String schemaEscape = escape(schema, dataBaseType);
         String tableName = escape(tableMetadata.getTableName(), dataBaseType);
         String columnNames = getColumnNameList(columnsMetas, dataBaseType);
-        String primaryKey = escape(tableMetadata.getPrimaryMetas().get(0).getColumnName(), dataBaseType);
+        String primaryKey = escape(tableMetadata.getPrimaryMetas()
+                                                .get(0)
+                                                .getColumnName(), dataBaseType);
         final String orderBy = getOrderBy(tableMetadata.getPrimaryMetas(), dataBaseType);
         String pkCondition;
         if (StringUtils.isNotEmpty(seqStart) && StringUtils.isNotEmpty(seqEnd)) {
@@ -195,8 +206,10 @@ public class SelectSqlBuilder {
         } else {
             pkCondition = getNumberPkCondition(primaryKey);
         }
-        return QUERY_WHERE_BETWEEN.replace(COLUMN, columnNames).replace(SCHEMA, schemaEscape)
-                                  .replace(TABLE_NAME, tableName).replace(PK_CONDITION, pkCondition)
+        return QUERY_WHERE_BETWEEN.replace(COLUMN, columnNames)
+                                  .replace(SCHEMA, schemaEscape)
+                                  .replace(TABLE_NAME, tableName)
+                                  .replace(PK_CONDITION, pkCondition)
                                   .replace(ORDER_BY, orderBy);
     }
 
@@ -204,7 +217,17 @@ public class SelectSqlBuilder {
         if (isFullCondition) {
             return getNumberPkConditionFull(primaryKey);
         }
-        return primaryKey + ">= " + start + " and " + primaryKey + " < " + offset;
+        if (isFirst) {
+            return primaryKey + "< " + offset;
+        }
+        if (isEnd) {
+            return primaryKey + ">= " + start;
+        }
+        if (isHalfOpenHalfClosed) {
+            return primaryKey + ">= " + start + " and " + primaryKey + " < " + offset;
+        } else {
+            return primaryKey + ">= " + start + " and " + primaryKey + " <= " + offset;
+        }
     }
 
     private String getNumberPkConditionFull(String primaryKey) {
@@ -219,7 +242,17 @@ public class SelectSqlBuilder {
         if (isFullCondition) {
             return getPkConditionFull(primaryKey);
         }
-        return primaryKey + ">= '" + seqStart + "' and " + primaryKey + " < '" + seqEnd + "'";
+        if (isFirst) {
+            return primaryKey + " < '" + seqEnd + "'";
+        }
+        if (isEnd) {
+            return primaryKey + ">= '" + seqStart + "'";
+        }
+        if (isHalfOpenHalfClosed) {
+            return primaryKey + ">= '" + seqStart + "' and " + primaryKey + " < '" + seqEnd + "'";
+        } else {
+            return primaryKey + ">= '" + seqStart + "' and " + primaryKey + " <= '" + seqEnd + "'";
+        }
     }
 
     private String buildSelectSqlConditionLimit(TableMetadata tableMetadata, ConditionLimit conditionLimit) {
@@ -235,7 +268,8 @@ public class SelectSqlBuilder {
     }
 
     private String getOrderBy(List<ColumnsMetaData> primaryMetas, DataBaseType dataBaseType) {
-        return "order by " + primaryMetas.stream().map(ColumnsMetaData::getColumnName)
+        return "order by " + primaryMetas.stream()
+                                         .map(ColumnsMetaData::getColumnName)
                                          .map(key -> escape(key, dataBaseType) + " asc")
                                          .collect(Collectors.joining(DELIMITER));
     }
@@ -251,7 +285,9 @@ public class SelectSqlBuilder {
             sqlGenerateMeta = new SqlGenerateMeta(schemaEscape, tableName, columnNames, orderBy, start, offset);
             return getSqlGenerate(dataBaseType).replace(sqlGenerateMeta);
         } else {
-            String primaryKey = escape(tableMetadata.getPrimaryMetas().get(0).getColumnName(), dataBaseType);
+            String primaryKey = escape(tableMetadata.getPrimaryMetas()
+                                                    .get(0)
+                                                    .getColumnName(), dataBaseType);
             sqlGenerateMeta =
                 new SqlGenerateMeta(schemaEscape, tableName, columnNames, orderBy, start, offset, primaryKey);
             return QUERY_BETWEEN_GENERATE.replace(sqlGenerateMeta);
@@ -260,9 +296,11 @@ public class SelectSqlBuilder {
 
     private String escape(String content, DataBaseType dataBaseType) {
         if (tableMetadata.isOgCompatibilityB()) {
-            return ESCAPEB.get(dataBaseType).escape(content);
+            return ESCAPEB.get(dataBaseType)
+                          .escape(content);
         }
-        return ESCAPE.get(dataBaseType).escape(content);
+        return ESCAPE.get(dataBaseType)
+                     .escape(content);
     }
 
     private String buildSelectSqlOffsetZero(List<ColumnsMetaData> columnsMetas, String tableName) {
@@ -274,12 +312,22 @@ public class SelectSqlBuilder {
     }
 
     private String getColumnNameList(@NonNull List<ColumnsMetaData> columnsMetas, DataBaseType dataBaseType) {
-        return columnsMetas.stream().map(ColumnsMetaData::getColumnName).map(column -> escape(column, dataBaseType))
+        return columnsMetas.stream()
+                           .map(ColumnsMetaData::getColumnName)
+                           .map(column -> escape(column, dataBaseType))
                            .collect(Collectors.joining(DELIMITER));
     }
 
     private SqlGenerate getSqlGenerate(DataBaseType dataBaseType) {
         return SQL_GENERATE.get(dataBaseType);
+    }
+
+    public void isFirstConfition(boolean first) {
+        this.isFirst = first;
+    }
+
+    public void isEndConfition(boolean end) {
+        this.isEnd = end;
     }
 
     @Getter

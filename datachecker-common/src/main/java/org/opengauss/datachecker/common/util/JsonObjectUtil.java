@@ -17,19 +17,18 @@ package org.opengauss.datachecker.common.util;
 
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.serializer.SerializerFeature;
-import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 /**
+ * JsonObjectUtil
+ *
  * @author ：wangchao
  * @date ：Created in 2022/5/23
  * @since ：11
  */
-@Slf4j
 public class JsonObjectUtil {
-
     private static final String TIME_MILLIS_FORMATTER = "yyyy-MM-dd HH:mm:ss.SSS";
     private static final String TIME_SEC_FORMATTER = "yyyy-MM-dd HH:mm:ss";
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern(TIME_MILLIS_FORMATTER);
@@ -61,6 +60,11 @@ public class JsonObjectUtil {
      */
     public static String prettyFormatMillis(Object object) {
         return JSONObject.toJSONStringWithDateFormat(object, TIME_MILLIS_FORMATTER, SerializerFeature.PrettyFormat,
+            SerializerFeature.WriteMapNullValue);
+    }
+
+    public static String formatSimple(Object object) {
+        return JSONObject.toJSONStringWithDateFormat(object, TIME_MILLIS_FORMATTER,
             SerializerFeature.WriteMapNullValue);
     }
 

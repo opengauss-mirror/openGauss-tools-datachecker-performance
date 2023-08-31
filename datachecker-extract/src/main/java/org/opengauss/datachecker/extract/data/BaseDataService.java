@@ -15,17 +15,22 @@
 
 package org.opengauss.datachecker.extract.data;
 
+import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.entry.enums.ColumnKey;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
+import org.opengauss.datachecker.common.util.LogUtils;
+import org.opengauss.datachecker.common.util.LongHashFunctionWrapper;
 import org.opengauss.datachecker.extract.cache.MetaDataCache;
 import org.opengauss.datachecker.extract.data.access.DataAccessService;
 import org.opengauss.datachecker.extract.service.RuleAdapterService;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
+import javax.sql.DataSource;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
@@ -42,11 +47,27 @@ import java.util.stream.Collectors;
  */
 @Service
 public class BaseDataService {
+    private static final Logger log = LogUtils.getLogger();
+    private static final LongHashFunctionWrapper HASH_UTIL = new LongHashFunctionWrapper();
+
     @Resource
     private DataAccessService dataAccessService;
     @Resource
     private RuleAdapterService ruleAdapterService;
     private final List<String> tableNameList = new LinkedList<>();
+
+    public DataAccessService getDataAccessService() {
+        return dataAccessService;
+    }
+
+    /**
+     * get data source
+     *
+     * @return datasource
+     */
+    public DataSource getDataSource() {
+        return dataAccessService.getDataSource();
+    }
 
     /**
      * load check table list
@@ -85,6 +106,11 @@ public class BaseDataService {
         return ruleAdapterService.executeTableRule(tableNameList);
     }
 
+    /**
+     * filter table rule
+     *
+     * @param tableMetadataMap table metadata
+     */
     public void matchRowRules(Map<String, TableMetadata> tableMetadataMap) {
         if (MapUtils.isEmpty(tableMetadataMap)) {
             return;
@@ -121,16 +147,32 @@ public class BaseDataService {
      * @return TableMetadata
      */
     public TableMetadata queryTableMetadata(String tableName) {
+        if (MetaDataCache.containsKey(tableName)) {
+            return MetaDataCache.get(tableName);
+        }
         TableMetadata tableMetadata = dataAccessService.queryTableMetadata(tableName);
+        if (Objects.isNull(tableMetadata)) {
+            return tableMetadata;
+        }
         updateTableColumnMetaData(tableMetadata);
+        MetaDataCache.put(tableName, tableMetadata);
         return tableMetadata;
     }
 
+    /**
+     * update table metadata, and filter column rules
+     *
+     * @param tableMetadata table metadata
+     */
     public void updateTableColumnMetaData(TableMetadata tableMetadata) {
         String tableName = tableMetadata.getTableName();
         final List<ColumnsMetaData> columns = dataAccessService.queryTableColumnsMetaData(tableName);
+        if (Objects.isNull(columns)) {
+            log.error("table columns metadata is null ,{}", tableName);
+        }
         tableMetadata.setColumnsMetas(ruleAdapterService.executeColumnRule(columns));
         tableMetadata.setPrimaryMetas(getTablePrimaryColumn(columns));
+        tableMetadata.setTableHash(calcTableHash(columns));
     }
 
     private List<ColumnsMetaData> getTablePrimaryColumn(List<ColumnsMetaData> columnsMetaData) {
@@ -139,12 +181,44 @@ public class BaseDataService {
                               .collect(Collectors.toList());
     }
 
+    /**
+     * query table columns
+     *
+     * @param tableName table
+     * @return table columns
+     */
     public List<ColumnsMetaData> queryTableColumnsMetaData(String tableName) {
         final List<ColumnsMetaData> columns = dataAccessService.queryTableColumnsMetaData(tableName);
         return ruleAdapterService.executeColumnRule(columns);
     }
 
-    public boolean contains(String table) {
-        return tableNameList.contains(table);
+    private long calcTableHash(List<ColumnsMetaData> columnsMetas) {
+        StringBuffer buffer = new StringBuffer();
+        columnsMetas.sort(Comparator.comparing(ColumnsMetaData::getOrdinalPosition));
+        columnsMetas.forEach(column -> {
+            buffer.append(column.getColumnName()).append(column.getColumnKey()).append(column.getOrdinalPosition());
+        });
+        KafkaAvroDeserializerConfig a;
+        return HASH_UTIL.hashBytes(buffer.toString());
+    }
+
+    /**
+     * check current table whether in check table list
+     *
+     * @param table table
+     * @return true | false
+     */
+    public boolean checkTableContains(String table) {
+        List<String> filterTableList = ruleAdapterService.executeTableRule(List.of(table));
+        if (CollectionUtils.isNotEmpty(filterTableList)) {
+            TableMetadata tableMetadata = queryTableMetadata(table);
+            return hasPrimary(tableMetadata);
+        } else {
+            return false;
+        }
+    }
+
+    private boolean hasPrimary(TableMetadata tableMetadata) {
+        return !Objects.isNull(tableMetadata) && tableMetadata.hasPrimary();
     }
 }

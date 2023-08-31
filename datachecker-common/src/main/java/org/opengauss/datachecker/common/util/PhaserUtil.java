@@ -15,7 +15,7 @@
 
 package org.opengauss.datachecker.common.util;
 
-import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.Logger;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.util.ArrayList;
@@ -32,9 +32,8 @@ import java.util.concurrent.ThreadPoolExecutor;
  * @date ：Created in 2022/12/22
  * @since ：11
  */
-@Slf4j
 public class PhaserUtil {
-
+    private static final Logger log = LogUtils.getLogger();
     /**
      * Use the thread pool to submit parallel tasks. When all parallel tasks are completed, execute the complete task
      *

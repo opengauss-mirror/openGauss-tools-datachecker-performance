@@ -37,12 +37,6 @@ class TopicRegisterTest {
     @BeforeEach
     void setUp() {
         topicRegisterUnderTest = new TopicRegister();
-        topicRegisterUnderTest.initProcess("process");
-    }
-
-    @Test
-    void testInitProcess() {
-        topicRegisterUnderTest.initProcess("process");
     }
 
     @DisplayName("register source")

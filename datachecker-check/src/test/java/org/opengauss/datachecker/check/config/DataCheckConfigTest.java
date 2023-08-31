@@ -15,9 +15,10 @@
 
 package org.opengauss.datachecker.check.config;
 
-import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.Test;
 import org.opengauss.datachecker.check.BaseTest;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
@@ -27,8 +28,8 @@ import org.springframework.beans.factory.annotation.Autowired;
  * @date ：Created in 2022/6/18
  * @since ：11
  */
-@Slf4j
 class DataCheckConfigTest extends BaseTest {
+    private static final Logger log = LogUtils.getLogger();
     @Autowired
     private DataCheckConfig dataCheckConfig;
 

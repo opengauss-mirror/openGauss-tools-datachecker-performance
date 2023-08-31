@@ -62,15 +62,14 @@ public class TableKafkaController {
     /**
      * register topic
      *
-     * @param table           tableName
-     * @param topicPartitions topicPartitions
-     * @param endpoint        current endpoint
+     * @param table    tableName
+     * @param ptnNum   ptnNum
+     * @param endpoint current endpoint
      * @return topic
      */
     @PostMapping("/register/topic")
     public Topic registerTopic(@RequestParam(value = "tableName") @NotEmpty String table,
-        @RequestParam(value = "topicPartitions") int topicPartitions,
-        @RequestParam(value = "endpoint") @NonNull Endpoint endpoint) {
-        return topicRegister.register(table, topicPartitions, endpoint);
+        @RequestParam(value = "ptnNum") int ptnNum, @RequestParam(value = "endpoint") @NonNull Endpoint endpoint) {
+        return topicRegister.register(table, ptnNum, endpoint);
     }
 }

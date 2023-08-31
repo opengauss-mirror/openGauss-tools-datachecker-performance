@@ -42,4 +42,6 @@ public interface ExtConstants {
 
     String PROFILE_SINK = "sink";
     String PROFILE_SOURCE = "source";
+    String CSV_LISTENER_END = "finished";
+    int MIN_TOPIC_PTN_NUM = 1;
 }

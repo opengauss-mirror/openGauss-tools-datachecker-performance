@@ -17,9 +17,10 @@ package org.opengauss.datachecker.check.modules.merkle;
 
 import lombok.Data;
 import lombok.experimental.Accessors;
-import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.check.modules.bucket.Bucket;
 import org.opengauss.datachecker.common.util.ByteUtil;
+import org.opengauss.datachecker.common.util.LogUtils;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
@@ -36,9 +37,9 @@ import java.util.zip.Adler32;
  * @date ：Created in 2022/5/23
  * @since ：11
  */
-@Slf4j
 @Data
 public class MerkleTree {
+    private static final Logger log = LogUtils.getBusinessLogger();
     public static final int MAGIC_HDR = 0Xcdaace99;
     public static final int LONG_BYTE = 8;
     /**

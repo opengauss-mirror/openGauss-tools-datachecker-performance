@@ -15,16 +15,18 @@
 
 package org.opengauss.datachecker.check.cache;
 
-import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.Logger;
+import org.opengauss.datachecker.common.config.ConfigCache;
+import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.extract.Topic;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.TopicUtil;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * TopicRegister
@@ -33,37 +35,26 @@ import java.util.concurrent.locks.ReentrantLock;
  * @date ：Created in 2023/4/23
  * @since ：11
  */
-@Slf4j
 @Service
 public class TopicRegister {
+    private static final Logger log = LogUtils.getLogger();
     private static volatile Map<String, Topic> TOPIC_CACHE = new ConcurrentHashMap<>();
-
-    private volatile String process;
-
-    /**
-     * init current check process
-     *
-     * @param process process
-     */
-    public void initProcess(String process) {
-        this.process = process;
-    }
 
     /**
      * add table's topic
      *
-     * @param table           table name
-     * @param topicPartitions topicPartitions
-     * @param endpoint        endpoint
+     * @param table    table name
+     * @param ptnNum   ptnNum
+     * @param endpoint endpoint
      * @return topic
      */
-    public Topic register(String table, int topicPartitions, Endpoint endpoint) {
+    public Topic register(String table, int ptnNum, Endpoint endpoint) {
         synchronized (table) {
             Topic topic = TOPIC_CACHE.get(table);
             if (Objects.isNull(topic)) {
                 topic = new Topic();
                 topic.setTableName(table);
-                topic.setPartitions(topicPartitions);
+                topic.setPtnNum(ptnNum);
                 setTopicName(table, topic);
                 TOPIC_CACHE.put(table, topic);
             }
@@ -73,6 +64,7 @@ public class TopicRegister {
     }
 
     private void setTopicName(String table, Topic topic) {
+        String process = ConfigCache.getValue(ConfigConstants.PROCESS_NO);
         topic.setSourceTopicName(TopicUtil.buildTopicName(process, Endpoint.SOURCE, table));
         topic.setSinkTopicName(TopicUtil.buildTopicName(process, Endpoint.SINK, table));
     }

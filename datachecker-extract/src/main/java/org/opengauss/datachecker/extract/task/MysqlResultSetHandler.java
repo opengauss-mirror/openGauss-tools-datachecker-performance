@@ -38,13 +38,15 @@ public class MysqlResultSetHandler extends ResultSetHandler {
         TypeHandler binaryToString = (rs, columnLabel, displaySize) -> byteToStringTrim(rs.getBytes(columnLabel));
         TypeHandler varbinaryToString = (rs, columnLabel, displaySize) -> bytesToString(rs.getBytes(columnLabel));
         TypeHandler blobToString = (rs, columnLabel, displaySize) -> HexUtil.byteToHexTrim(rs.getBytes(columnLabel));
-        TypeHandler numericToString = (rs, columnLabel, displaySize) -> numericToString(rs.getBigDecimal(columnLabel));
-        TypeHandler floatToString = (rs, columnLabel, displaySize) -> floatToString(rs.getFloat(columnLabel));
+        TypeHandler numericToString = (rs, columnLabel, displaySize) -> floatingPointNumberToString(rs,columnLabel);
         TypeHandler bitBooleanToString = (rs, columnLabel, displaySize) -> rs.getString(columnLabel);
 
-        typeHandlers.put(MysqlType.FLOAT, floatToString);
+        typeHandlers.put(MysqlType.FLOAT_UNSIGNED, numericToString);
+        typeHandlers.put(MysqlType.FLOAT, numericToString);
         typeHandlers.put(MysqlType.DOUBLE, numericToString);
+        typeHandlers.put(MysqlType.DOUBLE_UNSIGNED, numericToString);
         typeHandlers.put(MysqlType.DECIMAL, numericToString);
+        typeHandlers.put(MysqlType.DECIMAL_UNSIGNED, numericToString);
         typeHandlers.put(MysqlType.BIT, bitBooleanToString);
         // byte binary blob
         typeHandlers.put(MysqlType.BINARY, binaryToString);

@@ -15,7 +15,6 @@
 
 package org.opengauss.datachecker.check.cmd;
 
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.cli.Option;
 import org.opengauss.datachecker.common.service.CommonCommandLine;
 
@@ -30,9 +29,7 @@ import static org.opengauss.datachecker.common.service.CommonCommandLine.CmdOpti
  * @date ：Created in 2023/4/8
  * @since ：11
  */
-@Slf4j
 public class CheckCommandLine extends CommonCommandLine {
-
     public CheckCommandLine() {
         super();
         options.addOption(getJvmOption());
@@ -53,7 +50,12 @@ public class CheckCommandLine extends CommonCommandLine {
         descBuffer.append(System.lineSeparator());
         descBuffer.append("java -XX:+UseG1GC xxx.jar");
         descBuffer.append(System.lineSeparator());
-        return Option.builder().longOpt("jvm").argName("jvm options").hasArgs().desc(descBuffer.toString()).build();
+        return Option.builder()
+                     .longOpt("jvm")
+                     .argName("jvm options")
+                     .hasArgs()
+                     .desc(descBuffer.toString())
+                     .build();
     }
 
     private static Option getCheckOption() {
@@ -66,11 +68,15 @@ public class CheckCommandLine extends CommonCommandLine {
         descBuffer.append(System.lineSeparator());
         descBuffer.append(" nohup java -jar datachecker-check-0.0.1.jar >/dev/null 2>&1 & ");
         descBuffer.append(System.lineSeparator());
-        return Option.builder().longOpt(CHECK).desc(descBuffer.toString()).build();
+        return Option.builder()
+                     .longOpt(CHECK)
+                     .desc(descBuffer.toString())
+                     .build();
     }
 
     public String getMode() {
-        String logName = commandLine.getOptionProperties("D").getProperty(CmdOption.LOG_NAME);
+        String logName = commandLine.getOptionProperties("D")
+                                    .getProperty(CmdOption.LOG_NAME);
         return Objects.isNull(logName) ? CHECK : logName;
     }
 }

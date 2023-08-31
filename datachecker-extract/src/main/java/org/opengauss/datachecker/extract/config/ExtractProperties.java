@@ -19,6 +19,7 @@ import com.alibaba.fastjson.annotation.JSONType;
 import lombok.Data;
 import org.hibernate.validator.constraints.Range;
 import org.opengauss.datachecker.common.entry.enums.DataBaseType;
+import org.opengauss.datachecker.common.entry.enums.DataLoad;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
@@ -34,9 +35,11 @@ import java.util.List;
 @Data
 @Component
 @ConfigurationProperties(prefix = "spring.extract")
-@JSONType(orders = {"schema", "databaseType", "endpoint", "isDebeziumEnable", "debeziumTopic", "debeziumGroupId",
-    "debeziumSerializer", "debeziumAvroRegistry"})
+@JSONType(orders = {"schema", "dataLoadMode", "databaseType", "endpoint", "isDebeziumEnable", "debeziumTopic",
+    "debeziumGroupId", "debeziumSerializer", "debeziumAvroRegistry"})
 public class ExtractProperties {
+    @NotNull(message = DataLoad.API_DESCRIPTION + "data load mode configuration, must [jdbc/csv] cannot be empty")
+    private DataLoad dataLoadMode;
 
     /**
      * Database instance : database instance configuration,which cannot be empty
@@ -76,7 +79,7 @@ public class ExtractProperties {
      * Group parameter setting for the debezium incremental migration verification topic
      */
     private String debeziumGroupId;
-    
+
     private Boolean countRow = true;
 
     /**

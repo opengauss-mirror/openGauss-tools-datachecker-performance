@@ -16,12 +16,17 @@
 package org.opengauss.datachecker.check.modules.check;
 
 import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.Logger;
+import org.opengauss.datachecker.common.entry.check.Difference;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.extract.ConditionLimit;
+import org.opengauss.datachecker.common.util.LogUtils;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
@@ -33,19 +38,22 @@ import java.util.TreeSet;
  * @date ：Created in 2022/6/18
  * @since ：11
  */
-@Slf4j
 @Getter
 public abstract class AbstractCheckDiffResultBuilder<C extends CheckDiffResult, B extends AbstractCheckDiffResultBuilder<C, B>> {
+    private static final Logger log = LogUtils.getLogger();
     private static final int MAX_DIFF_REPAIR_SIZE = 5000;
 
     private String table;
     private int partitions;
     private int rowCount;
     private int errorRate;
+    private int sno;
     private long beginOffset;
     private String topic;
     private String schema;
     private String process;
+    private String fileName;
+    private String error;
     private boolean isTableStructureEquals;
     private boolean isExistTableMiss;
     private Endpoint onlyExistEndpoint;
@@ -54,6 +62,9 @@ public abstract class AbstractCheckDiffResultBuilder<C extends CheckDiffResult, 
     private Set<String> keyUpdateSet = new TreeSet<>();
     private Set<String> keyInsertSet = new TreeSet<>();
     private Set<String> keyDeleteSet = new TreeSet<>();
+    private List<Difference> keyUpdate = new LinkedList<>();
+    private List<Difference> keyInsert = new LinkedList<>();
+    private List<Difference> keyDelete = new LinkedList<>();
     private LocalDateTime startTime;
     private LocalDateTime endTime;
 
@@ -88,6 +99,11 @@ public abstract class AbstractCheckDiffResultBuilder<C extends CheckDiffResult, 
         return self();
     }
 
+    public B fileName(String fileName) {
+        this.fileName = fileName;
+        return self();
+    }
+
     /**
      * Set the process properties of the builder
      *
@@ -96,6 +112,16 @@ public abstract class AbstractCheckDiffResultBuilder<C extends CheckDiffResult, 
      */
     public B process(String process) {
         this.process = process;
+        return self();
+    }
+
+    public B error(String error) {
+        this.error = error;
+        return self();
+    }
+
+    public B sno(int sno) {
+        this.sno = sno;
         return self();
     }
 
@@ -195,7 +221,7 @@ public abstract class AbstractCheckDiffResultBuilder<C extends CheckDiffResult, 
     }
 
     public B errorRate(int errorRate) {
-        this.errorRate = errorRate;
+        this.errorRate = 100;
         return self();
     }
 
@@ -219,6 +245,25 @@ public abstract class AbstractCheckDiffResultBuilder<C extends CheckDiffResult, 
         this.keyUpdateSet.addAll(keyUpdateSet);
         return self();
     }
+
+    public B keyDiff(List<Difference> insert, List<Difference> update, List<Difference> delete) {
+        this.keyInsert.addAll(insert);
+        this.keyUpdate.addAll(update);
+        this.keyDelete.addAll(delete);
+        diffSort.sort(this.keyInsert);
+        diffSort.sort(this.keyUpdate);
+        diffSort.sort(this.keyDelete);
+        return self();
+    }
+
+    @FunctionalInterface
+    private interface DifferenceSort {
+        void sort(List<Difference> list);
+    }
+
+    private DifferenceSort diffSort = list -> {
+        list.sort(Comparator.comparing(Difference::getKey));
+    };
 
     /**
      * Set the keyInsertSet properties of the builder
@@ -275,6 +320,7 @@ public abstract class AbstractCheckDiffResultBuilder<C extends CheckDiffResult, 
             return true;
         }
         int totalRepair = getKeySetSize(keyDeleteSet) + getKeySetSize(keyInsertSet) + getKeySetSize(keyUpdateSet);
+        totalRepair = totalRepair + getKeyListSize(keyDelete) + getKeyListSize(keyInsert) + getKeyListSize(keyUpdate);
         int curErrorRate = rowCount > 0 ? (totalRepair * 100 / rowCount) : 0;
         if (totalRepair <= MAX_DIFF_REPAIR_SIZE || curErrorRate <= errorRate) {
             return true;
@@ -287,5 +333,9 @@ public abstract class AbstractCheckDiffResultBuilder<C extends CheckDiffResult, 
 
     protected int getKeySetSize(Set<String> keySet) {
         return keySet == null ? 0 : keySet.size();
+    }
+
+    protected int getKeyListSize(List<Difference> keyList) {
+        return keyList == null ? 0 : keyList.size();
     }
 }

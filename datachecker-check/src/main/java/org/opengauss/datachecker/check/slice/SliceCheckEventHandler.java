@@ -1,0 +1,110 @@
+/*
+ * Copyright (c) 2022-2022 Huawei Technologies Co.,Ltd.
+ *
+ * openGauss is licensed under Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *
+ *           http://license.coscl.org.cn/MulanPSL2
+ *
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+ * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+ * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
+ */
+
+package org.opengauss.datachecker.check.slice;
+
+import org.apache.logging.log4j.Logger;
+import org.opengauss.datachecker.check.modules.check.AbstractCheckDiffResultBuilder.CheckDiffResultBuilder;
+import org.opengauss.datachecker.check.modules.check.CheckDiffResult;
+import org.opengauss.datachecker.common.config.ConfigCache;
+import org.opengauss.datachecker.common.constant.ConfigConstants;
+import org.opengauss.datachecker.common.entry.extract.SliceExtend;
+import org.opengauss.datachecker.common.entry.extract.SliceVo;
+import org.opengauss.datachecker.common.service.DynamicThreadPoolManager;
+import org.opengauss.datachecker.common.util.LogUtils;
+import org.springframework.stereotype.Component;
+
+import javax.annotation.Resource;
+
+import java.time.LocalDateTime;
+import java.util.concurrent.ThreadPoolExecutor;
+
+import static org.opengauss.datachecker.common.constant.DynamicTpConstant.CHECK_EXECUTOR;
+
+/**
+ * SliceCheckEventHandler
+ *
+ * @author ：wangchao
+ * @date ：Created in 2023/8/2
+ * @since ：11
+ */
+@Component
+public class SliceCheckEventHandler {
+    private static final Logger log = LogUtils.getBusinessLogger();
+    @Resource
+    private DynamicThreadPoolManager dynamicThreadPoolManager;
+    @Resource
+    private SliceCheckContext sliceCheckContext;
+    private ThreadPoolExecutor executor;
+
+    /**
+     * init dynamic thread pool for slice check worker
+     */
+    public void initDtpExecutor() {
+        executor = dynamicThreadPoolManager.getExecutor(CHECK_EXECUTOR);
+    }
+
+    /**
+     * handle slice check event
+     * if table structure is equal, then create slice check worker ,and add into executor.
+     * if not equal,add check result that table structure not equal.
+     *
+     * @param checkEvent check event
+     */
+    public void handle(SliceCheckEvent checkEvent) {
+        if (checkTableStructure(checkEvent)) {
+            log.info("slice check event {} is dispatched.", checkEvent.getCheckName());
+            if (checkEvent.isTableLevel()) {
+                executor.submit(new TableCheckWorker(checkEvent, sliceCheckContext));
+            } else {
+                executor.submit(new SliceCheckWorker(checkEvent, sliceCheckContext));
+            }
+        } else {
+            log.info("slice check event {} table structure diff", checkEvent.getCheckName());
+            handleTableStructureDiff(checkEvent);
+        }
+    }
+
+    private void handleTableStructureDiff(SliceCheckEvent checkEvent) {
+        SliceExtend source = checkEvent.getSource();
+        SliceExtend sink = checkEvent.getSink();
+        long count = Math.max(source.getCount(), sink.getCount());
+        sliceCheckContext.refreshSliceCheckProgress(checkEvent.getSlice(), count);
+        CheckDiffResult result = buildTableStructureDiffResult(checkEvent.getSlice(), (int) count);
+        sliceCheckContext.addTableStructureDiffResult(checkEvent.getSlice(), result);
+    }
+
+    private CheckDiffResult buildTableStructureDiffResult(SliceVo slice, int count) {
+        CheckDiffResultBuilder builder = CheckDiffResultBuilder.builder();
+        builder.checkMode(ConfigCache.getCheckMode())
+               .process(ConfigCache.getValue(ConfigConstants.PROCESS_NO))
+               .schema(slice.getSchema())
+               .table(slice.getTable())
+               .sno(slice.getNo())
+               .startTime(LocalDateTime.now())
+               .endTime(LocalDateTime.now())
+               .isTableStructureEquals(false)
+               .isExistTableMiss(false, null)
+               .rowCount(count)
+               .error("table structure diff");
+        return builder.build();
+    }
+
+    private boolean checkTableStructure(SliceCheckEvent checkEvent) {
+        SliceExtend source = checkEvent.getSource();
+        SliceExtend sink = checkEvent.getSink();
+        return source.getTableHash() == sink.getTableHash();
+    }
+}

@@ -15,7 +15,8 @@
 
 package org.opengauss.datachecker.common.exception;
 
-import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.Logger;
+import org.opengauss.datachecker.common.util.LogUtils;
 
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -69,8 +70,8 @@ public class CheckThreadFactory implements ThreadFactory {
 /**
  * Custom Check Thread Exception Handler
  */
-@Slf4j
 class CheckUncaughtExceptionHandler implements Thread.UncaughtExceptionHandler {
+    private static final Logger log = LogUtils.getLogger();
     @Override
     public void uncaughtException(Thread thread, Throwable throwable) {
         log.error("{} exception: ", thread.getName(), throwable);

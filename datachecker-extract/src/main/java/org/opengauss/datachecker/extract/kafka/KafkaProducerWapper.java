@@ -16,11 +16,12 @@
 package org.opengauss.datachecker.extract.kafka;
 
 import com.alibaba.fastjson.JSON;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.entry.extract.RowDataHash;
 import org.opengauss.datachecker.common.entry.extract.Topic;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.kafka.core.KafkaTemplate;
 
 import java.util.List;
@@ -32,8 +33,8 @@ import java.util.List;
  * @date ：Created in 2022/5/14
  * @since ：11
  */
-@Slf4j
 public class KafkaProducerWapper {
+    private static final Logger log = LogUtils.getKafkaLogger();
     private static final int DEFAULT_PARTITION = 0;
     private static final int EMPTY = 0;
     private static final int MIN_PARTITION_NUM = 1;

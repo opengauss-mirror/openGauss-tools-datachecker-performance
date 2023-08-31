@@ -36,6 +36,7 @@ public class Topic {
     private String sourceTopicName;
     private String sinkTopicName;
     private int partitions;
+    private int ptnNum;
 
     public String getTopicName(Endpoint endpoint) {
         return Objects.equals(Endpoint.SOURCE, endpoint) ? sourceTopicName : sinkTopicName;
@@ -45,5 +46,9 @@ public class Topic {
     public String toString() {
         return " tableName=" + tableName + ", topicName=" + topicName + ", sourceTopicName=" + sourceTopicName
             + ", sinkTopicName=" + sinkTopicName + ", partitions=" + partitions;
+    }
+
+    public String toTopicString() {
+        return sourceTopicName + " , " + sinkTopicName;
     }
 }

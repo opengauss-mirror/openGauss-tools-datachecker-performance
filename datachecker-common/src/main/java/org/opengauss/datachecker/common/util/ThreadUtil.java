@@ -15,10 +15,12 @@
 
 package org.opengauss.datachecker.common.util;
 
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
+import org.apache.logging.log4j.Logger;
 
+import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -31,9 +33,8 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
  * @date ：Created in 2022/5/31
  * @since ：11
  */
-@Slf4j
 public class ThreadUtil {
-
+    private static final Logger log = LogUtils.getLogger();
     /**
      * Thread hibernation
      *
@@ -73,6 +74,25 @@ public class ThreadUtil {
     }
 
     /**
+     * kill thread by thread name
+     *
+     * @param name thread name
+     */
+    public static void killThreadByName(String name) {
+        ThreadGroup currentGroup = Thread.currentThread()
+                                         .getThreadGroup();
+        int noThreads = currentGroup.activeCount();
+        Thread[] lstThreads = new Thread[noThreads];
+        currentGroup.enumerate(lstThreads);
+        Arrays.stream(lstThreads)
+              .filter(thread -> StringUtils.startsWith(thread.getName(), name))
+              .forEach(thread -> {
+                  thread.interrupt();
+                  log.error("thread [{}] has interrupted", thread.getName());
+              });
+    }
+
+    /**
      * Custom thread pool construction
      *
      * @return thread pool
@@ -88,12 +108,14 @@ public class ThreadUtil {
      * @return Scheduled task single thread
      */
     public static ScheduledExecutorService newSingleThreadScheduledExecutor() {
-        return new ScheduledThreadPoolExecutor(1, new BasicThreadFactory.Builder().daemon(true).build());
+        return new ScheduledThreadPoolExecutor(1, new BasicThreadFactory.Builder().daemon(true)
+                                                                                  .build());
     }
 
     public static ScheduledExecutorService newSingleThreadScheduledExecutor(String name) {
         return new ScheduledThreadPoolExecutor(1, new BasicThreadFactory.
-            Builder().namingPattern(name).build());
+            Builder().namingPattern(name)
+                     .build());
     }
 
 }

@@ -15,7 +15,6 @@
 
 package org.opengauss.datachecker.common.service;
 
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
@@ -23,7 +22,9 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.exception.ExtractBootstrapException;
+import org.opengauss.datachecker.common.util.LogUtils;
 
 import static org.opengauss.datachecker.common.service.CommonCommandLine.CmdOption.HELP;
 import static org.opengauss.datachecker.common.service.CommonCommandLine.CmdOption.HELP_LONG;
@@ -35,8 +36,9 @@ import static org.opengauss.datachecker.common.service.CommonCommandLine.CmdOpti
  * @date ：Created in 2023/4/13
  * @since ：11
  */
-@Slf4j
 public class CommonCommandLine {
+    private static final Logger log = LogUtils.getLogger();
+
     protected static Options options = new Options();
     protected static CommandLineParser parser = new DefaultParser();
     protected static CommandLine commandLine;

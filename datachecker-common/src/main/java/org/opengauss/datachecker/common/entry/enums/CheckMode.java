@@ -27,13 +27,17 @@ import lombok.Getter;
 @Getter
 public enum CheckMode implements IEnum {
     /**
+     * CSV full check mode
+     */
+    CSV("CSV", "csv mode"),
+    /**
      * full check mode
      */
-    FULL("FULL", "full check mode"),
+    FULL("FULL", "full mode"),
     /**
      * increment check mode
      */
-    INCREMENT("INCREMENT", "increment check mode");
+    INCREMENT("INCREMENT", "increment mode");
 
     private final String code;
     private final String description;
@@ -46,5 +50,5 @@ public enum CheckMode implements IEnum {
     /**
      * CheckMode api description
      */
-    public static final String API_DESCRIPTION = "CheckMode [FULL-full check mode,INCREMENT-increment check mode]";
+    public static final String API_DESCRIPTION = "CheckMode [CSV-csv mode , FULL-full mode,INCREMENT-increment mode]";
 }

@@ -78,36 +78,36 @@ public interface DataExtractService {
      */
     ExtractTask queryTableInfo(String taskName);
 
-    /**
-     * DML statement generating repair report
-     *
-     * @param schema    schema
-     * @param tableName tableName
-     * @param diffSet   Primary key set to be generated
-     * @return DML statement
-     */
-    List<String> buildRepairStatementUpdateDml(String schema, String tableName, boolean ogCompatibility, Set<String> diffSet);
-
-    /**
-     * DML statement generating repair report
-     *
-     * @param schema    schema
-     * @param tableName tableName
-     * @param diffSet   Primary key set to be generated
-     * @return DML statement
-     */
-    List<String> buildRepairStatementInsertDml(String schema, String tableName, boolean ogCompatibility,Set<String> diffSet);
-
-    /**
-     * DML statement generating repair report
-     *
-     * @param schema    schema
-     * @param tableName tableName
-     * @param ogCompatibility
-     * @param diffSet   Primary key set to be generated
-     * @return DML statement
-     */
-    List<String> buildRepairStatementDeleteDml(String schema, String tableName, boolean ogCompatibility, Set<String> diffSet);
+//    /**
+//     * DML statement generating repair report
+//     *
+//     * @param schema    schema
+//     * @param tableName tableName
+//     * @param diffSet   Primary key set to be generated
+//     * @return DML statement
+//     */
+//    List<String> buildRepairStatementUpdateDml(String schema, String tableName, boolean ogCompatibility, Set<String> diffSet);
+//
+//    /**
+//     * DML statement generating repair report
+//     *
+//     * @param schema    schema
+//     * @param tableName tableName
+//     * @param diffSet   Primary key set to be generated
+//     * @return DML statement
+//     */
+//    List<String> buildRepairStatementInsertDml(String schema, String tableName, boolean ogCompatibility,Set<String> diffSet);
+//
+//    /**
+//     * DML statement generating repair report
+//     *
+//     * @param schema    schema
+//     * @param tableName tableName
+//     * @param ogCompatibility
+//     * @param diffSet   Primary key set to be generated
+//     * @return DML statement
+//     */
+//    List<String> buildRepairStatementDeleteDml(String schema, String tableName, boolean ogCompatibility, Set<String> diffSet);
 
     /**
      * Query table data

@@ -15,13 +15,14 @@
 
 package org.opengauss.datachecker.common.service;
 
-import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.entry.memory.CpuInfo;
 import org.opengauss.datachecker.common.entry.memory.GcInfo;
 import org.opengauss.datachecker.common.entry.memory.JvmInfo;
 import org.opengauss.datachecker.common.entry.memory.MemoryInfo;
 import org.opengauss.datachecker.common.entry.memory.OsInfo;
 import org.opengauss.datachecker.common.entry.memory.ThreadInfo;
+import org.opengauss.datachecker.common.util.LogUtils;
 import oshi.hardware.CentralProcessor;
 import oshi.hardware.CentralProcessor.TickType;
 import oshi.hardware.GlobalMemory;
@@ -42,8 +43,8 @@ import java.util.Properties;
  * @date ：Created in 2023/3/29
  * @since ：11
  */
-@Slf4j
 public class MemoryManager {
+    private static final Logger log = LogUtils.getLogger();
     private static final int OSHI_WAIT_MILLIS = 500;
     private static final OsInfo OS_INFO = getOsInfo();
     private static final CpuInfo CPU = new CpuInfo();

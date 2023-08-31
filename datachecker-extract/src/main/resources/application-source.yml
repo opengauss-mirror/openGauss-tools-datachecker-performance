@@ -1,8 +1,6 @@
 server:
   port: 9001
 debug: false
-logging:
-  config: classpath:log4j2-source.xml
 
 spring:
   application:
@@ -13,6 +11,7 @@ spring:
     schema: test
     databaseType: MS  # MS mysql
     endpoint: SOURCE
+    dataLoadMode: jdbc # jdbc or csv
     query-dop: 1 # jdbc Parallel Query  config
     debezium-enable: false # Whether to enable incremental debezium configuration (not enabled by default)
     debezium-topic:
@@ -28,25 +27,23 @@ spring:
     sync-extract: false
 
   datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://xxxxxx:xxx/xxx?useSSL=false&useUnicode=true&characterEncoding=utf-8&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: xxxxx
+    password: xxxxxx
+    type: com.alibaba.druid.pool.DruidDataSource
     druid:
-      dataSourceOne:
-        driver-class-name: com.mysql.cj.jdbc.Driver
-        url: jdbc:mysql://xxxxxx:xxx/xxx?useSSL=false&useUnicode=true&characterEncoding=utf-8&serverTimezone=UTC&allowPublicKeyRetrieval=true
-        username: xxxxx
-        password: xxxxxx
-        type: com.alibaba.druid.pool.DruidDataSource
-        initialSize: 5
-        minIdle: 5
-        maxActive: 20
-        maxWait: 60000
-        timeBetweenEvictionRunsMillis: 60000
-        minEvictableIdleTimeMillis: 300000
-        validationQuery: SELECT 1 FROM DUAL
-        testWhileIdle: true
-        testOnBorrow: false
-        testOnReturn: false
-        poolPreparedStatements: true
-      filters: stat,wall,log4j
+      initialSize: 5
+      minIdle: 5
+      maxActive: 20
+      max-wait: 60000
+      timeBetweenEvictionRunsMillis: 60000
+      min-evictable-idle-time-millis: 600000
+      validationQuery: SELECT 1 FROM DUAL
+      testWhileIdle: true
+      testOnBorrow: false
+      testOnReturn: false
+      poolPreparedStatements: true
       maxPoolPreparedStatementPerConnectionSize: 20
       useGlobalDataSourceStat: true
       connectionProperties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=500

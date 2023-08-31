@@ -16,19 +16,22 @@
 package org.opengauss.datachecker.check.modules.check;
 
 import com.alibaba.fastjson.JSON;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.entry.extract.RowDataHash;
+import org.opengauss.datachecker.common.entry.extract.SliceExtend;
+import org.opengauss.datachecker.common.util.LogUtils;
 
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Stream;
 
 /**
  * KafkaConsumerHandler
@@ -37,9 +40,8 @@ import java.util.Map;
  * @date ：Created in 2022/8/31
  * @since ：11
  */
-@Slf4j
 public class KafkaConsumerHandler {
-
+    private static final Logger log = LogUtils.getKafkaLogger();
     private static final int KAFKA_CONSUMER_POLL_DURATION = 20;
 
     private final KafkaConsumer<String, String> kafkaConsumer;
@@ -73,6 +75,33 @@ public class KafkaConsumerHandler {
         consumerTopicRecords(list, kafkaConsumer, endOfOffset);
         log.debug("consumer topic=[{}] partitions=[{}] dataList=[{}] ,beginOfOffset={},endOfOffset={}", topic,
             partitions, list.size(), beginOfOffset, endOfOffset);
+    }
+
+    /**
+     * consumer poll data from the topic partition, and filter bu slice extend. then add data in the data list.
+     *
+     * @param topicPartition topic partition
+     * @param sExtend        slice extend
+     * @param dataList       data list
+     */
+    public void pollTpSliceData(TopicPartition topicPartition, SliceExtend sExtend, List<RowDataHash> dataList) {
+        kafkaConsumer.assign(List.of(topicPartition));
+        kafkaConsumer.seek(topicPartition, sExtend.getStartOffset());
+        AtomicLong currentCount = new AtomicLong(0);
+        while (currentCount.get() < sExtend.getCount()) {
+            ConsumerRecords<String, String> records =
+                kafkaConsumer.poll(Duration.ofMillis(KAFKA_CONSUMER_POLL_DURATION));
+            if (records.count() <= 0) {
+                continue;
+            }
+            records.forEach(record -> {
+                RowDataHash row = JSON.parseObject(record.value(), RowDataHash.class);
+                if (row.getSNo() == sExtend.getNo()) {
+                    dataList.add(row);
+                    currentCount.incrementAndGet();
+                }
+            });
+        }
     }
 
     /**
@@ -134,9 +163,14 @@ public class KafkaConsumerHandler {
         });
     }
 
+    /**
+     * close consumer
+     */
     public void closeConsumer() {
         if (kafkaConsumer != null) {
+            kafkaConsumer.unsubscribe();
             kafkaConsumer.close(Duration.ofSeconds(1));
         }
     }
+
 }

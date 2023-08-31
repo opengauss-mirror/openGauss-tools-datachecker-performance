@@ -15,7 +15,6 @@
 
 package org.opengauss.datachecker.check.event;
 
-import lombok.extern.slf4j.Slf4j;
 import org.opengauss.datachecker.check.load.CheckEnvironment;
 import org.opengauss.datachecker.check.modules.check.CheckDiffResult;
 import org.opengauss.datachecker.common.entry.report.CheckSuccess;
@@ -31,7 +30,6 @@ import javax.annotation.Resource;
  * @date ：Created in 2023/3/7
  * @since ：11
  */
-@Slf4j
 @Component
 public class CheckSuccessReportEventListener extends CheckReportEventAdapter
     implements ApplicationListener<CheckSuccessReportEvent> {
@@ -55,7 +53,7 @@ public class CheckSuccessReportEventListener extends CheckReportEventAdapter
         long cost = calcCheckTaskCost(result.getStartTime(), result.getEndTime());
         return new CheckSuccess().setProcess(result.getProcess()).setSchema(result.getSchema())
                                  .setTopic(new String[] {result.getTopic()}).setPartition(result.getPartitions())
-                                 .setTableName(result.getTable()).setCost(cost).setEndTime(result.getEndTime())
+                                 .setTable(result.getTable()).setCost(cost).setEndTime(result.getEndTime())
                                  .setStartTime(result.getStartTime()).setMessage(result.getMessage());
     }
 }

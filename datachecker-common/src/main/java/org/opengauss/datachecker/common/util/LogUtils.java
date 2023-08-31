@@ -26,17 +26,22 @@ import org.apache.logging.log4j.Logger;
  * @since ：11
  */
 public class LogUtils {
-    private static final String CHECK_BUSINESS = "check_business";
-    private static final String EXTRACT_BUSINESS = "extract_business";
-    private static final String KAFKA_BUSINESS = "kafka_business";
+    private static final String PROGRESS = "progress";
+    private static final String BUSINESS = "business";
+    private static final String KAFKA = "kafka";
+    private static final String DEBUG = "debugger";
 
     /**
      * get kafka business logger
      *
      * @return logger
      */
-    public static Logger geKafkaLogger() {
-        return LogManager.getLogger(KAFKA_BUSINESS);
+    public static Logger getKafkaLogger() {
+        return LogManager.getLogger(KAFKA);
+    }
+
+    public static Logger getLogger() {
+        return LogManager.getLogger(PROGRESS);
     }
 
     /**
@@ -44,16 +49,11 @@ public class LogUtils {
      *
      * @return logger
      */
-    public static Logger getCheckLogger() {
-        return LogManager.getLogger(CHECK_BUSINESS);
+    public static Logger getBusinessLogger() {
+        return LogManager.getLogger(BUSINESS);
     }
 
-    /**
-     * get extrect business logger
-     *
-     * @return logger
-     */
-    public static Logger getExtractLogger() {
-        return LogManager.getLogger(EXTRACT_BUSINESS);
+    public static Logger getDebugLogger() {
+        return LogManager.getLogger(DEBUG);
     }
 }

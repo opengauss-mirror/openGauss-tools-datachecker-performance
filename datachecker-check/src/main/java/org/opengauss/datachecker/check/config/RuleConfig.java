@@ -46,4 +46,16 @@ public class RuleConfig {
     private List<Rule> row;
     @ColumnRule
     private List<Rule> column;
+
+    public void tableRuleClear() {
+        table.clear();
+    }
+
+    public void rowRuleClear() {
+        row.clear();
+    }
+
+    public void columnRuleClear() {
+        column.clear();
+    }
 }

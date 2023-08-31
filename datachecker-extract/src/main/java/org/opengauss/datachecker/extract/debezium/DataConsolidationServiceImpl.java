@@ -15,7 +15,6 @@
 
 package org.opengauss.datachecker.extract.debezium;
 
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.opengauss.datachecker.common.entry.check.IncrementCheckConfig;
@@ -54,7 +53,6 @@ import java.util.stream.Collectors;
  * @date ：Created in 2022/6/14
  * @since ：11
  */
-@Slf4j
 @Service
 public class DataConsolidationServiceImpl implements DataConsolidationService {
     private static final IncrementCheckConfig INCREMENT_CHECK_CONIFG = new IncrementCheckConfig();

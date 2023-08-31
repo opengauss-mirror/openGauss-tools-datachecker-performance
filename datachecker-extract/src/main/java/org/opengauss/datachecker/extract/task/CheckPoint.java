@@ -15,9 +15,10 @@
 
 package org.opengauss.datachecker.extract.task;
 
-import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.entry.common.DataAccessParam;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.extract.data.access.DataAccessService;
 
 import java.util.LinkedList;
@@ -31,13 +32,13 @@ import java.util.Objects;
  * @date ：Created in 2023/6/19
  * @since ：11
  */
-@Slf4j
 public class CheckPoint {
+    private static final Logger log = LogUtils.getLogger();
     private static final List<String> numberDataTypes =
-        List.of("integer", "int", "uint4", "long", "smallint", "mediumint", "bigint");
+        List.of("integer", "int", "uint1", "uint2", "uint4", "uint8", "long", "smallint", "mediumint", "bigint");
     private static final List<String> dataTypes =
-        List.of("integer", "int", "uint4", "long", "smallint", "mediumint", "bigint", "character", "char", "varchar",
-            "character varying");
+        List.of("integer", "int", "uint1", "uint2", "uint4", "uint8", "long", "smallint", "mediumint", "bigint",
+            "character", "char", "varchar", "character varying");
     private final DataAccessService dataAccessService;
 
     /**
@@ -64,7 +65,9 @@ public class CheckPoint {
         String schema = tableMetadata.getSchema();
         String tableName = tableMetadata.getTableName();
 
-        DataAccessParam param = new DataAccessParam().setSchema(schema).setName(tableName).setColName(pkName);
+        DataAccessParam param = new DataAccessParam().setSchema(schema)
+                                                     .setName(tableName)
+                                                     .setColName(pkName);
         String checkPoint = dataAccessService.min(param);
         param.setOffset(slice);
         String preValue = checkPoint;
@@ -88,12 +91,16 @@ public class CheckPoint {
     }
 
     public boolean checkPkNumber(TableMetadata tableMetadata) {
-        String dataType = tableMetadata.getPrimaryMetas().get(0).getDataType();
+        String dataType = tableMetadata.getPrimaryMetas()
+                                       .get(0)
+                                       .getDataType();
         return numberDataTypes.contains(dataType);
     }
 
     private String getPkName(TableMetadata tableMetadata) {
-        return tableMetadata.getPrimaryMetas().get(0).getColumnName();
+        return tableMetadata.getPrimaryMetas()
+                            .get(0)
+                            .getColumnName();
     }
 
     public Long[][] translateBetween(List<Object> checkPointList) {
@@ -122,14 +129,17 @@ public class CheckPoint {
 
     public long queryMaxIdOfAutoIncrementTable(TableMetadata tableMetadata) {
         DataAccessParam param = new DataAccessParam();
-        param.setSchema(tableMetadata.getSchema()).setName(tableMetadata.getTableName())
+        param.setSchema(tableMetadata.getSchema())
+             .setName(tableMetadata.getTableName())
              .setColName(getPkName(tableMetadata));
         String maxId = dataAccessService.max(param);
         return Long.parseLong(maxId);
     }
 
-    public boolean checkValidPrimaryKey(TableMetadata tableMetadata) {
-        String columnType = tableMetadata.getPrimaryMetas().get(0).getDataType();
+    public boolean checkInvalidPrimaryKey(TableMetadata tableMetadata) {
+        String columnType = tableMetadata.getPrimaryMetas()
+                                         .get(0)
+                                         .getDataType();
         return !dataTypes.contains(columnType);
     }
 }

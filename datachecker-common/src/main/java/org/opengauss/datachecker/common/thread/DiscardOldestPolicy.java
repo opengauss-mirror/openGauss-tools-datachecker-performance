@@ -15,7 +15,7 @@
 
 package org.opengauss.datachecker.common.thread;
 
-import org.slf4j.Logger;
+import org.apache.logging.log4j.Logger;
 
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicLong;

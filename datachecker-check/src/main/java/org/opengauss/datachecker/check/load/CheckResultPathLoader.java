@@ -15,7 +15,6 @@
 
 package org.opengauss.datachecker.check.load;
 
-import lombok.extern.slf4j.Slf4j;
 import org.opengauss.datachecker.check.config.DataCheckProperties;
 import org.opengauss.datachecker.check.modules.check.ExportCheckResult;
 import org.springframework.core.annotation.Order;
@@ -30,7 +29,6 @@ import javax.annotation.Resource;
  * @date ：Created in 2022/10/31
  * @since ：11
  */
-@Slf4j
 @Order(96)
 @Service
 public class CheckResultPathLoader extends AbstractCheckLoader {
@@ -44,6 +42,7 @@ public class CheckResultPathLoader extends AbstractCheckLoader {
     public void load(CheckEnvironment checkEnvironment) {
         ExportCheckResult.initEnvironment(properties.getDataPath());
         checkEnvironment.setExportCheckPath(properties.getDataPath());
+        ExportCheckResult.backCheckResultDirectory();
         log.info("check service load export environment success.");
     }
 }

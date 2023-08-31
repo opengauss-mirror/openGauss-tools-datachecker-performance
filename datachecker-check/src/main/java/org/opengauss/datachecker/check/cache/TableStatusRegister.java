@@ -15,13 +15,14 @@
 
 package org.opengauss.datachecker.check.cache;
 
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.constant.Constants.InitialCapacity;
 import org.opengauss.datachecker.common.entry.check.CheckProgress;
 import org.opengauss.datachecker.common.entry.check.Pair;
 import org.opengauss.datachecker.common.exception.ExtractException;
 import org.opengauss.datachecker.common.service.ShutdownService;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.springframework.stereotype.Service;
 
@@ -42,13 +43,15 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
+ * TableStatusRegister
+ *
  * @author ：wangchao
  * @date ：Created in 2022/5/25
  * @since ：11
  */
-@Slf4j
 @Service
 public class TableStatusRegister implements Cache<String, Integer> {
+    private static final Logger log = LogUtils.getLogger();
     /**
      * Task status: if both the source and destination tasks complete data extraction, the setting status is 3
      */
@@ -113,7 +116,8 @@ public class TableStatusRegister implements Cache<String, Integer> {
         ScheduledExecutorService scheduledExecutor = ThreadUtil.newSingleThreadScheduledExecutor();
         shutdownService.addExecutorService(scheduledExecutor);
         scheduledExecutor.scheduleWithFixedDelay(() -> {
-            Thread.currentThread().setName(SELF_CHECK_THREAD_NAME);
+            Thread.currentThread()
+                  .setName(SELF_CHECK_THREAD_NAME);
             doCheckingStatus();
         }, 5, 1, TimeUnit.SECONDS);
     }
@@ -125,7 +129,9 @@ public class TableStatusRegister implements Cache<String, Integer> {
      * @return boolean
      */
     public boolean isCheckCompleted() {
-        return TABLE_STATUS_CACHE.values().stream().filter(status -> status >= TASK_STATUS_DEFAULT_VALUE)
+        return TABLE_STATUS_CACHE.values()
+                                 .stream()
+                                 .filter(status -> status >= TASK_STATUS_DEFAULT_VALUE)
                                  .allMatch(status -> status == TASK_STATUS_CONSUMER_VALUE);
     }
 
@@ -180,7 +186,9 @@ public class TableStatusRegister implements Cache<String, Integer> {
      * @return task has extract completed count
      */
     private int extractCompletedCount() {
-        return (int) TABLE_STATUS_CACHE.values().stream().filter(status -> status >= TASK_STATUS_COMPLETED_VALUE)
+        return (int) TABLE_STATUS_CACHE.values()
+                                       .stream()
+                                       .filter(status -> status >= TASK_STATUS_COMPLETED_VALUE)
                                        .count();
     }
 
@@ -190,7 +198,9 @@ public class TableStatusRegister implements Cache<String, Integer> {
      * @return table has check completed count
      */
     public int checkCompletedCount() {
-        return (int) TABLE_STATUS_CACHE.values().stream().filter(status -> status >= TASK_STATUS_CONSUMER_VALUE)
+        return (int) TABLE_STATUS_CACHE.values()
+                                       .stream()
+                                       .filter(status -> status >= TASK_STATUS_CONSUMER_VALUE)
                                        .count();
     }
 
@@ -251,9 +261,10 @@ public class TableStatusRegister implements Cache<String, Integer> {
             throw new ExtractException("The current key= " + key + " already exists and cannot be added repeatedly");
         }
         Map<Integer, Integer> partitionMap = new ConcurrentHashMap<>(InitialCapacity.CAPACITY_16);
-        IntStream.range(0, partitions).forEach(partition -> {
-            partitionMap.put(partition, TASK_STATUS_COMPLETED_VALUE);
-        });
+        IntStream.range(0, partitions)
+                 .forEach(partition -> {
+                     partitionMap.put(partition, TASK_STATUS_COMPLETED_VALUE);
+                 });
         TABLE_PARTITIONS_STATUS_CACHE.put(key, partitionMap);
     }
 
@@ -293,9 +304,12 @@ public class TableStatusRegister implements Cache<String, Integer> {
             log.error("current partition key={}  does not exist", key);
             return;
         }
-        TABLE_PARTITIONS_STATUS_CACHE.get(key).put(partition, TASK_STATUS_COMPLETED_VALUE | value);
+        TABLE_PARTITIONS_STATUS_CACHE.get(key)
+                                     .put(partition, TASK_STATUS_COMPLETED_VALUE | value);
         log.debug("update table [{}] partition[{}] status : {}", key, partition, TASK_STATUS_CONSUMER_VALUE);
-        boolean isAllCompleted = TABLE_PARTITIONS_STATUS_CACHE.get(key).values().stream()
+        boolean isAllCompleted = TABLE_PARTITIONS_STATUS_CACHE.get(key)
+                                                              .values()
+                                                              .stream()
                                                               .allMatch(status -> status == TASK_STATUS_CONSUMER_VALUE);
         if (isAllCompleted) {
             update(key, TASK_STATUS_CHECK_VALUE);
@@ -355,7 +369,8 @@ public class TableStatusRegister implements Cache<String, Integer> {
      * @return cache size
      */
     public Integer cacheSize() {
-        return TABLE_STATUS_CACHE.keySet().size();
+        return TABLE_STATUS_CACHE.keySet()
+                                 .size();
     }
 
     /**
@@ -428,10 +443,14 @@ public class TableStatusRegister implements Cache<String, Integer> {
                 log.debug("process check status running");
             }
         });
-        List<String> tableStatus =
-            TABLE_STATUS_CACHE.entrySet().stream().filter(entry -> entry.getValue() != 7).limit(10)
-                              .map(entry -> entry.getKey().concat("=").concat(entry.getValue() + ""))
-                              .collect(Collectors.toList());
+        List<String> tableStatus = TABLE_STATUS_CACHE.entrySet()
+                                                     .stream()
+                                                     .filter(entry -> entry.getValue() != 7)
+                                                     .limit(10)
+                                                     .map(entry -> entry.getKey()
+                                                                        .concat("=")
+                                                                        .concat(entry.getValue() + ""))
+                                                     .collect(Collectors.toList());
         if (CollectionUtils.isNotEmpty(tableStatus)) {
             log.debug("table_status :{} ", tableStatus);
         }
@@ -439,21 +458,31 @@ public class TableStatusRegister implements Cache<String, Integer> {
     }
 
     private int errorCount() {
-        return (int) TABLE_STATUS_CACHE.values().stream().filter(status -> status < TASK_STATUS_DEFAULT_VALUE).count();
+        return (int) TABLE_STATUS_CACHE.values()
+                                       .stream()
+                                       .filter(status -> status < TASK_STATUS_DEFAULT_VALUE)
+                                       .count();
     }
 
     private int extractingCount() {
-        return (int) TABLE_STATUS_CACHE.values().stream().filter(
-            status -> status >= TASK_STATUS_DEFAULT_VALUE && status < TASK_STATUS_COMPLETED_VALUE).count();
+        return (int) TABLE_STATUS_CACHE.values()
+                                       .stream()
+                                       .filter(status -> status >= TASK_STATUS_DEFAULT_VALUE
+                                           && status < TASK_STATUS_COMPLETED_VALUE)
+                                       .count();
     }
 
     private int extractCount() {
-        return (int) TABLE_STATUS_CACHE.values().stream().filter(status -> status == TASK_STATUS_COMPLETED_VALUE)
+        return (int) TABLE_STATUS_CACHE.values()
+                                       .stream()
+                                       .filter(status -> status == TASK_STATUS_COMPLETED_VALUE)
                                        .count();
     }
 
     private int checkCount() {
-        return (int) TABLE_STATUS_CACHE.values().stream().filter(status -> status == TASK_STATUS_CONSUMER_VALUE)
+        return (int) TABLE_STATUS_CACHE.values()
+                                       .stream()
+                                       .filter(status -> status == TASK_STATUS_CONSUMER_VALUE)
                                        .count();
     }
 }

@@ -15,7 +15,6 @@
 
 package org.opengauss.datachecker.check.load;
 
-import lombok.extern.slf4j.Slf4j;
 import org.opengauss.datachecker.check.service.EndpointManagerService;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.util.ThreadUtil;
@@ -31,7 +30,6 @@ import javax.annotation.Resource;
  * @date ：Created in 2022/11/9
  * @since ：11
  */
-@Slf4j
 @Order(1)
 @Service
 public class HeartBeatStartLoader extends AbstractCheckLoader {

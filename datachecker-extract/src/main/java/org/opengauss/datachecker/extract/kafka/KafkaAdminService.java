@@ -23,13 +23,12 @@ import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.admin.TopicListing;
 import org.apache.kafka.common.KafkaFuture;
 import org.apache.logging.log4j.Logger;
-import org.opengauss.datachecker.common.entry.enums.Endpoint;
+import org.opengauss.datachecker.common.config.ConfigCache;
+import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.util.LogUtils;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.KafkaException;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -38,7 +37,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 /**
@@ -50,29 +50,20 @@ import java.util.stream.Collectors;
  */
 @Component
 public class KafkaAdminService {
-    private static final Logger log = LogUtils.geKafkaLogger();
-    @Value("${spring.kafka.bootstrap-servers}")
-    private String springKafkaBootstrapServers;
-    private KafkaAdminClient adminClient;
-    private String endpointTopicPrefix = "";
-    private ReentrantLock lock = new ReentrantLock();
+    private static final Logger log = LogUtils.getKafkaLogger();
 
-    public void init(String process, Endpoint endpoint) {
-        this.endpointTopicPrefix = "CHECK_" + process + "_" + endpoint.getCode() + "_";
-        log.info("init endpoint topic prefix [{}]", endpointTopicPrefix);
-    }
+    private KafkaAdminClient adminClient;
 
     /**
      * Initialize Admin Client
      */
-    @PostConstruct
-    private void initAdminClient() {
+    public void initAdminClient() {
         Map<String, Object> props = new HashMap<>(1);
-        props.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, springKafkaBootstrapServers);
+        props.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, ConfigCache.getValue(ConfigConstants.KAFKA_SERVERS));
         adminClient = (KafkaAdminClient) KafkaAdminClient.create(props);
         try {
             adminClient.listTopics().listings().get();
-            log.info("init and listTopics  admin client [{}]", springKafkaBootstrapServers);
+            log.info("init and listTopics  admin client [{}]", ConfigCache.getValue(ConfigConstants.KAFKA_SERVERS));
         } catch (ExecutionException | InterruptedException ex) {
             log.error("kafka Client link exception: ", ex);
             throw new KafkaException("kafka Client link exception");
@@ -86,14 +77,15 @@ public class KafkaAdminService {
      * @param partitions partitions
      */
     public boolean createTopic(String topic, int partitions) {
-        lock.lock();
         try {
             CreateTopicsResult topicsResult =
                 adminClient.createTopics(List.of(new NewTopic(topic, partitions, (short) 1)));
+            topicsResult.values().get(topic).get(5, TimeUnit.SECONDS);
             log.info("create topic success , name= [{}] numPartitions = [{}]", topic, partitions);
-            return topicsResult.all().isDone();
-        } finally {
-            lock.unlock();
+            return true;
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            log.error("create tioic error : ", e);
+            return false;
         }
     }
 

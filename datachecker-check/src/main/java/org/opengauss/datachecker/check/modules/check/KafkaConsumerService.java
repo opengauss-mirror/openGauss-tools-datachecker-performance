@@ -16,11 +16,12 @@
 package org.opengauss.datachecker.check.modules.check;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.check.config.KafkaConsumerConfig;
 import org.opengauss.datachecker.common.util.IdGenerator;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Service;
@@ -32,11 +33,11 @@ import org.springframework.stereotype.Service;
  * @date ：Created in 2022/8/31
  * @since ：11
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
 @ConditionalOnBean({KafkaConsumerConfig.class})
 public class KafkaConsumerService {
+    private static final Logger log = LogUtils.getLogger();
     private static final String CLIENT_ID_SUFFIX = "Random";
 
     private final KafkaConsumerConfig kafkaConsumerConfig;
@@ -62,7 +63,7 @@ public class KafkaConsumerService {
     public KafkaConsumer<String, String> buildKafkaConsumer(boolean isNewGroup) {
         Consumer<String, String> consumer;
         if (isNewGroup) {
-            consumer = kafkaConsumerConfig.consumerFactory().createConsumer(IdGenerator.nextId36(), CLIENT_ID_SUFFIX);
+            consumer = kafkaConsumerConfig.consumerFactory(IdGenerator.nextId36()).createConsumer();
         } else {
             consumer = kafkaConsumerConfig.consumerFactory().createConsumer();
         }

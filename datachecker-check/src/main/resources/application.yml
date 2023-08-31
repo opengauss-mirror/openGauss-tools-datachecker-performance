@@ -27,8 +27,16 @@ spring:
       max-poll-records: 20000
       request-timeout-ms: 300000
       fetch-max-bytes: 536870912  # 512M
-
-
+  csv:
+    sync: true
+    schema: test_630
+    path: D:\tmp\chameleon
+    reader: ${spring.csv.path}/reader.log
+    writer: ${spring.csv.path}/writer.log
+    data: ${spring.csv.path}/data/
+    schema-tables: ${spring.csv.path}/${spring.csv.schema}_information_schema_tables.csv
+    schema-columns: ${spring.csv.path}/${spring.csv.schema}_information_schema_columns.csv
+    sleep-interval: 100 # 毫秒
 
 data:
   check:

@@ -15,11 +15,13 @@
 
 package org.opengauss.datachecker.extract.data.access;
 
+import org.opengauss.datachecker.common.entry.check.Difference;
 import org.opengauss.datachecker.common.entry.common.DataAccessParam;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.springframework.jdbc.core.RowMapper;
 
+import javax.sql.DataSource;
 import java.util.List;
 import java.util.Map;
 
@@ -37,7 +39,9 @@ public interface DataAccessService {
      * @return true | false
      */
     boolean health();
+
     boolean isOgCompatibilityB();
+
     /**
      * query schema table list
      * filter no primary key tables
@@ -111,4 +115,21 @@ public interface DataAccessService {
      * @return data
      */
     <T> List<T> query(String sql, Map<String, Object> param, RowMapper<T> rowMapper);
+
+    /**
+     * query data from csv file
+     *
+     * @param table          table
+     * @param fileName       fileName
+     * @param differenceList differenceList
+     * @return
+     */
+    List<Map<String, String>> query(String table, String fileName, List<Difference> differenceList);
+
+    /**
+     * get DataSource
+     *
+     * @return DataSource
+     */
+    DataSource getDataSource();
 }

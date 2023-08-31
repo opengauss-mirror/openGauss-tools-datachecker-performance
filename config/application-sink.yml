@@ -1,13 +1,13 @@
 server:
   port: 9002
 logging:
-  config: config/log4j2sink.xml
+  config: config/log4j2.xml
 spring:
   check:
     server-uri: http://127.0.0.1:9000
     core-pool-size: 1
     maximum-pool-size: 5
-    maximum-topic-size: 5
+    maximum-topic-size: 10
     maximum-table-slice-size: 100000
   extract:
     schema: test
@@ -23,14 +23,22 @@ spring:
   kafka:
     bootstrap-servers: localhost:9092
   datasource:
+    driver-class-name: org.opengauss.Driver
+    url: jdbc:opengauss://localhost:5432/postgres?useSSL=false&useUnicode=true&characterEncoding=utf-8&serverTimezone=UTC
+    username:
+    password: 'xxxx'  # The password text may contain special characters, which need to be enclosed in quotation marks
+    # Configure initialization connection pool size, minimum number of connections, and maximum number of connections
+    # Users can make appropriate adjustments according to the number of current database tables
     druid:
-      dataSourceOne:
-        driver-class-name: org.opengauss.Driver
-        url: jdbc:opengauss://localhost:5432/postgres?useSSL=false&useUnicode=true&characterEncoding=utf-8&serverTimezone=UTC
-        username:
-        password: 'xxxx'  # The password text may contain special characters, which need to be enclosed in quotation marks
-        # Configure initialization connection pool size, minimum number of connections, and maximum number of connections
-        # Users can make appropriate adjustments according to the number of current database tables
-        initialSize: 5 # initialization connection pool size
-        minIdle: 10 # minimum number of connections
-        maxActive: 20 # maximum number of connections
+      initial-size: 20 # initialization connection pool size
+      min-idle: 20 # minimum number of connections
+      max-active: 100 # maximum number of connections
+      test-while-idle: true
+      test-on-borrow: true
+      validation-query: "select 1"
+      validation-query-timeout: 10000
+      connection-error-retry-attempts: 0
+      break-after-acquire-failure: true
+      max-wait: 6000
+      keep-alive: true
+      min-evictable-idle-time-millis: 600000

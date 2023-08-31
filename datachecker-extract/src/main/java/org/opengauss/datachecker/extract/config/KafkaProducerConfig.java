@@ -15,7 +15,6 @@
 
 package org.opengauss.datachecker.extract.config;
 
-import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.opengauss.datachecker.common.constant.Constants.InitialCapacity;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,7 +35,6 @@ import java.util.Map;
  * @date ：Created in 2022/5/17
  * @since ：11
  */
-@Slf4j
 @Component
 @EnableKafka
 @EnableConfigurationProperties(KafkaProperties.class)
