@@ -15,19 +15,16 @@
 
 package org.opengauss.datachecker.extract.resource;
 
-import com.alibaba.druid.pool.DruidDataSource;
-import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.Logger;
+import org.opengauss.datachecker.common.config.ConfigCache;
+import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.memory.JvmInfo;
 import org.opengauss.datachecker.common.service.MemoryManager;
 import org.opengauss.datachecker.common.service.ShutdownService;
-import org.opengauss.datachecker.extract.config.DruidDataSourceConfig;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
-import javax.sql.DataSource;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -38,19 +35,13 @@ import java.util.concurrent.locks.ReentrantLock;
  * @date ：Created in 2023/3/25
  * @since ：11
  */
-@Slf4j
 @Service
-@ConditionalOnBean(DruidDataSourceConfig.class)
 public class ResourceManager {
+    private static final Logger log = LogUtils.getLogger();
     private static final int MAX_AVAILABLE_TIMES = 30;
 
     private volatile AtomicInteger connectionCount = new AtomicInteger(0);
     private volatile AtomicInteger tryAvailableTimes = new AtomicInteger(0);
-
-    @Value("${spring.extract.query-dop}")
-    private int queryDop;
-    @Resource
-    private DruidDataSourceConfig dataSourceConfig;
 
     @Resource
     private ShutdownService shutdownService;
@@ -59,15 +50,10 @@ public class ResourceManager {
     /**
      * initMaxConnectionCount
      */
-    @PostConstruct
     public void initMaxConnectionCount() {
-        DataSource dataSource = dataSourceConfig.druidDataSource();
-        if (dataSource instanceof DruidDataSource) {
-            final DruidDataSource druidDataSource = (DruidDataSource) dataSource;
-            connectionCount.set(druidDataSource.getMaxActive());
-            final JvmInfo memory = MemoryManager.getJvmInfo();
-            log.info("max active connection {} ,max memory {}", connectionCount.get(), memory.getMax());
-        }
+        connectionCount.set(ConfigCache.getIntValue(ConfigConstants.DRUID_MAX_ACTIVE));
+        final JvmInfo memory = MemoryManager.getJvmInfo();
+        log.info("max active connection {} ,max memory {}", connectionCount.get(), memory.getMax());
     }
 
     /**
@@ -76,7 +62,7 @@ public class ResourceManager {
      * @return queryDop
      */
     public int getParallelQueryDop() {
-        return queryDop;
+        return ConfigCache.getIntValue(ConfigConstants.QUERY_DOP);
     }
 
     /**

@@ -15,10 +15,9 @@
 
 package org.opengauss.datachecker.check.client;
 
-import org.opengauss.datachecker.common.entry.common.DistributeRuleEntry;
-import org.opengauss.datachecker.common.entry.common.Rule;
-import org.opengauss.datachecker.common.entry.enums.CheckMode;
-import org.opengauss.datachecker.common.entry.enums.RuleType;
+import org.opengauss.datachecker.common.entry.common.GlobalConfig;
+import org.opengauss.datachecker.common.entry.common.RepairEntry;
+import org.opengauss.datachecker.common.entry.csv.CsvPathConfig;
 import org.opengauss.datachecker.common.entry.extract.ExtractConfig;
 import org.opengauss.datachecker.common.entry.extract.ExtractTask;
 import org.opengauss.datachecker.common.entry.extract.RowDataHash;
@@ -33,7 +32,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * @author ：wangchao
@@ -126,38 +124,29 @@ public interface ExtractFeignClient {
     /**
      * Build repair statements based on parameters
      *
-     * @param schema    The corresponding schema of the end DB to be repaired
-     * @param tableName table Name
-     * @param diffSet   Differential primary key set
+     * @param repairEntry repairEntry
      * @return Return to repair statement collection
      */
     @PostMapping("/extract/build/repair/statement/update")
-    Result<List<String>> buildRepairStatementUpdateDml(@RequestParam(name = "schema") String schema,
-        @RequestParam(name = "tableName") String tableName,@RequestParam(name = "ogCompatibility") boolean ogCompatibility, @RequestBody Set<String> diffSet);
+    Result<List<String>> buildRepairStatementUpdateDml(@RequestBody RepairEntry repairEntry);
 
     /**
      * Build repair statements based on parameters
      *
-     * @param schema    The corresponding schema of the end DB to be repaired
-     * @param tableName table Name
-     * @param diffSet   Differential primary key set
+     * @param repairEntry repairEntry
      * @return Return to repair statement collection
      */
     @PostMapping("/extract/build/repair/statement/insert")
-    Result<List<String>> buildRepairStatementInsertDml(@RequestParam(name = "schema") String schema,
-        @RequestParam(name = "tableName") String tableName,@RequestParam(name = "ogCompatibility") boolean ogCompatibility, @RequestBody Set<String> diffSet);
+    Result<List<String>> buildRepairStatementInsertDml(@RequestBody RepairEntry repairEntry);
 
     /**
      * Build repair statements based on parameters
      *
-     * @param schema    The corresponding schema of the end DB to be repaired
-     * @param tableName table Name
-     * @param diffSet   Differential primary key set
+     * @param repairEntry repairEntry
      * @return Return to repair statement collection
      */
     @PostMapping("/extract/build/repair/statement/delete")
-    Result<List<String>> buildRepairStatementDeleteDml(@RequestParam(name = "schema") String schema,
-        @RequestParam(name = "tableName") String tableName, @RequestParam(name = "ogCompatibility") boolean ogCompatibility, @RequestBody Set<String> diffSet);
+    Result<List<String>> buildRepairStatementDeleteDml(@RequestBody RepairEntry repairEntry);
 
     /**
      * Query table metadata hash information
@@ -203,13 +192,16 @@ public interface ExtractFeignClient {
     Result<Void> pauseOrResumeIncrementMonitor(@RequestParam("parseOrResume") boolean parseOrResume);
 
     /**
-     * Distribution Data Extraction Filter Rules
+     * Distribution Data Extraction config
      *
-     * @param rules rules
+     * @param config config
      * @return void
      */
-    @PostMapping("/extract/rules/distribute")
-    Result<Void> distributeRules(@RequestBody DistributeRuleEntry rules);
+    @PostMapping("/extract/config/distribute")
+    Result<Void> distributeConfig(@RequestBody GlobalConfig config);
+
+    @PostMapping("/csv/config/distribute")
+    Result<Void> distributeConfig(@RequestBody CsvPathConfig config);
 
     @PostMapping("/extract/shutdown")
     Result<Void> shutdown(@RequestBody String message);
@@ -231,4 +223,10 @@ public interface ExtractFeignClient {
 
     @GetMapping("/check/target/og/compatibility")
     Result<Boolean> checkTargetOgCompatibility();
+
+    @PostMapping("/start/csv/service")
+    Result<Void> enableCsvExtractService();
+
+    @GetMapping("/fetch/check/table/count")
+    Result<Integer> fetchCheckTableCount();
 }

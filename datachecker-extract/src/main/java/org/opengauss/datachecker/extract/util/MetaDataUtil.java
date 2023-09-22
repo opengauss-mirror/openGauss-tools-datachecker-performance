@@ -16,6 +16,7 @@
 package org.opengauss.datachecker.extract.util;
 
 import org.apache.commons.collections4.CollectionUtils;
+import org.opengauss.datachecker.common.entry.enums.ColumnKey;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 
@@ -33,6 +34,9 @@ import java.util.stream.Collectors;
  * @since ：11
  */
 public class MetaDataUtil {
+    private static final List<String> numberDataTypes =
+        List.of("integer", "int", "long", "smallint", "mediumint", "bigint");
+
     /**
      * getTableColumns
      *
@@ -81,5 +85,18 @@ public class MetaDataUtil {
      */
     public static boolean hasNoPrimary(TableMetadata tableMetadata) {
         return CollectionUtils.isEmpty(tableMetadata.getPrimaryMetas());
+    }
+
+    /**
+     * check current primary column is digit key
+     *
+     * @param primaryKey primaryKey
+     * @return true | false
+     */
+    public static boolean isDigitPrimaryKey(ColumnsMetaData primaryKey) {
+        if (primaryKey.getColumnKey() != ColumnKey.PRI) {
+            return false;
+        }
+        return numberDataTypes.contains(primaryKey.getDataType());
     }
 }

@@ -15,10 +15,11 @@
 
 package org.opengauss.datachecker.check.config.validator;
 
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.check.annotation.TableRule;
 import org.opengauss.datachecker.common.entry.common.Rule;
+import org.opengauss.datachecker.common.util.LogUtils;
 
 import javax.validation.ConstraintValidatorContext;
 import java.util.List;
@@ -43,8 +44,8 @@ import static org.opengauss.datachecker.common.constant.RuleConstants.RULE_WHITE
  * @date ：Created in 2022/12/7
  * @since ：11
  */
-@Slf4j
 public class RuleConfigTableValidator implements RuleConfigValidator<TableRule> {
+    private static final Logger log = LogUtils.getLogger();
     @Override
     public boolean isValid(List<Rule> values, ConstraintValidatorContext context) {
         if (CollectionUtils.isEmpty(values)) {

@@ -15,10 +15,11 @@
 
 package org.opengauss.datachecker.check.task;
 
-import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.opengauss.datachecker.check.cache.TableStatusRegister;
+import org.opengauss.datachecker.common.util.LogUtils;
 
 import java.util.Set;
 
@@ -31,8 +32,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @date ：Created in 2022/7/20
  * @since ：11
  */
-@Slf4j
 class TableStatusRegisterTest {
+    private static final Logger log = LogUtils.getLogger();
     private TableStatusRegister tableStatusRegisterUnderTest;
 
     @BeforeEach

@@ -15,7 +15,7 @@
 
 package org.opengauss.datachecker.extract.service;
 
-import lombok.extern.slf4j.Slf4j;
+import com.alibaba.druid.pool.PreparedStatementPool;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.opengauss.datachecker.common.entry.common.Rule;
 import org.opengauss.datachecker.common.entry.extract.ConditionLimit;
@@ -37,12 +37,11 @@ import java.util.regex.Pattern;
  * @date ：Created in 2022/12/1
  * @since ：11
  */
-@Slf4j
 @Service
 public class RowRuleAdapterService {
     @Resource
     private ExtractProperties extractProperties;
-
+    PreparedStatementPool statementPool;
     /**
      * Execute row-level rules
      * @param rules rules

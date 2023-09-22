@@ -15,10 +15,11 @@
 
 package org.opengauss.datachecker.check.config.validator;
 
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.entry.common.Rule;
+import org.opengauss.datachecker.common.util.LogUtils;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -40,9 +41,8 @@ import static java.util.stream.Collectors.toCollection;
  * @date ：Created in 2022/12/7
  * @since ：11
  */
-@Slf4j
 public class RuleConfigValidatorUtil {
-
+    private static final Logger log = LogUtils.getLogger();
     public static List<Rule> fetchRuleByPredicate(List<Rule> rules, Predicate<Rule> rulePredicate) {
         if (CollectionUtils.isEmpty(rules)) {
             return new ArrayList<>();

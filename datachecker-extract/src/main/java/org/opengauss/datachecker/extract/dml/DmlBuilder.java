@@ -15,6 +15,8 @@
 
 package org.opengauss.datachecker.extract.dml;
 
+import org.opengauss.datachecker.common.config.ConfigCache;
+import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.entry.enums.DataBaseType;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.util.HexUtil;
@@ -100,6 +102,7 @@ public class DmlBuilder {
      * conditionValue
      */
     protected String conditionValue;
+    protected CheckMode checkMode;
     /**
      * dataBaseType
      */
@@ -109,11 +112,11 @@ public class DmlBuilder {
     public DmlBuilder() {
     }
 
-    public DmlBuilder(DataBaseType databaseType,boolean ogCompatibility) {
+    public DmlBuilder(DataBaseType databaseType, boolean ogCompatibility) {
         this.dataBaseType = databaseType;
         this.isOgCompatibilityB = ogCompatibility;
+        this.checkMode = ConfigCache.getCheckMode();
     }
-
 
     /**
      * Build SQL column statement fragment
@@ -121,7 +124,9 @@ public class DmlBuilder {
      * @param columnsMetas Field Metadata
      */
     protected void buildColumns(@NotNull List<ColumnsMetaData> columnsMetas) {
-        columns = columnsMetas.stream().map(ColumnsMetaData::getColumnName).map(column -> escape(column, dataBaseType))
+        columns = columnsMetas.stream()
+                              .map(ColumnsMetaData::getColumnName)
+                              .map(column -> escape(column, dataBaseType))
                               .collect(Collectors.joining(DELIMITER));
     }
 
@@ -158,7 +163,9 @@ public class DmlBuilder {
      * @return sql value fragment
      */
     protected String buildConditionCompositePrimary(List<ColumnsMetaData> primaryMetas) {
-        return primaryMetas.stream().map(ColumnsMetaData::getColumnName).map(name -> escape(name, dataBaseType))
+        return primaryMetas.stream()
+                           .map(ColumnsMetaData::getColumnName)
+                           .map(name -> escape(name, dataBaseType))
                            .collect(Collectors.joining(DELIMITER, LEFT_BRACKET, RIGHT_BRACKET));
     }
 
@@ -185,7 +192,8 @@ public class DmlBuilder {
                 if (Objects.isNull(value)) {
                     valueList.add("null");
                 } else {
-                    valueList.add(SINGLE_QUOTES.concat(value).concat(SINGLE_QUOTES));
+                    valueList.add(SINGLE_QUOTES.concat(value)
+                                               .concat(SINGLE_QUOTES));
                 }
             }
         });

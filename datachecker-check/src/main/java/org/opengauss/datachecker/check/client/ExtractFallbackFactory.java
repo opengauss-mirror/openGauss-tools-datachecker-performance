@@ -15,10 +15,9 @@
 
 package org.opengauss.datachecker.check.client;
 
-import org.opengauss.datachecker.common.entry.common.DistributeRuleEntry;
-import org.opengauss.datachecker.common.entry.common.Rule;
-import org.opengauss.datachecker.common.entry.enums.CheckMode;
-import org.opengauss.datachecker.common.entry.enums.RuleType;
+import org.opengauss.datachecker.common.entry.common.GlobalConfig;
+import org.opengauss.datachecker.common.entry.common.RepairEntry;
+import org.opengauss.datachecker.common.entry.csv.CsvPathConfig;
 import org.opengauss.datachecker.common.entry.extract.ExtractConfig;
 import org.opengauss.datachecker.common.entry.extract.ExtractTask;
 import org.opengauss.datachecker.common.entry.extract.RowDataHash;
@@ -31,7 +30,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * ExtractFallbackFactory
@@ -107,42 +105,33 @@ public class ExtractFallbackFactory implements FallbackFactory<ExtractFeignClien
         /**
          * Build repair statements based on parameters
          *
-         * @param schema    The corresponding schema of the end DB to be repaired
-         * @param tableName table Name
-         * @param diffSet   Differential primary key set
+         * @param repairEntry repairEntry
          * @return Return to repair statement collection
          */
         @Override
-        public Result<List<String>> buildRepairStatementUpdateDml(String schema, String tableName,
-            boolean ogCompatibility, Set<String> diffSet) {
+        public Result<List<String>> buildRepairStatementUpdateDml(RepairEntry repairEntry) {
             return Result.error("Remote call, build and repair statement exceptions according to parameters");
         }
 
         /**
          * Build repair statements based on parameters
          *
-         * @param schema    The corresponding schema of the end DB to be repaired
-         * @param tableName table Name
-         * @param diffSet   Differential primary key set
+         * @param repairEntry repairEntry
          * @return Return to repair statement collection
          */
         @Override
-        public Result<List<String>> buildRepairStatementInsertDml(String schema, String tableName,
-            boolean ogCompatibility, Set<String> diffSet) {
+        public Result<List<String>> buildRepairStatementInsertDml(RepairEntry repairEntry) {
             return Result.error("Remote call, build and repair statement exceptions according to parameters");
         }
 
         /**
          * Build repair statements based on parameters
          *
-         * @param schema    The corresponding schema of the end DB to be repaired
-         * @param tableName table Name
-         * @param diffSet   Differential primary key set
+         * @param repairEntry repairEntry
          * @return Return to repair statement collection
          */
         @Override
-        public Result<List<String>> buildRepairStatementDeleteDml(String schema, String tableName,
-            boolean ogCompatibility, Set<String> diffSet) {
+        public Result<List<String>> buildRepairStatementDeleteDml(RepairEntry repairEntry) {
             return Result.error("Remote call, build and repair statement exceptions according to parameters");
         }
 
@@ -172,8 +161,13 @@ public class ExtractFallbackFactory implements FallbackFactory<ExtractFeignClien
         }
 
         @Override
-        public Result<Void> distributeRules(DistributeRuleEntry rules) {
-            return Result.error("Remote call,  Distribution Filter Rules exception");
+        public Result<Void> distributeConfig(GlobalConfig config) {
+            return Result.error("Remote call,  Distribution config exception");
+        }
+
+        @Override
+        public Result<Void> distributeConfig(CsvPathConfig config) {
+            return Result.error("Remote call,  Distribution csv config exception");
         }
 
         @Override
@@ -194,6 +188,16 @@ public class ExtractFallbackFactory implements FallbackFactory<ExtractFeignClien
         @Override
         public Result<Boolean> isCheckTableEmpty(boolean isForced) {
             return Result.error("Remote call, check table empty exception");
+        }
+
+        @Override
+        public Result<Void> enableCsvExtractService() {
+            return Result.error("Remote call, start csv extract exception");
+        }
+
+        @Override
+        public Result<Integer> fetchCheckTableCount() {
+            return null;
         }
     }
 }

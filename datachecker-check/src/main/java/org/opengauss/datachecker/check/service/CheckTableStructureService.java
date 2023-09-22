@@ -15,7 +15,7 @@
 
 package org.opengauss.datachecker.check.service;
 
-import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.check.load.CheckEnvironment;
 import org.opengauss.datachecker.check.modules.check.AbstractCheckDiffResultBuilder.CheckDiffResultBuilder;
 import org.opengauss.datachecker.check.modules.check.CheckDiffResult;
@@ -25,6 +25,7 @@ import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.Database;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -41,9 +42,9 @@ import java.util.stream.Collectors;
  * @date ：Created in 2022/9/8
  * @since ：11
  */
-@Slf4j
 @Service
 public class CheckTableStructureService {
+    private static final Logger log = LogUtils.getLogger();
     @Resource
     private CheckEnvironment checkEnvironment;
     @Resource

@@ -15,12 +15,13 @@
 
 package org.opengauss.datachecker.extract.service;
 
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.entry.common.Rule;
 import org.opengauss.datachecker.common.entry.enums.RuleType;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -35,9 +36,9 @@ import java.util.Map;
  * @date ：Created in 2022/12/1
  * @since ：11
  */
-@Slf4j
 @Service
 public class RuleAdapterService {
+    private static final Logger logDebug = LogUtils.getDebugLogger();
     private static final Map<RuleType, List<Rule>> RULES = new HashMap<>();
 
     @Resource
@@ -67,7 +68,7 @@ public class RuleAdapterService {
         if (CollectionUtils.isEmpty(rules)) {
             return tableList;
         }
-        log.info("filter table by rule {}", rules);
+        logDebug.debug("filter table by rule {}", rules);
         return tableRuleAdapterService.executeTableRule(rules, tableList);
     }
 

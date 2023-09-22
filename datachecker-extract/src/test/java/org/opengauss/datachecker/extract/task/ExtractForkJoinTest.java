@@ -1,8 +1,9 @@
 package org.opengauss.datachecker.extract.task;
 
-import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 
 import java.util.ArrayList;
@@ -13,9 +14,8 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 
-@Slf4j
 public class ExtractForkJoinTest {
-
+    private static final Logger log = LogUtils.getLogger();
     @BeforeEach
     void setUp() {
     }

@@ -15,7 +15,6 @@
 
 package org.opengauss.datachecker.extract.cmd;
 
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.cli.Option;
 import org.opengauss.datachecker.common.service.CommonCommandLine;
 
@@ -31,7 +30,6 @@ import static org.opengauss.datachecker.common.service.CommonCommandLine.CmdOpti
  * @date ：Created in 2023/4/8
  * @since ：11
  */
-@Slf4j
 public class ExtractCommandLine extends CommonCommandLine {
 
     public ExtractCommandLine() {

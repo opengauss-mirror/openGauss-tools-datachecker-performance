@@ -16,7 +16,8 @@
 package org.opengauss.datachecker.extract.kafka;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.Logger;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.extract.config.KafkaConsumerConfig;
 import org.springframework.stereotype.Service;
 
@@ -29,10 +30,11 @@ import java.util.List;
  * @date ：Created in 2022/6/10
  * @since ：11
  */
-@Slf4j
 @RequiredArgsConstructor
 @Service
 public class KafkaManagerService {
+    private static final Logger log = LogUtils.getKafkaLogger();
+
     private final KafkaAdminService kafkaAdminService;
     private final KafkaConsumerConfig kafkaConsumerConfig;
 

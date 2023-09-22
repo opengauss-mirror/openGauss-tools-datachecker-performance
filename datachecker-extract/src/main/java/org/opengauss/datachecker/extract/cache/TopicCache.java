@@ -75,7 +75,7 @@ public class TopicCache {
      * @return Topic
      */
     public Topic getTopic(String table) {
-        return Objects.requireNonNull(TOPIC_CACHE.get(table), table + " is not found the topic information");
+        return TOPIC_CACHE.get(table);
     }
 
     public void removeTopic(String table) {

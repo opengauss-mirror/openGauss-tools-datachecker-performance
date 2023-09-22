@@ -40,10 +40,8 @@ import javax.sql.DataSource;
 @Service
 public class ExtractThreadSupport {
     private static final int DEFAULT_MAXIMUM_TABLE_SLICE_SIZE = 10000;
-
     @Value("${spring.check.maximum-table-slice-size}")
     private int maximumTableSliceSize = DEFAULT_MAXIMUM_TABLE_SLICE_SIZE;
-    @Resource
     private DataSource dataSource;
     @Resource
     private DataAccessService dataAccessService;
@@ -76,6 +74,10 @@ public class ExtractThreadSupport {
         } else {
             return DEFAULT_MAXIMUM_TABLE_SLICE_SIZE;
         }
+    }
+
+    public void setDataSource(DataSource dataSource) {
+        this.dataSource = dataSource;
     }
 
     public DataSource getDataSource() {

@@ -15,11 +15,11 @@
 
 package org.opengauss.datachecker.extract.dao.enums;
 
-import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.Test;
 import org.opengauss.datachecker.common.entry.enums.DataSourceType;
 import org.opengauss.datachecker.common.util.EnumUtil;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.opengauss.datachecker.common.util.LogUtils;
 
 /**
  * EnumTest
@@ -28,8 +28,8 @@ import org.springframework.boot.test.context.SpringBootTest;
  * @date ：Created in 2022/5/14
  * @since ：11
  */
-@Slf4j
 public class EnumTest {
+    private static final Logger log = LogUtils.getLogger();
     @Test
     void testEnum() {
         DataSourceType type = DataSourceType.Sink;

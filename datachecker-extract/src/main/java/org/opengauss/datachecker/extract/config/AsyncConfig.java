@@ -15,7 +15,6 @@
 
 package org.opengauss.datachecker.extract.config;
 
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableAsync;
@@ -31,7 +30,6 @@ import javax.annotation.PreDestroy;
  * @date 2022/5/8 19:17
  * @since 11
  **/
-@Slf4j
 @EnableAsync
 @EnableScheduling
 @Configuration

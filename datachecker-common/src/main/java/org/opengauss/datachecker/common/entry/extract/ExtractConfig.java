@@ -17,9 +17,11 @@ package org.opengauss.datachecker.common.entry.extract;
 
 import lombok.Data;
 import lombok.experimental.Accessors;
+import org.opengauss.datachecker.common.entry.enums.DataLoad;
 
 /**
  * ExtractConfig
+ *
  * @author ：wangchao
  * @date ：Created in 2022/10/31
  * @since ：11
@@ -29,4 +31,5 @@ import lombok.experimental.Accessors;
 public class ExtractConfig {
     private boolean isDebeziumEnable = false;
     private Database database;
+    private DataLoad dataLoadMode;
 }

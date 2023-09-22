@@ -16,8 +16,10 @@
 package org.opengauss.datachecker.check.client;
 
 import org.opengauss.datachecker.common.constant.WorkerSwitch;
-import org.opengauss.datachecker.common.entry.common.DistributeRuleEntry;
+import org.opengauss.datachecker.common.entry.common.GlobalConfig;
+import org.opengauss.datachecker.common.entry.common.RepairEntry;
 import org.opengauss.datachecker.common.entry.common.Rule;
+import org.opengauss.datachecker.common.entry.csv.CsvPathConfig;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.enums.RuleType;
@@ -34,7 +36,6 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Implement feign client interface call encapsulation
@@ -194,15 +195,12 @@ public class FeignClientService {
     /**
      * Build repair statements based on parameters
      *
-     * @param endpoint  endpoint type
-     * @param schema    The corresponding schema of the end DB to be repaired
-     * @param tableName table Name
-     * @param diffSet   Differential primary key set
+     * @param endpoint    endpoint type
+     * @param repairEntry repairEntry
      * @return Return to repair statement collection
      */
-    public List<String> buildRepairStatementInsertDml(Endpoint endpoint, String schema, String tableName,boolean ogCompatibility,
-        Set<String> diffSet) {
-        Result<List<String>> result = getClient(endpoint).buildRepairStatementInsertDml(schema, tableName,ogCompatibility, diffSet);
+    public List<String> buildRepairStatementInsertDml(Endpoint endpoint, RepairEntry repairEntry) {
+        Result<List<String>> result = getClient(endpoint).buildRepairStatementInsertDml(repairEntry);
         if (result.isSuccess()) {
             return result.getData();
         } else {
@@ -213,15 +211,12 @@ public class FeignClientService {
     /**
      * Build repair statements based on parameters
      *
-     * @param endpoint  endpoint type
-     * @param schema    The corresponding schema of the end DB to be repaired
-     * @param tableName table Name
-     * @param diffSet   Differential primary key set
+     * @param endpoint    endpoint type
+     * @param repairEntry repairEntry
      * @return Return to repair statement collection
      */
-    public List<String> buildRepairStatementDeleteDml(Endpoint endpoint, String schema, String tableName,boolean ogCompatibility,
-        Set<String> diffSet) {
-        Result<List<String>> result = getClient(endpoint).buildRepairStatementDeleteDml(schema, tableName, ogCompatibility,diffSet);
+    public List<String> buildRepairStatementDeleteDml(Endpoint endpoint, RepairEntry repairEntry) {
+        Result<List<String>> result = getClient(endpoint).buildRepairStatementDeleteDml(repairEntry);
         if (result.isSuccess()) {
             return result.getData();
         } else {
@@ -232,16 +227,12 @@ public class FeignClientService {
     /**
      * Build repair statements based on parameters
      *
-     * @param endpoint  endpoint type
-     * @param schema    The corresponding schema of the end DB to be repaired
-     * @param tableName table Name
-     * @param diffSet   Differential primary key set
-     * @param ogCompatibility
+     * @param endpoint    endpoint type
+     * @param repairEntry repairEntry
      * @return Return to repair statement collection
      */
-    public List<String> buildRepairStatementUpdateDml(Endpoint endpoint, String schema, String tableName,boolean ogCompatibility,
-        Set<String> diffSet) {
-        Result<List<String>> result = getClient(endpoint).buildRepairStatementUpdateDml(schema, tableName ,ogCompatibility, diffSet);
+    public List<String> buildRepairStatementUpdateDml(Endpoint endpoint, RepairEntry repairEntry) {
+        Result<List<String>> result = getClient(endpoint).buildRepairStatementUpdateDml(repairEntry);
         if (result.isSuccess()) {
             return result.getData();
         } else {
@@ -269,11 +260,17 @@ public class FeignClientService {
         }
     }
 
-    public void distributeRules(Endpoint endpoint, CheckMode checkMode, Map<RuleType, List<Rule>> rules) {
-        DistributeRuleEntry distributeRuleEntry = new DistributeRuleEntry();
-        distributeRuleEntry.setRules(rules);
-        distributeRuleEntry.setCheckMode(checkMode);
-        getClient(endpoint).distributeRules(distributeRuleEntry);
+    public void distributeConfig(CheckMode checkMode, Map<RuleType, List<Rule>> rules) {
+        GlobalConfig config = new GlobalConfig();
+        config.setRules(rules);
+        config.setCheckMode(checkMode);
+        getClient(Endpoint.SOURCE).distributeConfig(config);
+        getClient(Endpoint.SINK).distributeConfig(config);
+    }
+
+    public void distributeConfig(CsvPathConfig config) {
+        getClient(Endpoint.SOURCE).distributeConfig(config);
+        getClient(Endpoint.SINK).distributeConfig(config);
     }
 
     public void shutdown(String message) {
@@ -341,6 +338,24 @@ public class FeignClientService {
         } catch (Exception ignored) {
             throw new DispatchClientException(Endpoint.SINK,
                 "check target OgCompatibility failed: " + ignored.getMessage());
+        }
+    }
+
+    public void enableCsvExtractService() {
+        getClient(Endpoint.SOURCE).enableCsvExtractService();
+        getClient(Endpoint.SINK).enableCsvExtractService();
+    }
+
+    public int fetchCheckTableCount() {
+        try {
+            Result<Integer> result = getClient(Endpoint.SOURCE).fetchCheckTableCount();
+            if (result.isSuccess()) {
+                return result.getData();
+            } else {
+                throw new CheckingException("fetchCheckTableCount failed: " + Endpoint.SOURCE);
+            }
+        } catch (Exception ignored) {
+            throw new DispatchClientException(Endpoint.SOURCE, "check database error: " + ignored.getMessage());
         }
     }
 }

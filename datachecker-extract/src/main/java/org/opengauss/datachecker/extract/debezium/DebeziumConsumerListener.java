@@ -16,9 +16,10 @@
 package org.opengauss.datachecker.extract.debezium;
 
 import com.alibaba.fastjson.JSONException;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.exception.DebeziumConfigException;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.extract.config.ExtractProperties;
 import org.opengauss.datachecker.extract.service.MetaDataService;
 import org.springframework.stereotype.Service;
@@ -34,9 +35,9 @@ import java.util.concurrent.LinkedBlockingQueue;
  * @date ：Created in 2022/9/21
  * @since ：11
  */
-@Slf4j
 @Service
 public class DebeziumConsumerListener {
+    private static final Logger log = LogUtils.getLogger();
     private static final LinkedBlockingQueue<DebeziumDataBean> DATA_LOG_QUEUE = new LinkedBlockingQueue<>();
     private DeserializerAdapter adapter = new DeserializerAdapter();
     private DebeziumDataHandler debeziumDataHandler;

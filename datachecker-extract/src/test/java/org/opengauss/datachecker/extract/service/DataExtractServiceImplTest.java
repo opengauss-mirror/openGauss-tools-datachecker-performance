@@ -43,7 +43,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -128,118 +127,6 @@ class DataExtractServiceImplTest {
         // Verify the results
         assertThatThrownBy(() -> dataExtractServiceImplUnderTest.queryTableInfo("tableName"))
             .isInstanceOf(TaskNotFoundException.class);
-    }
-
-    @Test
-    void testBuildRepairStatementUpdateDml() {
-        // Setup
-        String table = "t_test_table_template";
-        // Configure MetaDataService.getMetaDataOfSchemaByCache(...).
-        final TableMetadata tableMetadata = MetaDataCache.get(table);
-        when(mockMetaDataService.getMetaDataOfSchemaByCache(table)).thenReturn(tableMetadata);
-        when(mockDataManipulationService.buildReplace("schema", table, Set.of("value"), tableMetadata, ogCompatibility))
-            .thenReturn(List.of("value"));
-        // Run the test
-        final List<String> result = dataExtractServiceImplUnderTest
-            .buildRepairStatementUpdateDml("schema", table, ogCompatibility, Set.of("value"));
-        // Verify the results
-        assertThat(result).isEqualTo(List.of("value"));
-    }
-
-    @Test
-    void test_DataManipulationServiceReturnsNoItems() {
-        // Setup
-        // Configure MetaDataService.getMetaDataOfSchemaByCache(...).
-        String table = "t_test_table_template";
-        // Configure MetaDataService.getMetaDataOfSchemaByCache(...).
-        final TableMetadata tableMetadata = MetaDataCache.get(table);
-        when(mockMetaDataService.getMetaDataOfSchemaByCache(table)).thenReturn(tableMetadata);
-
-        when(mockDataManipulationService.buildReplace("schema", table, Set.of("value"), tableMetadata, ogCompatibility))
-            .thenReturn(Collections.emptyList());
-
-        // Run the test
-        final List<String> result = dataExtractServiceImplUnderTest
-            .buildRepairStatementUpdateDml("schema", table, ogCompatibility, Set.of("value"));
-
-        // Verify the results
-        assertThat(result).isEqualTo(Collections.emptyList());
-    }
-
-    @Test
-    void testBuildRepairStatementInsertDml() {
-        // Setup
-        // Configure MetaDataService.getMetaDataOfSchemaByCache(...).
-        String table = "t_test_table_template";
-        // Configure MetaDataService.getMetaDataOfSchemaByCache(...).
-        final TableMetadata tableMetadata = MetaDataCache.get(table);
-        when(mockMetaDataService.getMetaDataOfSchemaByCache(table)).thenReturn(tableMetadata);
-
-        when(mockDataManipulationService.buildInsert("schema", table, Set.of("value"), tableMetadata, ogCompatibility))
-            .thenReturn(List.of("value"));
-
-        // Run the test
-        final List<String> result = dataExtractServiceImplUnderTest
-            .buildRepairStatementInsertDml("schema", table, ogCompatibility, Set.of("value"));
-
-        // Verify the results
-        assertThat(result).isEqualTo(List.of("value"));
-    }
-
-    @Test
-    void testInsertDml_DataManipulationServiceReturnsNoItems() {
-        String table = "t_test_table_template";
-        final TableMetadata tableMetadata = MetaDataCache.get(table);
-        when(mockMetaDataService.getMetaDataOfSchemaByCache(table)).thenReturn(tableMetadata);
-
-        when(mockDataManipulationService.buildInsert("schema", table, Set.of("value"), tableMetadata, ogCompatibility))
-            .thenReturn(Collections.emptyList());
-
-        // Run the test
-        final List<String> result = dataExtractServiceImplUnderTest
-            .buildRepairStatementInsertDml("schema", table, ogCompatibility, Set.of("value"));
-
-        // Verify the results
-        assertThat(result).isEqualTo(Collections.emptyList());
-    }
-
-    @Test
-    void testBuildRepairStatementDeleteDml() {
-        // Setup
-        // Configure MetaDataService.getMetaDataOfSchemaByCache(...).
-        String table = "t_test_table_template";
-        final TableMetadata tableMetadata = MetaDataCache.get(table);
-        when(mockMetaDataService.getMetaDataOfSchemaByCache(table)).thenReturn(tableMetadata);
-
-        when(mockDataManipulationService
-            .buildDelete("schema", table, Set.of("value"), tableMetadata.getPrimaryMetas(), ogCompatibility))
-            .thenReturn(List.of("value"));
-
-        // Run the test
-        final List<String> result = dataExtractServiceImplUnderTest
-            .buildRepairStatementDeleteDml("schema", table, ogCompatibility, Set.of("value"));
-
-        // Verify the results
-        assertThat(result).isEqualTo(List.of("value"));
-    }
-
-    @Test
-    void testDeleteDml_DataManipulationServiceReturnsNoItems() {
-        // Setup
-        // Configure MetaDataService.getMetaDataOfSchemaByCache(...).
-        String table = "t_test_table_template";
-        final TableMetadata tableMetadata = MetaDataCache.get(table);
-        when(mockMetaDataService.getMetaDataOfSchemaByCache(table)).thenReturn(tableMetadata);
-        when(mockDataManipulationService
-            .buildDelete("schema", table, Set.of("value"), tableMetadata.getPrimaryMetas(), ogCompatibility))
-            .thenReturn(Collections.emptyList());
-
-        // Run the test
-        final List<String> result = dataExtractServiceImplUnderTest
-            .buildRepairStatementDeleteDml("schema", table, ogCompatibility, Set.of("value"));
-
-        // Verify the results
-        assertThat(result).isEqualTo(Collections.emptyList());
     }
 
     @Test

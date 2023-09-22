@@ -15,8 +15,8 @@
 
 package org.opengauss.datachecker.common.util;
 
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,8 +38,8 @@ import java.util.stream.Collectors;
  * @date ：Created in 2022/5/23
  * @since ：11
  */
-@Slf4j
 public class FileUtils {
+    private static final Logger log = LogUtils.getLogger();
     /**
      * Creates a directory by creating all nonexistent parent directories first.
      *

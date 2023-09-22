@@ -15,7 +15,7 @@
 
 package org.opengauss.datachecker.common.util;
 
-import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.Logger;
 
 import java.lang.management.ManagementFactory;
 import java.net.InetAddress;
@@ -47,8 +47,8 @@ import java.util.Locale;
  * @date ：Created in 2022/5/23
  * @since ：11
  */
-@Slf4j
 public class IdGenerator {
+    private static final Logger log = LogUtils.getLogger();
     /**
      * Get ID auto increment sequence
      *

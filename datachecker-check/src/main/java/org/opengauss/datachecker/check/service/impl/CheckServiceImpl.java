@@ -15,9 +15,9 @@
 
 package org.opengauss.datachecker.check.service.impl;
 
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.check.cache.TableStatusRegister;
 import org.opengauss.datachecker.check.cache.TopicRegister;
 import org.opengauss.datachecker.check.client.FeignClientService;
@@ -28,6 +28,8 @@ import org.opengauss.datachecker.check.service.CheckService;
 import org.opengauss.datachecker.check.service.CheckTableStructureService;
 import org.opengauss.datachecker.check.service.EndpointMetaDataManager;
 import org.opengauss.datachecker.check.event.KafkaTopicDeleteProvider;
+import org.opengauss.datachecker.common.config.ConfigCache;
+import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.check.CheckProgress;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
@@ -36,8 +38,8 @@ import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.entry.extract.Topic;
 import org.opengauss.datachecker.common.exception.CheckingException;
 import org.opengauss.datachecker.common.exception.CommonException;
-import org.opengauss.datachecker.common.util.IdGenerator;
 import org.opengauss.datachecker.common.util.JsonObjectUtil;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -58,9 +60,9 @@ import java.util.stream.IntStream;
  * @date ：Created in 2022/5/29
  * @since ：11
  */
-@Slf4j
 @Service(value = "checkService")
 public class CheckServiceImpl implements CheckService {
+    private static final Logger log = LogUtils.getLogger();
     /**
      * Verification task start flag
      * <p>
@@ -153,9 +155,7 @@ public class CheckServiceImpl implements CheckService {
      * Turn on full calibration mode
      */
     private void startCheckFullMode() {
-        String processNo = IdGenerator.nextId36();
-        kafkaTopicDeleteProvider.init(processNo);
-        topicRegister.initProcess(processNo);
+        String processNo = ConfigCache.getValue(ConfigConstants.PROCESS_NO);
         // Source endpoint task construction
         final List<ExtractTask> extractTasks = feignClientService.buildExtractTaskAllTables(Endpoint.SOURCE, processNo);
         log.info("check full mode : build extract task source {}", processNo);
@@ -218,10 +218,10 @@ public class CheckServiceImpl implements CheckService {
             return;
         }
         String process = getCurrentCheckProcess();
-        tableStatusRegister.initPartitionsStatus(tableName, topic.getPartitions());
-        IntStream.range(0, topic.getPartitions()).forEach(idxPartition -> {
+        tableStatusRegister.initPartitionsStatus(tableName, topic.getPtnNum());
+        IntStream.range(0, topic.getPtnNum()).forEach(idxPartition -> {
             // Verify the data according to the table name and Kafka partition
-            dataCheckService.checkTableData(process, tableName, idxPartition, topic.getPartitions());
+            dataCheckService.checkTableData(process, tableName, idxPartition, topic.getPtnNum());
         });
         kafkaTopicDeleteProvider.addTableToDropTopic(tableName);
     }

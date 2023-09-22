@@ -15,8 +15,9 @@
 
 package org.opengauss.datachecker.common.exception;
 
-import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.entry.enums.ResultEnum;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.web.Result;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
@@ -32,9 +33,8 @@ import javax.servlet.http.HttpServletRequest;
  * @date ：Created in 2022/5/23
  * @since ：11
  */
-@Slf4j
 public class GlobalCommonExceptionHandler {
-
+    private static final Logger log = LogUtils.getLogger();
     /**
      * Missing required parameters
      *

@@ -15,12 +15,7 @@
 
 package org.opengauss.datachecker.extract.adapter.service;
 
-import lombok.extern.slf4j.Slf4j;
 import org.opengauss.datachecker.common.entry.common.Rule;
-import org.springframework.dao.DataAccessException;
-import org.springframework.jdbc.core.JdbcTemplate;
-
-import javax.annotation.Resource;
 
 /**
  * CheckRowRuleService
@@ -29,23 +24,11 @@ import javax.annotation.Resource;
  * @date ：Created in 2022/12/2
  * @since ：11
  */
-@Slf4j
 public abstract class CheckRowRuleService implements CheckRowRule {
-    @Resource
-    private JdbcTemplate jdbcTemplate;
 
     @Override
     public boolean checkRule(String schema, Rule rule) {
-        boolean result = false;
-        try {
-            String checkStatement = String.format(CHECK_RULE_STATEMENT, convert(schema), convert(rule.getName()),
-                convertCondition(rule.getText()));
-            jdbcTemplate.execute(checkStatement);
-            result = true;
-        } catch (DataAccessException ex) {
-            log.error("rules of row is invalid!,schema={},rule={}", schema, rule);
-        }
-        return result;
+        return true;
     }
 
     /**

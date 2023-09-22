@@ -15,8 +15,9 @@
 
 package org.opengauss.datachecker.extract.cache;
 
-import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.Test;
+import org.opengauss.datachecker.common.util.LogUtils;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -29,8 +30,8 @@ import java.util.stream.IntStream;
  * @date ：Created in 2022/5/14
  * @since ：11
  */
-@Slf4j
 public class TestByteXOR {
+    private static final Logger log = LogUtils.getLogger();
     @Test
     public void testXOR() {
         long old = 0L;

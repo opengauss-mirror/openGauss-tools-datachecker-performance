@@ -70,8 +70,8 @@ import java.util.concurrent.CountDownLatch;
  * @since ：11
  */
 public class DataCheckRunnable implements Runnable {
-    private static final Logger log = LogUtils.getCheckLogger();
-    private static final Logger logKafka = LogUtils.geKafkaLogger();
+    private static final Logger log = LogUtils.getBusinessLogger();
+    private static final Logger logKafka = LogUtils.getKafkaLogger();
     private static final int THRESHOLD_MIN_BUCKET_SIZE = 2;
 
     private final DifferencePair<Map<String, RowDataHash>, Map<String, RowDataHash>, Map<String, Pair<Node, Node>>>

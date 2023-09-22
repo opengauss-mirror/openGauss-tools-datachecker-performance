@@ -17,8 +17,8 @@ package org.opengauss.datachecker.check.modules.check;
 
 import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.check.cache.CheckRateCache;
 import org.opengauss.datachecker.check.client.FeignClientService;
 import org.opengauss.datachecker.check.modules.bucket.Bucket;
@@ -41,6 +41,7 @@ import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.entry.extract.TableMetadataHash;
 import org.opengauss.datachecker.common.exception.DispatchClientException;
 import org.opengauss.datachecker.common.exception.MerkleTreeDepthException;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.SpringUtil;
 import org.opengauss.datachecker.common.web.Result;
 import org.springframework.lang.NonNull;
@@ -64,8 +65,8 @@ import java.util.Set;
  * @date ：Created in 2022/5/23
  * @since ：11
  */
-@Slf4j
 public class IncrementCheckThread extends Thread {
+    private static final Logger log = LogUtils.getLogger();
     private static final int THRESHOLD_MIN_BUCKET_SIZE = 2;
     private static final String THREAD_NAME_PRIFEX = "increment-data-check-";
 

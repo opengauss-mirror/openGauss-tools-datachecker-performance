@@ -15,9 +15,10 @@
 
 package org.opengauss.datachecker.check.modules.bucket;
 
-import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.Test;
 import org.opengauss.datachecker.common.util.IdGenerator;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.LongHashFunctionWrapper;
 
 import java.util.stream.IntStream;
@@ -29,8 +30,8 @@ import java.util.stream.IntStream;
  * @date ：Created in 2022/6/10
  * @since ：11
  */
-@Slf4j
 public class TestBucket {
+    private static final Logger log = LogUtils.getLogger();
     private static final LongHashFunctionWrapper HASH_UTIL = new LongHashFunctionWrapper();
     private static final int[] BUCKET_COUNT_LIMITS = new int[15];
     private static final int EMPTY_INITIAL_CAPACITY = 0;

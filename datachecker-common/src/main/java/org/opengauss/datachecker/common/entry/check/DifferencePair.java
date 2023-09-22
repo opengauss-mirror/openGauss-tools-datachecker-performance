@@ -27,9 +27,9 @@ import lombok.Getter;
 @EqualsAndHashCode
 public final class DifferencePair<L, R, D> {
 
-    private final L onlyOnLeft;
-    private final R onlyOnRight;
-    private final D differing;
+    private L onlyOnLeft;
+    private R onlyOnRight;
+    private D differing;
 
     private DifferencePair(L onlyOnLeft, R onlyOnRight, D differing) {
         this.onlyOnLeft = onlyOnLeft;
@@ -47,6 +47,12 @@ public final class DifferencePair<L, R, D> {
      */
     public static <L, R, D> DifferencePair<L, R, D> of(L onlyOnLeft, R onlyOnRight, D differing) {
         return new DifferencePair<>(onlyOnLeft, onlyOnRight, differing);
+    }
+
+    public void clear() {
+        this.onlyOnLeft = null;
+        this.differing = null;
+        this.onlyOnRight = null;
     }
 
     /**

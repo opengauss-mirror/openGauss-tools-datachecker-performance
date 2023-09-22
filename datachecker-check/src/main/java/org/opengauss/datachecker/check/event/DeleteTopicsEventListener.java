@@ -21,10 +21,11 @@ import org.apache.kafka.clients.admin.KafkaAdminClient;
 import org.apache.kafka.common.KafkaFuture;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.check.client.FeignClientService;
+import org.opengauss.datachecker.common.config.ConfigCache;
+import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.ThreadUtil;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
 
@@ -35,6 +36,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * @author ：wangchao
@@ -43,17 +46,17 @@ import java.util.concurrent.ExecutionException;
  */
 @Component
 public class DeleteTopicsEventListener implements ApplicationListener<DeleteTopicsEvent> {
-    private static final Logger log = LogUtils.geKafkaLogger();
+    private static final Logger log = LogUtils.getKafkaLogger();
     @Resource
     private CustomEventHistory customEventHistory;
     @Resource
     private FeignClientService feignClient;
-    @Value("${spring.kafka.bootstrap-servers}")
-    private String bootstrapServers;
     private KafkaAdminClient adminClient = null;
+    private final Lock lock = new ReentrantLock();
 
     @Override
     public void onApplicationEvent(DeleteTopicsEvent event) {
+        lock.lock();
         try {
             log.info("delete topic event : {}", event.getMessage());
             final Object source = event.getSource();
@@ -66,17 +69,18 @@ public class DeleteTopicsEventListener implements ApplicationListener<DeleteTopi
         } catch (Exception exception) {
             log.error("delete topic has error ", exception);
         } finally {
+            lock.unlock();
             customEventHistory.completedEvent(event);
         }
     }
 
     private void deleteTopic(List<String> deleteTopicList) {
         try {
-            log.info("delete topic [{}] start", deleteTopicList);
+            log.debug("delete topic [{}] start", deleteTopicList);
             DeleteTopicsResult deleteTopicsResult = adminClient.deleteTopics(deleteTopicList);
             final KafkaFuture<Void> kafkaFuture = deleteTopicsResult.all();
             kafkaFuture.get();
-            log.info("delete topic [{}] finished", deleteTopicList);
+            log.debug("delete topic [{}] finished", deleteTopicList);
         } catch (InterruptedException | ExecutionException ignore) {
             log.error("delete topic [{}] error :  ", deleteTopicList, ignore);
         }
@@ -85,9 +89,9 @@ public class DeleteTopicsEventListener implements ApplicationListener<DeleteTopi
     private void initAdminClient() {
         if (this.adminClient == null) {
             Map<String, Object> props = new HashMap<>(1);
-            props.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+            props.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, ConfigCache.getValue(ConfigConstants.KAFKA_SERVERS));
             this.adminClient = (KafkaAdminClient) KafkaAdminClient.create(props);
-            log.info("init admin client [{}]", bootstrapServers);
+            log.info("init admin client [{}]", ConfigCache.getValue(ConfigConstants.KAFKA_SERVERS));
         }
     }
 

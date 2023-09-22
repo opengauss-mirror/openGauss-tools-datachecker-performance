@@ -15,22 +15,21 @@
 
 package org.opengauss.datachecker.extract.config;
 
-import com.alibaba.druid.pool.DruidDataSource;
-import com.alibaba.druid.support.http.StatViewServlet;
-import com.alibaba.druid.support.http.WebStatFilter;
-import org.opengauss.datachecker.common.constant.Constants.InitialCapacity;
+import com.alibaba.druid.spring.boot.autoconfigure.DruidDataSourceBuilder;
+import org.apache.ibatis.session.SqlSessionFactory;
+import org.mybatis.spring.SqlSessionFactoryBean;
+import org.mybatis.spring.SqlSessionTemplate;
+import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.web.servlet.FilterRegistrationBean;
-import org.springframework.boot.web.servlet.ServletRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import javax.sql.DataSource;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * DruidDataSourceConfig
@@ -40,16 +39,35 @@ import java.util.Map;
  * @since ：11
  */
 @Configuration
-public class DruidDataSourceConfig {
+@ConditionalOnProperty(prefix = "spring.extract", name = "dataLoadMode", havingValue = "jdbc")
+@ConditionalOnBean({ExtractProperties.class})
+@MapperScan(basePackages = "org.opengauss.datachecker.extract.data.mapper", sqlSessionFactoryRef = "sqlSessionFactory")
+public class DruidDataSourceConfig implements DataSourceConfig {
+
     /**
      * build extract DruidDataSource
      *
      * @return DruidDataSource
      */
-    @Bean("dataSource")
-    @ConfigurationProperties(prefix = "spring.datasource.druid.datasourceone")
+    @Bean(name = "dataSource")
+    @ConfigurationProperties(prefix = "spring.datasource.druid")
     public DataSource druidDataSource() {
-        return new DruidDataSource();
+        return DruidDataSourceBuilder.create()
+                                     .build();
+    }
+
+    @Bean(name = "sqlSessionFactory")
+    public SqlSessionFactory primarySqlSessionFactory(@Qualifier("dataSource") DataSource datasource) throws Exception {
+        SqlSessionFactoryBean bean = new SqlSessionFactoryBean();
+        bean.setDataSource(datasource);
+        bean.setMapperLocations(new PathMatchingResourcePatternResolver().getResources("classpath*:mapper/*.xml"));
+        return bean.getObject();
+    }
+
+    @Bean("sqlSessionTemplate")
+    public SqlSessionTemplate primarySqlSessionTemplate(
+        @Qualifier("sqlSessionFactory") SqlSessionFactory sessionfactory) {
+        return new SqlSessionTemplate(sessionfactory);
     }
 
     /**
@@ -63,45 +81,5 @@ public class DruidDataSourceConfig {
         JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
         jdbcTemplate.setFetchSize(20000);
         return jdbcTemplate;
-    }
-
-    /**
-     * Background monitoring
-     * Configure the servlet of the Druid monitoring management background.
-     * There is no web.xml file when the servlet container is built in. Therefore ,the servlet registration mode of
-     * Spring Boot is used.
-     *
-     * @return return ServletRegistrationBean
-     */
-    @Bean
-    public ServletRegistrationBean<StatViewServlet> initServletRegistrationBean() {
-        ServletRegistrationBean<StatViewServlet> bean =
-            new ServletRegistrationBean<>(new StatViewServlet(), "/druid/*");
-        HashMap<String, String> initParameters = new HashMap<>(InitialCapacity.CAPACITY_1);
-        initParameters.put("allow", "");
-        bean.setInitParameters(initParameters);
-        return bean;
-    }
-
-    /**
-     * Configuring the filter for druid monitoring - web monitoring
-     * WebStatFilter: used to configure management association monitoring statistice between web and druid data sources.
-     *
-     * @return return FilterRegistrationBean
-     */
-    @Bean
-    public FilterRegistrationBean webStatFilter() {
-        FilterRegistrationBean bean = new FilterRegistrationBean();
-        bean.setFilter(new WebStatFilter());
-
-        // exclusions: sets the requests to be filtered out so that statistics are not collected.
-        Map<String, String> initParams = new HashMap<>(InitialCapacity.CAPACITY_1);
-        // this things don't count.
-        initParams.put("exclusions", "*.js,*.css,/druid/*,/jdbc/*");
-        bean.setInitParameters(initParams);
-
-        // "/*" indicates that all requests are filtered.
-        bean.setUrlPatterns(Arrays.asList("/*"));
-        return bean;
     }
 }

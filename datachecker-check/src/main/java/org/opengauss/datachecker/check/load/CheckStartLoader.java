@@ -15,8 +15,6 @@
 
 package org.opengauss.datachecker.check.load;
 
-import lombok.extern.slf4j.Slf4j;
-import org.opengauss.datachecker.check.client.FeignClientService;
 import org.opengauss.datachecker.check.modules.report.CheckResultManagerService;
 import org.opengauss.datachecker.check.modules.report.ProgressService;
 import org.opengauss.datachecker.check.service.CheckService;
@@ -39,17 +37,15 @@ import java.util.Objects;
  * @date ：Created in 2022/11/9
  * @since ：11
  */
-@Slf4j
 @Order(199)
 @Service
 public class CheckStartLoader extends AbstractCheckLoader {
     private static final String FULL_CHECK_COMPLETED = "full check completed";
+
     @Value("${spring.memory-monitor-enable}")
     private boolean isEnableMemoryMonitor;
     @Resource
     private CheckService checkService;
-    @Resource
-    private FeignClientService feignClient;
     @Resource
     private CheckResultManagerService checkResultManagerService;
     @Resource
@@ -77,7 +73,6 @@ public class CheckStartLoader extends AbstractCheckLoader {
         } else {
             log.info("check task execute success ,cost time =0");
         }
-        feignClient.shutdown(FULL_CHECK_COMPLETED);
         shutdown(FULL_CHECK_COMPLETED);
     }
 }

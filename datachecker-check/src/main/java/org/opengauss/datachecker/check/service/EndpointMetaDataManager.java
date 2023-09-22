@@ -16,12 +16,13 @@
 package org.opengauss.datachecker.check.service;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.MapUtils;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.check.client.FeignClientService;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.exception.CheckMetaDataException;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -39,10 +40,10 @@ import java.util.stream.Collectors;
  * @date ：Created in 2022/7/24
  * @since ：11
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class EndpointMetaDataManager {
+    private static final Logger log = LogUtils.getLogger();
     private static final List<String> CHECK_TABLE_LIST = new ArrayList<>();
     private static final List<String> MISS_TABLE_LIST = new ArrayList<>();
     private static final Map<String, TableMetadata> SOURCE_METADATA = new HashMap<>();

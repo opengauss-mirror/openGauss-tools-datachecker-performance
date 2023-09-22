@@ -15,9 +15,12 @@
 
 package org.opengauss.datachecker.extract.controller;
 
-import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.Logger;
+import org.opengauss.datachecker.common.config.ConfigCache;
+import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.exception.NotSourceEndpointException;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.web.Result;
 import org.opengauss.datachecker.extract.config.ExtractProperties;
 import org.opengauss.datachecker.extract.debezium.DataConsolidationService;
@@ -38,9 +41,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @date ：Created in 2022/6/23
  * @since ：11
  */
-@Slf4j
 @RestController
 public class IncrementController {
+    private static final Logger log = LogUtils.getLogger();
     private static final AtomicBoolean IS_ENABLED_INCREMENT_SERVICE = new AtomicBoolean(false);
 
     @Resource
@@ -57,6 +60,7 @@ public class IncrementController {
      */
     @PostMapping("/start/source/increment/monitor")
     Result<Void> startIncrementMonitor() {
+        ConfigCache.setCheckMode(CheckMode.INCREMENT);
         if (!isSourceEndpoint()) {
             throw new NotSourceEndpointException();
         }

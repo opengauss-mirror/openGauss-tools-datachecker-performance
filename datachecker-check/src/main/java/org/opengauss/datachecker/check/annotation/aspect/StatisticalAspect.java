@@ -15,7 +15,7 @@
 
 package org.opengauss.datachecker.check.annotation.aspect;
 
-import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.Logger;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.Signature;
 import org.aspectj.lang.annotation.Around;
@@ -25,6 +25,7 @@ import org.aspectj.lang.reflect.MethodSignature;
 import org.opengauss.datachecker.check.annotation.Statistical;
 import org.opengauss.datachecker.common.util.FileUtils;
 import org.opengauss.datachecker.common.util.JsonObjectUtil;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -42,8 +43,8 @@ import java.util.Objects;
  */
 @Component
 @Aspect
-@Slf4j
 public class StatisticalAspect {
+    private static final Logger log = LogUtils.getLogger();
     @Value("${data.check.statistical-enable}")
     private boolean shouldStatistical;
 

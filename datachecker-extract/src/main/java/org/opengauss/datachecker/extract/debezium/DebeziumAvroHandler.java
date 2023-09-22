@@ -17,11 +17,12 @@ package org.opengauss.datachecker.extract.debezium;
 
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.TypeReference;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericData.Record;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.extract.service.MetaDataService;
 import org.opengauss.datachecker.extract.util.MetaDataUtil;
 
@@ -48,8 +49,8 @@ import static org.opengauss.datachecker.extract.debezium.DebeziumAvroHandler.Mes
  * @date ：Created in 2022/6/24
  * @since ：11
  */
-@Slf4j
 public class DebeziumAvroHandler implements DebeziumDataHandler<GenericData.Record> {
+    private static final Logger log = LogUtils.getLogger();
     private String destSchema;
     private MetaDataService metaDataService;
 

@@ -17,9 +17,11 @@ package org.opengauss.datachecker.extract.debezium;
 
 import com.alibaba.fastjson.JSONObject;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.entry.debezium.DebeziumData;
 import org.opengauss.datachecker.common.entry.debezium.DebeziumPayload;
 import org.opengauss.datachecker.common.entry.debezium.PayloadSource;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.extract.service.MetaDataService;
 
 import javax.validation.constraints.NotEmpty;
@@ -34,8 +36,8 @@ import java.util.concurrent.LinkedBlockingQueue;
  * @date ：Created in 2022/6/24
  * @since ：11
  */
-@Slf4j
 public class DebeziumStringHandler implements DebeziumDataHandler<String> {
+    private static final Logger log = LogUtils.getLogger();
     private String destSchema;
     private MetaDataService metaDataService;
 

@@ -54,6 +54,5 @@ public class ExtractApplication {
             commandLine.help();
             throw new ExtractBootstrapException("extract profile setting error, profile must be 'sink' or 'source'");
         }
-
     }
 }

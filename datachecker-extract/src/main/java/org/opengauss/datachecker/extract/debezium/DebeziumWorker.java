@@ -15,11 +15,12 @@
 
 package org.opengauss.datachecker.extract.debezium;
 
-import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.constant.WorkerSwitch;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.opengauss.datachecker.extract.config.KafkaConsumerConfig;
 
@@ -35,8 +36,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @date ：Created in 2022/9/21
  * @since ：11
  */
-@Slf4j
 public class DebeziumWorker implements Runnable {
+    private static final Logger log = LogUtils.getLogger();
     private static final AtomicBoolean PAUSE_OR_RESUME = new AtomicBoolean(WorkerSwitch.RESUME);
     private static final AtomicBoolean RUNNING = new AtomicBoolean(false);
     private static final String NAME = "DebeziumWorker";

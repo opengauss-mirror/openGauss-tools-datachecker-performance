@@ -15,9 +15,10 @@
 
 package org.opengauss.datachecker.extract.service;
 
-import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.Test;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -31,9 +32,9 @@ import java.util.Map;
  * @date ：Created in 2022/5/14
  * @since ：11
  */
-@Slf4j
 @SpringBootTest
 public class MetaDataServiceTest {
+    private static final Logger log = LogUtils.getLogger();
     @Autowired
     private MetaDataService metaDataService;
 

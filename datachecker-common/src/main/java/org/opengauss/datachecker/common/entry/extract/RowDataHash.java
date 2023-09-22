@@ -16,12 +16,9 @@
 package org.opengauss.datachecker.common.entry.extract;
 
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
 
-import static org.opengauss.datachecker.common.util.EncodeUtil.format;
-import static org.opengauss.datachecker.common.util.EncodeUtil.parseInt;
-import static org.opengauss.datachecker.common.util.EncodeUtil.parseLong;
+import java.util.Objects;
 
 /**
  * RowDataHash
@@ -31,7 +28,6 @@ import static org.opengauss.datachecker.common.util.EncodeUtil.parseLong;
  * @since ：11
  */
 @Data
-@EqualsAndHashCode
 @Accessors(chain = true)
 public class RowDataHash {
     /**
@@ -42,6 +38,11 @@ public class RowDataHash {
      * </pre>
      */
     private String key;
+
+    /**
+     * CSV scene for locating data in CSV files
+     */
+    private int idx;
 
     /**
      * Hash value of the corresponding value of the primary key
@@ -56,4 +57,21 @@ public class RowDataHash {
      * slice no
      */
     private int sNo;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof RowDataHash)) {
+            return false;
+        }
+        RowDataHash that = (RowDataHash) o;
+        return kHash == that.kHash && vHash == that.vHash && sNo == that.sNo && getKey().equals(that.getKey());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(getKey(), kHash, vHash, sNo);
+    }
 }

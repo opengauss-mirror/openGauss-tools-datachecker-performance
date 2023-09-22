@@ -16,6 +16,7 @@
 package org.opengauss.datachecker.check.event;
 
 import org.springframework.stereotype.Component;
+
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -30,11 +31,11 @@ import java.util.concurrent.ConcurrentHashMap;
 public class CustomEventHistory {
     private static volatile Map<CustomApplicationEvent, Boolean> events = new ConcurrentHashMap<>();
 
-    public void addEvent(CustomApplicationEvent customEvent) {
+    public synchronized void addEvent(CustomApplicationEvent customEvent) {
         events.put(customEvent, false);
     }
 
-    public void completedEvent(CustomApplicationEvent customEvent) {
+    public synchronized void completedEvent(CustomApplicationEvent customEvent) {
         events.remove(customEvent);
     }
 

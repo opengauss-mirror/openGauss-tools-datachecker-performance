@@ -40,9 +40,9 @@ public interface DynamicTpConstant {
     int MIN_MEMORY_FREE = 500;
 
     /**
-     * monitoring period is 1000 millis
+     * monitoring period is 2000 millis
      */
-    int MONITORING_PERIOD_MILLIS = 1000;
+    int MONITORING_PERIOD_MILLIS = 2000;
 
     /**
      * check-executor

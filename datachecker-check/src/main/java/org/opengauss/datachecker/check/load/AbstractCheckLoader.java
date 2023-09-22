@@ -15,10 +15,13 @@
 
 package org.opengauss.datachecker.check.load;
 
-import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.Logger;
+import org.opengauss.datachecker.check.client.FeignClientService;
+import org.opengauss.datachecker.check.event.CustomEventHistory;
 import org.opengauss.datachecker.common.service.ShutdownService;
+import org.opengauss.datachecker.common.util.LogUtils;
+import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
 
 import javax.annotation.Resource;
 
@@ -29,8 +32,8 @@ import javax.annotation.Resource;
  * @date ：Created in 2022/11/9
  * @since ：11
  */
-@Slf4j
 public abstract class AbstractCheckLoader implements CheckLoader {
+    protected static final Logger log = LogUtils.getLogger();
     @Value("${data.check.max-retry-times}")
     protected int maxRetryTimes;
     @Value("${data.check.retry-interval-times}")
@@ -39,6 +42,10 @@ public abstract class AbstractCheckLoader implements CheckLoader {
     private CheckEnvironment checkEnvironment;
     @Resource
     private ShutdownService shutdownService;
+    @Resource
+    private FeignClientService feignClient;
+    @Resource
+    private CustomEventHistory customEventHistory;
 
     /**
      * Verification environment global information loader
@@ -49,21 +56,16 @@ public abstract class AbstractCheckLoader implements CheckLoader {
     public abstract void load(CheckEnvironment checkEnvironment);
 
     /**
-     * Handle an application event.
-     *
-     * @param event the event to respond to
-     */
-    @Override
-    public void onApplicationEvent(ApplicationReadyEvent event) {
-        load(checkEnvironment);
-    }
-
-    /**
      * shutdown app
      *
      * @param message shutdown message
      */
     public void shutdown(String message) {
+        while (!customEventHistory.checkAllEventCompleted()) {
+            ThreadUtil.sleepOneSecond();
+        }
+        feignClient.shutdown(message);
+        ThreadUtil.sleepOneSecond();
         shutdownService.shutdown(message);
     }
 }

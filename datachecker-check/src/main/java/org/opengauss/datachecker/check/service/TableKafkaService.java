@@ -16,12 +16,13 @@
 package org.opengauss.datachecker.check.service;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.check.modules.check.KafkaConsumerHandler;
 import org.opengauss.datachecker.check.modules.check.KafkaConsumerService;
 import org.opengauss.datachecker.common.entry.check.TopicRecordInfo;
 import org.opengauss.datachecker.common.entry.extract.RowDataHash;
 import org.opengauss.datachecker.common.entry.extract.Topic;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.LinkedList;
@@ -35,10 +36,10 @@ import java.util.stream.IntStream;
  * @date ：Created in 2022/8/31
  * @since ：11
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class TableKafkaService {
+    private static final Logger log = LogUtils.getLogger();
     private final KafkaConsumerService kafkaConsumerService;
 
     /**

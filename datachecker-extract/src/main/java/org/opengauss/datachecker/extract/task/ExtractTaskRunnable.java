@@ -15,6 +15,7 @@
 
 package org.opengauss.datachecker.extract.task;
 
+import com.alibaba.druid.pool.DruidDataSource;
 import com.alibaba.fastjson.JSON;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -29,15 +30,17 @@ import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.entry.extract.Topic;
 import org.opengauss.datachecker.common.exception.ExtractDataAccessException;
 import org.opengauss.datachecker.common.exception.ExtractException;
-import org.opengauss.datachecker.common.exception.ExtractPrimaryKeyException;
 import org.opengauss.datachecker.common.service.DynamicThreadPoolManager;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.TaskUtilHelper;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.opengauss.datachecker.extract.client.CheckingFeignClient;
 import org.opengauss.datachecker.extract.resource.ResourceManager;
+import org.opengauss.datachecker.extract.task.sql.FullQueryStatement;
 import org.opengauss.datachecker.extract.task.sql.QuerySqlEntry;
-import org.opengauss.datachecker.extract.task.sql.SelectSqlBuilder;
+import org.opengauss.datachecker.extract.task.sql.QueryStatementFactory;
+import org.opengauss.datachecker.extract.task.sql.AutoSliceQueryStatement;
+import org.opengauss.datachecker.extract.util.DruidDataSourceUtil;
 import org.opengauss.datachecker.extract.util.HashHandler;
 import org.opengauss.datachecker.extract.util.MetaDataUtil;
 import org.springframework.jdbc.datasource.DataSourceUtils;
@@ -52,7 +55,6 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -61,8 +63,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import static org.opengauss.datachecker.common.constant.DynamicTpConstant.TABLE_PARALLEL_EXECUTOR;
 
@@ -74,18 +76,18 @@ import static org.opengauss.datachecker.common.constant.DynamicTpConstant.TABLE_
  * @since 11
  **/
 public class ExtractTaskRunnable implements Runnable {
-    private static final Logger log = LogUtils.getExtractLogger();
-    private static final Logger logKafka = LogUtils.geKafkaLogger();
+    private static final Logger log = LogUtils.getBusinessLogger();
+    private static final Logger logKafka = LogUtils.getKafkaLogger();
     private static final int FETCH_SIZE = 10000;
     private final ExtractTask task;
     private final DynamicThreadPoolManager dynamicThreadPoolManager;
     private final CheckingFeignClient checkingFeignClient;
-    private final JdbcDataExtractionOperations jdbcOperation;
     private final KafkaOperations kafkaOperate;
     private final ExtractContext extractContext;
     private final CheckPoint checkPoint;
     private TaskUtilHelper taskUtilHelper;
     private final QueryStatementFactory factory = new QueryStatementFactory();
+    private final AtomicReference<JdbcDataExtractionOperations> jdbcOperation;
 
     /**
      * Thread Constructor
@@ -96,7 +98,9 @@ public class ExtractTaskRunnable implements Runnable {
      */
     public ExtractTaskRunnable(String processNo, ExtractTask task, ExtractThreadSupport support) {
         this.task = task;
-        this.jdbcOperation = new JdbcDataExtractionOperations(support.getDataSource(), support.getResourceManager());
+        JdbcDataExtractionOperations jdbcOperate =
+            new JdbcDataExtractionOperations(support.getDataSource(), support.getResourceManager());
+        this.jdbcOperation = new AtomicReference<>(jdbcOperate);
         this.checkingFeignClient = support.getCheckingFeignClient();
         this.dynamicThreadPoolManager = support.getDynamicThreadPoolManager();
         this.extractContext = support.getContext();
@@ -119,13 +123,15 @@ public class ExtractTaskRunnable implements Runnable {
                 executeMultiTaskOffset(context);
             }
             checkingFeignClient.refreshTableExtractStatus(task.getTableName(), extractContext.getEndpoint(),
-                extractContext.getEndpoint().getCode());
+                extractContext.getEndpoint()
+                              .getCode());
             log.info("refresh table {} extract status success", task.getTableName());
         } catch (Exception ex) {
             checkingFeignClient.refreshTableExtractStatus(task.getTableName(), extractContext.getEndpoint(), -1);
             log.error("extract", ex);
         } finally {
-            Runtime.getRuntime().gc();
+            Runtime.getRuntime()
+                   .gc();
         }
     }
 
@@ -136,15 +142,16 @@ public class ExtractTaskRunnable implements Runnable {
         try {
             FullQueryStatement fullQueryStatement = factory.createFullQueryStatement();
             QuerySqlEntry querySqlEntry = fullQueryStatement.builderByTaskOffset(context.getTableMetadata());
-            connection = jdbcOperation.tryConnectionAndClosedAutoCommit(context.evaluateMemorySize());
-            rowCount = jdbcOperation.resultSetHandler(connection, querySqlEntry, context, FETCH_SIZE);
+            connection = jdbcOperation.get().tryConnectionAndClosedAutoCommit(context.evaluateMemorySize());
+            rowCount = jdbcOperation.get().resultSetHandler(connection, querySqlEntry, context, FETCH_SIZE);
         } catch (SQLException ex) {
             log.error("jdbc query  {} error : {}", context.getTableName(), ex.getMessage());
             throw new ExtractDataAccessException();
         } finally {
-            jdbcOperation.releaseConnection(connection);
+            jdbcOperation.get().releaseConnection(connection);
             log.info("query table [{}] row-count [{}] cost [{}] milliseconds", context.getTableName(), rowCount,
-                Duration.between(start, LocalDateTime.now()).toMillis());
+                Duration.between(start, LocalDateTime.now())
+                        .toMillis());
             logNumberOfGlobalTasks(context.getTableName(), null,
                 dynamicThreadPoolManager.getExecutor(DynamicTpConstant.EXTRACT_EXECUTOR));
         }
@@ -155,7 +162,7 @@ public class ExtractTaskRunnable implements Runnable {
         int slice = extractContext.getMaximumTableSliceSize();
         long totalRows = 0;
         try {
-            SliceQueryStatement sliceStatement =
+            AutoSliceQueryStatement sliceStatement =
                 factory.createSliceQueryStatement(checkPoint, context.getTableMetadata());
             List<QuerySqlEntry> querySqlList = sliceStatement.builderByTaskOffset(context.getTableMetadata(), slice);
             if (CollectionUtils.isNotEmpty(querySqlList)) {
@@ -167,7 +174,8 @@ public class ExtractTaskRunnable implements Runnable {
             throw new ExtractDataAccessException();
         } finally {
             log.info("table [{}] execution [{}] rows completed, taking a total of {} milliseconds",
-                context.getTableName(), totalRows, Duration.between(start, LocalDateTime.now()).toMillis());
+                context.getTableName(), totalRows, Duration.between(start, LocalDateTime.now())
+                                                           .toMillis());
         }
     }
 
@@ -183,16 +191,16 @@ public class ExtractTaskRunnable implements Runnable {
             executor.submit(() -> {
                 Connection connection = null;
                 try {
-                    connection = jdbcOperation.tryConnectionAndClosedAutoCommit(context.evaluateMemorySize(sliceSize));
+                    connection = jdbcOperation.get().tryConnectionAndClosedAutoCommit(context.evaluateMemorySize(sliceSize));
                     totalRowCount.addAndGet(
-                        jdbcOperation.resultSetHandlerParallelContext(connection, queryEntry, context, FETCH_SIZE));
+                        jdbcOperation.get().resultSetHandlerParallelContext(connection, queryEntry, context, FETCH_SIZE));
                 } catch (SQLException ex) {
                     exceptionCount.incrementAndGet();
                     log.error("jdbc parallel query [{}] error : {}", queryEntry.getSql(), ex.getMessage());
                     throw new ExtractDataAccessException();
                 } finally {
                     countDown(context.getTableName(), countDownLatch, executor);
-                    jdbcOperation.releaseConnection(connection);
+                    jdbcOperation.get().releaseConnection(connection);
                 }
             });
         });
@@ -208,173 +216,27 @@ public class ExtractTaskRunnable implements Runnable {
 
     private void seekExtractTableInfo(TableMetadata tableMetadata) {
         log.info("table [{}] isAutoIncrement=[{}] , column=[{}] , avgRowLength=[{}] , tableRows=[{}] ",
-            tableMetadata.getTableName(), tableMetadata.isAutoIncrement(), tableMetadata.getColumnsMetas().size(),
+            tableMetadata.getTableName(), tableMetadata.isAutoIncrement(), tableMetadata.getColumnsMetas()
+                                                                                        .size(),
             tableMetadata.getAvgRowLength(), tableMetadata.getTableRows());
         log.info("table [{}] table column metadata -> {}", tableMetadata.getTableName(),
             getTableColumnInformation(tableMetadata));
     }
 
-    /**
-     * query statement builder factory
-     * build FullQueryStatement and SliceQueryStatement
-     */
-    class QueryStatementFactory {
-        /**
-         * create SliceQueryStatement
-         *
-         * @param checkPoint    checkPoint
-         * @param tableMetadata tableMetadata
-         * @return SliceQueryStatement
-         */
-        public SliceQueryStatement createSliceQueryStatement(CheckPoint checkPoint, TableMetadata tableMetadata) {
-            if (checkPoint.checkValidPrimaryKey(tableMetadata)) {
-                throw new ExtractPrimaryKeyException(
-                    "current not support primary key type  for this table " + tableMetadata.getTableName());
-            }
-            return new SinglePrimarySliceQueryStatement(checkPoint);
-        }
-
-        /**
-         * create FullQueryStatement
-         *
-         * @return FullQueryStatement
-         */
-        public FullQueryStatement createFullQueryStatement() {
-            return tableMetadata -> {
-                final SelectSqlBuilder sqlBuilder = new SelectSqlBuilder(tableMetadata);
-                sqlBuilder.isDivisions(false).builder();
-                return new QuerySqlEntry(tableMetadata.getTableName(), sqlBuilder.isDivisions(false).builder(), 0,
-                    tableMetadata.getTableRows());
-            };
-        }
-    }
-
-    /**
-     * QueryStatement is a parent interface of FullQueryStatement and SliceQueryStatement
-     */
-    interface QueryStatement {}
-
-    /**
-     * FullQueryStatement interface
-     */
-    interface FullQueryStatement extends QueryStatement {
-        /**
-         * build full query statement for table
-         *
-         * @param tableMetadata tableMetadata
-         * @return QuerySqlEntry
-         */
-        QuerySqlEntry builderByTaskOffset(TableMetadata tableMetadata);
-    }
-
-    /**
-     * SliceQueryStatement interface
-     */
-    interface SliceQueryStatement extends QueryStatement {
-        /**
-         * build slice query statement for table
-         *
-         * @param tableMetadata tableMetadata
-         * @param slice         slice
-         * @return QuerySqlEntry
-         */
-        List<QuerySqlEntry> builderByTaskOffset(TableMetadata tableMetadata, int slice);
-    }
-
-    /**
-     * single primary slice query statement
-     */
-    class SinglePrimarySliceQueryStatement implements SliceQueryStatement {
-        private final CheckPoint singlePrimaryCheckPoint;
-
-        /**
-         * create SinglePrimarySliceQueryStatement
-         *
-         * @param checkPoint checkPoint
-         */
-        public SinglePrimarySliceQueryStatement(CheckPoint checkPoint) {
-            this.singlePrimaryCheckPoint = checkPoint;
-        }
-
-        @Override
-        public List<QuerySqlEntry> builderByTaskOffset(TableMetadata tableMetadata, int slice) {
-            List<QuerySqlEntry> querySqlList = new LinkedList<>();
-            List<Object> checkPointList = singlePrimaryCheckPoint.initCheckPointList(tableMetadata, slice);
-            if (CollectionUtils.isEmpty(checkPointList)) {
-                return querySqlList;
-            }
-            final Object[][] taskOffset;
-            if (singlePrimaryCheckPoint.checkPkNumber(tableMetadata)) {
-                taskOffset = singlePrimaryCheckPoint.translateBetween(checkPointList);
-            } else {
-                taskOffset = singlePrimaryCheckPoint.translateBetweenString(checkPointList);
-            }
-            final SelectSqlBuilder sqlBuilder = new SelectSqlBuilder(tableMetadata);
-            task.setDivisionsTotalNumber(taskOffset.length);
-            sqlBuilder.isDivisions(task.isDivisions());
-            String tableName = tableMetadata.getTableName();
-            IntStream.range(0, taskOffset.length).forEach(idx -> {
-                sqlBuilder.isFullCondition(idx == taskOffset.length - 1).offset(taskOffset[idx][0], taskOffset[idx][1]);
-                QuerySqlEntry entry =
-                    new QuerySqlEntry(tableName, sqlBuilder.builder(), taskOffset[idx][0], taskOffset[idx][1]);
-                querySqlList.add(entry);
-            });
-            return querySqlList;
-        }
-    }
-
-    /**
-     * single primary slice query statement ,and the primary key is AutoIncrement
-     */
-    class SinglePrimaryAutoIncrementSliceQueryStatement implements SliceQueryStatement {
-        private final CheckPoint checkPoint;
-
-        SinglePrimaryAutoIncrementSliceQueryStatement(CheckPoint checkPoint) {
-            this.checkPoint = checkPoint;
-        }
-
-        @Override
-        public List<QuerySqlEntry> builderByTaskOffset(TableMetadata tableMetadata, int slice) {
-            if (!tableMetadata.isAutoIncrement()) {
-                return null;
-            }
-            updateAutoIncrement(tableMetadata);
-            final int[][] taskOffset = new TaskUtilHelper(tableMetadata, slice).calcAutoTaskOffset();
-            task.setDivisionsTotalNumber(taskOffset.length);
-
-            List<QuerySqlEntry> querySqlList = new LinkedList<>();
-            final SelectSqlBuilder sqlBuilder = new SelectSqlBuilder(tableMetadata);
-            sqlBuilder.isDivisions(task.isDivisions());
-            IntStream.range(0, taskOffset.length).forEach(idx -> {
-                sqlBuilder.offset(taskOffset[idx][0], taskOffset[idx][1]);
-                querySqlList.add(
-                    new QuerySqlEntry(tableMetadata.getTableName(), sqlBuilder.builder(), taskOffset[idx][0],
-                        taskOffset[idx][1]));
-            });
-            return querySqlList;
-        }
-
-        private void updateAutoIncrement(TableMetadata tableMetadata) {
-            long rowCount = checkPoint.queryRowsOfAutoIncrementTable(tableMetadata);
-            long maxId = checkPoint.queryMaxIdOfAutoIncrementTable(tableMetadata);
-            tableMetadata.setRealRows(true);
-            tableMetadata.setMaxTableId(maxId);
-            tableMetadata.setTableRows(rowCount);
-        }
-    }
-
     private void enableParallelQueryDop(int taskOffset) throws SQLException {
-        int dop = Math.min(taskOffset, jdbcOperation.getParallelQueryDop());
-        jdbcOperation.enableDatabaseParallelQuery(dop);
+        int dop = Math.min(taskOffset, jdbcOperation.get().getParallelQueryDop());
+        jdbcOperation.get().enableDatabaseParallelQuery(dop);
     }
 
     private String getTableColumnInformation(TableMetadata tableMetadata) {
-        return tableMetadata.getColumnsMetas().stream().map(ColumnsMetaData::getColumnMsg)
+        return tableMetadata.getColumnsMetas()
+                            .stream()
+                            .map(ColumnsMetaData::getColumnMsg)
                             .collect(Collectors.joining(" , "));
     }
 
     private boolean isNotSlice() {
-        return taskUtilHelper.noTableSlice() || jdbcOperation.getParallelQueryDop() == 1;
+        return taskUtilHelper.noTableSlice() || jdbcOperation.get().getParallelQueryDop() == 1;
     }
 
     private void countDown(String tableName, CountDownLatch countDownLatch, ThreadPoolExecutor executor) {
@@ -424,6 +286,7 @@ public class ExtractTaskRunnable implements Runnable {
          */
         public synchronized Connection tryConnectionAndClosedAutoCommit(long allocMemory) throws SQLException {
             takeConnection(allocMemory);
+            DruidDataSourceUtil.print((DruidDataSource) jdbcDataSource);
             return getConnectionAndClosedAutoCommit();
         }
 
@@ -502,8 +365,10 @@ public class ExtractTaskRunnable implements Runnable {
         private void logSliceQueryInfo(QuerySqlEntry sqlEntry, LocalDateTime start, int rowCount,
             LocalDateTime endQuery, LocalDateTime end) {
             log.info(" extract table {} , row-count=[{}] completed , cost=[ query={} send={} all={} ]",
-                sqlEntry.toString(), rowCount, Duration.between(start, endQuery).toMillis(),
-                Duration.between(endQuery, end).toMillis(), Duration.between(start, end).toMillis());
+                sqlEntry.toString(), rowCount, Duration.between(start, endQuery)
+                                                       .toMillis(), Duration.between(endQuery, end)
+                                                                            .toMillis(), Duration.between(start, end)
+                                                                                                 .toMillis());
         }
 
         private void logProcessTableRowNum(QueryTableRowContext context, QuerySqlEntry sqlEntry, int rowCount) {
@@ -538,8 +403,8 @@ public class ExtractTaskRunnable implements Runnable {
         public void enableDatabaseParallelQuery(int queryDop) throws SQLException {
             if (Objects.equals(DataBaseType.OG, extractContext.getDatabaseType())) {
                 Connection connection = getConnectionAndClosedAutoCommit();
-                try (PreparedStatement ps = connection
-                    .prepareStatement(String.format(OPEN_GAUSS_PARALLEL_QUERY, queryDop))) {
+                try (PreparedStatement ps = connection.prepareStatement(
+                    String.format(OPEN_GAUSS_PARALLEL_QUERY, queryDop))) {
                     ps.execute();
                 }
                 DataSourceUtils.doReleaseConnection(connection, jdbcDataSource);
@@ -732,7 +597,9 @@ public class ExtractTaskRunnable implements Runnable {
             String primaryValue = hashHandler.value(rowData, primary);
             long primaryHash = hashHandler.xx3Hash(rowData, primary);
             RowDataHash hashData = new RowDataHash();
-            hashData.setKey(primaryValue).setKHash(primaryHash).setVHash(rowHash);
+            hashData.setKey(primaryValue)
+                    .setKHash(primaryHash)
+                    .setVHash(rowHash);
             return hashData;
         }
 

@@ -17,12 +17,13 @@ package org.opengauss.datachecker.extract.kafka;
 
 import com.alibaba.fastjson.JSON;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.entry.extract.RowDataHash;
 import org.opengauss.datachecker.common.entry.extract.Topic;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.extract.cache.TopicCache;
 import org.opengauss.datachecker.extract.config.KafkaConsumerConfig;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -39,11 +40,11 @@ import java.util.List;
  * @date ：Created in 2022/5/14
  * @since ：11
  */
-@Slf4j
 @Component
 @RequiredArgsConstructor
 @ConditionalOnBean({KafkaConsumerConfig.class, TopicCache.class})
 public class KafkaConsumerService {
+    private static final Logger log = LogUtils.getKafkaLogger();
     private final KafkaConsumerConfig consumerConfig;
     private final TopicCache topicCache;
 

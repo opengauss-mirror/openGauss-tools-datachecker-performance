@@ -19,6 +19,8 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.check.config.DataCheckProperties;
 import org.opengauss.datachecker.check.modules.task.TaskManagerService;
+import org.opengauss.datachecker.common.config.ConfigCache;
+import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.service.ShutdownService;
 import org.opengauss.datachecker.common.util.LogUtils;
@@ -33,19 +35,20 @@ import javax.annotation.Resource;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
+ * KafkaTopicDeleteProvider
+ *
  * @author ：wangchao
  * @date ：Created in 2023/3/7
  * @since ：11
  */
 @Service
 public class KafkaTopicDeleteProvider implements ApplicationContextAware {
-    private static final Logger logKafka = LogUtils.geKafkaLogger();
+    private static final Logger logKafka = LogUtils.getKafkaLogger();
     private static volatile Map<String, DeleteTopics> deleteTableMap = new ConcurrentHashMap<>();
 
     private ApplicationContext applicationContext;
@@ -57,23 +60,18 @@ public class KafkaTopicDeleteProvider implements ApplicationContextAware {
     private DataCheckProperties properties;
     @Resource
     private TaskManagerService taskManagerService;
-    private volatile String process;
-
-    /**
-     * Initialize Admin Client and process
-     *
-     * @param process process
-     */
-    public void init(String process) {
-        this.process = process;
-    }
 
     public void addTableToDropTopic(String tableName) {
+        addTableToDropTopic(tableName, false);
+    }
+
+    public void addTableToDropTopic(String tableName, boolean immediately) {
         if (properties.getAutoDeleteTopic() == DeleteMode.DELETE_NO.code) {
             return;
         }
+        String process = ConfigCache.getValue(ConfigConstants.PROCESS_NO);
         final DeleteTopics deleteTopics = new DeleteTopics();
-        deleteTopics.setCanDelete(false);
+        deleteTopics.setCanDelete(immediately);
         deleteTopics.setTableName(tableName);
         deleteTopics.setTopicList(List.of(TopicUtil.buildTopicName(process, Endpoint.SOURCE, tableName),
             TopicUtil.buildTopicName(process, Endpoint.SINK, tableName)));
@@ -118,7 +116,9 @@ public class KafkaTopicDeleteProvider implements ApplicationContextAware {
     private synchronized void deleteTopicFromCache() {
         List<DeleteTopics> deleteOptions = new LinkedList<>();
         deleteTableMap.forEach((table, deleteOption) -> {
-            deleteOption.setCanDelete(taskManagerService.isChecked(table));
+            if (!deleteOption.isCanDelete()) {
+                deleteOption.setCanDelete(taskManagerService.isChecked(table));
+            }
             if (deleteOption.isCanDelete()) {
                 deleteOptions.add(deleteOption);
             }

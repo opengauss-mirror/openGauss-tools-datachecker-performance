@@ -15,9 +15,9 @@
 
 package org.opengauss.datachecker.extract.task;
 
-import lombok.extern.slf4j.Slf4j;
-import org.opengauss.datachecker.common.constant.Constants.InitialCapacity;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.util.HexUtil;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.lang.NonNull;
 
 import java.math.BigDecimal;
@@ -43,15 +43,17 @@ import java.util.stream.IntStream;
  * @date ：Created in 2022/6/13
  * @since 11
  **/
-@Slf4j
 public abstract class ResultSetHandler {
+    private static final Logger log = LogUtils.getLogger();
     protected static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     protected static final DateTimeFormatter YEAR = DateTimeFormatter.ofPattern("yyyy");
     protected static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm:ss");
-    protected static final DateTimeFormatter TIMESTAMP_NANOS = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS");
+    protected static final DateTimeFormatter TIMESTAMP_NANOS =
+        DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS");
     protected static final DateTimeFormatter TIMESTAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     protected static final String EMPTY = "";
     protected static final String NULL = null;
+    protected static final String FLOATING_POINT_NUMBER_ZERO = "0.0";
 
     /**
      * Convert the current query result set into map according to the metadata information of the result set
@@ -64,15 +66,17 @@ public abstract class ResultSetHandler {
     public Map<String, String> putOneResultSetToMap(ResultSetMetaData rsmd, ResultSet resultSet,
         Map<String, String> values) {
         try {
-            IntStream.rangeClosed(1, rsmd.getColumnCount()).forEach(columnIdx -> {
-                try {
-                    String columnLabel = rsmd.getColumnLabel(columnIdx);
-                    values.put(columnLabel, convert(resultSet, rsmd.getColumnTypeName(columnIdx), columnLabel,
-                        rsmd.getColumnDisplaySize(columnIdx)));
-                } catch (SQLException ex) {
-                    log.error("putOneResultSetToMap Convert data according to result set metadata information.", ex);
-                }
-            });
+            IntStream.rangeClosed(1, rsmd.getColumnCount())
+                     .forEach(columnIdx -> {
+                         try {
+                             String columnLabel = rsmd.getColumnLabel(columnIdx);
+                             values.put(columnLabel, convert(resultSet, rsmd.getColumnTypeName(columnIdx), columnLabel,
+                                 rsmd.getColumnDisplaySize(columnIdx)));
+                         } catch (SQLException ex) {
+                             log.error(
+                                 "putOneResultSetToMap Convert data according to result set metadata information.", ex);
+                         }
+                     });
         } catch (SQLException ex) {
             log.error("putOneResultSetToMap get data metadata information exception", ex);
         }
@@ -93,12 +97,12 @@ public abstract class ResultSetHandler {
     protected abstract String convert(ResultSet resultSet, String columnTypeName, String columnLabel, int displaySize)
         throws SQLException;
 
-    protected String numericToString(BigDecimal bigDecimal) {
-        return Objects.isNull(bigDecimal) ? NULL : bigDecimal.stripTrailingZeros().toPlainString();
+    protected String floatingPointNumberToString(@NonNull ResultSet resultSet, String columnLabel) throws SQLException {
+        BigDecimal bigDecimal = resultSet.getBigDecimal(columnLabel);
+        return resultSet.wasNull() ? FLOATING_POINT_NUMBER_ZERO :
+            Objects.isNull(bigDecimal) ? FLOATING_POINT_NUMBER_ZERO : Double.toString(bigDecimal.doubleValue());
     }
-    protected String floatToString(float value) {
-        return String.valueOf(value);
-    }
+
     protected String getDateFormat(@NonNull ResultSet resultSet, String columnLabel, int displaySize)
         throws SQLException {
         final Date date = resultSet.getDate(columnLabel);

@@ -15,7 +15,6 @@
 
 package org.opengauss.datachecker.check.load;
 
-import lombok.extern.slf4j.Slf4j;
 import org.opengauss.datachecker.check.client.FeignClientService;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.extract.ExtractConfig;
@@ -32,7 +31,6 @@ import javax.annotation.Resource;
  * @date ：Created in 2022/10/31
  * @since ：11
  */
-@Slf4j
 @Order(97)
 @Service
 public class CheckDatabaseLoader extends AbstractCheckLoader {
@@ -56,9 +54,11 @@ public class CheckDatabaseLoader extends AbstractCheckLoader {
         }
         if (sourceConfig == null) {
             shutdown("source endpoint server has error");
+            return;
         }
         if (sinkConfig == null) {
             shutdown("sink endpoint server has error");
+            return;
         }
         checkEnvironment.addExtractDatabase(Endpoint.SOURCE, sourceConfig.getDatabase());
         checkEnvironment.addExtractDatabase(Endpoint.SINK, sinkConfig.getDatabase());

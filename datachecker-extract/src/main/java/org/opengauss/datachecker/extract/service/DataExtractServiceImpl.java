@@ -15,13 +15,12 @@
 
 package org.opengauss.datachecker.extract.service;
 
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.Logger;
+import org.opengauss.datachecker.common.config.ConfigCache;
+import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.constant.Constants;
-import org.opengauss.datachecker.common.entry.enums.DML;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
-import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.Database;
 import org.opengauss.datachecker.common.entry.extract.ExtractConfig;
 import org.opengauss.datachecker.common.entry.extract.ExtractTask;
@@ -30,7 +29,6 @@ import org.opengauss.datachecker.common.entry.extract.SourceDataLog;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.entry.extract.TableMetadataHash;
 import org.opengauss.datachecker.common.entry.extract.Topic;
-import org.opengauss.datachecker.common.exception.BuildRepairStatementException;
 import org.opengauss.datachecker.common.exception.ProcessMultipleException;
 import org.opengauss.datachecker.common.exception.TableNotExistException;
 import org.opengauss.datachecker.common.exception.TaskNotFoundException;
@@ -48,8 +46,8 @@ import org.opengauss.datachecker.extract.task.DataManipulationService;
 import org.opengauss.datachecker.extract.task.ExtractTaskBuilder;
 import org.opengauss.datachecker.extract.task.ExtractTaskRunnable;
 import org.opengauss.datachecker.extract.task.ExtractThreadSupport;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.lang.NonNull;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -75,10 +73,9 @@ import static org.opengauss.datachecker.common.constant.DynamicTpConstant.EXTRAC
  * @date ：Created in 2022/7/1
  * @since ：11
  */
-@Slf4j
 @Service
 public class DataExtractServiceImpl implements DataExtractService {
-    private static final Logger logKafka = LogUtils.geKafkaLogger();
+    private static final Logger log = LogUtils.getLogger();
     /**
      * Maximum number of sleeps of threads executing data extraction tasks
      */
@@ -112,10 +109,7 @@ public class DataExtractServiceImpl implements DataExtractService {
     private DataManipulationService dataManipulationService;
     @Resource
     private TopicCache topicCache;
-    @Value("${server.port}")
-    private int serverPort = 0;
-    @Value("${spring.check.maximum-topic-size}")
-    private int maximumTopicSize = 10;
+
     @Resource
     private DynamicThreadPoolManager dynamicThreadPoolManager;
     @Resource
@@ -285,7 +279,6 @@ public class DataExtractServiceImpl implements DataExtractService {
                     break;
                 }
             }
-            kafkaAdminService.init(processNo, extractProperties.getEndpoint());
             dynamicThreadPoolManager.dynamicThreadPoolMonitor();
             List<ExtractTask> taskList = taskReference.get();
             if (CollectionUtils.isEmpty(taskList)) {
@@ -293,25 +286,31 @@ public class DataExtractServiceImpl implements DataExtractService {
             }
             final ExecutorService executorService = dynamicThreadPoolManager.getExecutor(EXTRACT_EXECUTOR);
             Map<String, Integer> tableCheckStatus = checkingFeignClient.queryTableCheckStatus();
+            int maximumTopicSize = ConfigCache.getIntValue(ConfigConstants.MAXIMUM_TOPIC_SIZE);
             taskList.forEach(task -> {
-                log.info("Perform data extraction tasks {}", task.getTaskName());
-                final String tableName = task.getTableName();
-                if (!tableCheckStatus.containsKey(tableName) || tableCheckStatus.get(tableName) == -1) {
-                    log.info("Abnormal table[{}] status, ignoring the current table data extraction task", tableName);
-                    return;
+                try {
+                    log.info("Perform data extraction tasks {}", task.getTaskName());
+                    final String tableName = task.getTableName();
+                    if (!tableCheckStatus.containsKey(tableName) || tableCheckStatus.get(tableName) == -1) {
+                        log.info("Abnormal table[{}] status, ignoring the current table data extraction task",
+                            tableName);
+                        return;
+                    }
+                    ThreadUtil.requestConflictingSleeping();
+                    registerTopic(task);
+                    while (!topicCache.canCreateTopic(maximumTopicSize)) {
+                        ThreadUtil.sleep(1000);
+                    }
+                    Topic topic = task.getTopic();
+                    Endpoint endpoint = extractProperties.getEndpoint();
+                    log.info("try to create [{}] [{}]", topic.getTopicName(endpoint), topic.getPtnNum());
+                    kafkaAdminService.createTopic(topic.getTopicName(endpoint), topic.getPtnNum());
+                    topicCache.add(topic);
+                    log.info("current topic cache size = {}", topicCache.size());
+                    executorService.submit(new ExtractTaskRunnable(processNo, task, extractThreadSupport));
+                } catch (Exception ex) {
+                    log.error("async exec extract tables error : ", ex);
                 }
-                ThreadUtil.requestConflictingSleeping();
-                registerTopic(task);
-                while (!topicCache.canCreateTopic(maximumTopicSize)) {
-                    ThreadUtil.sleep(1000);
-                }
-                Topic topic = task.getTopic();
-                Endpoint endpoint = extractProperties.getEndpoint();
-                logKafka.info("try to create [{}] [{}]", topic.getTopicName(endpoint), topic.getPartitions());
-                kafkaAdminService.createTopic(topic.getTopicName(endpoint), topic.getPartitions());
-                topicCache.add(topic);
-                log.info("current topic cache size = {}", topicCache.size());
-                executorService.submit(new ExtractTaskRunnable(processNo, task, extractThreadSupport));
             });
         }
     }
@@ -321,45 +320,6 @@ public class DataExtractServiceImpl implements DataExtractService {
         Endpoint currentEndpoint = extractProperties.getEndpoint();
         Topic topic = checkingFeignClient.registerTopic(task.getTableName(), topicPartitions, currentEndpoint);
         task.setTopic(topic);
-    }
-
-    @Override
-    public List<String> buildRepairStatementUpdateDml(String schema, String tableName, boolean ogCompatibility,
-        Set<String> diffSet) {
-        repairStatementLog(schema, tableName, DML.REPLACE, diffSet.size());
-        if (CollectionUtils.isEmpty(diffSet)) {
-            return new ArrayList<>();
-        }
-        final TableMetadata metadata = metaDataService.getMetaDataOfSchemaByCache(tableName);
-        return dataManipulationService.buildReplace(schema, tableName, diffSet, metadata, ogCompatibility);
-    }
-
-    @Override
-    public List<String> buildRepairStatementInsertDml(String schema, String tableName, boolean ogCompatibility,
-        Set<String> diffSet) {
-        repairStatementLog(schema, tableName, DML.INSERT, diffSet.size());
-        if (CollectionUtils.isEmpty(diffSet)) {
-            return new ArrayList<>();
-        }
-        final TableMetadata metadata = metaDataService.getMetaDataOfSchemaByCache(tableName);
-        return dataManipulationService.buildInsert(schema, tableName, diffSet, metadata, ogCompatibility);
-    }
-
-    @Override
-    public List<String> buildRepairStatementDeleteDml(String schema, String tableName, boolean ogCompatibility,
-        Set<String> diffSet) {
-        repairStatementLog(schema, tableName, DML.DELETE, diffSet.size());
-        final TableMetadata metadata = metaDataService.getMetaDataOfSchemaByCache(tableName);
-        if (Objects.nonNull(metadata)) {
-            final List<ColumnsMetaData> primaryMetas = metadata.getPrimaryMetas();
-            return dataManipulationService.buildDelete(schema, tableName, diffSet, primaryMetas, ogCompatibility);
-        } else {
-            throw new BuildRepairStatementException(tableName);
-        }
-    }
-
-    private void repairStatementLog(String schema, String tableName, DML dml, int count) {
-        log.info("check table[{}.{}] repair [{}] diff-count={} build repair dml", schema, tableName, dml, count);
     }
 
     /**
@@ -428,9 +388,9 @@ public class DataExtractServiceImpl implements DataExtractService {
     public ExtractConfig getEndpointConfig() {
         ExtractConfig config = new ExtractConfig();
         final Database database = new Database();
-        database.setDatabaseType(extractProperties.getDatabaseType()).setSchema(extractProperties.getSchema())
-                .setEndpoint(extractProperties.getEndpoint());
-        config.setDebeziumEnable(extractProperties.isDebeziumEnable()).setDatabase(database);
+        BeanUtils.copyProperties(extractProperties, database);
+        BeanUtils.copyProperties(extractProperties, config);
+        config.setDatabase(database);
         return config;
     }
 

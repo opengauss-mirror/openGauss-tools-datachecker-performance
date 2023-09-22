@@ -15,11 +15,12 @@
 
 package org.opengauss.datachecker.check.modules.check;
 
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.util.FileUtils;
 import org.opengauss.datachecker.common.util.JsonObjectUtil;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.TopicUtil;
 
 import java.io.File;
@@ -40,8 +41,8 @@ import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
  * @date ：Created in 2022/6/17
  * @since ：11
  */
-@Slf4j
 public class ExportCheckResult {
+    private static final Logger log = LogUtils.getLogger();
     private static final DateTimeFormatter FORMATTER_DIR = DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS");
     private static final String CHECK_RESULT_BAK_DIR = File.separator + "result_bak" + File.separator;
     private static final String CHECK_RESULT_PATH = File.separator + "result" + File.separator;

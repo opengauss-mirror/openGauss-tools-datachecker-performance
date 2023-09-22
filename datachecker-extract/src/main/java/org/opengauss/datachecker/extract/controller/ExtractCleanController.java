@@ -68,4 +68,10 @@ public class ExtractCleanController {
         shutdownService.shutdown(message);
         return Result.success();
     }
+
+    @PostMapping("/extract/csv/shutdown")
+    Result<Void> csvShutdown(@RequestBody String message) {
+        shutdownService.shutdown(message);
+        return Result.success();
+    }
 }

@@ -18,9 +18,10 @@ package org.opengauss.datachecker.extract.config;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.parameters.HeaderParameter;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.reflect.FieldUtils;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.exception.CommonException;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.springdoc.core.customizers.OpenApiCustomiser;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -39,9 +40,9 @@ import java.util.List;
  * @date ：Created in 2022/5/17
  * @since ：11
  */
-@Slf4j
 @Configuration
 public class SpringDocConfig implements WebMvcConfigurer {
+    private static final Logger log = LogUtils.getLogger();
     /**
      * mallTinyOpenAPI
      *

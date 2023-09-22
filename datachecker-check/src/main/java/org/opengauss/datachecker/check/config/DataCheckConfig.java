@@ -31,7 +31,6 @@ import javax.annotation.PostConstruct;
  * @since ：11
  */
 @Getter
-@Slf4j
 @Component
 public class DataCheckConfig {
 

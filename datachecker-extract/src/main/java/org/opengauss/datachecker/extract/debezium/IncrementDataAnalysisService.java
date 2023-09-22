@@ -17,11 +17,12 @@ package org.opengauss.datachecker.extract.debezium;
 
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.entry.extract.SourceDataLog;
 import org.opengauss.datachecker.common.exception.ExtractException;
 import org.opengauss.datachecker.common.service.ShutdownService;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.opengauss.datachecker.extract.client.CheckingFeignClient;
 import org.opengauss.datachecker.extract.config.ExtractProperties;
@@ -41,10 +42,10 @@ import java.util.concurrent.atomic.AtomicLong;
  * @date ：Created in 2022/7/4
  * @since ：11
  */
-@Slf4j
 @RequiredArgsConstructor
 @Service
 public class IncrementDataAnalysisService {
+    private static final Logger log = LogUtils.getLogger();
     /**
      * Single thread scheduled task - execute check polling thread
      */

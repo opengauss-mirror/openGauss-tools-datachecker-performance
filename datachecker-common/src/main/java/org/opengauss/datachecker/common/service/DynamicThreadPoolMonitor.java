@@ -16,10 +16,11 @@
 package org.opengauss.datachecker.common.service;
 
 import lombok.SneakyThrows;
-import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.constant.DynamicTpConstant;
 import org.opengauss.datachecker.common.entry.memory.CpuInfo;
 import org.opengauss.datachecker.common.entry.memory.JvmInfo;
+import org.opengauss.datachecker.common.util.LogUtils;
 
 import java.util.Map;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -31,8 +32,8 @@ import java.util.concurrent.ThreadPoolExecutor;
  * @date ：Created in 2023/4/24
  * @since ：11
  */
-@Slf4j
 public class DynamicThreadPoolMonitor implements Runnable {
+    private static final Logger log = LogUtils.getDebugLogger();
     private int initCorePoolSize;
     private Map<String, ThreadPoolExecutor> executors;
     private volatile boolean isChecked = true;
@@ -86,8 +87,9 @@ public class DynamicThreadPoolMonitor implements Runnable {
 
     private void logInfo(String name, ThreadPoolExecutor tpExecutor) {
         if (tpExecutor.getActiveCount() > 0) {
-            log.info("{} coreSize={}, maxSize={}, taskCount={}, completedCount={}, activeCount={}", name,
-                tpExecutor.getCorePoolSize(), tpExecutor.getMaximumPoolSize(), tpExecutor.getTaskCount(),
+            log.info(
+                "DynamicThreadPoolMonitor {} coreSize={}, maxSize={}, taskCount={}, completedCount={}, activeCount={}",
+                name, tpExecutor.getCorePoolSize(), tpExecutor.getMaximumPoolSize(), tpExecutor.getTaskCount(),
                 tpExecutor.getCompletedTaskCount(), tpExecutor.getActiveCount());
         }
     }

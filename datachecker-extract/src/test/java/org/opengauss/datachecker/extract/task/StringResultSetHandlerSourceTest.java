@@ -15,7 +15,7 @@
 
 package org.opengauss.datachecker.extract.task;
 
-import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -25,6 +25,7 @@ import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.opengauss.datachecker.common.constant.Constants.InitialCapacity;
 import org.opengauss.datachecker.common.entry.enums.DataBaseType;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -38,12 +39,12 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@Slf4j
 @TestInstance(Lifecycle.PER_CLASS)
 @ActiveProfiles("source")
 @SpringBootTest
 @ExtendWith(SpringExtension.class)
 class StringResultSetHandlerSourceTest {
+    private static final Logger log = LogUtils.getLogger();
     private static final ResultSetHandlerFactory RESULT_SET_FACTORY = new ResultSetHandlerFactory();
     @Autowired
     private JdbcTemplate jdbcTemplateOne;

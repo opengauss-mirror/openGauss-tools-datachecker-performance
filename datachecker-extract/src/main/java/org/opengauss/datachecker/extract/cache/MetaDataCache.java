@@ -15,8 +15,9 @@
 
 package org.opengauss.datachecker.extract.cache;
 
-import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 
@@ -33,9 +34,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * @date ：Created in 2022/7/1
  * @since ：11
  */
-@Slf4j
 @Component
 public class MetaDataCache {
+    private static final Logger log = LogUtils.getLogger();
     private static Map<String, TableMetadata> TABLE_CACHE = new ConcurrentHashMap<>();
 
     /**

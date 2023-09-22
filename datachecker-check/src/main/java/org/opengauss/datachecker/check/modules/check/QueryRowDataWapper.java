@@ -15,7 +15,6 @@
 
 package org.opengauss.datachecker.check.modules.check;
 
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.opengauss.datachecker.check.client.FeignClientService;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
@@ -34,7 +33,6 @@ import java.util.List;
  * @date ：Created in 2022/6/18
  * @since ：11
  */
-@Slf4j
 public class QueryRowDataWapper {
     private final FeignClientService feignClient;
 
