@@ -15,11 +15,13 @@
 
 package org.opengauss.datachecker.check.modules.report;
 
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.report.CheckProgress;
 import org.opengauss.datachecker.common.util.FileUtils;
 import org.opengauss.datachecker.common.util.JsonObjectUtil;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -28,6 +30,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static org.opengauss.datachecker.check.modules.report.SliceProgressService.CheckProgressStatus.END;
 import static org.opengauss.datachecker.check.modules.report.SliceProgressService.CheckProgressStatus.PROGRESS;
@@ -42,9 +46,11 @@ import static org.opengauss.datachecker.check.modules.report.SliceProgressServic
  */
 @Service
 public class SliceProgressService {
+    private static final Logger log = LogUtils.getBusinessLogger();
     private static final Map<String, Set<Integer>> TABLE_SLICE = new ConcurrentHashMap<>();
     private static final Map<String, Long> TABLE_ROW_COUNT = new ConcurrentHashMap<>();
     private static final String PROCESS_LOG_NAME = "progress.log";
+    private final Lock lock = new ReentrantLock();
 
     private static int completedTableCount = 0;
     private static int totalTable = 0;
@@ -56,10 +62,19 @@ public class SliceProgressService {
      * start progressing
      */
     public void startProgressing() {
-        checkProgress.setMode(ConfigCache.getCheckMode()).setStatus(START).setStartTime(LocalDateTime.now());
-        checkProgress.setCurrentTime(checkProgress.getStartTime());
-        createProgressLog();
-        ConfigCache.put(ConfigConstants.START_LOCAL_TIME, checkProgress.getStartTime());
+        lock.lock();
+        try {
+            checkProgress.setMode(ConfigCache.getCheckMode())
+                         .setStatus(START)
+                         .setStartTime(LocalDateTime.now());
+            checkProgress.setCurrentTime(checkProgress.getStartTime());
+            createProgressLog();
+            ConfigCache.put(ConfigConstants.START_LOCAL_TIME, checkProgress.getStartTime());
+        } catch (Exception exception) {
+            log.error("start progressing error ", exception);
+        } finally {
+            lock.unlock();
+        }
     }
 
     /**
@@ -71,19 +86,31 @@ public class SliceProgressService {
      * @param count  slice row count
      */
     public void updateProgress(String table, int sTotal, int sNo, long count) {
-        updateTableSliceProgress(table, sNo);
-        updateCompletedTableProgress(table, sTotal);
-        updateTableRowCountProgress(table, count);
-        refreshCheckProgress();
-        refreshProgressLog();
+        lock.lock();
+        try {
+            updateTableSliceProgress(table, sNo);
+            updateCompletedTableProgress(table, sTotal);
+            updateTableRowCountProgress(table, count);
+            refreshCheckProgress();
+            refreshProgressLog();
+        } catch (Exception exception) {
+            log.error("start progressing error ", exception);
+        } finally {
+            lock.unlock();
+        }
     }
 
     private void refreshCheckProgress() {
-        checkProgress.setTableCount(totalTable).setCompleteCount(completedTableCount)
-                     .setTotalRows(TABLE_ROW_COUNT.values().stream().mapToLong(Long::longValue).sum())
+        checkProgress.setTableCount(totalTable)
+                     .setCompleteCount(completedTableCount)
+                     .setTotalRows(TABLE_ROW_COUNT.values()
+                                                  .stream()
+                                                  .mapToLong(Long::longValue)
+                                                  .sum())
                      .setCurrentTime(LocalDateTime.now());
         checkProgress.setTotal(checkProgress.getTotalRows());
-        long cost = Duration.between(checkProgress.getStartTime(), checkProgress.getCurrentTime()).toSeconds();
+        long cost = Duration.between(checkProgress.getStartTime(), checkProgress.getCurrentTime())
+                            .toSeconds();
         checkProgress.setCost(cost);
         checkProgress.setSpeed((int) (checkProgress.getTotalRows() / (cost == 0 ? 1 : cost)));
         checkProgress.setAvgSpeed(checkProgress.getSpeed());
@@ -100,11 +127,19 @@ public class SliceProgressService {
     }
 
     public void updateTotalTableCount(int totalTableCount) {
-        totalTable = totalTableCount;
+        lock.lock();
+        try {
+            totalTable = totalTableCount;
+        } catch (Exception exception) {
+            log.error("start progressing error ", exception);
+        } finally {
+            lock.unlock();
+        }
     }
 
     private void updateCompletedTableProgress(String table, int sTotal) {
-        if (TABLE_SLICE.get(table).size() == sTotal) {
+        if (TABLE_SLICE.get(table)
+                       .size() == sTotal) {
             completedTableCount++;
         }
     }
