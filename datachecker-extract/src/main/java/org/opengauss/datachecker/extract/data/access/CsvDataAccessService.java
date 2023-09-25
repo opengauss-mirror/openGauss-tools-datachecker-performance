@@ -56,7 +56,6 @@ import java.util.stream.Stream;
  * @date ：Created in 2023/7/10
  * @since ：11
  */
-@Service
 @ConditionalOnBean(CsvSourceConfiguration.class)
 public class CsvDataAccessService implements DataAccessService {
     private static final Logger log = LogUtils.getLogger();
