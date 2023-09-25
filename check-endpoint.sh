@@ -1,6 +1,6 @@
 #!/bin/bash
 
-APP_NAME=datachecker-check-5.0.0.jar
+APP_NAME=datachecker-check-5.1.0.jar
 CONFIG_PATH=config
 run_path=$(cd `dirname $0`; pwd)
 #使用说明，用来提示输入参数
