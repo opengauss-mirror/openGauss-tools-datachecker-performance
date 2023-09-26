@@ -64,7 +64,7 @@
         select table_name tableName ,column_name columnName, ordinal_position ordinalPosition, data_type dataType,
             column_type columnType,column_key columnKey, extra extra
         from information_schema.columns
-        where table_schema=#{schema} and table_name =#{name}
+        where table_schema=#{schema} and table_name =#{name} order by ordinal_position asc
     </select>
 
     <select id="rowCount" resultType="long">
