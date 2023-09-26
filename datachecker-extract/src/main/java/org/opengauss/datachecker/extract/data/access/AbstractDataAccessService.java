@@ -20,12 +20,10 @@ import org.opengauss.datachecker.common.entry.check.Difference;
 import org.opengauss.datachecker.common.entry.enums.DataBaseMeta;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.util.LogUtils;
-import org.opengauss.datachecker.extract.config.DruidDataSourceConfig;
 import org.opengauss.datachecker.extract.config.ExtractProperties;
 import org.opengauss.datachecker.extract.dao.MetaSqlMapper;
 import org.opengauss.datachecker.extract.task.ResultSetHandlerFactory;
 import org.opengauss.datachecker.extract.task.ResultSetHashHandler;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -44,7 +42,6 @@ import java.util.Map;
  * @date ：Created in 2023/7/10
  * @since ：11
  */
-@ConditionalOnBean(DruidDataSourceConfig.class)
 public abstract class AbstractDataAccessService implements DataAccessService {
     private static final Logger log = LogUtils.getLogger();
     protected boolean isOgCompatibilityB = false;

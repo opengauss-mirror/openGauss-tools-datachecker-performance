@@ -30,10 +30,7 @@ import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.exception.CsvDataAccessException;
 import org.opengauss.datachecker.common.exception.ExtractDataAccessException;
 import org.opengauss.datachecker.common.util.LogUtils;
-import org.opengauss.datachecker.extract.config.CsvSourceConfiguration;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.jdbc.core.RowMapper;
-import org.springframework.stereotype.Service;
 
 import javax.sql.DataSource;
 import java.io.FileReader;
@@ -56,7 +53,6 @@ import java.util.stream.Stream;
  * @date ：Created in 2023/7/10
  * @since ：11
  */
-@ConditionalOnBean(CsvSourceConfiguration.class)
 public class CsvDataAccessService implements DataAccessService {
     private static final Logger log = LogUtils.getLogger();
     private Map<String, TableMetadata> tableMetadataMap = new ConcurrentHashMap<>();
