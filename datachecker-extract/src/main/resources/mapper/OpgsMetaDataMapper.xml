@@ -67,7 +67,7 @@
               join pg_class tbl on tbl.oid = ad.adrelid
               join pg_namespace ts on ts.oid = tbl.relnamespace  where s.relkind = 'S' and d.deptype in ('a', 'n') and  ts.nspname=#{schema}
               ) my_seq
-              on ca1.tableName = my_seq.table_name and ca1.columnName=my_seq.column_name)
+              on ca1.tableName = my_seq.table_name and ca1.columnName=my_seq.column_name) order by ca1.ordinal_position asc
     </select>
 
     <select id="queryTableColumnsMetaDataB" resultMap="columnMetadataMap">
