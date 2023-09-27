@@ -19,14 +19,9 @@ import org.opengauss.datachecker.common.entry.common.DataAccessParam;
 import org.opengauss.datachecker.common.entry.enums.OgCompatibility;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
-import org.opengauss.datachecker.extract.config.DruidDataSourceConfig;
 import org.opengauss.datachecker.extract.data.mapper.OpgsMetaDataMapper;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
-import javax.annotation.Resource;
 import java.util.List;
 import java.util.Objects;
 
@@ -37,12 +32,12 @@ import java.util.Objects;
  * @date ：Created in 2023/7/10
  * @since ：11
  */
-@Service
-@ConditionalOnBean(DruidDataSourceConfig.class)
-@ConditionalOnProperty(prefix = "spring.extract", name = "databaseType", havingValue = "OG")
 public class OpgsDataAccessService extends AbstractDataAccessService {
-    @Resource
     private OpgsMetaDataMapper opgsMetaDataMapper;
+
+    public OpgsDataAccessService(OpgsMetaDataMapper opgsMetaDataMapper) {
+        this.opgsMetaDataMapper = opgsMetaDataMapper;
+    }
 
     @Override
     @PostConstruct

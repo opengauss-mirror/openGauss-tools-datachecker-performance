@@ -318,7 +318,7 @@ public class ExtractTaskRunnable implements Runnable {
          *
          * @param connection connection
          */
-        public synchronized void releaseConnection(Connection connection) {
+        public void releaseConnection(Connection connection) {
             resourceManager.release();
             DataSourceUtils.releaseConnection(connection, jdbcDataSource);
         }
