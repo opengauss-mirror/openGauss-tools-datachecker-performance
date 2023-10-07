@@ -15,8 +15,9 @@
 
 package org.opengauss.datachecker.check.load;
 
+import org.opengauss.datachecker.check.client.FeignClientService;
 import org.opengauss.datachecker.check.modules.report.CheckResultManagerService;
-import org.opengauss.datachecker.check.modules.report.ProgressService;
+import org.opengauss.datachecker.check.modules.report.SliceProgressService;
 import org.opengauss.datachecker.check.service.CheckService;
 import org.opengauss.datachecker.check.event.KafkaTopicDeleteProvider;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
@@ -51,9 +52,11 @@ public class CheckStartLoader extends AbstractCheckLoader {
     @Resource
     private KafkaTopicDeleteProvider kafkaTopicDeleteProvider;
     @Resource
-    private ProgressService progressService;
-    @Resource
     private MemoryManagerService memoryManagerService;
+    @Resource
+    private SliceProgressService sliceProgressService;
+    @Resource
+    private FeignClientService feignClient;
 
     @Override
     public void load(CheckEnvironment checkEnvironment) {
@@ -63,7 +66,9 @@ public class CheckStartLoader extends AbstractCheckLoader {
         if (!checkEnvironment.isCheckTableEmpty()) {
             memoryManagerService.startMemoryManager(isEnableMemoryMonitor);
             final LocalDateTime startTime = LocalDateTime.now();
-            progressService.progressing(checkEnvironment, startTime);
+            sliceProgressService.startProgressing();
+            int count = feignClient.fetchCheckTableCount();
+            sliceProgressService.updateTotalTableCount(count);
             checkService.start(CheckMode.FULL);
             log.info("check task execute success ,cost time ={}",
                 Duration.between(startTime, LocalDateTime.now()).toSeconds());

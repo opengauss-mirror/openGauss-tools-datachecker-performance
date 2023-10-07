@@ -57,9 +57,21 @@ public class SinglePrimaryAutoSliceQueryStatement implements AutoSliceQueryState
         IntStream.range(0, taskOffset.length).forEach(idx -> {
             sqlBuilder.isFullCondition(idx == taskOffset.length - 1).offset(taskOffset[idx][0], taskOffset[idx][1]);
             QuerySqlEntry entry =
-                new QuerySqlEntry(tableName, sqlBuilder.builder(), taskOffset[idx][0], taskOffset[idx][1]);
+                    new QuerySqlEntry(tableName, sqlBuilder.builder(), taskOffset[idx][0], taskOffset[idx][1]);
             querySqlList.add(entry);
         });
         return querySqlList;
+    }
+
+    @Override
+    public Object[][] builderSlice(TableMetadata tableMetadata, int slice) {
+        List<Object> checkPointList = singlePrimaryCheckPoint.initCheckPointList(tableMetadata, slice);
+        final Object[][] taskOffset;
+        if (singlePrimaryCheckPoint.checkPkNumber(tableMetadata)) {
+            taskOffset = singlePrimaryCheckPoint.translateBetween(checkPointList);
+        } else {
+            taskOffset = singlePrimaryCheckPoint.translateBetweenString(checkPointList);
+        }
+        return taskOffset;
     }
 }

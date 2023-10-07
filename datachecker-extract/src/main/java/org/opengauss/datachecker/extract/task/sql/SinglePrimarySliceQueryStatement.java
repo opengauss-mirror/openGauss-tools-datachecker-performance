@@ -46,8 +46,8 @@ public class SinglePrimarySliceQueryStatement implements SliceQueryStatement {
     public QuerySqlEntry buildSlice(TableMetadata tableMetadata, SliceVo slice) {
         final SelectSqlBuilder sqlBuilder = new SelectSqlBuilder(tableMetadata);
         sqlBuilder.isDivisions(slice.getTotal() > 1);
-        sqlBuilder.isFirstConfition(slice.getNo() == 1);
-        sqlBuilder.isEndConfition(slice.getNo() == slice.getTotal());
+        sqlBuilder.isFirstCondition(slice.getNo() == 1);
+        sqlBuilder.isEndCondition(slice.getNo() == slice.getTotal());
         sqlBuilder.isHalfOpenHalfClosed(isHalfOpenHalfClosed);
         ColumnsMetaData primaryKey = tableMetadata.getSinglePrimary();
         boolean isDigit = MetaDataUtil.isDigitPrimaryKey(primaryKey);

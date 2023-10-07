@@ -82,6 +82,7 @@ public class SliceCheckResultManager {
     private FeignClientService feignClient;
     private int successTableCount = 0;
     private int failedTableCount = 0;
+    private int rowCount = 0;
     private boolean isCsvMode = false;
     private boolean ogCompatibility = false;
     private boolean hasInitSliceResultEnvironment = true;
@@ -159,6 +160,7 @@ public class SliceCheckResultManager {
                 String successLogPath = checkResultPath + SUCCESS_LOG_NAME;
                 FileUtils.writeAppendFile(successLogPath, JsonObjectUtil.prettyFormatMillis(success) + ",");
                 successTableCount++;
+                rowCount += success.getRowCount();
             }
             refreshSummary();
         }
@@ -202,6 +204,7 @@ public class SliceCheckResultManager {
         checkSummary.setCost(calcCheckTaskCost(checkSummary.getStartTime(), checkSummary.getEndTime()));
         checkSummary.setSuccessCount(successTableCount);
         checkSummary.setFailedCount(failedTableCount);
+        checkSummary.setRowCount(rowCount);
         String summaryPath = ConfigCache.getCheckResult() + SUMMARY_LOG_NAME;
         FileUtils.writeFile(summaryPath, JsonObjectUtil.prettyFormatMillis(checkSummary));
     }
@@ -311,6 +314,8 @@ public class SliceCheckResultManager {
         result.setEndTime(fetchMaxEndTime(tableSuccessList));
         result.setRowCount(fetchRowCount.fetchCount(tableSuccessList));
         result.setCost(calcCheckTaskCost(result.getStartTime(), result.getEndTime()));
+        result.setPartition(tableSuccessList.get(0).getPartitions());
+        result.setMessage(fetchMessage(tableSuccessList));
         return result;
     }
 
@@ -334,6 +339,13 @@ public class SliceCheckResultManager {
                               .map(CheckDiffResult::getEndTime)
                               .max(LocalDateTime::compareTo)
                               .get();
+    }
+
+    private String fetchMessage(@NotEmpty List<CheckDiffResult> tableResultList) {
+        return tableResultList.stream()
+                .map(CheckDiffResult::getMessage)
+                .collect(Collectors.toList())
+                .toString();
     }
 
     private LocalDateTime fetchMinStartTime(@NotEmpty List<CheckDiffResult> tableResultList) {
