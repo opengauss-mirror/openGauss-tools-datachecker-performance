@@ -15,6 +15,7 @@
 
 package org.opengauss.datachecker.extract.service;
 
+import com.google.common.collect.Lists;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.config.ConfigCache;
@@ -25,6 +26,7 @@ import org.opengauss.datachecker.common.entry.extract.Database;
 import org.opengauss.datachecker.common.entry.extract.ExtractConfig;
 import org.opengauss.datachecker.common.entry.extract.ExtractTask;
 import org.opengauss.datachecker.common.entry.extract.RowDataHash;
+import org.opengauss.datachecker.common.entry.extract.SliceVo;
 import org.opengauss.datachecker.common.entry.extract.SourceDataLog;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.entry.extract.TableMetadataHash;
@@ -41,11 +43,17 @@ import org.opengauss.datachecker.extract.cache.TableExtractStatusCache;
 import org.opengauss.datachecker.extract.cache.TopicCache;
 import org.opengauss.datachecker.extract.client.CheckingFeignClient;
 import org.opengauss.datachecker.extract.config.ExtractProperties;
+import org.opengauss.datachecker.extract.data.BaseDataService;
+import org.opengauss.datachecker.extract.data.access.DataAccessService;
 import org.opengauss.datachecker.extract.kafka.KafkaAdminService;
+import org.opengauss.datachecker.extract.slice.SliceRegister;
+import org.opengauss.datachecker.extract.slice.factory.SliceFactory;
+import org.opengauss.datachecker.extract.task.CheckPoint;
 import org.opengauss.datachecker.extract.task.DataManipulationService;
 import org.opengauss.datachecker.extract.task.ExtractTaskBuilder;
-import org.opengauss.datachecker.extract.task.ExtractTaskRunnable;
 import org.opengauss.datachecker.extract.task.ExtractThreadSupport;
+import org.opengauss.datachecker.extract.task.sql.AutoSliceQueryStatement;
+import org.opengauss.datachecker.extract.task.sql.QueryStatementFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.NonNull;
@@ -63,6 +71,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.opengauss.datachecker.common.constant.DynamicTpConstant.EXTRACT_EXECUTOR;
 
@@ -86,6 +95,8 @@ public class DataExtractServiceImpl implements DataExtractService {
     private static final int MAX_SLEEP_MILLIS_TIME = 2000;
     private static final int MAX_QUERY_PAGE_SIZE = 500;
     private static final String PROCESS_NO_RESET = "0";
+    private static final String TASK_NAME_PREFIX = "extract_task_";
+    private static final int SINGLE_SLICE_NUM = 1;
 
     /**
      * After the service is started, the {code atomicProcessNo} attribute will be initialized,
@@ -95,6 +106,7 @@ public class DataExtractServiceImpl implements DataExtractService {
     private final AtomicReference<String> atomicProcessNo = new AtomicReference<>(PROCESS_NO_RESET);
 
     private final AtomicReference<List<ExtractTask>> taskReference = new AtomicReference<>();
+    private final QueryStatementFactory factory = new QueryStatementFactory();
     @Autowired
     private ExtractTaskBuilder extractTaskBuilder;
     @Autowired
@@ -107,13 +119,18 @@ public class DataExtractServiceImpl implements DataExtractService {
     private MetaDataService metaDataService;
     @Autowired
     private DataManipulationService dataManipulationService;
+    @Autowired
+    private DataAccessService dataAccessService;
+    @Autowired
+    private BaseDataService baseDataService;
     @Resource
     private TopicCache topicCache;
-
     @Resource
     private DynamicThreadPoolManager dynamicThreadPoolManager;
     @Resource
     private KafkaAdminService kafkaAdminService;
+    @Resource
+    private SliceRegister sliceRegister;
 
     /**
      * Data extraction service
@@ -287,6 +304,7 @@ public class DataExtractServiceImpl implements DataExtractService {
             final ExecutorService executorService = dynamicThreadPoolManager.getExecutor(EXTRACT_EXECUTOR);
             Map<String, Integer> tableCheckStatus = checkingFeignClient.queryTableCheckStatus();
             int maximumTopicSize = ConfigCache.getIntValue(ConfigConstants.MAXIMUM_TOPIC_SIZE);
+            SliceFactory sliceFactory = new SliceFactory(baseDataService.getDataSource());
             taskList.forEach(task -> {
                 try {
                     log.info("Perform data extraction tasks {}", task.getTaskName());
@@ -306,13 +324,93 @@ public class DataExtractServiceImpl implements DataExtractService {
                     log.info("try to create [{}] [{}]", topic.getTopicName(endpoint), topic.getPtnNum());
                     kafkaAdminService.createTopic(topic.getTopicName(endpoint), topic.getPtnNum());
                     topicCache.add(topic);
+                    CheckPoint checkPoint = new CheckPoint(dataAccessService);
                     log.info("current topic cache size = {}", topicCache.size());
-                    executorService.submit(new ExtractTaskRunnable(processNo, task, extractThreadSupport));
+                    List<SliceVo> sliceVoList = buildSliceByTask(checkPoint, task.getTableMetadata(), topic, endpoint);
+                    sliceVoList.forEach(sliceVo -> {
+                        addSlice(executorService, sliceFactory, sliceVo);
+                    });
                 } catch (Exception ex) {
                     log.error("async exec extract tables error : ", ex);
                 }
             });
         }
+    }
+
+    private List<SliceVo> buildSliceByTask(CheckPoint checkPoint, TableMetadata tableMetadata,
+                                           Topic topic, Endpoint endpoint) {
+        List<SliceVo> sliceVoList;
+        if (noTableSlice(tableMetadata)) {
+            sliceVoList = buildSingleSlice(checkPoint, tableMetadata, topic, endpoint);
+        } else {
+            sliceVoList = buildSlice(checkPoint, tableMetadata, topic, endpoint);
+        }
+        return sliceVoList;
+    }
+
+    private void addSlice(ExecutorService executorService, SliceFactory sliceFactory, SliceVo sliceVo) {
+        sliceRegister.register(sliceVo);
+        executorService.submit(sliceFactory.createSliceProcessor(sliceVo));
+    }
+
+    private List<SliceVo> buildSingleSlice(CheckPoint checkPoint, TableMetadata metadata,
+                                           Topic topic, Endpoint endpoint) {
+        Object[][] taskOffsets = getTaskOffset(checkPoint, metadata);
+        SliceVo sliceVo = new SliceVo();
+        sliceVo.setNo(SINGLE_SLICE_NUM);
+        sliceVo.setTable(metadata.getTableName());
+        sliceVo.setSchema(metadata.getSchema());
+        sliceVo.setName(sliceTaskNameBuilder(metadata.getTableName(), 0));
+        sliceVo.setPtnNum(topic.getPtnNum());
+        sliceVo.setTotal(SINGLE_SLICE_NUM);
+        sliceVo.setEndpoint(endpoint);
+        sliceVo.setFetchSize(Integer.parseInt(String.valueOf(taskOffsets[0][1])));
+        sliceVo.setBeginIdx(String.valueOf(0));
+        return Lists.newArrayList(sliceVo);
+    }
+
+    private boolean noTableSlice(TableMetadata tableMetadata) {
+        return tableMetadata.getTableRows() < getMaximumTableSliceSize() || getQueryDop() == 1;
+    }
+
+    private int getMaximumTableSliceSize() {
+        return ConfigCache.getIntValue(ConfigConstants.MAXIMUM_TABLE_SLICE_SIZE);
+    }
+
+    private int getQueryDop() {
+        return ConfigCache.getIntValue(ConfigConstants.QUERY_DOP);
+    }
+
+    private List<SliceVo> buildSlice(CheckPoint checkPoint, TableMetadata metadata, Topic topic, Endpoint endpoint) {
+        Object[][] taskOffsets = getTaskOffset(checkPoint, metadata);
+        int topicPartitions = topic.getPtnNum();
+        ArrayList<SliceVo> sliceTaskList = new ArrayList<>();
+        IntStream.range(0, taskOffsets.length).forEach(index -> {
+            SliceVo sliceVo = new SliceVo();
+            sliceVo.setNo(index + 1);
+            sliceVo.setTable(metadata.getTableName());
+            sliceVo.setSchema(metadata.getSchema());
+            sliceVo.setFetchSize(ConfigCache.getIntValue(ConfigConstants.MAXIMUM_TABLE_SLICE_SIZE));
+            sliceVo.setName(sliceTaskNameBuilder(metadata.getTableName(), index));
+            sliceVo.setBeginIdx(String.valueOf(taskOffsets[index][0]));
+            sliceVo.setEndIdx(String.valueOf(taskOffsets[index][1]));
+            sliceVo.setPtnNum(topic.getPtnNum());
+            sliceVo.setPtn(index % topicPartitions);
+            sliceVo.setTotal(taskOffsets.length);
+            sliceVo.setEndpoint(endpoint);
+            sliceTaskList.add(sliceVo);
+        });
+        return sliceTaskList;
+    }
+
+    private Object[][] getTaskOffset(CheckPoint checkPoint, TableMetadata metadata) {
+        AutoSliceQueryStatement sliceStatement =
+                factory.createSliceQueryStatement(checkPoint, metadata);
+        return sliceStatement.builderSlice(metadata, ConfigCache.getIntValue(ConfigConstants.MAXIMUM_TABLE_SLICE_SIZE));
+    }
+
+    private String sliceTaskNameBuilder(@NonNull String tableName, int index) {
+        return TASK_NAME_PREFIX.concat(tableName).concat("_slice_").concat(String.valueOf(index + 1));
     }
 
     private void registerTopic(ExtractTask task) {

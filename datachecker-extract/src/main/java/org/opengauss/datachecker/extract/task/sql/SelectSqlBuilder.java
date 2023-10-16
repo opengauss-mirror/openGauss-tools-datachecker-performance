@@ -322,11 +322,11 @@ public class SelectSqlBuilder {
         return SQL_GENERATE.get(dataBaseType);
     }
 
-    public void isFirstConfition(boolean first) {
+    public void isFirstCondition(boolean first) {
         this.isFirst = first;
     }
 
-    public void isEndConfition(boolean end) {
+    public void isEndCondition(boolean end) {
         this.isEnd = end;
     }
 

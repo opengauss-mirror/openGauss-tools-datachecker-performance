@@ -35,4 +35,13 @@ public interface AutoSliceQueryStatement extends QueryStatement {
      * @return QuerySqlEntry
      */
     List<QuerySqlEntry> builderByTaskOffset(TableMetadata tableMetadata, int slice);
+
+    /**
+     * build slice by checkpoint
+     *
+     * @param tableMetadata tableMetadata
+     * @param slice slice
+     * @return Two-dimensional array
+     */
+    Object[][] builderSlice(TableMetadata tableMetadata, int slice);
 }

@@ -102,6 +102,7 @@ public class CheckDiffResult {
         endTime = builder.getEndTime();
         rowCondition = builder.getConditionLimit();
         checkMode = builder.getCheckMode();
+        rowCount = builder.getRowCount();
         isTableStructureEquals = builder.isTableStructureEquals();
         if (builder.isExistTableMiss()) {
             initEmptyCollections();
@@ -143,7 +144,7 @@ public class CheckDiffResult {
             message =
                 String.format(CHECKED_ROW_CONDITION, schema, table, rowCondition.getStart(), rowCondition.getOffset());
         } else {
-            message = String.format(CHECKED_PARTITIONS, schema, table, partitions);
+            message = String.format(CHECKED_PARTITIONS, schema, table, sno);
         }
         if (CheckResultUtils.isEmptyDiff(keyDeleteSet, keyUpdateSet, keyInsertSet) && CheckResultUtils.isEmptyDiff(
             keyDelete, keyUpdate, keyInsert)) {

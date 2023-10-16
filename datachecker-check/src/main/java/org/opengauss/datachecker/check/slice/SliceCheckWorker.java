@@ -74,7 +74,7 @@ public class SliceCheckWorker implements Runnable {
     private static final int THRESHOLD_MIN_BUCKET_SIZE = 2;
 
     private final SliceVo slice;
-    private long sliceRowCont;
+    private long sliceRowCount;
     private final SliceCheckEvent checkEvent;
     private final SliceCheckContext checkContext;
     private final DifferencePair<List<Difference>, List<Difference>, List<Difference>> difference =
@@ -100,7 +100,7 @@ public class SliceCheckWorker implements Runnable {
         try {
             SliceExtend source = checkEvent.getSource();
             SliceExtend sink = checkEvent.getSink();
-            this.sliceRowCont = Math.max(source.getCount(), sink.getCount());
+            this.sliceRowCount = Math.max(source.getCount(), sink.getCount());
             log.info("check slice of {}", slice.getName());
             SliceTuple sourceTuple = SliceTuple.of(Endpoint.SOURCE, source, new LinkedList<>());
             SliceTuple sinkTuple = SliceTuple.of(Endpoint.SINK, sink, new LinkedList<>());
@@ -193,12 +193,12 @@ public class SliceCheckWorker implements Runnable {
                .schema(slice.getSchema())
                .fileName(slice.getName())
                .conditionLimit(getConditionLimit())
-               .partitions(slice.getPtn())
+               .partitions(slice.getPtnNum())
                .isTableStructureEquals(true)
                .startTime(startTime)
                .endTime(LocalDateTime.now())
                .isExistTableMiss(false, null)
-               .rowCount((int) sliceRowCont)
+               .rowCount((int) sliceRowCount)
                .errorRate(20)
                .checkMode(ConfigCache.getValue(ConfigConstants.CHECK_MODE, CheckMode.class))
                .keyDiff(difference.getOnlyOnLeft(), difference.getDiffering(), difference.getOnlyOnRight());
@@ -291,7 +291,7 @@ public class SliceCheckWorker implements Runnable {
     }
 
     private void refreshSliceCheckProgress() {
-        checkContext.refreshSliceCheckProgress(slice, sliceRowCont);
+        checkContext.refreshSliceCheckProgress(slice, sliceRowCount);
     }
 
     private void initBucketList(SliceTuple sourceTuple, SliceTuple sinkTuple) throws InterruptedException {
