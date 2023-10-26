@@ -30,20 +30,9 @@ public class DruidDataSourceUtil {
     private static final Logger log = LogUtils.getDebugLogger();
     public static void print(DruidDataSource dataSource) {
         log.debug("datasource getUrl : {}", dataSource.getUrl());
-        log.debug("datasource getUsername : {}", dataSource.getUsername());
-        log.debug("datasource getDbType : {}", dataSource.getDbType());
-        log.debug("datasource getDriverClassName : {}", dataSource.getDriverClassName());
-        log.debug("datasource getInitialSize : {}", dataSource.getInitialSize());
-        log.debug("datasource getMinIdle : {}", dataSource.getMinIdle());
-        log.debug("datasource getMaxActive : {}", dataSource.getMaxActive());
-        log.debug("datasource getMaxWait : {}", dataSource.getMaxWait());
-        log.debug("datasource getTimeBetweenEvictionRunsMillis : {}", dataSource.getTimeBetweenEvictionRunsMillis());
-        log.debug("datasource getMinEvictableIdleTimeMillis : {}", dataSource.getMinEvictableIdleTimeMillis());
-        log.debug("datasource getValidationQuery : {}", dataSource.getValidationQuery());
-        log.debug("datasource isTestWhileIdle : {}", dataSource.isTestWhileIdle());
-        log.debug("datasource isTestOnBorrow : {}", dataSource.isTestOnBorrow());
-        log.debug("datasource isTestOnReturn : {}", dataSource.isTestOnReturn());
-        log.debug("datasource isUseGlobalDataSourceStat : {}", dataSource.isUseGlobalDataSourceStat());
-        log.debug("datasource isPoolPreparedStatements : {}", dataSource.isPoolPreparedStatements());
+        log.debug("datasource Username : {} , DbType : {} -> {} ", dataSource.getUsername(), dataSource.getDbType(),
+                dataSource.getDriverClassName());
+        log.debug("datasource InitialSize : {} ,MinIdle : {}, MaxActive : {}", dataSource.getInitialSize(),
+                dataSource.getMinIdle(), dataSource.getMaxActive());
     }
 }

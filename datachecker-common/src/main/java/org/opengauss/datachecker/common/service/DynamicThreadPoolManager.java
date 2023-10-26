@@ -17,14 +17,18 @@ package org.opengauss.datachecker.common.service;
 
 import org.opengauss.datachecker.common.constant.DynamicTpConstant;
 import org.opengauss.datachecker.common.exception.ExtractBootstrapException;
+import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 
 /**
@@ -45,6 +49,8 @@ public class DynamicThreadPoolManager {
     private int corePoolSize;
     @Value("${spring.check.maximum-pool-size}")
     private int maximumPoolSize;
+    @Value("${spring.check.maximum-topic-size}")
+    private int topicSize;
 
     /**
      * buildDynamicThreadPoolExecutor
@@ -88,5 +94,44 @@ public class DynamicThreadPoolManager {
      */
     public ThreadPoolExecutor getExecutor(String name) {
         return EXECUTOR_SERVICE_CACHE.get(name);
+    }
+
+    /**
+     * get Extend Free Thread Pool Executor
+     *
+     * @return ExecutorService
+     */
+    public ExecutorService getFreeExecutor() {
+        List<String> freeDtpList = getFreeDtpList();
+        if (freeDtpList.size() > 0) {
+            return EXECUTOR_SERVICE_CACHE.get(freeDtpList.get(0));
+        }
+        long count = EXECUTOR_SERVICE_CACHE.keySet()
+                .stream()
+                .filter(dtpName -> dtpName.startsWith(DynamicTpConstant.EXTEND_EXECUTOR))
+                .count();
+        if (count < topicSize) {
+            return buildExtendDtpExecutor(DynamicTpConstant.EXTEND_EXECUTOR + (count + 1));
+        } else {
+            ThreadUtil.sleepOneSecond();
+            return getFreeExecutor();
+        }
+    }
+
+    private List<String> getFreeDtpList() {
+        List<String> freeDtpList = new LinkedList<>();
+        EXECUTOR_SERVICE_CACHE.forEach((dtpName, dtpPool) -> {
+            if (dtpName.startsWith(DynamicTpConstant.EXTEND_EXECUTOR) && dtpPool.getQueue()
+                    .isEmpty()
+                    && dtpPool.getActiveCount() == 0) {
+                freeDtpList.add(dtpName);
+            }
+        });
+        return freeDtpList;
+    }
+
+    private ThreadPoolExecutor buildExtendDtpExecutor(String extendDtpName) {
+        dynamicThreadPool.buildExtendDtpExecutor(EXECUTOR_SERVICE_CACHE, extendDtpName, 1, 10);
+        return EXECUTOR_SERVICE_CACHE.get(extendDtpName);
     }
 }

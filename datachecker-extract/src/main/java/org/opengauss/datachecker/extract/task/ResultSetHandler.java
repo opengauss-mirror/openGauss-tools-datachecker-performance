@@ -67,16 +67,19 @@ public abstract class ResultSetHandler {
         Map<String, String> values) {
         try {
             IntStream.rangeClosed(1, rsmd.getColumnCount())
-                     .forEach(columnIdx -> {
-                         try {
-                             String columnLabel = rsmd.getColumnLabel(columnIdx);
-                             values.put(columnLabel, convert(resultSet, rsmd.getColumnTypeName(columnIdx), columnLabel,
-                                 rsmd.getColumnDisplaySize(columnIdx)));
-                         } catch (SQLException ex) {
-                             log.error(
-                                 "putOneResultSetToMap Convert data according to result set metadata information.", ex);
-                         }
-                     });
+                    .forEach(columnIdx -> {
+                        String columnLabel = null;
+                        String tableName = null;
+                        try {
+                            columnLabel = rsmd.getColumnLabel(columnIdx);
+                            tableName = rsmd.getTableName(columnIdx);
+                            values.put(columnLabel, convert(resultSet, rsmd.getColumnTypeName(columnIdx), columnLabel,
+                                    rsmd.getColumnDisplaySize(columnIdx)));
+                        } catch (SQLException ex) {
+                            log.error("putOneResultSetToMap Convert data [{}:{}] {} error ", tableName, columnLabel,
+                                    ex.getMessage(), ex);
+                        }
+                    });
         } catch (SQLException ex) {
             log.error("putOneResultSetToMap get data metadata information exception", ex);
         }

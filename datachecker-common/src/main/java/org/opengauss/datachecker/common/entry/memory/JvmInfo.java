@@ -32,9 +32,9 @@ import java.util.List;
  */
 @Setter
 public class JvmInfo extends BaseMonitor implements MonitorFormatter {
-    private double total;
-    private double max;
-    private double free;
+    private long total;
+    private long max;
+    private long free;
     private String version;
     private String home;
 
@@ -135,7 +135,7 @@ public class JvmInfo extends BaseMonitor implements MonitorFormatter {
      * @return isAvailable
      */
     public boolean isAvailable(long freeSize) {
-        return Double.compare(free, freeSize) > 0;
+        return free > freeSize;
     }
 
     @Override

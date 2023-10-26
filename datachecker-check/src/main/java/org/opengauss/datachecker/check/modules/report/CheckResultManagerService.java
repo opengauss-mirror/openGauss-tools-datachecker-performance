@@ -62,6 +62,8 @@ public class CheckResultManagerService implements ApplicationContextAware {
     @Resource
     private ProgressService progressService;
     @Resource
+    private SliceProgressService sliceProgressService;
+    @Resource
     private CheckEnvironment checkEnvironment;
     @Resource
     private FeignClientService feignClient;
@@ -184,7 +186,7 @@ public class CheckResultManagerService implements ApplicationContextAware {
     private CheckSummary buildCheckSummaryResult(int successTableCount, int failedTableCount) {
         CheckSummary checkSummary = new CheckSummary();
         int completeCount = successTableCount + failedTableCount;
-        final CheckProgress checkProgress = progressService.getCheckProgress(completeCount);
+        final CheckProgress checkProgress = sliceProgressService.getCheckProgress();
         checkSummary.setMode(checkEnvironment.getCheckMode());
         checkSummary.setTableCount(completeCount);
         checkSummary.setStartTime(checkProgress.getStartTime());

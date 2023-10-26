@@ -100,6 +100,10 @@ public class SliceProgressService {
         }
     }
 
+    public CheckProgress getCheckProgress() {
+        return checkProgress;
+    }
+
     private void refreshCheckProgress() {
         checkProgress.setTableCount(totalTable)
                      .setCompleteCount(completedTableCount)

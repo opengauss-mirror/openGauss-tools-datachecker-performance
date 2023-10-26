@@ -20,8 +20,11 @@ import org.opengauss.datachecker.check.modules.report.CheckResultManagerService;
 import org.opengauss.datachecker.check.modules.report.SliceProgressService;
 import org.opengauss.datachecker.check.service.CheckService;
 import org.opengauss.datachecker.check.event.KafkaTopicDeleteProvider;
+import org.opengauss.datachecker.check.service.TaskRegisterCenter;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.service.MemoryManagerService;
+import org.opengauss.datachecker.common.util.SpringUtil;
+import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
@@ -66,15 +69,19 @@ public class CheckStartLoader extends AbstractCheckLoader {
         if (!checkEnvironment.isCheckTableEmpty()) {
             memoryManagerService.startMemoryManager(isEnableMemoryMonitor);
             final LocalDateTime startTime = LocalDateTime.now();
-            sliceProgressService.startProgressing();
             int count = feignClient.fetchCheckTableCount();
+            sliceProgressService.startProgressing();
             sliceProgressService.updateTotalTableCount(count);
             checkService.start(CheckMode.FULL);
-            log.info("check task execute success ,cost time ={}",
-                Duration.between(startTime, LocalDateTime.now()).toSeconds());
             checkResultManagerService.summaryCheckResult();
             kafkaTopicDeleteProvider.deleteTopicIfAllCheckedCompleted();
             kafkaTopicDeleteProvider.waitDeleteTopicsEventCompleted();
+            TaskRegisterCenter registerCenter = SpringUtil.getBean(TaskRegisterCenter.class);
+            while (!registerCenter.checkCompletedAll(count)) {
+                ThreadUtil.sleepOneSecond();
+            }
+            log.info("check task execute success ,cost time ={}",
+                    Duration.between(startTime, LocalDateTime.now()).toSeconds());
         } else {
             log.info("check task execute success ,cost time =0");
         }

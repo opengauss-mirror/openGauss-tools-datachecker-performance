@@ -55,6 +55,11 @@ public interface DynamicTpConstant {
     String EXTRACT_EXECUTOR = "extract-dtp";
 
     /**
+     * extend-executor
+     */
+    String EXTEND_EXECUTOR = "extend-dtp";
+
+    /**
      * table-parallel-executor
      */
     String TABLE_PARALLEL_EXECUTOR = "parallel-dtp";
