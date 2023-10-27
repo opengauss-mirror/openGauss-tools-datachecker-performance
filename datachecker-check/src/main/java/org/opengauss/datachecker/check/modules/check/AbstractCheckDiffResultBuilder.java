@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 /**
  * AbstractCheckDiffResultBuilder
@@ -250,6 +251,9 @@ public abstract class AbstractCheckDiffResultBuilder<C extends CheckDiffResult, 
         this.keyInsert.addAll(insert);
         this.keyUpdate.addAll(update);
         this.keyDelete.addAll(delete);
+        this.keyInsertSet.addAll(insert.stream().map(Difference::getKey).collect(Collectors.toSet()));
+        this.keyUpdateSet.addAll(update.stream().map(Difference::getKey).collect(Collectors.toSet()));
+        this.keyDeleteSet.addAll(delete.stream().map(Difference::getKey).collect(Collectors.toSet()));
         diffSort.sort(this.keyInsert);
         diffSort.sort(this.keyUpdate);
         diffSort.sort(this.keyDelete);
