@@ -35,4 +35,15 @@ public interface DynamicThreadPool {
      */
     void buildDynamicThreadPoolExecutor(Map<String, ThreadPoolExecutor> executorServiceCache, int corePoolSize,
         int maximumPoolSize);
+
+    /**
+     * init Extend Thread Pool Executor
+     *
+     * @param executors executors
+     * @param name name
+     * @param corePoolSize corePoolSize
+     * @param maximumPoolSize maximumPoolSize
+     */
+    void buildExtendDtpExecutor(Map<String, ThreadPoolExecutor> executors, String name, int corePoolSize,
+                                int maximumPoolSize);
 }

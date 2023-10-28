@@ -47,6 +47,12 @@ public class DynamicExtractTpService implements DynamicThreadPool {
         }
     }
 
+    @Override
+    public void buildExtendDtpExecutor(Map<String, ThreadPoolExecutor> executors, String name, int corePoolSize,
+                                       int maximumPoolSize) {
+        executors.put(name, buildExtractExecutor(corePoolSize, maximumPoolSize));
+    }
+
     private ThreadPoolExecutor buildTableParallelExecutor(int corePoolSize, int maximumPoolSize) {
         return ThreadPoolFactory
             .newThreadPool(TABLE_PARALLEL_EXECUTOR, corePoolSize, maximumPoolSize, Integer.MAX_VALUE);

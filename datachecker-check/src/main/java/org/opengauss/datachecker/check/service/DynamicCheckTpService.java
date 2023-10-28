@@ -39,6 +39,11 @@ public class DynamicCheckTpService implements DynamicThreadPool {
         executors.put(CHECK_EXECUTOR, buildCheckExecutor(corePoolSize, maximumPoolSize));
     }
 
+    @Override
+    public void buildExtendDtpExecutor(Map<String, ThreadPoolExecutor> executors, String name, int corePoolSize,
+                                       int maximumPoolSize) {
+    }
+
     private ThreadPoolExecutor buildCheckExecutor(int corePoolSize, int maximumPoolSize) {
         return ThreadPoolFactory.newThreadPool(CHECK_EXECUTOR, corePoolSize, maximumPoolSize, Integer.MAX_VALUE);
     }

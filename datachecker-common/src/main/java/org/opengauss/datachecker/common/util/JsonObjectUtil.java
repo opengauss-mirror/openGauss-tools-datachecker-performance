@@ -75,7 +75,7 @@ public class JsonObjectUtil {
      * @return formatting string
      */
     public static String formatSec(Object object) {
-        return JSONObject.toJSONStringWithDateFormat(object, TIME_SEC_FORMATTER, SerializerFeature.WriteMapNullValue);
+        return JSONObject.toJSONStringWithDateFormat(object, TIME_SEC_FORMATTER);
     }
 
     /**

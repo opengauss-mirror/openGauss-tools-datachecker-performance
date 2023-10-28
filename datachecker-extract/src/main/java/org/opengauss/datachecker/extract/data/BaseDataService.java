@@ -83,7 +83,7 @@ public class BaseDataService {
      *
      * @return table name list
      */
-    public List<String> queryTableNameList() {
+    public synchronized List<String> queryTableNameList() {
         if (CollectionUtils.isEmpty(tableNameList)) {
             tableNameList.addAll(filterByTableRules(dataAccessService.queryTableNameList()));
         }
@@ -196,7 +196,7 @@ public class BaseDataService {
         StringBuffer buffer = new StringBuffer();
         columnsMetas.sort(Comparator.comparing(ColumnsMetaData::getOrdinalPosition));
         columnsMetas.forEach(column -> {
-            buffer.append(column.getColumnName()).append(column.getColumnKey()).append(column.getOrdinalPosition());
+            buffer.append(column.getColumnName()).append(column.getOrdinalPosition());
         });
         KafkaAvroDeserializerConfig a;
         return HASH_UTIL.hashBytes(buffer.toString());

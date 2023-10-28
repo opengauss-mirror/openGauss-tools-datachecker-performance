@@ -200,8 +200,9 @@ public class DataExtractServiceImpl implements DataExtractService {
                     taskList.size(), tableNames);
                 return;
             }
-            final List<ExtractTask> extractTasks =
-                taskList.stream().filter(task -> tableNames.contains(task.getTableName())).collect(Collectors.toList());
+            final List<ExtractTask> extractTasks = taskList.stream()
+                    .filter(task -> tableNames.contains(task.getTableName()))
+                    .collect(Collectors.toList());
             extractTasks.forEach(this::updateSinkMetadata);
             taskReference.set(extractTasks);
             log.info("build extract task process={} count={},", processNo, extractTasks.size());
@@ -301,10 +302,8 @@ public class DataExtractServiceImpl implements DataExtractService {
             if (CollectionUtils.isEmpty(taskList)) {
                 return;
             }
-            final ExecutorService executorService = dynamicThreadPoolManager.getExecutor(EXTRACT_EXECUTOR);
             Map<String, Integer> tableCheckStatus = checkingFeignClient.queryTableCheckStatus();
             int maximumTopicSize = ConfigCache.getIntValue(ConfigConstants.MAXIMUM_TOPIC_SIZE);
-            SliceFactory sliceFactory = new SliceFactory(baseDataService.getDataSource());
             taskList.forEach(task -> {
                 try {
                     log.info("Perform data extraction tasks {}", task.getTaskName());
@@ -327,11 +326,10 @@ public class DataExtractServiceImpl implements DataExtractService {
                     CheckPoint checkPoint = new CheckPoint(dataAccessService);
                     log.info("current topic cache size = {}", topicCache.size());
                     List<SliceVo> sliceVoList = buildSliceByTask(checkPoint, task.getTableMetadata(), topic, endpoint);
-                    sliceVoList.forEach(sliceVo -> {
-                        addSlice(executorService, sliceFactory, sliceVo);
-                    });
+                    log.info("table [{}] have {} slice to check", tableName, sliceVoList.size());
+                    addSliceProcessor(sliceVoList);
                 } catch (Exception ex) {
-                    log.error("async exec extract tables error : ", ex);
+                    log.error("async exec extract tables error {}:{} ", task.getTableName(), ex.getMessage(), ex);
                 }
             });
         }
@@ -341,21 +339,34 @@ public class DataExtractServiceImpl implements DataExtractService {
                                            Topic topic, Endpoint endpoint) {
         List<SliceVo> sliceVoList;
         if (noTableSlice(tableMetadata)) {
-            sliceVoList = buildSingleSlice(checkPoint, tableMetadata, topic, endpoint);
+            sliceVoList = buildSingleSlice(tableMetadata, topic, endpoint);
         } else {
             sliceVoList = buildSlice(checkPoint, tableMetadata, topic, endpoint);
         }
         return sliceVoList;
     }
 
-    private void addSlice(ExecutorService executorService, SliceFactory sliceFactory, SliceVo sliceVo) {
-        sliceRegister.register(sliceVo);
-        executorService.submit(sliceFactory.createSliceProcessor(sliceVo));
+    private void addSliceProcessor(List<SliceVo> sliceVoList) {
+        SliceFactory sliceFactory = new SliceFactory(baseDataService.getDataSource());
+        if (sliceVoList.size() <= 20) {
+            ExecutorService executorService = dynamicThreadPoolManager.getExecutor(EXTRACT_EXECUTOR);
+            log.info("table [{}] get executorService success", sliceVoList.get(0).getTable());
+            sliceVoList.forEach(sliceVo -> {
+                sliceRegister.register(sliceVo);
+                executorService.submit(sliceFactory.createSliceProcessor(sliceVo));
+            });
+        } else {
+            ExecutorService extendExecutor = dynamicThreadPoolManager.getFreeExecutor();
+            log.info("table [{}] get extendExecutor success", sliceVoList.get(0).getTable());
+            sliceVoList.forEach(sliceVo -> {
+                sliceRegister.register(sliceVo);
+                extendExecutor.submit(sliceFactory.createSliceProcessor(sliceVo));
+            });
+        }
     }
 
-    private List<SliceVo> buildSingleSlice(CheckPoint checkPoint, TableMetadata metadata,
+    private List<SliceVo> buildSingleSlice(TableMetadata metadata,
                                            Topic topic, Endpoint endpoint) {
-        Object[][] taskOffsets = getTaskOffset(checkPoint, metadata);
         SliceVo sliceVo = new SliceVo();
         sliceVo.setNo(SINGLE_SLICE_NUM);
         sliceVo.setTable(metadata.getTableName());
@@ -364,8 +375,6 @@ public class DataExtractServiceImpl implements DataExtractService {
         sliceVo.setPtnNum(topic.getPtnNum());
         sliceVo.setTotal(SINGLE_SLICE_NUM);
         sliceVo.setEndpoint(endpoint);
-        sliceVo.setFetchSize(Integer.parseInt(String.valueOf(taskOffsets[0][1])));
-        sliceVo.setBeginIdx(String.valueOf(0));
         return Lists.newArrayList(sliceVo);
     }
 
@@ -385,32 +394,34 @@ public class DataExtractServiceImpl implements DataExtractService {
         Object[][] taskOffsets = getTaskOffset(checkPoint, metadata);
         int topicPartitions = topic.getPtnNum();
         ArrayList<SliceVo> sliceTaskList = new ArrayList<>();
-        IntStream.range(0, taskOffsets.length).forEach(index -> {
-            SliceVo sliceVo = new SliceVo();
-            sliceVo.setNo(index + 1);
-            sliceVo.setTable(metadata.getTableName());
-            sliceVo.setSchema(metadata.getSchema());
-            sliceVo.setFetchSize(ConfigCache.getIntValue(ConfigConstants.MAXIMUM_TABLE_SLICE_SIZE));
-            sliceVo.setName(sliceTaskNameBuilder(metadata.getTableName(), index));
-            sliceVo.setBeginIdx(String.valueOf(taskOffsets[index][0]));
-            sliceVo.setEndIdx(String.valueOf(taskOffsets[index][1]));
-            sliceVo.setPtnNum(topic.getPtnNum());
-            sliceVo.setPtn(index % topicPartitions);
-            sliceVo.setTotal(taskOffsets.length);
-            sliceVo.setEndpoint(endpoint);
-            sliceTaskList.add(sliceVo);
-        });
+        IntStream.range(0, taskOffsets.length)
+                .forEach(index -> {
+                    SliceVo sliceVo = new SliceVo();
+                    sliceVo.setNo(index + 1);
+                    sliceVo.setTable(metadata.getTableName());
+                    sliceVo.setSchema(metadata.getSchema());
+                    sliceVo.setFetchSize(ConfigCache.getIntValue(ConfigConstants.MAXIMUM_TABLE_SLICE_SIZE));
+                    sliceVo.setName(sliceTaskNameBuilder(metadata.getTableName(), index));
+                    sliceVo.setBeginIdx(String.valueOf(taskOffsets[index][0]));
+                    sliceVo.setEndIdx(String.valueOf(taskOffsets[index][1]));
+                    sliceVo.setPtnNum(topic.getPtnNum());
+                    sliceVo.setPtn(index % topicPartitions);
+                    sliceVo.setTotal(taskOffsets.length);
+                    sliceVo.setEndpoint(endpoint);
+                    sliceTaskList.add(sliceVo);
+                });
         return sliceTaskList;
     }
 
     private Object[][] getTaskOffset(CheckPoint checkPoint, TableMetadata metadata) {
-        AutoSliceQueryStatement sliceStatement =
-                factory.createSliceQueryStatement(checkPoint, metadata);
+        AutoSliceQueryStatement sliceStatement = factory.createSliceQueryStatement(checkPoint, metadata);
         return sliceStatement.builderSlice(metadata, ConfigCache.getIntValue(ConfigConstants.MAXIMUM_TABLE_SLICE_SIZE));
     }
 
     private String sliceTaskNameBuilder(@NonNull String tableName, int index) {
-        return TASK_NAME_PREFIX.concat(tableName).concat("_slice_").concat(String.valueOf(index + 1));
+        return TASK_NAME_PREFIX.concat(tableName)
+                .concat("_slice_")
+                .concat(String.valueOf(index + 1));
     }
 
     private void registerTopic(ExtractTask task) {

@@ -18,6 +18,8 @@ package org.opengauss.datachecker.extract.slice.process;
 import org.opengauss.datachecker.common.entry.extract.SliceExtend;
 import org.opengauss.datachecker.extract.slice.SliceProcessorContext;
 
+import java.math.BigDecimal;
+
 /**
  * AbstractProcessor
  *
@@ -40,7 +42,9 @@ public abstract class AbstractProcessor implements SliceProcessor {
      * @return memory size
      */
     protected long estimatedMemorySize(long rowLength, long sliceSize) {
-        return (rowLength * 3 + 30) * sliceSize;
+        BigDecimal rowLengthNum = BigDecimal.valueOf(rowLength);
+        BigDecimal sliceSizeNum = BigDecimal.valueOf(sliceSize);
+        return rowLengthNum.multiply(sliceSizeNum).longValue();
     }
 
     /**

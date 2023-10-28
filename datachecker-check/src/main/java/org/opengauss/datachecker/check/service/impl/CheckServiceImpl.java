@@ -122,7 +122,6 @@ public class CheckServiceImpl implements CheckService {
         if (STARTED.compareAndSet(false, true)) {
             ExportCheckResult.backCheckResultDirectory();
             try {
-                tableStatusRegister.selfCheck();
                 startCheckFullMode();
                 // Wait for the task construction to complete, and start the task polling thread
                 startCheckPollingThread();
@@ -178,9 +177,7 @@ public class CheckServiceImpl implements CheckService {
      * And start the current task to verify the data.
      */
     public void startCheckPollingThread() {
-        while (!tableStatusRegister.isCheckCompleted()) {
-            checkTableWithSyncExtracting();
-        }
+        checkTableWithSyncExtracting();
     }
 
     private void checkTableWithExtractEnd() {
