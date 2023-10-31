@@ -375,11 +375,14 @@ public class DataExtractServiceImpl implements DataExtractService {
         sliceVo.setPtnNum(topic.getPtnNum());
         sliceVo.setTotal(SINGLE_SLICE_NUM);
         sliceVo.setEndpoint(endpoint);
+        sliceVo.setFetchSize(ConfigCache.getIntValue(ConfigConstants.MAXIMUM_TABLE_SLICE_SIZE));
         return Lists.newArrayList(sliceVo);
     }
 
     private boolean noTableSlice(TableMetadata tableMetadata) {
-        return tableMetadata.getTableRows() < getMaximumTableSliceSize() || getQueryDop() == 1;
+        return tableMetadata.getTableRows() < getMaximumTableSliceSize()
+                || getQueryDop() == 1
+                || tableMetadata.getConditionLimit() != null;
     }
 
     private int getMaximumTableSliceSize() {
