@@ -103,4 +103,12 @@ public interface MetaDataMapper {
      * @return val
      */
     String next(@Param("param") DataAccessParam param);
+
+    /**
+     * query table check point list
+     *
+     * @param param param
+     * @return point list
+     */
+    List<Object> queryPointList(@Param("param") DataAccessParam param);
 }

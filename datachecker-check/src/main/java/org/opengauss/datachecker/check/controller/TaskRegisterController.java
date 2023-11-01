@@ -15,14 +15,19 @@
 
 package org.opengauss.datachecker.check.controller;
 
+import org.opengauss.datachecker.check.service.CheckPointRegister;
 import org.opengauss.datachecker.check.service.TaskRegisterCenter;
+import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.extract.SliceExtend;
 import org.opengauss.datachecker.common.entry.extract.SliceVo;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
+import java.util.List;
 
 /**
  * TaskRegisterController
@@ -35,6 +40,8 @@ import javax.annotation.Resource;
 public class TaskRegisterController {
     @Resource
     private TaskRegisterCenter taskRegisterCenter;
+    @Resource
+    private CheckPointRegister checkPointRegister;
 
     /**
      * register slice ,when extract endpoint listener slice log
@@ -54,5 +61,37 @@ public class TaskRegisterController {
     @PostMapping("/update/register/slice")
     public void refreshRegisterSlice(@RequestBody SliceExtend sliceExt) {
         taskRegisterCenter.update(sliceExt);
+    }
+
+    /**
+     * start table checkpoint monitor
+     */
+    @GetMapping("/register/checkpoint/monitor/start")
+    public void startCheckPointMonitor() {
+        checkPointRegister.startMonitor();
+    }
+
+    /**
+     * stop table checkpoint monitor
+     *
+     * @param endpoint endpoint
+     */
+    @GetMapping("/register/checkpoint/monitor/stop")
+    public void stopCheckPointMonitor(@RequestParam(value = "endpoint") Endpoint endpoint) {
+        checkPointRegister.stopMonitor(endpoint);
+    }
+
+    /**
+     * register table checkpoint list
+     *
+     * @param endpoint endpoint
+     * @param tableName tableName
+     * @param checkPoint checkPoint
+     */
+    @PostMapping("/register/checkpoint")
+    public void registerCheckpoint(@RequestParam(value = "endpoint") Endpoint endpoint,
+                                   @RequestParam(value = "tableName") String tableName,
+                                   @RequestBody List<Long> checkPoint) {
+        checkPointRegister.registerCheckPoint(endpoint, tableName, checkPoint);
     }
 }

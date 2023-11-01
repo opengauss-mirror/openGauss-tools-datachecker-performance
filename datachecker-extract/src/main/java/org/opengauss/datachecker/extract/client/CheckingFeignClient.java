@@ -118,4 +118,30 @@ public interface CheckingFeignClient {
 
     @PostMapping("/notify/dispatch/csv/slice/finished")
     void notifyDispatchCsvSliceFinished();
+
+    /**
+     * start table checkpoint monitor
+     */
+    @GetMapping("/register/checkpoint/monitor/start")
+    void startCheckPointMonitor();
+
+    /**
+     * stop table checkpoint monitor
+     *
+     * @param endpoint endpoint
+     */
+    @GetMapping("/register/checkpoint/monitor/stop")
+    void stopCheckPointMonitor(@RequestParam(value = "endpoint") Endpoint endpoint);
+
+    /**
+     * register table checkpoint list
+     *
+     * @param endpoint endpoint
+     * @param tableName tableName
+     * @param checkPoint checkPoint
+     */
+    @PostMapping("/register/checkpoint")
+    void registerCheckPoint(@RequestParam(name = "endpoint") @NotEmpty Endpoint endpoint,
+                            @RequestParam(name = "tableName") @NotEmpty String tableName,
+                            @RequestBody List<Long> checkPoint);
 }

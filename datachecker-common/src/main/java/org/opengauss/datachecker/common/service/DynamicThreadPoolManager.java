@@ -49,8 +49,6 @@ public class DynamicThreadPoolManager {
     private int corePoolSize;
     @Value("${spring.check.maximum-pool-size}")
     private int maximumPoolSize;
-    @Value("${spring.check.maximum-topic-size}")
-    private int topicSize;
 
     /**
      * buildDynamicThreadPoolExecutor
@@ -99,9 +97,11 @@ public class DynamicThreadPoolManager {
     /**
      * get Extend Free Thread Pool Executor
      *
+     * @param topicSize topicSize
+     * @param extendMaxPoolSize extendMaxPoolSize
      * @return ExecutorService
      */
-    public ExecutorService getFreeExecutor() {
+    public ExecutorService getFreeExecutor(int topicSize, int extendMaxPoolSize) {
         List<String> freeDtpList = getFreeDtpList();
         if (freeDtpList.size() > 0) {
             return EXECUTOR_SERVICE_CACHE.get(freeDtpList.get(0));
@@ -111,10 +111,10 @@ public class DynamicThreadPoolManager {
                 .filter(dtpName -> dtpName.startsWith(DynamicTpConstant.EXTEND_EXECUTOR))
                 .count();
         if (count < topicSize) {
-            return buildExtendDtpExecutor(DynamicTpConstant.EXTEND_EXECUTOR + (count + 1));
+            return buildExtendDtpExecutor(DynamicTpConstant.EXTEND_EXECUTOR + (count + 1), extendMaxPoolSize);
         } else {
             ThreadUtil.sleepOneSecond();
-            return getFreeExecutor();
+            return getFreeExecutor(topicSize, extendMaxPoolSize);
         }
     }
 
@@ -130,8 +130,8 @@ public class DynamicThreadPoolManager {
         return freeDtpList;
     }
 
-    private ThreadPoolExecutor buildExtendDtpExecutor(String extendDtpName) {
-        dynamicThreadPool.buildExtendDtpExecutor(EXECUTOR_SERVICE_CACHE, extendDtpName, 1, 10);
+    private ThreadPoolExecutor buildExtendDtpExecutor(String extendDtpName, int extendMaxPoolSize) {
+        dynamicThreadPool.buildExtendDtpExecutor(EXECUTOR_SERVICE_CACHE, extendDtpName, 1, extendMaxPoolSize);
         return EXECUTOR_SERVICE_CACHE.get(extendDtpName);
     }
 }

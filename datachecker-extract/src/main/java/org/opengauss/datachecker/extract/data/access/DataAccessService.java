@@ -132,4 +132,12 @@ public interface DataAccessService {
      * @return DataSource
      */
     DataSource getDataSource();
+
+    /**
+     * query table check point list
+     *
+     * @param param param
+     * @return point list
+     */
+    List<Object> queryPointList(DataAccessParam param);
 }

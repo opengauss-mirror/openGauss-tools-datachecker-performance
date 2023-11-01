@@ -47,6 +47,11 @@ public interface ConfigConstants {
 
     String MAXIMUM_TABLE_SLICE_SIZE = "spring.check.maximum-table-slice-size";
     String MAXIMUM_TOPIC_SIZE = "spring.check.maximum-topic-size";
+
+    /**
+     * with table slice check, config the maximum number of threads in the thread pool
+     */
+    String EXTEND_MAXIMUM_POOL_SIZE = "spring.check.extend-maximum-pool-size";
     String BUCKET_CAPACITY = "data.check.bucket-expect-capacity";
     String CHECK_PATH = "data.check.data-path";
 
@@ -64,4 +69,9 @@ public interface ConfigConstants {
     String DRUID_MAX_WAIT = "spring.datasource.druid.max-wait";
     String DRUID_VALIDATION_QUERY = "spring.datasource.druid.validationQuery";
     String DRUID_MIN_EVICTABLE_IDLE_TIME_MILLIS = "spring.datasource.druid.min-evictable-idle-time-millis";
+
+    /**
+     * lifecycle graceful shutdown wait time
+     */
+    String TIMEOUT_PER_SHUTDOWN_PHASE = "spring.lifecycle.timeout-per-shutdown-phase";
 }

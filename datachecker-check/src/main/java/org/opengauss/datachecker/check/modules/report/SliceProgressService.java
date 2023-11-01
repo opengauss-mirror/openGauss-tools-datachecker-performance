@@ -91,7 +91,7 @@ public class SliceProgressService {
             updateTableSliceProgress(table, sNo);
             updateCompletedTableProgress(table, sTotal);
             updateTableRowCountProgress(table, count);
-            refreshCheckProgress();
+            refreshCheckProgress(count);
             refreshProgressLog();
         } catch (Exception exception) {
             log.error("start progressing error ", exception);
@@ -104,19 +104,19 @@ public class SliceProgressService {
         return checkProgress;
     }
 
-    private void refreshCheckProgress() {
+    private void refreshCheckProgress(long count) {
         checkProgress.setTableCount(totalTable)
                      .setCompleteCount(completedTableCount)
-                     .setTotalRows(TABLE_ROW_COUNT.values()
-                                                  .stream()
-                                                  .mapToLong(Long::longValue)
-                                                  .sum())
+                     .setTotalRows(count)
                      .setCurrentTime(LocalDateTime.now());
-        checkProgress.setTotal(checkProgress.getTotalRows());
+        checkProgress.setTotal(TABLE_ROW_COUNT.values()
+                     .stream()
+                     .mapToLong(Long::longValue)
+                     .sum());
         long cost = Duration.between(checkProgress.getStartTime(), checkProgress.getCurrentTime())
                             .toSeconds();
         checkProgress.setCost(cost);
-        checkProgress.setSpeed((int) (checkProgress.getTotalRows() / (cost == 0 ? 1 : cost)));
+        checkProgress.setSpeed((int) (checkProgress.getTotal() / (cost == 0 ? 1 : cost)));
         checkProgress.setAvgSpeed(checkProgress.getSpeed());
         if (completedTableCount == totalTable) {
             checkProgress.setEndTime(checkProgress.getCurrentTime());

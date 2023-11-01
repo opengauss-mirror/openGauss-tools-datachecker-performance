@@ -156,4 +156,12 @@ public interface DataExtractService {
      * @return result
      */
     Boolean isCheckTableEmpty(boolean isForced);
+
+    /**
+     * refresh extract table checkPoint list
+     *
+     * @param tableName tableName
+     * @param checkPoint checkPoint
+     */
+    void refreshCheckPoint(String tableName, List<Long> checkPoint);
 }

@@ -17,14 +17,17 @@ package org.opengauss.datachecker.extract.slice;
 
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
+import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.extract.SliceVo;
 import org.opengauss.datachecker.common.entry.extract.Topic;
 import org.opengauss.datachecker.extract.cache.TopicCache;
 import org.opengauss.datachecker.extract.client.CheckingFeignClient;
 import org.opengauss.datachecker.extract.kafka.KafkaAdminService;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -91,5 +94,33 @@ public class SliceRegister {
      */
     public void notifyDispatchCsvSliceFinished() {
         checkingClient.notifyDispatchCsvSliceFinished();
+    }
+
+    /**
+     * start table checkpoint monitor
+     */
+    public void startCheckPointMonitor() {
+        checkingClient.startCheckPointMonitor();
+    }
+
+    /**
+     * stop table checkpoint monitor
+     *
+     * @param endpoint endpoint
+     */
+    public void stopCheckPointMonitor(Endpoint endpoint) {
+        checkingClient.stopCheckPointMonitor(endpoint);
+    }
+
+    /**
+     * register table checkPoint list
+     *
+     * @param endpoint endpoint
+     * @param tableName tableName
+     * @param checkPointList checkPointList
+     */
+    @Retryable(maxAttempts = 3)
+    public void registerCheckPoint(Endpoint endpoint, String tableName, List<Long> checkPointList) {
+        checkingClient.registerCheckPoint(endpoint, tableName, checkPointList);
     }
 }

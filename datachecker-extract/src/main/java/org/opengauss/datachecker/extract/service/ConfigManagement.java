@@ -47,7 +47,7 @@ public class ConfigManagement {
     private KafkaAdminService kafkaAdminService;
 
     @Value("${spring.check.maximum-topic-size}")
-    private int maximumTopicSize = 10;
+    private int maximumTopicSize = 3;
     @Value("${spring.memory-monitor-enable}")
     private boolean isEnableMemoryMonitor;
     @Value("${spring.kafka.bootstrap-servers}")
@@ -56,6 +56,9 @@ public class ConfigManagement {
     private int queryDop;
     @Value("${spring.check.maximum-table-slice-size}")
     private int maximumTableSliceSize;
+    @Value("${spring.check.extend-maximum-pool-size}")
+    private int extendMaxPoolSize = 10;
+
 
     @Value("${spring.datasource.druid.initialSize}")
     private int initialSize;
@@ -69,6 +72,8 @@ public class ConfigManagement {
     private String validationQuery;
     @Value("${spring.datasource.druid.min-evictable-idle-time-millis}")
     private int minEvictableIdleTimeMillis;
+    @Value("${spring.lifecycle.timeout-per-shutdown-phase}")
+    private int timeoutPerShutdownPhase;
 
     /**
      * init csv config
@@ -109,6 +114,8 @@ public class ConfigManagement {
         ConfigCache.put(ConfigConstants.QUERY_DOP, queryDop);
         ConfigCache.put(ConfigConstants.MAXIMUM_TABLE_SLICE_SIZE, maximumTableSliceSize);
         ConfigCache.put(ConfigConstants.FETCH_SIZE, 1000);
+        ConfigCache.put(ConfigConstants.TIMEOUT_PER_SHUTDOWN_PHASE, timeoutPerShutdownPhase);
+        ConfigCache.put(ConfigConstants.EXTEND_MAXIMUM_POOL_SIZE, extendMaxPoolSize);
 
         loadKafkaProperties();
     }

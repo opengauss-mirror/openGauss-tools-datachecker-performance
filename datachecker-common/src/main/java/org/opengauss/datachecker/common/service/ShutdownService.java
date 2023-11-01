@@ -1,10 +1,13 @@
 package org.opengauss.datachecker.common.service;
 
 import org.apache.logging.log4j.Logger;
+import org.opengauss.datachecker.common.config.ConfigCache;
+import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.SpringUtil;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.springframework.boot.SpringApplication;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.concurrent.ExecutorConfigurationSupport;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
@@ -31,8 +34,11 @@ public class ShutdownService {
     @Resource
     private DynamicThreadPoolManager dynamicThreadPoolManager;
 
+    @Async
     public void shutdown(String message) {
         log.info("The check server will be shutdown , {} . check server exited .", message);
+        ThreadUtil.sleep(ConfigCache.getIntValue(ConfigConstants.TIMEOUT_PER_SHUTDOWN_PHASE));
+        log.info("The check server wait 5s and will be shutdown , {} . check server exited .", message);
         isShutdown.set(true);
         ThreadUtil.killThreadByName("kafka-producer-network-thread");
 

@@ -93,4 +93,9 @@ public class OpgsDataAccessService extends AbstractDataAccessService {
     public String next(DataAccessParam param) {
         return opgsMetaDataMapper.next(param);
     }
+
+    @Override
+    public List<Object> queryPointList(DataAccessParam param) {
+        return opgsMetaDataMapper.queryPointList(param);
+    }
 }

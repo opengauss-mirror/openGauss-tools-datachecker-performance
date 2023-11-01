@@ -85,4 +85,9 @@ public class MysqlDataAccessService extends AbstractDataAccessService {
     public String next(DataAccessParam param) {
         return mysqlMetaDataMapper.next(param);
     }
+
+    @Override
+    public List<Object> queryPointList(DataAccessParam param) {
+        return mysqlMetaDataMapper.queryPointList(param);
+    }
 }

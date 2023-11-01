@@ -24,6 +24,7 @@ import org.opengauss.datachecker.extract.data.access.DataAccessService;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * CheckPoint
@@ -68,20 +69,15 @@ public class CheckPoint {
         DataAccessParam param = new DataAccessParam().setSchema(schema)
                                                      .setName(tableName)
                                                      .setColName(pkName);
-        String checkPoint = dataAccessService.min(param);
+        String minCheckPoint = dataAccessService.min(param);
         param.setOffset(slice);
-        String preValue = checkPoint;
-        List<Object> checkList = new LinkedList<>();
-        addCheckList(checkList, preValue);
-        while (preValue != null) {
-            param.setPreValue(preValue);
-            preValue = dataAccessService.next(param);
-            addCheckList(checkList, preValue);
-        }
         Object maxPoint = dataAccessService.max(param);
-        addCheckList(checkList, maxPoint);
-        log.info("table [{}] check-point-list : {} ", tableName, checkList);
-        return checkList;
+        List<Object> checkPointList = dataAccessService.queryPointList(param);
+        checkPointList.add(minCheckPoint);
+        checkPointList.add(maxPoint);
+        checkPointList = checkPointList.stream().distinct().collect(Collectors.toList());
+        log.debug("table [{}] check-point-list : {} ", tableName, checkPointList);
+        return checkPointList;
     }
 
     private void addCheckList(List<Object> checkList, Object value) {

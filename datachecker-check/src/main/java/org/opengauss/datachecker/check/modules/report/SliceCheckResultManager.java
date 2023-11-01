@@ -329,7 +329,7 @@ public class SliceCheckResultManager {
     protected long calcCheckTaskCost(LocalDateTime start, LocalDateTime end) {
         if (Objects.nonNull(start) && Objects.nonNull(end)) {
             return Duration.between(start, end)
-                           .toMillis();
+                           .toSeconds();
         }
         return 0;
     }
