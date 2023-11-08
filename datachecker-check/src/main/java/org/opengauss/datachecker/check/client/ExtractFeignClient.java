@@ -229,4 +229,15 @@ public interface ExtractFeignClient {
 
     @GetMapping("/fetch/check/table/count")
     Result<Integer> fetchCheckTableCount();
+
+    /**
+     * refresh table checkPoint list
+     *
+     * @param tableName tableName
+     * @param checkPointList checkPointList
+     * @return void
+     */
+    @PostMapping("/extract/table/checkpoint")
+    Result<Void> refreshCheckpoint(@RequestParam(name = "tableName") String tableName,
+                                   @RequestBody List<Long> checkPointList);
 }

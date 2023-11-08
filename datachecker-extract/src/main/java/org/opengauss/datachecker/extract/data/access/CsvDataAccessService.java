@@ -198,6 +198,11 @@ public class CsvDataAccessService implements DataAccessService {
     }
 
     @Override
+    public List<Object> queryPointList(DataAccessParam param) {
+        return null;
+    }
+
+    @Override
     public long rowCount(String tableName) {
         return 0;
     }

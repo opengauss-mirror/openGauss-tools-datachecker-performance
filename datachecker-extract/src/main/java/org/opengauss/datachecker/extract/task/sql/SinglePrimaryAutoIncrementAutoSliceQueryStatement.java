@@ -61,6 +61,11 @@ public class SinglePrimaryAutoIncrementAutoSliceQueryStatement implements AutoSl
         return new Object[0][];
     }
 
+    @Override
+    public List<Object> getCheckPoint(TableMetadata tableMetadata, int slice) {
+        return null;
+    }
+
     private void updateAutoIncrement(TableMetadata tableMetadata) {
         long rowCount = checkPoint.queryRowsOfAutoIncrementTable(tableMetadata);
         long maxId = checkPoint.queryMaxIdOfAutoIncrementTable(tableMetadata);

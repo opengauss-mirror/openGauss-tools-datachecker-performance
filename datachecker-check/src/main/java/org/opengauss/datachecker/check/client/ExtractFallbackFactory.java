@@ -199,5 +199,11 @@ public class ExtractFallbackFactory implements FallbackFactory<ExtractFeignClien
         public Result<Integer> fetchCheckTableCount() {
             return null;
         }
+
+
+        @Override
+        public Result<Void> refreshCheckpoint(String tableName, List<Long> checkPointList) {
+            return Result.error("Remote call, refresh checkpoint exception");
+        }
     }
 }

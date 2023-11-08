@@ -36,6 +36,7 @@ import org.opengauss.datachecker.extract.task.sql.QueryStatementFactory;
 import org.opengauss.datachecker.extract.task.sql.SliceQueryStatement;
 import org.opengauss.datachecker.extract.util.DruidDataSourceUtil;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
@@ -135,6 +136,7 @@ public class SliceProcessorContext {
      *
      * @param sliceExtend slice extend
      */
+    @Retryable(maxAttempts = 3)
     public void feedbackStatus(SliceExtend sliceExtend) {
         checkingFeignClient.refreshRegisterSlice(sliceExtend);
     }

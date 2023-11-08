@@ -44,4 +44,13 @@ public interface AutoSliceQueryStatement extends QueryStatement {
      * @return Two-dimensional array
      */
     Object[][] builderSlice(TableMetadata tableMetadata, int slice);
+
+    /**
+     * get table checkPoint list
+     *
+     * @param tableMetadata tableMetadata
+     * @param slice slice
+     * @return list checkPoint list
+     */
+    List<Object> getCheckPoint(TableMetadata tableMetadata, int slice);
 }

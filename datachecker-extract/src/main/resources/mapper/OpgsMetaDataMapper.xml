@@ -110,4 +110,12 @@
     <select id="next" resultType="string">
          select ${param.colName} from ${param.schema}.${param.name} where ${param.colName} >= #{param.preValue} order by ${param.colName} asc limit #{param.offset} ,1
     </select>
+
+    <select id="queryPointList" resultType="string">
+        select s.${param.colName}
+        from (
+                 SELECT ROWNUM rn, ${param.colName} from ${param.schema}.${param.name} order by ${param.colName} asc
+             ) s
+        where mod(s.rn, #{param.offset}) = 0
+    </select>
 </mapper>

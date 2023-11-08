@@ -18,7 +18,7 @@
     <Properties>
         <!--Property LOG_HOME must be absolute path dir -->
         <Property name="LOG_HOME">logs</Property>
-        <Property name="LOG_LEVEL">DEBUG</Property>
+        <Property name="LOG_LEVEL">INFO</Property>
         <Property name="LOG_NAME">${sys:logName}</Property>
         <Property name="LOG_DEBUGGER">debugger</Property>
         <Property name="LOG_KAFKA">kafka</Property>
@@ -73,38 +73,41 @@
                  </Policies>
              </RollingFile>
                 -->
-         </Appenders>
+    </Appenders>
 
-         <Loggers>
-             <root level="${LOG_LEVEL}">
-                 <appender-ref ref="console_out_appender"/>
-             </root>
-             <logger name="progress" level="${LOG_LEVEL}">
-                 <appender-ref ref="progress"/>
-             </logger>
-             <logger name="business" level="${LOG_LEVEL}">
-                 <appender-ref ref="business"/>
-             </logger>
-             <logger name="kafka" level="${LOG_LEVEL}">
-                 <appender-ref ref="kafka"/>
-             </logger>
-             <!--
-               <logger name="debugger" level="${LOG_LEVEL}">
-                    <appender-ref ref="debugger"/>
-                </logger>
-              -->
-               <logger name="org.apache.kafka" level="ERROR"/>
-               <logger name="org.opengauss.datachecker.check.service.EndpointManagerService" level="ERROR"/>
-               <logger name="org.springframework" level="INFO"/>
-               <logger name="_org.springframework.web" level="ERROR"/>
-               <logger name="org.hibernate.validator" level="ERROR"/>
-               <logger name="org.jboss.netty" level="ERROR"/>
-               <logger name="org.apache.http" level="ERROR"/>
-               <logger name="oshi.util" level="ERROR"/>
-               <logger name="io.confluent.kafka.serializers" level="ERROR"/>
-               <logger name="org.apache.catalina.loader" level="ERROR"/>
-               <logger name="org.opengauss.core.v3" level="ERROR"/>
-               <logger name="com.alibaba.druid.pool" level="ERROR"/>
-           </Loggers>
+    <Loggers>
+        <root level="${LOG_LEVEL}">
+            <appender-ref ref="console_out_appender"/>
+        </root>
+        <logger name="progress" level="${LOG_LEVEL}">
+            <appender-ref ref="progress"/>
+        </logger>
+        <logger name="business" level="${LOG_LEVEL}">
+            <appender-ref ref="business"/>
+        </logger>
+        <logger name="kafka" level="${LOG_LEVEL}">
+            <appender-ref ref="kafka"/>
+        </logger>
+        <!--
+          <logger name="debugger" level="${LOG_LEVEL}">
+               <appender-ref ref="debugger"/>
+           </logger>
+         -->
+        <logger name="org.apache.kafka" level="ERROR"/>
+        <logger name="org.opengauss.datachecker.check.service.EndpointManagerService" level="ERROR"/>
+        <logger name="org.springframework" level="INFO"/>
+        <logger name="_org.springframework.web" level="ERROR"/>
+        <logger name="org.hibernate.validator" level="ERROR"/>
+        <logger name="org.jboss.netty" level="ERROR"/>
+        <logger name="org.apache.http" level="ERROR"/>
+        <logger name="oshi.util" level="ERROR"/>
+        <logger name="io.confluent.kafka.serializers" level="ERROR"/>
+        <logger name="org.apache.catalina.loader" level="ERROR"/>
+        <logger name="org.opengauss.core.v3" level="ERROR"/>
+        <logger name="com.alibaba.druid.pool" level="ERROR"/>
+        <logger name="org.opengauss.datachecker" level="INFO">
+            <appender-ref ref="progress"/>
+        </logger>
+    </Loggers>
 
-       </Configuration>
+</Configuration>

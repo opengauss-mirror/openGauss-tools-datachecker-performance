@@ -74,4 +74,9 @@ public class SinglePrimaryAutoSliceQueryStatement implements AutoSliceQueryState
         }
         return taskOffset;
     }
+
+    @Override
+    public List<Object> getCheckPoint(TableMetadata tableMetadata, int slice) {
+        return singlePrimaryCheckPoint.initCheckPointList(tableMetadata, slice);
+    }
 }
