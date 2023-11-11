@@ -238,7 +238,7 @@ public class ExtractController {
      */
     @PostMapping("/extract/table/checkpoint")
     public void refreshCheckpoint(@RequestParam(name = "tableName") String tableName,
-                                  @RequestBody List<Long> checkPointList) {
+                                  @RequestBody List<Object> checkPointList) {
         dataExtractService.refreshCheckPoint(tableName, checkPointList);
     }
 }

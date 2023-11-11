@@ -163,5 +163,5 @@ public interface DataExtractService {
      * @param tableName tableName
      * @param checkPoint checkPoint
      */
-    void refreshCheckPoint(String tableName, List<Long> checkPoint);
+    void refreshCheckPoint(String tableName, List<Object> checkPoint);
 }

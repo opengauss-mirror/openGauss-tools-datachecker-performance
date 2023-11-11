@@ -239,5 +239,5 @@ public interface ExtractFeignClient {
      */
     @PostMapping("/extract/table/checkpoint")
     Result<Void> refreshCheckpoint(@RequestParam(name = "tableName") String tableName,
-                                   @RequestBody List<Long> checkPointList);
+                                   @RequestBody List<Object> checkPointList);
 }

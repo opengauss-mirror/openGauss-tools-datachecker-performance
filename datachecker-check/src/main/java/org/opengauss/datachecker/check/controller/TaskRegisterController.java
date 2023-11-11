@@ -91,7 +91,7 @@ public class TaskRegisterController {
     @PostMapping("/register/checkpoint")
     public void registerCheckpoint(@RequestParam(value = "endpoint") Endpoint endpoint,
                                    @RequestParam(value = "tableName") String tableName,
-                                   @RequestBody List<Long> checkPoint) {
+                                   @RequestBody List<Object> checkPoint) {
         checkPointRegister.registerCheckPoint(endpoint, tableName, checkPoint);
     }
 }

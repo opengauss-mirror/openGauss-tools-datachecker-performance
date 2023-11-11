@@ -18,6 +18,7 @@ package org.opengauss.datachecker.check.slice;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.check.modules.check.AbstractCheckDiffResultBuilder.CheckDiffResultBuilder;
 import org.opengauss.datachecker.check.modules.check.CheckDiffResult;
+import org.opengauss.datachecker.check.service.TaskRegisterCenter;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.extract.SliceExtend;
@@ -43,17 +44,18 @@ import static org.opengauss.datachecker.common.constant.DynamicTpConstant.CHECK_
 @Component
 public class SliceCheckEventHandler {
     private static final Logger log = LogUtils.getBusinessLogger();
-    @Resource
-    private DynamicThreadPoolManager dynamicThreadPoolManager;
-    @Resource
     private SliceCheckContext sliceCheckContext;
+    private TaskRegisterCenter registerCenter;
     private ThreadPoolExecutor executor;
 
     /**
      * init dynamic thread pool for slice check worker
      */
-    public void initDtpExecutor() {
-        executor = dynamicThreadPoolManager.getExecutor(CHECK_EXECUTOR);
+    public void initSliceCheckEventHandler(DynamicThreadPoolManager dynamicThreadPoolManager,
+        SliceCheckContext sliceCheckContext, TaskRegisterCenter registerCenter) {
+        this.sliceCheckContext = sliceCheckContext;
+        this.registerCenter = registerCenter;
+        this.executor = dynamicThreadPoolManager.getExecutor(CHECK_EXECUTOR);
     }
 
     /**
@@ -69,7 +71,7 @@ public class SliceCheckEventHandler {
             if (checkEvent.isTableLevel()) {
                 executor.submit(new TableCheckWorker(checkEvent, sliceCheckContext));
             } else {
-                executor.submit(new SliceCheckWorker(checkEvent, sliceCheckContext));
+                executor.submit(new SliceCheckWorker(checkEvent, sliceCheckContext, registerCenter));
             }
         } else {
             log.info("slice check event {} table structure diff", checkEvent.getCheckName());

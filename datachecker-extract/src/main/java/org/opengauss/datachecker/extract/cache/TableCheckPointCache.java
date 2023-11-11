@@ -36,7 +36,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class TableCheckPointCache {
     private static final Logger log = LogUtils.getLogger();
-    private static final Map<String, List<Long>> TABLE_CHECKPOINT_CACHE = new ConcurrentHashMap<>();
+    private static final Map<String, List<Object>> TABLE_CHECKPOINT_CACHE = new ConcurrentHashMap<>();
 
     /**
      * Save to the Cache k v
@@ -44,7 +44,7 @@ public class TableCheckPointCache {
      * @param key   Metadata key
      * @param value Metadata value of table
      */
-    public void put(@NonNull String key, List<Long> value) {
+    public void put(@NonNull String key, List<Object> value) {
         try {
             TABLE_CHECKPOINT_CACHE.put(key, value);
         } catch (NumberFormatException exception) {
@@ -57,7 +57,7 @@ public class TableCheckPointCache {
      *
      * @return map table checkPointList map
      */
-    public Map<String, List<Long>> getAll() {
+    public Map<String, List<Object>> getAll() {
         try {
             return TABLE_CHECKPOINT_CACHE;
         } catch (NumberFormatException exception) {
@@ -72,7 +72,7 @@ public class TableCheckPointCache {
      * @param key table name as cached key
      * @return list the checkPoint list
      */
-    public List<Long> get(String key) {
+    public List<Object> get(String key) {
         try {
             return TABLE_CHECKPOINT_CACHE.get(key);
         } catch (NumberFormatException exception) {

@@ -92,16 +92,21 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
         final LocalDateTime start = LocalDateTime.now();
         int rowCount = 0;
         Connection connection = null;
+        long jdbcQueryCost = 0;
+        long sendDataCost = 0;
+        long sliceAllCost = 0;
+
         try {
-            long estimatedSize = estimatedMemorySize(tableMetadata.getAvgRowLength(), slice.getFetchSize());
-            connection = jdbcOperation.tryConnectionAndClosedAutoCommit(estimatedSize);
+            long estimatedRowCount = slice.isSlice() ? slice.getFetchSize() : tableMetadata.getTableRows();
+            long estimatedMemorySize = estimatedMemorySize(tableMetadata.getAvgRowLength(), estimatedRowCount);
+            connection = jdbcOperation.tryConnectionAndClosedAutoCommit(estimatedMemorySize);
             SliceKafkaAgents kafkaAgents = context.createSliceKafkaAgents(slice);
             SliceResultSetSender sliceSender = new SliceResultSetSender(tableMetadata, kafkaAgents);
+
             try (PreparedStatement ps = connection.prepareStatement(sqlEntry.getSql());
                 ResultSet resultSet = ps.executeQuery()) {
                 LocalDateTime jdbcQuery = LocalDateTime.now();
-                logDebug.info("jdbc query slice [{}] cost [{}] milliseconds", sliceExtend.toSimpleString(),
-                    durationBetweenToMillis(start, jdbcQuery));
+                jdbcQueryCost = durationBetweenToMillis(start, jdbcQuery);
                 resultSet.setFetchSize(FETCH_SIZE);
                 ResultSetMetaData rsmd = resultSet.getMetaData();
                 sliceExtend.setStartOffset(sliceSender.checkOffsetEnd());
@@ -123,17 +128,17 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
                 sliceExtend.setStartOffset(getMinOffset(offsetList));
                 sliceExtend.setEndOffset(getMaxOffset(offsetList));
                 sliceExtend.setCount(rowCount);
-                logDebug.info("send slice [{}] cost [{}] milliseconds", sliceExtend.toSimpleString(),
-                    durationBetweenToMillis(jdbcQuery, LocalDateTime.now()));
+                sendDataCost = durationBetweenToMillis(jdbcQuery, LocalDateTime.now());
             }
-        } catch (SQLException ex) {
+            return sliceExtend;
+        } catch (Exception ex) {
             log.error("jdbc query [{}] error : {}", sliceExtend.toSimpleString(), ex.getMessage());
             throw new ExtractDataAccessException();
         } finally {
             jdbcOperation.releaseConnection(connection);
-            log.info("query slice [{}] cost [{}] milliseconds", sliceExtend.toSimpleString(),
-                durationBetweenToMillis(start, LocalDateTime.now()));
+            sliceAllCost = durationBetweenToMillis(start, LocalDateTime.now());
+            log.info("query slice [{}] cost [{} /{} /{}] milliseconds", sliceExtend.toSimpleString(), jdbcQueryCost,
+                sendDataCost, sliceAllCost);
         }
-        return sliceExtend;
     }
 }

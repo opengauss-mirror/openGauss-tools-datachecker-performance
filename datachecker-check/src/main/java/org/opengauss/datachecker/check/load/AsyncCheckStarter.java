@@ -15,8 +15,11 @@
 
 package org.opengauss.datachecker.check.load;
 
+import org.opengauss.datachecker.check.service.TaskRegisterCenter;
+import org.opengauss.datachecker.check.slice.SliceCheckContext;
 import org.opengauss.datachecker.check.slice.SliceCheckEventHandler;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
+import org.opengauss.datachecker.common.service.DynamicThreadPoolManager;
 import org.opengauss.datachecker.common.util.SpringUtil;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -56,7 +59,10 @@ public class AsyncCheckStarter {
         checkRule.load(environment);
 
         SliceCheckEventHandler sliceCheckEventHandler = SpringUtil.getBean(SliceCheckEventHandler.class);
-        sliceCheckEventHandler.initDtpExecutor();
+        SliceCheckContext sliceCheckContext = SpringUtil.getBean(SliceCheckContext.class);
+        TaskRegisterCenter registerCenter = SpringUtil.getBean(TaskRegisterCenter.class);
+        DynamicThreadPoolManager dynamicThreadPoolManager = SpringUtil.getBean(DynamicThreadPoolManager.class);
+        sliceCheckEventHandler.initSliceCheckEventHandler(dynamicThreadPoolManager, sliceCheckContext, registerCenter);
     }
 
     /**

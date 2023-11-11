@@ -85,8 +85,8 @@ public class FeignClientService {
         } else {
             // Exception in scheduling source side service to obtain database metadata information
             throw new DispatchClientException(endpoint,
-                "The scheduling source service gets the database metadata information abnormally," + result
-                    .getMessage());
+                "The scheduling source service gets the database metadata information abnormally,"
+                    + result.getMessage());
         }
     }
 
@@ -274,9 +274,11 @@ public class FeignClientService {
     }
 
     public void shutdown(String message) {
-        List.of(Endpoint.SOURCE, Endpoint.SINK).parallelStream().forEach(endpoint -> {
-            shutdown(endpoint, message);
-        });
+        List.of(Endpoint.SOURCE, Endpoint.SINK)
+            .parallelStream()
+            .forEach(endpoint -> {
+                shutdown(endpoint, message);
+            });
     }
 
     private void shutdown(Endpoint endpoint, String message) {
@@ -347,8 +349,14 @@ public class FeignClientService {
     }
 
     public int fetchCheckTableCount() {
+        int source = fetchCheckTableCount(Endpoint.SOURCE);
+        int sink = fetchCheckTableCount(Endpoint.SINK);
+        return Math.max(source, sink);
+    }
+
+    public int fetchCheckTableCount(Endpoint endpoint) {
         try {
-            Result<Integer> result = getClient(Endpoint.SOURCE).fetchCheckTableCount();
+            Result<Integer> result = getClient(endpoint).fetchCheckTableCount();
             if (result.isSuccess()) {
                 return result.getData();
             } else {

@@ -15,12 +15,15 @@
 
 package org.opengauss.datachecker.check.load;
 
-import org.opengauss.datachecker.check.client.FeignClientService;
-import org.opengauss.datachecker.check.modules.report.CheckResultManagerService;
+import org.opengauss.datachecker.check.modules.check.ExportCheckResult;
 import org.opengauss.datachecker.check.modules.report.SliceProgressService;
 import org.opengauss.datachecker.check.service.CheckService;
 import org.opengauss.datachecker.check.event.KafkaTopicDeleteProvider;
+import org.opengauss.datachecker.check.service.CheckTableStructureService;
 import org.opengauss.datachecker.check.service.TaskRegisterCenter;
+import org.opengauss.datachecker.common.config.ConfigCache;
+import org.opengauss.datachecker.common.constant.ConfigConstants;
+import org.opengauss.datachecker.common.entry.check.CheckTableInfo;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.service.MemoryManagerService;
 import org.opengauss.datachecker.common.util.SpringUtil;
@@ -51,37 +54,36 @@ public class CheckStartLoader extends AbstractCheckLoader {
     @Resource
     private CheckService checkService;
     @Resource
-    private CheckResultManagerService checkResultManagerService;
-    @Resource
     private KafkaTopicDeleteProvider kafkaTopicDeleteProvider;
     @Resource
     private MemoryManagerService memoryManagerService;
     @Resource
     private SliceProgressService sliceProgressService;
     @Resource
-    private FeignClientService feignClient;
-
+    private CheckTableStructureService checkTableStructureService;
     @Override
     public void load(CheckEnvironment checkEnvironment) {
         if (!Objects.equals(CheckMode.FULL, checkEnvironment.getCheckMode())) {
             return;
         }
         if (!checkEnvironment.isCheckTableEmpty()) {
+            ExportCheckResult.backCheckResultDirectory();
             memoryManagerService.startMemoryManager(isEnableMemoryMonitor);
             final LocalDateTime startTime = LocalDateTime.now();
-            int count = feignClient.fetchCheckTableCount();
+            String processNo = ConfigCache.getValue(ConfigConstants.PROCESS_NO);
+            CheckTableInfo checkTableInfo= checkTableStructureService.check(processNo);
+            int checkedTableCount = checkTableInfo.fetchCheckedTableCount();
             sliceProgressService.startProgressing();
-            sliceProgressService.updateTotalTableCount(count);
+            sliceProgressService.updateTotalTableCount(checkedTableCount);
             checkService.start(CheckMode.FULL);
-            checkResultManagerService.summaryCheckResult();
             kafkaTopicDeleteProvider.deleteTopicIfAllCheckedCompleted();
             kafkaTopicDeleteProvider.waitDeleteTopicsEventCompleted();
             TaskRegisterCenter registerCenter = SpringUtil.getBean(TaskRegisterCenter.class);
-            while (!registerCenter.checkCompletedAll(count)) {
+            while (!registerCenter.checkCompletedAll(checkedTableCount)) {
                 ThreadUtil.sleepOneSecond();
             }
-            log.info("check task execute success ,cost time ={}",
-                    Duration.between(startTime, LocalDateTime.now()).toSeconds());
+            log.info("check task execute success ,cost time ={}", Duration.between(startTime, LocalDateTime.now())
+                                                                          .toSeconds());
         } else {
             log.info("check task execute success ,cost time =0");
         }

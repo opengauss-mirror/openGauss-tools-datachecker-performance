@@ -19,8 +19,9 @@ import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.check.load.CheckEnvironment;
 import org.opengauss.datachecker.check.modules.check.AbstractCheckDiffResultBuilder.CheckDiffResultBuilder;
 import org.opengauss.datachecker.check.modules.check.CheckDiffResult;
-import org.opengauss.datachecker.check.modules.report.CheckResultManagerService;
+import org.opengauss.datachecker.check.modules.report.SliceCheckResultManager;
 import org.opengauss.datachecker.check.modules.task.TaskManagerService;
+import org.opengauss.datachecker.common.entry.check.CheckTableInfo;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.Database;
@@ -32,6 +33,7 @@ import javax.annotation.Resource;
 import java.time.LocalDateTime;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -52,14 +54,19 @@ public class CheckTableStructureService {
     @Resource
     private EndpointMetaDataManager endpointMetaDataManager;
     @Resource
-    private CheckResultManagerService checkResultManagerService;
+    private SliceCheckResultManager sliceCheckResultManager;
+
+    private CheckTableInfo checkTableInfo = new CheckTableInfo();
 
     private final CompareTableStructure tableStructureCompare = (source, sink) -> {
         if (source.size() == sink.size()) {
-            final List<String> sourceUpperList =
-                source.stream().map(ColumnsMetaData::getColumnName).map(String::toUpperCase)
-                      .collect(Collectors.toList());
-            final List<String> diffKeyList = sink.stream().map(ColumnsMetaData::getColumnName).map(String::toUpperCase)
+            final List<String> sourceUpperList = source.stream()
+                                                       .map(ColumnsMetaData::getColumnName)
+                                                       .map(String::toUpperCase)
+                                                       .collect(Collectors.toList());
+            final List<String> diffKeyList = sink.stream()
+                                                 .map(ColumnsMetaData::getColumnName)
+                                                 .map(String::toUpperCase)
                                                  .filter(key -> !sourceUpperList.contains(key))
                                                  .collect(Collectors.toList());
             return diffKeyList.isEmpty();
@@ -73,10 +80,13 @@ public class CheckTableStructureService {
      *
      * @param processNo
      */
-    public void check(String processNo) {
+    public CheckTableInfo check(String processNo) {
         initCheckTableStatus();
         checkTableStructureChanged(processNo);
         checkMissTable(processNo);
+        log.info("check table structure {}", checkTableInfo);
+        sliceCheckResultManager.refreshTableStructureDiffResult(checkTableInfo);
+        return checkTableInfo;
     }
 
     private void initCheckTableStatus() {
@@ -86,6 +96,9 @@ public class CheckTableStructureService {
         tableList.addAll(checkTableList);
         tableList.addAll(missTableList);
         taskManagerService.initTableExtractStatus(tableList);
+        Map<Endpoint, Integer> realTableCount = endpointMetaDataManager.getRealTableCount();
+        checkTableInfo.setSinkTableTotalSize(realTableCount.get(Endpoint.SINK));
+        checkTableInfo.setSourceTableTotalSize(realTableCount.get(Endpoint.SOURCE));
     }
 
     private void checkTableStructureChanged(String processNo) {
@@ -102,7 +115,15 @@ public class CheckTableStructureService {
         missTableList.forEach(missTable -> {
             final TableMetadata sourceMeta = endpointMetaDataManager.getTableMetadata(Endpoint.SOURCE, missTable);
             checkMissTable(processNo, missTable, sourceMeta);
+            if (Objects.equals(checkMissTable(processNo, missTable, sourceMeta), Endpoint.SOURCE)) {
+                checkTableInfo.addSource(missTable);
+            } else {
+                checkTableInfo.addSink(missTable);
+            }
         });
+        checkTableInfo.setMiss((int) missTableList.stream()
+                                                  .distinct()
+                                                  .count());
     }
 
     private void checkTableStructureChanged(String processNo, String tableName, TableMetadata sourceMeta,
@@ -113,32 +134,42 @@ public class CheckTableStructureService {
             LocalDateTime now = LocalDateTime.now();
             final Database database = checkEnvironment.getDatabase(Endpoint.SOURCE);
             final CheckDiffResultBuilder builder = CheckDiffResultBuilder.builder();
-            CheckDiffResult result =
-                builder.process(processNo).table(tableName).isTableStructureEquals(false).startTime(now).endTime(now)
-                       .schema(database.getSchema()).build();
-            checkResultManagerService.addNoCheckedResult(tableName, result);
+            CheckDiffResult result = builder.process(processNo)
+                                            .table(tableName)
+                                            .isTableStructureEquals(false)
+                                            .startTime(now)
+                                            .endTime(now)
+                                            .schema(database.getSchema())
+                                            .build();
+            sliceCheckResultManager.addTableStructureDiffResult(tableName,result);
             log.debug("compared  table[{}] field names not match source={},sink={}", tableName,
                 getFieldNames(sourceMeta), getFieldNames(sinkMeta));
-            log.error("compared the field names in table[{}](case ignored) and the result is not match", tableName);
         }
     }
 
     private String getFieldNames(TableMetadata sourceMeta) {
-        return sourceMeta.getColumnsMetas().stream().map(column -> column.getColumnName() + column.getOrdinalPosition())
+        return sourceMeta.getColumnsMetas()
+                         .stream()
+                         .map(column -> column.getColumnName() + column.getOrdinalPosition())
                          .collect(Collectors.joining());
     }
 
-    private void checkMissTable(String processNo, String tableName, TableMetadata sourceMeta) {
+    private Endpoint checkMissTable(String processNo, String tableName, TableMetadata sourceMeta) {
         Endpoint onlyExistEndpoint = Objects.isNull(sourceMeta) ? Endpoint.SINK : Endpoint.SOURCE;
         LocalDateTime now = LocalDateTime.now();
         final Database database = checkEnvironment.getDatabase(Endpoint.SOURCE);
         final CheckDiffResultBuilder builder = CheckDiffResultBuilder.builder();
-        CheckDiffResult result =
-            builder.process(processNo).table(tableName).startTime(now).endTime(now).schema(database.getSchema())
-                   .isExistTableMiss(true, onlyExistEndpoint).build();
+        CheckDiffResult result = builder.process(processNo)
+                                        .table(tableName)
+                                        .startTime(now)
+                                        .endTime(now)
+                                        .schema(database.getSchema())
+                                        .isExistTableMiss(true, onlyExistEndpoint)
+                                        .build();
         taskManagerService.refreshTableExtractStatus(tableName, Endpoint.CHECK, -1);
-        checkResultManagerService.addNoCheckedResult(tableName, result);
+        sliceCheckResultManager.addTableStructureDiffResult(tableName,result);
         log.error("compared the field names in table[{}](case ignored) and the result is not match", tableName);
+        return onlyExistEndpoint;
     }
 
     private boolean isTableNotExist(TableMetadata sourceMeta, TableMetadata sinkMeta) {
