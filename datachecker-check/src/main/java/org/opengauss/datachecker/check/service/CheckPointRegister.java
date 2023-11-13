@@ -51,7 +51,7 @@ public class CheckPointRegister {
     /**
      * table checkpoint map
      */
-    protected static final Map<String, List<Long>> checkPointCounter = new ConcurrentHashMap<>();
+    protected static final Map<String, List<Object>> checkPointCounter = new ConcurrentHashMap<>();
     private static final Logger log = LogUtils.getLogger();
 
     @Autowired
@@ -72,16 +72,17 @@ public class CheckPointRegister {
      * @param tableName      tableName
      * @param checkPointList checkPointList
      */
-    public void registerCheckPoint(Endpoint endpoint, String tableName, List<Long> checkPointList) {
+    public void registerCheckPoint(Endpoint endpoint, String tableName, List<Object> checkPointList) {
         lock.lock();
         try {
-            log.info("{} [{}] register checkpoint, current checkpoint size is [{}]",
-                    endpoint, tableName, checkPointList.size());
+            log.info("{} [{}] register checkpoint, current checkpoint size is [{}]", endpoint, tableName,
+                checkPointList.size());
             if (checkPointCounter.containsKey(tableName)) {
-                List<Long> preCheckPoint = checkPointCounter.get(tableName);
+                List<Object> preCheckPoint = checkPointCounter.get(tableName);
                 CheckPointData checkPointData = calculateCheckPoint(tableName, preCheckPoint, checkPointList);
-                log.info("{} [{}] register checkpoint, calculated checkpoint size is [{}]",
-                        endpoint, tableName, checkPointData.getCheckPointList().size());
+                log.info("{} [{}] register checkpoint, calculated checkpoint size is [{}]", endpoint, tableName,
+                    checkPointData.getCheckPointList()
+                                  .size());
                 checkPointQueue.add(checkPointData);
             } else {
                 checkPointCounter.put(tableName, checkPointList);
@@ -120,25 +121,29 @@ public class CheckPointRegister {
         }
     }
 
-    private CheckPointData calculateCheckPoint(String tableName, List<Long> checkPointList, List<Long> pointList) {
+    private CheckPointData calculateCheckPoint(String tableName, List<Object> checkPointList, List<Object> pointList) {
         CheckPointData checkPointData = new CheckPointData();
-        List<Long> unionCheckPoint = new ArrayList<>() {{
+        List<Object> unionCheckPoint = new ArrayList<>() {{
             addAll(checkPointList);
             addAll(pointList);
         }};
-        List<Long> calculatedCheckpoint = unionCheckPoint.stream().distinct().sorted().collect(Collectors.toList());
+        List<Object> calculatedCheckpoint = unionCheckPoint.stream()
+                                                           .distinct()
+                                                           .sorted()
+                                                           .collect(Collectors.toList());
         if (!calculatedCheckpoint.isEmpty()) {
             checkPointList.set(0, calculatedCheckpoint.get(0));
             checkPointList.set(checkPointList.size() - 1, calculatedCheckpoint.get(calculatedCheckpoint.size() - 1));
         }
-        return checkPointData.setTableName(tableName).setCheckPointList(checkPointList);
+        return checkPointData.setTableName(tableName)
+                             .setCheckPointList(checkPointList);
     }
 
     @Data
     @Accessors(chain = true)
     class CheckPointData {
         private String tableName;
-        private List<Long> checkPointList;
+        private List<Object> checkPointList;
     }
 
     /**
@@ -161,6 +166,7 @@ public class CheckPointRegister {
         @Override
         public void run() {
             int deliveredCount = 0;
+            log.info("check point monitor start");
             while (!isStop) {
                 try {
                     if (queue.isEmpty()) {
@@ -169,13 +175,15 @@ public class CheckPointRegister {
                     CheckPointData curCheckPointData = queue.take();
                     sendCheckPoint(curCheckPointData.getTableName(), curCheckPointData.getCheckPointList());
                     deliveredCount++;
-                    log.info("[{}] table checkpoint list send success", deliveredCount);
+                    log.info("[{}][{}] table checkpoint list send success", deliveredCount,
+                        curCheckPointData.getTableName());
                 } catch (InterruptedException exp) {
                     log.warn("send checkpoint occur interrupt exception", exp);
                 } catch (RetryableException exp) {
                     log.warn("send checkpoint occur retryable exception", exp);
                 }
             }
+            log.info("check point monitor stopped");
         }
 
         /**
@@ -185,7 +193,7 @@ public class CheckPointRegister {
          * @param checkPointList checkPointList
          */
         @Retryable(maxAttempts = 3)
-        public void sendCheckPoint(String tableName, List<Long> checkPointList) {
+        public void sendCheckPoint(String tableName, List<Object> checkPointList) {
             extractSourceClient.refreshCheckpoint(tableName, checkPointList);
             ThreadUtil.sleepHalfSecond();
             extractSinkClient.refreshCheckpoint(tableName, checkPointList);

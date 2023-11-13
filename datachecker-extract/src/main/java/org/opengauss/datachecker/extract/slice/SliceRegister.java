@@ -120,7 +120,7 @@ public class SliceRegister {
      * @param checkPointList checkPointList
      */
     @Retryable(maxAttempts = 3)
-    public void registerCheckPoint(Endpoint endpoint, String tableName, List<Long> checkPointList) {
+    public void registerCheckPoint(Endpoint endpoint, String tableName, List<Object> checkPointList) {
         checkingClient.registerCheckPoint(endpoint, tableName, checkPointList);
     }
 }

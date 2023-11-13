@@ -24,6 +24,7 @@ import org.opengauss.datachecker.check.modules.check.CheckDiffResult;
 import org.opengauss.datachecker.check.modules.check.CheckResultConstants;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
+import org.opengauss.datachecker.common.entry.check.CheckTableInfo;
 import org.opengauss.datachecker.common.entry.check.Difference;
 import org.opengauss.datachecker.common.entry.common.RepairEntry;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
@@ -86,6 +87,7 @@ public class SliceCheckResultManager {
     private boolean isCsvMode = false;
     private boolean ogCompatibility = false;
     private boolean hasInitSliceResultEnvironment = true;
+    private CheckTableInfo checkTableInfo = null;
 
     /**
      * add slice check result
@@ -107,10 +109,14 @@ public class SliceCheckResultManager {
     }
 
     public void addTableStructureDiffResult(SliceVo slice, CheckDiffResult result) {
-        if (tableStructureResult.containsKey(slice.getTable())) {
+        addTableStructureDiffResult(slice.getTable(), result);
+    }
+
+    public void addTableStructureDiffResult(String table, CheckDiffResult result) {
+        if (tableStructureResult.containsKey(table)) {
             return;
         }
-        tableStructureResult.put(slice.getTable(), result);
+        tableStructureResult.put(table, result);
         failedTableCount++;
         CheckFailed failed = translateCheckFailed(List.of(result));
         String failedLogPath = ConfigCache.getCheckResult() + CheckResultConstants.FAILED_LOG_NAME;
@@ -199,6 +205,7 @@ public class SliceCheckResultManager {
         int completeCount = successTableCount + failedTableCount;
         checkSummary.setMode(ConfigCache.getCheckMode());
         checkSummary.setTableCount(completeCount);
+        checkSummary.setMissTable(checkTableInfo);
         checkSummary.setStartTime(ConfigCache.getValue(ConfigConstants.START_LOCAL_TIME, LocalDateTime.class));
         checkSummary.setEndTime(LocalDateTime.now());
         checkSummary.setCost(calcCheckTaskCost(checkSummary.getStartTime(), checkSummary.getEndTime()));
@@ -282,6 +289,10 @@ public class SliceCheckResultManager {
         return diffKey;
     };
 
+    public void refreshTableStructureDiffResult(CheckTableInfo checkTableInfo) {
+        this.checkTableInfo = checkTableInfo;
+    }
+
     @FunctionalInterface
     protected interface FetchDiffKeys {
         Set<String> fetchKey(List<CheckDiffResult> tableFiledList);
@@ -314,7 +325,8 @@ public class SliceCheckResultManager {
         result.setEndTime(fetchMaxEndTime(tableSuccessList));
         result.setRowCount(fetchRowCount.fetchCount(tableSuccessList));
         result.setCost(calcCheckTaskCost(result.getStartTime(), result.getEndTime()));
-        result.setPartition(tableSuccessList.get(0).getPartitions());
+        result.setPartition(tableSuccessList.get(0)
+                                            .getPartitions());
         result.setMessage(fetchMessage(tableSuccessList));
         return result;
     }
@@ -343,9 +355,9 @@ public class SliceCheckResultManager {
 
     private String fetchMessage(@NotEmpty List<CheckDiffResult> tableResultList) {
         return tableResultList.stream()
-                .map(CheckDiffResult::getMessage)
-                .collect(Collectors.toList())
-                .toString();
+                              .map(CheckDiffResult::getMessage)
+                              .collect(Collectors.toList())
+                              .toString();
     }
 
     private LocalDateTime fetchMinStartTime(@NotEmpty List<CheckDiffResult> tableResultList) {

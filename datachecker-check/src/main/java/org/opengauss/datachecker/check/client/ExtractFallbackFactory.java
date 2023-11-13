@@ -202,7 +202,7 @@ public class ExtractFallbackFactory implements FallbackFactory<ExtractFeignClien
 
 
         @Override
-        public Result<Void> refreshCheckpoint(String tableName, List<Long> checkPointList) {
+        public Result<Void> refreshCheckpoint(String tableName, List<Object> checkPointList) {
             return Result.error("Remote call, refresh checkpoint exception");
         }
     }

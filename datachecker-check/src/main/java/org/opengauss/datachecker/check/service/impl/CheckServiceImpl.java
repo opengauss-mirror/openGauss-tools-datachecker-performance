@@ -120,7 +120,6 @@ public class CheckServiceImpl implements CheckService {
         Assert.isTrue(Objects.equals(CheckMode.FULL, checkEnvironment.getCheckMode()),
             "current check mode is " + CheckMode.INCREMENT.getDescription() + " , not start full check.");
         if (STARTED.compareAndSet(false, true)) {
-            ExportCheckResult.backCheckResultDirectory();
             try {
                 startCheckFullMode();
                 // Wait for the task construction to complete, and start the task polling thread
@@ -161,7 +160,7 @@ public class CheckServiceImpl implements CheckService {
         // Sink endpoint task construction
         feignClientService.buildExtractTaskAllTables(Endpoint.SINK, processNo, extractTasks);
         log.info("check full mode : build extract task sink {}", processNo);
-        checkTableStructureService.check(processNo);
+
         // Perform all tasks
         feignClientService.execExtractTaskAllTables(Endpoint.SOURCE, processNo);
         feignClientService.execExtractTaskAllTables(Endpoint.SINK, processNo);

@@ -143,5 +143,5 @@ public interface CheckingFeignClient {
     @PostMapping("/register/checkpoint")
     void registerCheckPoint(@RequestParam(name = "endpoint") @NotEmpty Endpoint endpoint,
                             @RequestParam(name = "tableName") @NotEmpty String tableName,
-                            @RequestBody List<Long> checkPoint);
+                            @RequestBody List<Object> checkPoint);
 }

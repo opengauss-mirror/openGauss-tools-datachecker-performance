@@ -45,7 +45,6 @@ import org.opengauss.datachecker.common.entry.extract.SliceVo;
 import org.opengauss.datachecker.common.exception.BucketNumberInconsistentException;
 import org.opengauss.datachecker.common.exception.MerkleTreeDepthException;
 import org.opengauss.datachecker.common.util.LogUtils;
-import org.opengauss.datachecker.common.util.SpringUtil;
 import org.springframework.lang.NonNull;
 
 import java.time.LocalDateTime;
@@ -77,6 +76,7 @@ public class SliceCheckWorker implements Runnable {
     private long sliceRowCount;
     private final SliceCheckEvent checkEvent;
     private final SliceCheckContext checkContext;
+    private final TaskRegisterCenter registerCenter;
     private final DifferencePair<List<Difference>, List<Difference>, List<Difference>> difference =
         DifferencePair.of(new LinkedList<>(), new LinkedList<>(), new LinkedList<>());
     private final LocalDateTime startTime;
@@ -87,11 +87,12 @@ public class SliceCheckWorker implements Runnable {
      * @param checkEvent        check event
      * @param sliceCheckContext slice check context
      */
-    public SliceCheckWorker(SliceCheckEvent checkEvent, SliceCheckContext sliceCheckContext) {
+    public SliceCheckWorker(SliceCheckEvent checkEvent, SliceCheckContext sliceCheckContext, TaskRegisterCenter registerCenter) {
         this.checkEvent = checkEvent;
         this.checkContext = sliceCheckContext;
         this.startTime = LocalDateTime.now();
         this.slice = checkEvent.getSlice();
+        this.registerCenter = registerCenter;
     }
 
     @Override
@@ -130,24 +131,19 @@ public class SliceCheckWorker implements Runnable {
             refreshSliceCheckProgress();
             checkResult(errorMsg);
             cleanCheckThreadEnvironment();
-            finishedSliceCheck();
+            finishedSliceCheck(slice);
             log.info("check slice of {} end.", slice.getName());
+        }
+    }
+
+    public void finishedSliceCheck(SliceVo slice) {
+        if (registerCenter.refreshAndCheckTableCompleted(slice)) {
+            checkContext.dropTableTopics(slice.getTable());
         }
     }
 
     private void cleanCheckThreadEnvironment() {
         difference.clear();
-    }
-
-    private void finishedSliceCheck() {
-        TaskRegisterCenter registerCenter = SpringUtil.getBean(TaskRegisterCenter.class);
-        if (registerCenter.refreshAndCheckTableCompleted(slice)) {
-            dropTableTopics();
-        }
-    }
-
-    private void dropTableTopics() {
-        checkContext.dropTableTopics(slice.getTable());
     }
 
     private void compareNoMerkleTree(SliceTuple sourceTuple, SliceTuple sinkTuple) {

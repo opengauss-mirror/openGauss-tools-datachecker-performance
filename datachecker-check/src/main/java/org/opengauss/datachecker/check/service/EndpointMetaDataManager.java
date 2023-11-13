@@ -48,6 +48,7 @@ public class EndpointMetaDataManager {
     private static final List<String> MISS_TABLE_LIST = new ArrayList<>();
     private static final Map<String, TableMetadata> SOURCE_METADATA = new HashMap<>();
     private static final Map<String, TableMetadata> SINK_METADATA = new HashMap<>();
+    private static final Map<Endpoint, Integer> REAL_TABLE_COUNT = new HashMap<>();
 
     private final EndpointStatusManager endpointStatusManager;
     private final FeignClientService feignClientService;
@@ -59,6 +60,8 @@ public class EndpointMetaDataManager {
         if (MapUtils.isNotEmpty(SOURCE_METADATA) && MapUtils.isNotEmpty(SINK_METADATA)) {
             final List<String> sourceTables = getEndpointTableNamesSortByTableRows(SOURCE_METADATA);
             final List<String> sinkTables = getEndpointTableNamesSortByTableRows(SINK_METADATA);
+            REAL_TABLE_COUNT.put(Endpoint.SOURCE, sourceTables.size());
+            REAL_TABLE_COUNT.put(Endpoint.SINK, sinkTables.size());
             final List<String> checkTables = compareAndFilterEndpointTables(sourceTables, sinkTables);
             final List<String> missTables = compareAndFilterMissTables(sourceTables, sinkTables);
             CHECK_TABLE_LIST.addAll(checkTables);
@@ -69,6 +72,10 @@ public class EndpointMetaDataManager {
             throw new CheckMetaDataException(
                 "the metadata information is empty, and the verification is terminated abnormally");
         }
+    }
+
+    public Map<Endpoint, Integer> getRealTableCount() {
+        return REAL_TABLE_COUNT;
     }
 
     /**
@@ -98,7 +105,9 @@ public class EndpointMetaDataManager {
     }
 
     private List<String> diffList(List<String> source, List<String> sink) {
-        return source.stream().filter(table -> !sink.contains(table)).collect(Collectors.toList());
+        return source.stream()
+                     .filter(table -> !sink.contains(table))
+                     .collect(Collectors.toList());
     }
 
     /**
@@ -139,12 +148,17 @@ public class EndpointMetaDataManager {
     }
 
     private List<String> compareAndFilterEndpointTables(List<String> sourceTables, List<String> sinkTables) {
-        return sourceTables.stream().filter(sinkTables::contains).collect(Collectors.toList());
+        return sourceTables.stream()
+                           .filter(sinkTables::contains)
+                           .collect(Collectors.toList());
     }
 
     private List<String> getEndpointTableNamesSortByTableRows(Map<String, TableMetadata> metadataMap) {
-        return metadataMap.values().stream().sorted(Comparator.comparing(TableMetadata::getTableRows))
-                          .map(TableMetadata::getTableName).collect(Collectors.toUnmodifiableList());
+        return metadataMap.values()
+                          .stream()
+                          .sorted(Comparator.comparing(TableMetadata::getTableRows))
+                          .map(TableMetadata::getTableName)
+                          .collect(Collectors.toUnmodifiableList());
     }
 
     /**
