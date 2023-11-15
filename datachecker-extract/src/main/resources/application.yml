@@ -1,5 +1,8 @@
 server:
   shutdown: graceful
+  tomcat:
+    threads:
+      max: 5
 debug: false
 logging:
   config: classpath:log4j2.xml

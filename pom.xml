@@ -39,6 +39,7 @@
         <commons.cli.version>1.4</commons.cli.version>
         <oshi.version>5.3.6</oshi.version>
         <opencsv.version>5.7.1</opencsv.version>
+        <disruptor.version>3.4.4</disruptor.version>
     </properties>
     <modules>
         <module>datachecker-common</module>
@@ -79,6 +80,11 @@
                 <groupId>org.springdoc</groupId>
                 <artifactId>springdoc-openapi-ui</artifactId>
                 <version>${springdoc.openapi.ui.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.lmax</groupId>
+                <artifactId>disruptor</artifactId>
+                <version>${disruptor.version}</version>
             </dependency>
             <dependency>
                 <groupId>commons-cli</groupId>

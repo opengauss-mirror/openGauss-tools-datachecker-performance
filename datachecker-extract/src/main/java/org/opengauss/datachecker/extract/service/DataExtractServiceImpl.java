@@ -317,7 +317,7 @@ public class DataExtractServiceImpl implements DataExtractService {
                     log.info("Perform data extraction tasks {}", task.getTaskName());
                     final String tableName = task.getTableName();
                     if (!tableCheckStatus.containsKey(tableName) || tableCheckStatus.get(tableName) == -1) {
-                        log.info("Abnormal table[{}] status, ignoring the current table data extraction task",
+                        log.warn("Abnormal table[{}] status, ignoring the current table data extraction task",
                             tableName);
                         return;
                     }
@@ -336,7 +336,7 @@ public class DataExtractServiceImpl implements DataExtractService {
                         ThreadUtil.sleepHalfSecond();
                     }
                     List<Object> summarizedCheckPoint = tableCheckPointCache.get(tableName);
-                    log.info("table [{}] summarized check-point-list : {}", tableName, summarizedCheckPoint);
+                    log.debug("table [{}] summarized check-point-list : {}", tableName, summarizedCheckPoint);
                     List<SliceVo> sliceVoList =
                         buildSliceByTask(summarizedCheckPoint, task.getTableMetadata(), topic, endpoint);
                     log.info("table [{}] have {} slice to check", tableName, sliceVoList.size());
@@ -473,7 +473,7 @@ public class DataExtractServiceImpl implements DataExtractService {
 
     private void registerCheckPoint(ExtractTask task) {
         String tableName = task.getTableName();
-        log.info("register check point [{}]", tableName);
+        log.debug("register check point [{}]", tableName);
         Endpoint endpoint = extractProperties.getEndpoint();
         CheckPoint checkPoint = new CheckPoint(dataAccessService);
         List<Object> checkPointList = getCheckPoint(checkPoint, task.getTableMetadata());
