@@ -36,10 +36,11 @@ import java.util.stream.Collectors;
 public class CheckPoint {
     private static final Logger log = LogUtils.getLogger();
     private static final List<String> numberDataTypes =
-        List.of("integer", "int", "uint1", "uint2", "uint4", "uint8", "long", "smallint", "mediumint", "bigint");
+        List.of("integer", "int", "uint1", "uint2", "uint4", "uint8", "long", "decimal", "numeric", "smallint",
+            "mediumint", "bigint");
     private static final List<String> dataTypes =
-        List.of("integer", "int", "uint1", "uint2", "uint4", "uint8", "long", "smallint", "mediumint", "bigint",
-            "character", "char", "varchar", "character varying");
+        List.of("integer", "int", "uint1", "uint2", "uint4", "uint8", "long", "decimal", "numeric", "smallint",
+            "mediumint", "bigint", "character", "char", "varchar", "character varying");
     private final DataAccessService dataAccessService;
 
     /**
@@ -75,7 +76,9 @@ public class CheckPoint {
         List<Object> checkPointList = dataAccessService.queryPointList(param);
         checkPointList.add(minCheckPoint);
         checkPointList.add(maxPoint);
-        checkPointList = checkPointList.stream().distinct().collect(Collectors.toList());
+        checkPointList = checkPointList.stream()
+                                       .distinct()
+                                       .collect(Collectors.toList());
         log.debug("table [{}] check-point-list : {} ", tableName, checkPointList);
         return checkPointList;
     }

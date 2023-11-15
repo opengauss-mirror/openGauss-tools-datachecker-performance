@@ -25,9 +25,9 @@ is_exist
 if [ $? -eq "0" ]; then
 echo "${APP_NAME} is already running. pid=${pid} ."
 else
-nohup java -Xmx6G -Xms6G -XX:MaxMetaspaceSize=1G -XX:MetaspaceSize=1G  -XX:+UseG1GC -XX:MaxGCPauseMillis=100 -XX:+ParallelRefProcEnabled -jar ${run_path}/${APP_NAME} --source >/dev/null 2>&1 &
+nohup java -Xmx1G -Xms1G -XX:+UseG1GC -XX:MaxGCPauseMillis=100 -XX:+ParallelRefProcEnabled -jar ${run_path}/${APP_NAME} --source >/dev/null 2>&1 &
 
-nohup java -Xmx6G -Xms6G -XX:MaxMetaspaceSize=1G -XX:MetaspaceSize=1G  -XX:+UseG1GC -XX:MaxGCPauseMillis=100 -XX:+ParallelRefProcEnabled -jar ${run_path}/${APP_NAME} --sink >/dev/null 2>&1 &
+nohup java -Xmx1G -Xms1G -XX:+UseG1GC -XX:MaxGCPauseMillis=100 -XX:+ParallelRefProcEnabled -jar ${run_path}/${APP_NAME} --sink >/dev/null 2>&1 &
 sleep 1s
 echo "${APP_NAME} source and sink start success"
 fi

@@ -1,6 +1,9 @@
 server:
   port: 9000
   shutdown: graceful
+  tomcat:
+    threads:
+      max: 5
 logging:
   config: classpath:./config/log4j2.xml
 debug: false

@@ -87,7 +87,8 @@ public class SliceCheckWorker implements Runnable {
      * @param checkEvent        check event
      * @param sliceCheckContext slice check context
      */
-    public SliceCheckWorker(SliceCheckEvent checkEvent, SliceCheckContext sliceCheckContext, TaskRegisterCenter registerCenter) {
+    public SliceCheckWorker(SliceCheckEvent checkEvent, SliceCheckContext sliceCheckContext,
+        TaskRegisterCenter registerCenter) {
         this.checkEvent = checkEvent;
         this.checkContext = sliceCheckContext;
         this.startTime = LocalDateTime.now();
@@ -297,11 +298,10 @@ public class SliceCheckWorker implements Runnable {
         // Initialize source bucket column list data
         long startFetch = System.currentTimeMillis();
         CountDownLatch countDownLatch = new CountDownLatch(checkTupleList.size());
-        checkTupleList.parallelStream()
-                      .forEach(check -> {
-                          initBucketList(check.getEndpoint(), check.getSlice(), check.getBuckets(), bucketDiff);
-                          countDownLatch.countDown();
-                      });
+        checkTupleList.forEach(check -> {
+            initBucketList(check.getEndpoint(), check.getSlice(), check.getBuckets(), bucketDiff);
+            countDownLatch.countDown();
+        });
         countDownLatch.await();
         logKafka.info("fetch slice {} data from topic, cost {} millis", slice.toSimpleString(), costMillis(startFetch));
         // Align the source and destination bucket list
