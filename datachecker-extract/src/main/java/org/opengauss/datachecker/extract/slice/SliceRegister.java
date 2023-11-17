@@ -23,7 +23,6 @@ import org.opengauss.datachecker.common.entry.extract.Topic;
 import org.opengauss.datachecker.extract.cache.TopicCache;
 import org.opengauss.datachecker.extract.client.CheckingFeignClient;
 import org.opengauss.datachecker.extract.kafka.KafkaAdminService;
-import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
@@ -59,7 +58,7 @@ public class SliceRegister {
      * register table topic to check service
      *
      * @param tableName table
-     * @param ptnNum ptnNum
+     * @param ptnNum    ptnNum
      * @return true | false
      */
     public boolean registerTopic(String tableName, int ptnNum) {
@@ -115,11 +114,10 @@ public class SliceRegister {
     /**
      * register table checkPoint list
      *
-     * @param endpoint endpoint
-     * @param tableName tableName
+     * @param endpoint       endpoint
+     * @param tableName      tableName
      * @param checkPointList checkPointList
      */
-    @Retryable(maxAttempts = 3)
     public void registerCheckPoint(Endpoint endpoint, String tableName, List<Object> checkPointList) {
         checkingClient.registerCheckPoint(endpoint, tableName, checkPointList);
     }

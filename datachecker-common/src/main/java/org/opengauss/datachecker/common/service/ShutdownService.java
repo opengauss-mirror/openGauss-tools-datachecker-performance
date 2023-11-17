@@ -33,6 +33,8 @@ public class ShutdownService {
     private List<ThreadPoolTaskExecutor> threadExecutorList = new LinkedList<>();
     @Resource
     private DynamicThreadPoolManager dynamicThreadPoolManager;
+    @Resource
+    private ProcessLogService processLogService;
 
     @Async
     public void shutdown(String message) {
@@ -46,6 +48,7 @@ public class ShutdownService {
         while (monitor.get() > 0) {
             ThreadUtil.sleepHalfSecond();
         }
+        processLogService.saveStopProcessLog();
         threadExecutorList.forEach(ExecutorConfigurationSupport::shutdown);
         executorServiceList.forEach(ExecutorService::shutdownNow);
         ThreadUtil.sleepHalfSecond();

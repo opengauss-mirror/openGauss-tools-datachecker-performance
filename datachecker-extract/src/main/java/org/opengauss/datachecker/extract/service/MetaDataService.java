@@ -38,8 +38,9 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
@@ -103,9 +104,7 @@ public class MetaDataService {
         }
         List<Future<?>> futures = new LinkedList<>();
         int maxConnection = resourceManager.maxConnectionCount();
-        ThreadPoolExecutor executor =
-            ThreadPoolFactory.newThreadPool("update-column", Math.max(1, maxConnection / 2), maxConnection,
-                tableMetadataList.size());
+        ExecutorService executor = Executors.newFixedThreadPool(Math.max(1, maxConnection / 2));
         metadataLoadProcess.setTotal(tableMetadataList.size());
         tableMetadataList.forEach(tableMetadata -> {
             Future<?> future = executor.submit(() -> {
@@ -131,13 +130,12 @@ public class MetaDataService {
         executor.shutdown();
         metadataLoadProcess.setLoadCount(metadataLoadProcess.getTotal());
         log.info("query table column metadata {}", tableMetadataList.size());
-        Map<String, TableMetadata> filterNoPrimary = tableMetadataMap.entrySet()
-                                                                     .stream()
-                                                                     .filter(entry -> CollectionUtils.isNotEmpty(
-                                                                         entry.getValue()
-                                                                              .getPrimaryMetas()))
-                                                                     .collect(Collectors.toMap(Entry::getKey,
-                                                                         Entry::getValue));
+        Map<String, TableMetadata> filterNoPrimary;
+        filterNoPrimary = tableMetadataMap.entrySet()
+                                          .stream()
+                                          .filter(entry -> CollectionUtils.isNotEmpty(entry.getValue()
+                                                                                           .getPrimaryMetas()))
+                                          .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
         log.info("filter table which does not have primary metadata {}", filterNoPrimary.size());
         tableMetadataMap.clear();
         tableMetadataMap.putAll(filterNoPrimary);

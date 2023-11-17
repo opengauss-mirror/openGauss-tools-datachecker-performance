@@ -67,7 +67,6 @@ public class CheckStartLoader extends AbstractCheckLoader {
             return;
         }
         if (!checkEnvironment.isCheckTableEmpty()) {
-            ExportCheckResult.backCheckResultDirectory();
             memoryManagerService.startMemoryManager(isEnableMemoryMonitor);
             final LocalDateTime startTime = LocalDateTime.now();
             String processNo = ConfigCache.getValue(ConfigConstants.PROCESS_NO);

@@ -33,34 +33,35 @@
 <!--            <PatternLayout pattern="${LOG_PATTERN}"/>-->
 <!--        </Console>-->
 
-        <RollingRandomAccessFile  name="progress" immediateFlush="true" fileName="${LOG_HOME}/${LOG_NAME}.log"
-                     filePattern="${LOG_HOME}/history/${LOG_NAME} - %d{yyyy-MM-dd}.log.gz">
+        <RollingRandomAccessFile name="progress" immediateFlush="true" fileName="${LOG_HOME}/${LOG_NAME}.log"
+                                 filePattern="${LOG_HOME}/history/${LOG_NAME} - %d{yyyy-MM-dd}.log.gz">
             <PatternLayout pattern="${LOG_PATTERN}"/>
             <Policies>
                 <SizeBasedTriggeringPolicy size="20MB"/>
             </Policies>
             <Filters>
-                <ThresholdFilter level="info" onMatch="ACCEPT" onMismatch="DENY"/>
+                <ThresholdFilter level="${LOG_LEVEL}" onMatch="ACCEPT" onMismatch="DENY"/>
             </Filters>
-        </RollingRandomAccessFile >
-        <RollingRandomAccessFile name="business" immediateFlush="true" fileName="${LOG_HOME}/${LOG_BUSINESS}-${LOG_NAME}.log"
-                     filePattern="${LOG_HOME}/history/${LOG_BUSINESS}-${LOG_NAME} - %d{yyyy-MM-dd}.log.gz">
+        </RollingRandomAccessFile>
+        <RollingRandomAccessFile name="business" immediateFlush="true"
+                                 fileName="${LOG_HOME}/${LOG_BUSINESS}-${LOG_NAME}.log"
+                                 filePattern="${LOG_HOME}/history/${LOG_BUSINESS}-${LOG_NAME} - %d{yyyy-MM-dd}.log.gz">
             <PatternLayout pattern="${LOG_PATTERN}"/>
             <Policies>
                 <SizeBasedTriggeringPolicy size="20MB"/>
             </Policies>
             <Filters>
-                <ThresholdFilter level="info" onMatch="ACCEPT" onMismatch="DENY"/>
+                <ThresholdFilter level="${LOG_LEVEL}" onMatch="ACCEPT" onMismatch="DENY"/>
             </Filters>
         </RollingRandomAccessFile>
         <RollingRandomAccessFile name="kafka" immediateFlush="true" fileName="${LOG_HOME}/${LOG_KAFKA}-${LOG_NAME}.log"
-                     filePattern="${LOG_HOME}/history/${LOG_KAFKA}-${LOG_NAME} - %d{yyyy-MM-dd}.log.gz">
+                                 filePattern="${LOG_HOME}/history/${LOG_KAFKA}-${LOG_NAME} - %d{yyyy-MM-dd}.log.gz">
             <PatternLayout pattern="${LOG_PATTERN}"/>
             <Policies>
                 <SizeBasedTriggeringPolicy size="20MB"/>
             </Policies>
             <Filters>
-                <ThresholdFilter level="info" onMatch="ACCEPT" onMismatch="DENY"/>
+                <ThresholdFilter level="${LOG_LEVEL}" onMatch="ACCEPT" onMismatch="DENY"/>
             </Filters>
         </RollingRandomAccessFile>
         <!--
@@ -75,38 +76,38 @@
     </Appenders>
 
     <Loggers>
-<!--        <root level="${LOG_LEVEL}">-->
-<!--            <appender-ref ref="console_out_appender"/>-->
-<!--        </root>-->
-        <AsyncLogger name="progress" level="${LOG_LEVEL}"  additivity="false">
+        <AsyncRoot  level="${LOG_LEVEL}">
+            <AppenderRef ref="console_out_appender"/>
+        </AsyncRoot>
+        <AsyncLogger name="progress" level="${LOG_LEVEL}" includeLocation="true" bufferSize="262144">
             <AppenderRef ref="progress"/>
         </AsyncLogger>
-        <AsyncLogger name="business" level="${LOG_LEVEL}" additivity="false">
+        <AsyncLogger name="business" level="${LOG_LEVEL}" includeLocation="true" bufferSize="262144">
             <AppenderRef ref="business"/>
         </AsyncLogger>
-        <AsyncLogger name="kafka" level="${LOG_LEVEL}" additivity="false">
+        <AsyncLogger name="kafka" level="${LOG_LEVEL}" includeLocation="true" bufferSize="262144">
             <AppenderRef ref="kafka"/>
         </AsyncLogger>
 
-<!--        <logger name="debugger" level="${LOG_LEVEL}">-->
-<!--            <appender-ref ref="debugger"/>-->
-<!--        </logger>-->
+        <!--        <logger name="debugger" level="${LOG_LEVEL}">-->
+        <!--            <appender-ref ref="debugger"/>-->
+        <!--        </logger>-->
 
-        <logger name="org.apache.kafka" level="ERROR"/>
-        <logger name="org.opengauss.datachecker.check.service.EndpointManagerService" level="ERROR"/>
-        <logger name="org.springframework" level="INFO"/>
-        <logger name="_org.springframework.web" level="ERROR"/>
-        <logger name="org.hibernate.validator" level="ERROR"/>
-        <logger name="org.jboss.netty" level="ERROR"/>
-        <logger name="org.apache.http" level="ERROR"/>
-        <logger name="oshi.util" level="ERROR"/>
-        <logger name="io.confluent.kafka.serializers" level="ERROR"/>
-        <logger name="org.apache.catalina.loader" level="ERROR"/>
-        <logger name="org.opengauss.core.v3" level="ERROR"/>
-        <logger name="com.alibaba.druid.pool" level="ERROR"/>
-        <logger name="org.opengauss.datachecker" level="INFO">
+        <AsyncLogger name="org.apache.kafka" level="ERROR"/>
+        <AsyncLogger name="org.opengauss.datachecker.check.service.EndpointManagerService" level="ERROR"/>
+        <AsyncLogger name="org.springframework" level="${LOG_LEVEL}"/>
+        <AsyncLogger name="_org.springframework.web" level="ERROR"/>
+        <AsyncLogger name="org.hibernate.validator" level="ERROR"/>
+        <AsyncLogger name="org.jboss.netty" level="ERROR"/>
+        <AsyncLogger name="org.apache.http" level="ERROR"/>
+        <AsyncLogger name="oshi.util" level="ERROR"/>
+        <AsyncLogger name="io.confluent.kafka.serializers" level="ERROR"/>
+        <AsyncLogger name="org.apache.catalina.loader" level="ERROR"/>
+        <AsyncLogger name="org.opengauss.core.v3" level="ERROR"/>
+        <AsyncLogger name="com.alibaba.druid.pool" level="ERROR"/>
+        <AsyncLogger name="org.opengauss.datachecker" level="INFO">
             <appender-ref ref="progress"/>
-        </logger>
+        </AsyncLogger>
     </Loggers>
 
 </Configuration>
