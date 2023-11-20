@@ -74,6 +74,13 @@ public class ThreadUtil {
     }
 
     /**
+     * thread sleep for 300 - 1000 milliseconds
+     */
+    public static void sleepMax2Second() {
+        sleep(RandomUtils.nextInt(300, 2000));
+    }
+
+    /**
      * kill thread by thread name
      *
      * @param name thread name

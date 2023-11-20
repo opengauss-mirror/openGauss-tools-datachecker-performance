@@ -169,8 +169,6 @@ public class KafkaConsumerHandler {
     public void closeConsumer() {
         if (kafkaConsumer != null) {
             kafkaConsumer.unsubscribe();
-            kafkaConsumer.close(Duration.ofSeconds(1));
         }
     }
-
 }

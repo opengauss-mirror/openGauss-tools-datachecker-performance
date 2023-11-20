@@ -66,6 +66,10 @@ public class TableCheckPointCache {
         return new HashMap<>();
     }
 
+    public int tableCount() {
+        return TABLE_CHECKPOINT_CACHE.size();
+    }
+
     /**
      * get cache
      *

@@ -20,6 +20,7 @@ import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.csv.CsvPathConfig;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
+import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.util.IdGenerator;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -59,6 +60,7 @@ public class ConfigManagement {
         ConfigCache.put(ConfigConstants.PROCESS_NO, IdGenerator.nextId36());
         ConfigCache.put(ConfigConstants.CHECK_PATH, checkProperties.getDataPath());
         ConfigCache.put(ConfigConstants.BUCKET_CAPACITY, checkProperties.getBucketExpectCapacity());
+        ConfigCache.put(ConfigConstants.ENDPOINT, Endpoint.CHECK);
         initKafka();
     }
 

@@ -45,8 +45,6 @@ import java.util.concurrent.ConcurrentHashMap;
 @EnableConfigurationProperties(KafkaProperties.class)
 public class KafkaConsumerConfig {
     private static final Logger log = LogUtils.getLogger();
-    private static final Object LOCK = new Object();
-    private static final Map<String, KafkaConsumer<String, String>> CONSUMER_MAP = new ConcurrentHashMap<>();
 
     @Value("${spring.extract.debezium-groupId}")
     private String debeziumGroupId;
@@ -61,28 +59,6 @@ public class KafkaConsumerConfig {
     /**
      * Obtaining a specified consumer client based on topic.
      *
-     * @param topic      topic name
-     * @param partitions total number of partitions
-     * @return the topic corresponds to the consumer client.
-     */
-    public KafkaConsumer<String, String> getKafkaConsumer(String topic, int partitions) {
-        String consumerKey = topic + "_" + partitions;
-        KafkaConsumer<String, String> consumer = CONSUMER_MAP.get(consumerKey);
-        if (Objects.isNull(consumer)) {
-            synchronized (LOCK) {
-                consumer = CONSUMER_MAP.get(consumerKey);
-                if (Objects.isNull(consumer)) {
-                    consumer = buildKafkaConsumer();
-                    CONSUMER_MAP.put(consumerKey, consumer);
-                }
-            }
-        }
-        return consumer;
-    }
-
-    /**
-     * Obtaining a specified consumer client based on topic.
-     *
      * @return consumer client.
      */
     public KafkaConsumer<String, Object> getDebeziumConsumer() {
@@ -90,7 +66,8 @@ public class KafkaConsumerConfig {
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
             String.join(ExtConstants.DELIMITER, properties.getBootstrapServers()));
         props.put(ConsumerConfig.GROUP_ID_CONFIG, debeziumGroupId);
-        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, properties.getConsumer().getAutoOffsetReset());
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, properties.getConsumer()
+                                                                     .getAutoOffsetReset());
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         adapterValueDeserializer(props, extractProperties);
         adapterAvroRegistry(props, extractProperties);
@@ -100,17 +77,19 @@ public class KafkaConsumerConfig {
     }
 
     public KafkaConsumer<String, String> createConsumer() {
-        Properties props = new Properties();
-        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
-            String.join(ExtConstants.DELIMITER, properties.getBootstrapServers()));
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, debeziumGroupId);
-        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, properties.getConsumer().getAutoOffsetReset());
-        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-        adapterValueDeserializer(props, extractProperties);
-        adapterAvroRegistry(props, extractProperties);
-        final KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props);
-        return consumer;
+        String groupId = properties.getConsumer()
+                                   .getGroupId();
+        return createConsumer(groupId);
     }
+
+    public KafkaConsumer<String, String> createIncConsumer() {
+        return createConsumer(debeziumGroupId);
+    }
+
+    public KafkaConsumer<String, String> createConsumer(String groupId) {
+        return buildStringValueConsumer(groupId);
+    }
+
     private void adapterValueDeserializer(Properties props, ExtractProperties extractProperties) {
         final Class deserializer = adapter.getDeserializer(extractProperties.getDebeziumSerializer());
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, deserializer);
@@ -122,12 +101,13 @@ public class KafkaConsumerConfig {
         }
     }
 
-    private KafkaConsumer<String, String> buildKafkaConsumer() {
+    private KafkaConsumer<String, String> buildStringValueConsumer(String groupId) {
         Properties props = new Properties();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
             String.join(ExtConstants.DELIMITER, properties.getBootstrapServers()));
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, properties.getConsumer().getGroupId());
-        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, properties.getConsumer().getAutoOffsetReset());
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, properties.getConsumer()
+                                                                     .getAutoOffsetReset());
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         return new KafkaConsumer<>(props);
@@ -137,7 +117,6 @@ public class KafkaConsumerConfig {
      * clear KafkaConsumer
      */
     public void cleanKafkaConsumer() {
-        CONSUMER_MAP.clear();
         log.info("clear KafkaConsumer");
     }
 }

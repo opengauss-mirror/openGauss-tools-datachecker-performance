@@ -32,6 +32,7 @@ public interface Constants {
      * DELIMITER
      */
     String DELIMITER = ",";
+    String SWAP_POINT_TOPIC_TEMP = "CHECK_%s_SWAP_REGISTER_SUMMARIZED_POINT";
 
     interface InitialCapacity {
         /**

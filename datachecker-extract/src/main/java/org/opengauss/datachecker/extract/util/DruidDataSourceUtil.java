@@ -28,11 +28,11 @@ import org.opengauss.datachecker.common.util.LogUtils;
  */
 public class DruidDataSourceUtil {
     private static final Logger log = LogUtils.getDebugLogger();
+
     public static void print(DruidDataSource dataSource) {
         log.debug("datasource getUrl : {}", dataSource.getUrl());
-        log.debug("datasource Username : {} , DbType : {} -> {} ", dataSource.getUsername(), dataSource.getDbType(),
-                dataSource.getDriverClassName());
-        log.debug("datasource InitialSize : {} ,MinIdle : {}, MaxActive : {}", dataSource.getInitialSize(),
-                dataSource.getMinIdle(), dataSource.getMaxActive());
+        log.debug("datasource Username : {} , DbType : {} -> {}  InitialSize : {} ,MinIdle : {}, MaxActive : {} ",
+            dataSource.getUsername(), dataSource.getDbType(), dataSource.getDriverClassName(),
+            dataSource.getInitialSize(), dataSource.getMinIdle(), dataSource.getMaxActive());
     }
 }

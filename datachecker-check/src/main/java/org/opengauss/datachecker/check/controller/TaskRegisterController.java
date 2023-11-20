@@ -27,7 +27,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
-import java.util.List;
 
 /**
  * TaskRegisterController
@@ -79,19 +78,5 @@ public class TaskRegisterController {
     @GetMapping("/register/checkpoint/monitor/stop")
     public void stopCheckPointMonitor(@RequestParam(value = "endpoint") Endpoint endpoint) {
         checkPointRegister.stopMonitor(endpoint);
-    }
-
-    /**
-     * register table checkpoint list
-     *
-     * @param endpoint endpoint
-     * @param tableName tableName
-     * @param checkPoint checkPoint
-     */
-    @PostMapping("/register/checkpoint")
-    public void registerCheckpoint(@RequestParam(value = "endpoint") Endpoint endpoint,
-                                   @RequestParam(value = "tableName") String tableName,
-                                   @RequestBody List<Object> checkPoint) {
-        checkPointRegister.registerCheckPoint(endpoint, tableName, checkPoint);
     }
 }

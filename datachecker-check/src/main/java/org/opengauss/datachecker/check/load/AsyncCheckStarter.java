@@ -20,9 +20,12 @@ import org.opengauss.datachecker.check.slice.SliceCheckContext;
 import org.opengauss.datachecker.check.slice.SliceCheckEventHandler;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.service.DynamicThreadPoolManager;
+import org.opengauss.datachecker.common.service.ProcessLogService;
 import org.opengauss.datachecker.common.util.SpringUtil;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+
+import javax.annotation.Resource;
 
 /**
  * AsyncCheckStarter
@@ -34,6 +37,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class AsyncCheckStarter {
     private CheckEnvironment environment;
+    @Resource
+    private ProcessLogService processLogService;
 
     /**
      * load check environment
@@ -94,6 +99,7 @@ public class AsyncCheckStarter {
     }
 
     private void checkedFullMode() {
+        processLogService.saveProcessLog();
         EmptyDataBaseCheckLoader emptyDatabase = SpringUtil.getBean(EmptyDataBaseCheckLoader.class);
         emptyDatabase.load(environment);
         MetaDataLoader metadata = SpringUtil.getBean(MetaDataLoader.class);

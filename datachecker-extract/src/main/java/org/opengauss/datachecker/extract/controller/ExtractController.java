@@ -229,16 +229,4 @@ public class ExtractController {
     public void notifyCheckTableFinished(@RequestParam(name = "tableName") String tableName) {
         topicCache.removeTopic(tableName);
     }
-
-    /**
-     * refresh extract table checkPoint list
-     *
-     * @param tableName tableName
-     * @param checkPointList checkPointList
-     */
-    @PostMapping("/extract/table/checkpoint")
-    public void refreshCheckpoint(@RequestParam(name = "tableName") String tableName,
-                                  @RequestBody List<Object> checkPointList) {
-        dataExtractService.refreshCheckPoint(tableName, checkPointList);
-    }
 }
