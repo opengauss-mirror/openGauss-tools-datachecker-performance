@@ -501,6 +501,7 @@ public class DataExtractServiceImpl implements DataExtractService {
             tableCheckPointCache.put(tableName, checkPointList);
         }
         checkPointManager.send(new CheckPointData().setTableName(tableName)
+                                                   .setDigit(checkPoint.checkPkNumber(task.getTableMetadata()))
                                                    .setCheckPointList(checkPointList));
     }
 

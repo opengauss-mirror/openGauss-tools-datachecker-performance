@@ -31,5 +31,6 @@ import java.util.List;
 public class CheckPointData {
     private Endpoint endpoint;
     private String tableName;
+    private boolean isDigit;
     private List<Object> checkPointList;
 }
