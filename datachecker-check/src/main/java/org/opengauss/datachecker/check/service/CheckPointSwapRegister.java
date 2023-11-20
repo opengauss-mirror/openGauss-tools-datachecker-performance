@@ -30,6 +30,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -111,11 +112,13 @@ public class CheckPointSwapRegister {
                         break;
                     }
                     if (sourcePointCounter.containsKey(table) && sinkPointCounter.containsKey(table)) {
+                        boolean digit = isCheckPointDigit(table);
                         List<Object> sourcePoints = sourcePointCounter.get(table)
                                                                       .getCheckPointList();
                         List<Object> sinkPoints = sinkPointCounter.get(table)
                                                                   .getCheckPointList();
-                        CheckPointData calculateCheckPoint = calculateCheckPoint(table, sourcePoints, sinkPoints);
+                        CheckPointData calculateCheckPoint =
+                            calculateCheckPoint(table, digit, sourcePoints, sinkPoints);
                         calculateCheckPoint.setEndpoint(Endpoint.CHECK);
                         kafkaTemplate.send(checkPointSwapTopicName, Endpoint.CHECK.getDescription(),
                             JSONObject.toJSONString(calculateCheckPoint));
@@ -129,6 +132,11 @@ public class CheckPointSwapRegister {
                 }
             }
         });
+    }
+
+    private boolean isCheckPointDigit(String table) {
+        return sourcePointCounter.get(table)
+                                 .isDigit();
     }
 
     public void pollSwapPoint() {
@@ -191,21 +199,36 @@ public class CheckPointSwapRegister {
         return isSubscribe;
     }
 
-    private CheckPointData calculateCheckPoint(String tableName, List<Object> checkPointList, List<Object> pointList) {
+    private CheckPointData calculateCheckPoint(String tableName, boolean digit, List<Object> checkPointList,
+        List<Object> pointList) {
         CheckPointData checkPointData = new CheckPointData();
         List<Object> unionCheckPoint = new ArrayList<>() {{
             addAll(checkPointList);
             addAll(pointList);
         }};
-        List<Object> calculatedCheckpoint = unionCheckPoint.stream()
-                                                           .distinct()
-                                                           .sorted()
-                                                           .collect(Collectors.toList());
+        List<Object> calculatedCheckpoint = listDistinctAndToSorted(digit, unionCheckPoint);
+
         if (!calculatedCheckpoint.isEmpty()) {
-            checkPointList.set(0, calculatedCheckpoint.get(0));
-            checkPointList.set(checkPointList.size() - 1, calculatedCheckpoint.get(calculatedCheckpoint.size() - 1));
+            checkPointList.add(calculatedCheckpoint.get(0));
+            checkPointList.add(calculatedCheckpoint.get(calculatedCheckpoint.size() - 1));
         }
+
         return checkPointData.setTableName(tableName)
-                             .setCheckPointList(checkPointList);
+                             .setCheckPointList(listDistinctAndToSorted(digit, checkPointList));
+    }
+
+    private List<Object> listDistinctAndToSorted(boolean digit, List<Object> checkPointList) {
+        return checkPointList.stream()
+                             .distinct()
+                             .sorted(checkPointComparator(digit))
+                             .collect(Collectors.toList());
+    }
+
+    private Comparator<Object> checkPointComparator(boolean digit) {
+        if (digit) {
+            return Comparator.comparingLong(o -> Long.parseLong((String) o));
+        } else {
+            return Comparator.comparing(o -> (String) o);
+        }
     }
 }

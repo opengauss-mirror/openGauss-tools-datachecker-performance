@@ -131,9 +131,8 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
                 sendDataCost = durationBetweenToMillis(jdbcQuery, LocalDateTime.now());
             }
             return sliceExtend;
-        } catch (Exception ex) {
-            log.error("jdbc query [{}] error : {}", sliceExtend.toSimpleString(), ex.getMessage());
-            throw new ExtractDataAccessException();
+        } catch (SQLException ex) {
+            throw new ExtractDataAccessException(ex);
         } finally {
             jdbcOperation.releaseConnection(connection);
             sliceAllCost = durationBetweenToMillis(start, LocalDateTime.now());

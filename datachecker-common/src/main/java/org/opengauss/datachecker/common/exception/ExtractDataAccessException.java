@@ -15,6 +15,8 @@
 
 package org.opengauss.datachecker.common.exception;
 
+import java.sql.SQLException;
+
 /**
  * ExtractException
  *
@@ -30,5 +32,9 @@ public class ExtractDataAccessException extends RuntimeException {
     }
 
     public ExtractDataAccessException() {
+    }
+
+    public ExtractDataAccessException(SQLException ex) {
+        super(ex);
     }
 }
