@@ -30,5 +30,6 @@ import java.util.Map;
 @Data
 public class GlobalConfig {
     private CheckMode checkMode;
+    private String processPath;
     private Map<RuleType, List<Rule>> rules;
 }

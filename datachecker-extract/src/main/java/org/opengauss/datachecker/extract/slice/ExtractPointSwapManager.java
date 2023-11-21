@@ -77,14 +77,18 @@ public class ExtractPointSwapManager {
                                 CheckPointData pointData = JSONObject.parseObject(record.value(), CheckPointData.class);
                                 tableCheckPointCache.put(pointData.getTableName(), pointData.getCheckPointList());
                                 deliveredCount.getAndIncrement();
-                                log.info("swap summarized checkpoint of table [{}]:[{}] ", pointData.getTableName(), deliveredCount);
+                                log.info("swap summarized checkpoint of table [{}]:[{}] ", deliveredCount, pointData);
                             }
                         });
                     } else {
                         ThreadUtil.sleepOneSecond();
                     }
                 } catch (Exception ex) {
-                    log.error(ex);
+                    if (Objects.equals("java.lang.InterruptedException", ex.getMessage())) {
+                        log.warn("kafka consumer stop by Interrupted");
+                    } else {
+                        log.error("pollSwapPoint ", ex);
+                    }
                 }
             }
         });

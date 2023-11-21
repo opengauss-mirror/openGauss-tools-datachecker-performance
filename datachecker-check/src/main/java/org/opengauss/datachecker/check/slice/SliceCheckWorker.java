@@ -68,7 +68,6 @@ import java.util.concurrent.CountDownLatch;
  */
 public class SliceCheckWorker implements Runnable {
     private static final Logger log = LogUtils.getBusinessLogger();
-    private static final Logger logDebug = LogUtils.getDebugLogger();
     private static final Logger logKafka = LogUtils.getKafkaLogger();
     private static final int THRESHOLD_MIN_BUCKET_SIZE = 2;
 
@@ -138,6 +137,7 @@ public class SliceCheckWorker implements Runnable {
     }
 
     public void finishedSliceCheck(SliceVo slice) {
+        checkContext.saveProcessHistoryLogging(slice);
         if (registerCenter.refreshAndCheckTableCompleted(slice)) {
             checkContext.dropTableTopics(slice.getTable());
         }
@@ -246,9 +246,9 @@ public class SliceCheckWorker implements Runnable {
         List<Difference> entriesOnlyOnRight = collectorDeleteOrInsert(bucketDifference.entriesOnlyOnRight());
         List<Difference> differing = collectorUpdate(bucketDifference.entriesDiffering());
 
-        logDebug.debug("diff slice {} insert {}", slice.getName(), bucketDifference.entriesOnlyOnLeft());
-        logDebug.debug("diff slice {} delete {}", slice.getName(), bucketDifference.entriesOnlyOnRight());
-        logDebug.debug("diff slice {} update {}", slice.getName(), bucketDifference.entriesDiffering());
+        log.debug("diff slice {} insert {}", slice.getName(), bucketDifference.entriesOnlyOnLeft());
+        log.debug("diff slice {} delete {}", slice.getName(), bucketDifference.entriesOnlyOnRight());
+        log.debug("diff slice {} update {}", slice.getName(), bucketDifference.entriesDiffering());
         return DifferencePair.of(entriesOnlyOnLeft, entriesOnlyOnRight, differing);
     }
 

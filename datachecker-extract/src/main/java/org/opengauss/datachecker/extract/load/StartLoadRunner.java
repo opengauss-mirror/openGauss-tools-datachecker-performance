@@ -19,7 +19,6 @@ import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.service.MemoryManagerService;
-import org.opengauss.datachecker.common.service.ProcessLogService;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.SpringUtil;
 import org.opengauss.datachecker.extract.config.DataSourceConfig;
@@ -49,8 +48,7 @@ public class StartLoadRunner implements ApplicationRunner {
     private ResourceManager resourceManager;
     @Resource
     private MemoryManagerService memoryManagerService;
-    @Resource
-    private ProcessLogService processLogService;
+
 
     @Override
     public void run(ApplicationArguments args) {
@@ -58,7 +56,7 @@ public class StartLoadRunner implements ApplicationRunner {
         configManagement.loadExtractProperties();
         memoryManagerService.startMemoryManager(ConfigCache.getBooleanValue(ConfigConstants.MEMORY_MONITOR));
         resourceManager.initMaxConnectionCount();
-        processLogService.saveStopProcessLog();
+
         initExtractContextDataSource();
     }
 

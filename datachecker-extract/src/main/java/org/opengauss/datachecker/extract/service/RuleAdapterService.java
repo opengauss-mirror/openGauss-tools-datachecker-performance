@@ -38,7 +38,7 @@ import java.util.Map;
  */
 @Service
 public class RuleAdapterService {
-    private static final Logger logDebug = LogUtils.getDebugLogger();
+    private static final Logger log = LogUtils.getLogger();
     private static final Map<RuleType, List<Rule>> RULES = new HashMap<>();
 
     @Resource
@@ -68,7 +68,7 @@ public class RuleAdapterService {
         if (CollectionUtils.isEmpty(rules)) {
             return tableList;
         }
-        logDebug.debug("filter table by rule {}", rules);
+        log.debug("filter table by rule {}", rules);
         return tableRuleAdapterService.executeTableRule(rules, tableList);
     }
 

@@ -42,7 +42,6 @@ import java.util.concurrent.locks.ReentrantLock;
 @Component
 public class TaskRegisterCenter {
     private static final Logger log = LogUtils.getLogger();
-    private static final Logger logDebug = LogUtils.getDebugLogger();
     protected static final AtomicInteger sliceTotalCount = new AtomicInteger();
     protected static final AtomicInteger tableCount = new AtomicInteger();
 
@@ -145,7 +144,7 @@ public class TaskRegisterCenter {
             int tableReleaseSize = sliceTableCounter.get(sliceVo.getTable());
             tableReleaseSize--;
             sliceTableCounter.put(sliceVo.getTable(), tableReleaseSize);
-            logDebug.debug("table [{}] slice release {}", sliceVo.getTable(), tableReleaseSize);
+            log.debug("table [{}] slice release {}", sliceVo.getTable(), tableReleaseSize);
             return tableReleaseSize == 0;
         } finally {
             lock.unlock();

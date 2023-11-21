@@ -64,50 +64,23 @@
                 <ThresholdFilter level="${LOG_LEVEL}" onMatch="ACCEPT" onMismatch="DENY"/>
             </Filters>
         </RollingRandomAccessFile>
-        <!--
-                       <RollingFile name="debugger" immediateFlush="true" fileName="${LOG_HOME}/${LOG_DEBUGGER}-${LOG_NAME}.log"
-                                    filePattern="${LOG_HOME}/history/${LOG_NAME} - %d{yyyy-MM-dd}.log.gz">
-                           <PatternLayout pattern="${LOG_PATTERN}"/>
-                           <Policies>
-                               <SizeBasedTriggeringPolicy size="20MB"/>
-                           </Policies>
-                       </RollingFile>
-                          -->
     </Appenders>
 
     <Loggers>
-        <AsyncRoot  level="${LOG_LEVEL}">
-            <AppenderRef ref="console_out_appender"/>
-        </AsyncRoot>
-        <AsyncLogger name="progress" level="${LOG_LEVEL}" includeLocation="true" bufferSize="262144">
+        <Root level="${LOG_LEVEL}">
+<!--            <AppenderRef ref="console_out_appender"/>-->
+            <AppenderRef ref="progress"/>
+        </Root>
+        <AsyncLogger name="progress" level="${LOG_LEVEL}">
             <AppenderRef ref="progress"/>
         </AsyncLogger>
-        <AsyncLogger name="business" level="${LOG_LEVEL}" includeLocation="true" bufferSize="262144">
+        <AsyncLogger name="business" level="${LOG_LEVEL}">
             <AppenderRef ref="business"/>
         </AsyncLogger>
-        <AsyncLogger name="kafka" level="${LOG_LEVEL}" includeLocation="true" bufferSize="262144">
+        <AsyncLogger name="kafka" level="${LOG_LEVEL}">
             <AppenderRef ref="kafka"/>
         </AsyncLogger>
-
-        <!--        <logger name="debugger" level="${LOG_LEVEL}">-->
-        <!--            <appender-ref ref="debugger"/>-->
-        <!--        </logger>-->
-
-        <AsyncLogger name="org.apache.kafka" level="ERROR"/>
-        <AsyncLogger name="org.opengauss.datachecker.check.service.EndpointManagerService" level="ERROR"/>
-        <AsyncLogger name="org.springframework" level="${LOG_LEVEL}"/>
-        <AsyncLogger name="_org.springframework.web" level="ERROR"/>
-        <AsyncLogger name="org.hibernate.validator" level="ERROR"/>
-        <AsyncLogger name="org.jboss.netty" level="ERROR"/>
-        <AsyncLogger name="org.apache.http" level="ERROR"/>
-        <AsyncLogger name="oshi.util" level="ERROR"/>
-        <AsyncLogger name="io.confluent.kafka.serializers" level="ERROR"/>
-        <AsyncLogger name="org.apache.catalina.loader" level="ERROR"/>
-        <AsyncLogger name="org.opengauss.core.v3" level="ERROR"/>
-        <AsyncLogger name="com.alibaba.druid.pool" level="ERROR"/>
-        <AsyncLogger name="org.opengauss.datachecker" level="INFO">
-            <appender-ref ref="progress"/>
-        </AsyncLogger>
+        <logger name="org.apache.kafka" level="off" />
     </Loggers>
 
 </Configuration>

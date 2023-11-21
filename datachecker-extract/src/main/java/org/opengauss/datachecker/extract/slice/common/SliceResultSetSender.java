@@ -41,7 +41,6 @@ import java.util.Map;
  */
 public class SliceResultSetSender {
     protected static final Logger log = LogUtils.getBusinessLogger();
-    protected static final Logger logDebug = LogUtils.getDebugLogger();
     private static final HashHandler hashHandler = new HashHandler();
     private final ResultSetHandler resultSetHandler;
     private final SliceKafkaAgents kafkaOperate;

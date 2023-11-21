@@ -27,6 +27,7 @@ import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.extract.SliceVo;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.entry.extract.Topic;
+import org.opengauss.datachecker.common.service.ProcessLogService;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
@@ -50,6 +51,8 @@ public class SliceCheckContext {
     private SliceCheckResultManager sliceCheckResultManager;
     @Resource
     private KafkaTopicDeleteProvider kafkaTopicDeleteProvider;
+    @Resource
+    private ProcessLogService processLogService;
 
     /**
      * create kafka consumer handler
@@ -137,5 +140,9 @@ public class SliceCheckContext {
 
     public void dropTableTopics(String table) {
         kafkaTopicDeleteProvider.addTableToDropTopic(table, true);
+    }
+
+    public void saveProcessHistoryLogging(SliceVo slice) {
+        processLogService.saveProcessHistoryLogging(slice.getTable(), slice.getNo());
     }
 }

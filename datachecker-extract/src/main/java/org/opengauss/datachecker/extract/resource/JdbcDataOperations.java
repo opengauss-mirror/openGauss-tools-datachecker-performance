@@ -23,7 +23,6 @@ import org.opengauss.datachecker.common.entry.enums.DataBaseType;
 import org.opengauss.datachecker.common.exception.ExtractDataAccessException;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.ThreadUtil;
-import org.opengauss.datachecker.extract.util.DruidDataSourceUtil;
 import org.springframework.jdbc.datasource.DataSourceUtils;
 
 import javax.sql.DataSource;
@@ -66,7 +65,6 @@ public class JdbcDataOperations {
      * @throws SQLException SQLException
      */
     public synchronized Connection tryConnectionAndClosedAutoCommit(long allocMemory) throws SQLException {
-        DruidDataSourceUtil.print((DruidDataSource) jdbcDataSource);
         takeConnection(allocMemory);
         return getConnectionAndClosedAutoCommit();
     }

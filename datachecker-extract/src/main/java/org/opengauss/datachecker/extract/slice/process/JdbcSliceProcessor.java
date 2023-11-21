@@ -74,6 +74,7 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
             log.error("table slice [{}] is error", slice.toSimpleString(), ex);
         } finally {
             log.info("table slice [{}] is finally ", slice.toSimpleString());
+            context.saveProcessing(slice);
         }
     }
 

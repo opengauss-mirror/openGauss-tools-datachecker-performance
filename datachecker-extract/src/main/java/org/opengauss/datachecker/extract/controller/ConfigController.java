@@ -17,9 +17,11 @@ package org.opengauss.datachecker.extract.controller;
 
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.config.ConfigCache;
+import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.common.GlobalConfig;
 import org.opengauss.datachecker.common.entry.csv.CsvPathConfig;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
+import org.opengauss.datachecker.common.service.ProcessLogService;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.web.Result;
 import org.opengauss.datachecker.extract.load.ExtractEnvironmentContext;
@@ -49,7 +51,8 @@ public class ConfigController {
     private RuleAdapterService ruleAdapterService;
     @Resource
     private ConfigManagement configManagement;
-
+    @Resource
+    private ProcessLogService processLogService;
     /**
      * Distribution Extraction config
      *
@@ -58,6 +61,8 @@ public class ConfigController {
     @PostMapping("/extract/config/distribute")
     public void distributeConfig(@RequestBody GlobalConfig config) {
         ConfigCache.setCheckMode(config.getCheckMode());
+        ConfigCache.put(ConfigConstants.CHECK_PATH,config.getProcessPath());
+        processLogService.saveProcessLog();
         ruleAdapterService.init(config.getRules());
         log.info("init filter rule config ");
         if (Objects.equals(config.getCheckMode(), CheckMode.FULL)) {

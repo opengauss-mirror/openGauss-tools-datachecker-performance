@@ -25,7 +25,6 @@ import org.opengauss.datachecker.extract.config.DataSourceConfig;
 import org.opengauss.datachecker.extract.config.DruidDataSourceConfig;
 import org.opengauss.datachecker.extract.config.ExtractProperties;
 import org.opengauss.datachecker.extract.kafka.KafkaAdminService;
-import org.opengauss.datachecker.extract.util.DruidDataSourceUtil;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -136,7 +135,6 @@ public class ConfigManagement {
         ConfigCache.put(ConfigConstants.DRUID_MAX_WAIT, maxWait);
         ConfigCache.put(ConfigConstants.DRUID_VALIDATION_QUERY, validationQuery);
         ConfigCache.put(ConfigConstants.DRUID_MIN_EVICTABLE_IDLE_TIME_MILLIS, minEvictableIdleTimeMillis);
-        DruidDataSourceUtil.print(bean);
     }
 
     private static void setExtractConfig(ExtractProperties properties) {
