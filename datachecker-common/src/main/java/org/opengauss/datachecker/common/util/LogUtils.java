@@ -29,7 +29,6 @@ public class LogUtils {
     private static final String PROGRESS = "progress";
     private static final String BUSINESS = "business";
     private static final String KAFKA = "kafka";
-    private static final String DEBUG = "debugger";
 
     /**
      * get kafka business logger
@@ -51,9 +50,5 @@ public class LogUtils {
      */
     public static Logger getBusinessLogger() {
         return LogManager.getLogger(BUSINESS);
-    }
-
-    public static Logger getDebugLogger() {
-        return LogManager.getLogger(DEBUG);
     }
 }

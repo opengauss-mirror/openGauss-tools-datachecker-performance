@@ -40,7 +40,6 @@ import org.opengauss.datachecker.extract.task.sql.FullQueryStatement;
 import org.opengauss.datachecker.extract.task.sql.QuerySqlEntry;
 import org.opengauss.datachecker.extract.task.sql.QueryStatementFactory;
 import org.opengauss.datachecker.extract.task.sql.AutoSliceQueryStatement;
-import org.opengauss.datachecker.extract.util.DruidDataSourceUtil;
 import org.opengauss.datachecker.extract.util.HashHandler;
 import org.opengauss.datachecker.extract.util.MetaDataUtil;
 import org.springframework.jdbc.datasource.DataSourceUtils;
@@ -286,7 +285,6 @@ public class ExtractTaskRunnable implements Runnable {
          */
         public synchronized Connection tryConnectionAndClosedAutoCommit(long allocMemory) throws SQLException {
             takeConnection(allocMemory);
-            DruidDataSourceUtil.print((DruidDataSource) jdbcDataSource);
             return getConnectionAndClosedAutoCommit();
         }
 

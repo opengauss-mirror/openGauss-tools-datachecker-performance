@@ -36,10 +36,10 @@ import java.util.stream.Collectors;
 public class CheckPoint {
     private static final Logger log = LogUtils.getLogger();
     private static final List<String> numberDataTypes =
-        List.of("integer", "int", "uint1", "uint2", "uint4", "uint8", "long", "decimal", "numeric", "smallint",
+        List.of("integer", "int", "uint1", "uint2", "uint4", "uint8", "long", "decimal", "numeric", "smallint","tinyint",
             "mediumint", "bigint");
     private static final List<String> dataTypes =
-        List.of("integer", "int", "uint1", "uint2", "uint4", "uint8", "long", "decimal", "numeric", "smallint",
+        List.of("integer", "int", "uint1", "uint2", "uint4", "uint8", "long", "decimal", "numeric", "smallint","tinyint",
             "mediumint", "bigint", "character", "char", "varchar", "character varying");
     private final DataAccessService dataAccessService;
 

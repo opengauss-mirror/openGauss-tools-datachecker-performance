@@ -41,7 +41,6 @@ import java.util.concurrent.ExecutionException;
 public abstract class AbstractSliceProcessor extends AbstractProcessor {
     protected static final int FETCH_SIZE = 10000;
     protected static final Logger log = LogUtils.getBusinessLogger();
-    protected static final Logger logDebug = LogUtils.getDebugLogger();
     protected SliceVo slice;
 
     public AbstractSliceProcessor(SliceVo slice, SliceProcessorContext context) {

@@ -33,7 +33,7 @@ import java.util.concurrent.ThreadPoolExecutor;
  * @since ：11
  */
 public class DynamicThreadPoolMonitor implements Runnable {
-    private static final Logger log = LogUtils.getDebugLogger();
+    private static final Logger log = LogUtils.getLogger();
     private int initCorePoolSize;
     private Map<String, ThreadPoolExecutor> executors;
     private volatile boolean isChecked = true;

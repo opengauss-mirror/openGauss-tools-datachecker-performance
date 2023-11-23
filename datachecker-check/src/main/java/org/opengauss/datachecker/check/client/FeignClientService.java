@@ -18,11 +18,9 @@ package org.opengauss.datachecker.check.client;
 import org.opengauss.datachecker.common.constant.WorkerSwitch;
 import org.opengauss.datachecker.common.entry.common.GlobalConfig;
 import org.opengauss.datachecker.common.entry.common.RepairEntry;
-import org.opengauss.datachecker.common.entry.common.Rule;
 import org.opengauss.datachecker.common.entry.csv.CsvPathConfig;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
-import org.opengauss.datachecker.common.entry.enums.RuleType;
 import org.opengauss.datachecker.common.entry.extract.ExtractConfig;
 import org.opengauss.datachecker.common.entry.extract.ExtractTask;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
@@ -260,10 +258,7 @@ public class FeignClientService {
         }
     }
 
-    public void distributeConfig(CheckMode checkMode, Map<RuleType, List<Rule>> rules) {
-        GlobalConfig config = new GlobalConfig();
-        config.setRules(rules);
-        config.setCheckMode(checkMode);
+    public void distributeConfig(CheckMode checkMode, GlobalConfig config) {
         getClient(Endpoint.SOURCE).distributeConfig(config);
         getClient(Endpoint.SINK).distributeConfig(config);
     }

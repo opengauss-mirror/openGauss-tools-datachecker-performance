@@ -21,6 +21,7 @@ import org.opengauss.datachecker.common.entry.extract.SliceExtend;
 import org.opengauss.datachecker.common.entry.extract.SliceVo;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.entry.extract.Topic;
+import org.opengauss.datachecker.common.service.ProcessLogService;
 import org.opengauss.datachecker.extract.cache.TopicCache;
 import org.opengauss.datachecker.extract.client.CheckingFeignClient;
 import org.opengauss.datachecker.extract.config.KafkaConsumerConfig;
@@ -34,7 +35,6 @@ import org.opengauss.datachecker.extract.task.sql.AutoSliceQueryStatement;
 import org.opengauss.datachecker.extract.task.sql.FullQueryStatement;
 import org.opengauss.datachecker.extract.task.sql.QueryStatementFactory;
 import org.opengauss.datachecker.extract.task.sql.SliceQueryStatement;
-import org.opengauss.datachecker.extract.util.DruidDataSourceUtil;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
@@ -52,7 +52,8 @@ import javax.sql.DataSource;
 @Component
 public class SliceProcessorContext {
     private final QueryStatementFactory factory = new QueryStatementFactory();
-
+    @Resource
+    private ProcessLogService processLogService;
     @Resource
     private ResourceManager resourceManager;
     @Resource
@@ -74,6 +75,10 @@ public class SliceProcessorContext {
      */
     public SliceKafkaAgents createSliceKafkaAgents(SliceVo slice) {
         return createSliceKafkaAgents(slice.getTable(), slice.getPtn());
+    }
+
+    public void saveProcessing(SliceVo slice) {
+        processLogService.saveProcessHistoryLogging(slice.getTable(), slice.getNo());
     }
 
     public SliceKafkaAgents createSliceKafkaAgents(String table, int ptn) {
@@ -104,7 +109,6 @@ public class SliceProcessorContext {
      * @return JdbcDataOperations
      */
     public JdbcDataOperations getJdbcDataOperations(DataSource dataSource) {
-        DruidDataSourceUtil.print((DruidDataSource) dataSource);
         return new JdbcDataOperations(dataSource, resourceManager);
     }
 

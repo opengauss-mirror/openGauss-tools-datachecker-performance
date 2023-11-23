@@ -88,7 +88,7 @@ public class CsvSliceProcessor extends AbstractSliceProcessor {
             SliceResultSetSender sliceSender = new SliceResultSetSender(tableMetadata, kafkaAgents);
             try (CSVReader reader = new CSVReader(new FileReader(sliceFilePath))) {
                 LocalDateTime parseCsv = LocalDateTime.now();
-                logDebug.info("parse slice [{}] cost [{}] milliseconds", sliceExtend.toSimpleString(),
+                log.info("parse slice [{}] cost [{}] milliseconds", sliceExtend.toSimpleString(),
                     durationBetweenToMillis(start, parseCsv));
                 String[] nextLine;
                 Map<String, String> result = new TreeMap<>();
@@ -108,7 +108,7 @@ public class CsvSliceProcessor extends AbstractSliceProcessor {
                 }
                 sliceExtend.setStartOffset(getMinOffset(offsetList));
                 sliceExtend.setEndOffset(getMaxOffset(offsetList));
-                logDebug.info("send slice [{}] cost [{}] milliseconds", sliceExtend.toSimpleString(),
+                log.info("send slice [{}] cost [{}] milliseconds", sliceExtend.toSimpleString(),
                     durationBetweenToMillis(parseCsv, LocalDateTime.now()));
             }
             sliceExtend.setCount(rowCount);

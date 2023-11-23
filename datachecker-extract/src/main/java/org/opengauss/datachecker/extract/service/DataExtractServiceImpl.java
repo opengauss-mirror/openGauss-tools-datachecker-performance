@@ -496,7 +496,7 @@ public class DataExtractServiceImpl implements DataExtractService {
         log.debug("register check point [{}]", tableName);
         CheckPoint checkPoint = new CheckPoint(dataAccessService);
         List<Object> checkPointList = getCheckPoint(checkPoint, task.getTableMetadata());
-        if (checkPointList == null || checkPointList.size() < 2) {
+        if (checkPointList == null || checkPointList.size() <= 2) {
             checkPointList = List.of();
             tableCheckPointCache.put(tableName, checkPointList);
         }

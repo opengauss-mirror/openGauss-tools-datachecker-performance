@@ -126,6 +126,7 @@ public class CheckPointSwapRegister {
                         log.info("send summarized checkpoint of table [{}]:[{}]:[{}]",
                             calculateCheckPoint.getTableName(), deliveredCount, calculateCheckPoint.getCheckPointList()
                                                                                                    .size());
+                        log.info("send summarized checkpoint of table [{}]", calculateCheckPoint);
                     }
                 } catch (Exception ex) {
                     log.error("checkPointSender error ", ex);
@@ -162,7 +163,11 @@ public class CheckPointSwapRegister {
                         ThreadUtil.sleepOneSecond();
                     }
                 } catch (Exception ex) {
-                    log.error("pollSwapPoint ", ex);
+                    if (Objects.equals("java.lang.InterruptedException", ex.getMessage())) {
+                        log.warn("kafka consumer stop by Interrupted");
+                    } else {
+                        log.error("pollSwapPoint ", ex);
+                    }
                 }
             }
         });
