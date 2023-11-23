@@ -298,8 +298,9 @@ public class SliceCheckWorker implements Runnable {
         // Initialize source bucket column list data
         long startFetch = System.currentTimeMillis();
         CountDownLatch countDownLatch = new CountDownLatch(checkTupleList.size());
+        int avgSliceCount = (int) (sourceTuple.getSlice().getCount() + sinkTuple.getSlice().getCount()) / 2;
         checkTupleList.forEach(check -> {
-            initBucketList(check.getEndpoint(), check.getSlice(), check.getBuckets(), bucketDiff);
+            initBucketList(check.getEndpoint(), check.getSlice(), check.getBuckets(), bucketDiff, avgSliceCount);
             countDownLatch.countDown();
         });
         countDownLatch.await();
@@ -315,7 +316,7 @@ public class SliceCheckWorker implements Runnable {
     }
 
     private void initBucketList(Endpoint endpoint, SliceExtend sliceExtend, List<Bucket> bucketList,
-        Map<Integer, Pair<Integer, Integer>> bucketDiff) {
+        Map<Integer, Pair<Integer, Integer>> bucketDiff, int avgSliceCount) {
         // Use feign client to pull Kafka data
         List<RowDataHash> dataList = new LinkedList<>();
         TopicPartition topicPartition = checkContext.getTopic(slice.getTable(), endpoint, slice.getPtn());
@@ -329,7 +330,7 @@ public class SliceCheckWorker implements Runnable {
 
         Map<Integer, Bucket> bucketMap = new ConcurrentHashMap<>(InitialCapacity.CAPACITY_128);
         // Use the pulled data to build the bucket list
-        bucketBuilder.builder(dataList, (int) sliceExtend.getCount(), bucketMap);
+        bucketBuilder.builder(dataList, avgSliceCount, bucketMap);
         dataList.clear();
         // Statistics bucket list information
         bucketList.addAll(bucketMap.values());
