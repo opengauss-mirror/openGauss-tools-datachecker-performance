@@ -84,4 +84,10 @@ public class CsvManagementService {
         Thread thread = new Thread(tableDispatcher);
         thread.start();
     }
+
+    public void close() {
+        listener.stop();
+        dynamicThreadPoolManager.closeDynamicThreadPoolMonitor();
+        sliceDispatcher.stop();
+    }
 }

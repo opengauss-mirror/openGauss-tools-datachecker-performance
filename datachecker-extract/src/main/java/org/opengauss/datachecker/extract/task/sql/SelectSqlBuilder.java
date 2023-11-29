@@ -243,7 +243,7 @@ public class SelectSqlBuilder {
             return getPkConditionFull(primaryKey);
         }
         if (isFirst) {
-            return primaryKey + " < '" + seqEnd + "'";
+            return primaryKey + " <= '" + seqEnd + "'";
         }
         if (isEnd) {
             return primaryKey + ">= '" + seqStart + "'";

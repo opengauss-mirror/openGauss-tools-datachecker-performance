@@ -53,6 +53,9 @@ public class CsvReaderListener implements CsvListener {
             public void handle(String line) {
                 try {
                     isTailEnd = StringUtils.equalsIgnoreCase(line, ExtConstants.CSV_LISTENER_END);
+                    if (isTailEnd) {
+                        return;
+                    }
                     SliceVo slice = JSONObject.parseObject(line, SliceVo.class);
                     if (skipNoInvalidSlice(slice)) {
                         return;

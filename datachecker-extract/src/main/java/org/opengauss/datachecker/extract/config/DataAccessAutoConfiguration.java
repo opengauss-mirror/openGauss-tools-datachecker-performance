@@ -25,11 +25,10 @@ import org.opengauss.datachecker.extract.data.access.OpgsDataAccessService;
 import org.opengauss.datachecker.extract.data.mapper.MetaDataMapper;
 import org.opengauss.datachecker.extract.data.mapper.MysqlMetaDataMapper;
 import org.opengauss.datachecker.extract.data.mapper.OpgsMetaDataMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
-import javax.annotation.Resource;
 import java.util.Map;
 import java.util.Objects;
 
@@ -49,16 +48,16 @@ public class DataAccessAutoConfiguration {
     @Value("${spring.extract.dataLoadMode}")
     private DataLoad dataLoadMode;
 
-    @Resource
-    private MysqlMetaDataMapper mysqlMetaDataMapper;
-    @Resource
-    private OpgsMetaDataMapper opgsMetaDataMapper;
+    @Autowired(required = false)
+    private DataLoadJdbcConfiguration dataLoadJdbc;
 
     @Bean
     public DataAccessService createDataAccessService() {
-        Map<DataBaseType, MetaDataMapper> mybatisMappers =
-            Map.of(DataBaseType.MS, this.mysqlMetaDataMapper, DataBaseType.OG, opgsMetaDataMapper);
-        return new DataAccessServiceBeanFactory(mybatisMappers).create(endpoint, databaseType, dataLoadMode);
+        if (dataLoadJdbc == null) {
+            return new DataAccessServiceBeanFactory().create(endpoint, databaseType, dataLoadMode);
+        }
+        return new DataAccessServiceBeanFactory(dataLoadJdbc.createDataMappers()).create(endpoint, databaseType,
+            dataLoadMode);
     }
 
     static class DataAccessServiceBeanFactory {
@@ -66,6 +65,10 @@ public class DataAccessAutoConfiguration {
 
         public DataAccessServiceBeanFactory(Map<DataBaseType, MetaDataMapper> mybatisMappers) {
             this.mybatisMappers = mybatisMappers;
+        }
+
+        public DataAccessServiceBeanFactory() {
+            this.mybatisMappers = null;
         }
 
         public DataAccessService create(Endpoint endpoint, DataBaseType dataBaseType, DataLoad dataLoad) {

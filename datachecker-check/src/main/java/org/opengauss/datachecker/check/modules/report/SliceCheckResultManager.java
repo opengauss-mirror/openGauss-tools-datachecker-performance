@@ -99,13 +99,13 @@ public class SliceCheckResultManager {
         if (!tableSliceCountMap.containsKey(slice.getTable())) {
             tableSliceCountMap.put(slice.getTable(), slice.getTotal());
         }
-        addResult(slice.getTable(), result);
         if (hasInitSliceResultEnvironment) {
             isCsvMode = Objects.equals(ConfigCache.getCheckMode(), CheckMode.CSV);
             ogCompatibility = feignClient.checkTargetOgCompatibility();
             hasInitSliceResultEnvironment = false;
             log.info("my gold ,i want to set property hasInitSliceResultEnvironment, and execute once");
         }
+        addResult(slice.getTable(), result);
     }
 
     public void addTableStructureDiffResult(SliceVo slice, CheckDiffResult result) {
@@ -189,6 +189,7 @@ public class SliceCheckResultManager {
             String csvDataPath = ConfigCache.getCsvData();
             File file = new File(csvDataPath, checkDiffResult.getFileName());
             file.renameTo(new File(csvDataPath, checkDiffResult.getFileName() + ".check"));
+            log.debug("rename csv sharding completed [{}]", checkDiffResult.getFileName());
         }
     }
 

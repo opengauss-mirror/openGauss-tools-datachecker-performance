@@ -5,7 +5,6 @@ import org.opengauss.datachecker.common.entry.check.Difference;
 import org.opengauss.datachecker.common.entry.common.RepairEntry;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.extract.config.CsvSourceConfiguration;
-import org.opengauss.datachecker.extract.data.access.CsvDataAccessService;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Component;
 
@@ -22,7 +21,7 @@ import java.util.stream.Collectors;
  * @since ：11
  */
 @Component
-@ConditionalOnBean({CsvSourceConfiguration.class, CsvDataAccessService.class})
+@ConditionalOnBean({CsvSourceConfiguration.class})
 public class CsvRepairStatement extends BaseRepairStatement {
     @Override
     public List<String> buildRepairStatementInsertDml(RepairEntry repairEntry) {

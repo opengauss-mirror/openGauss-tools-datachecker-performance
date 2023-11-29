@@ -19,6 +19,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import org.opengauss.datachecker.common.service.ShutdownService;
 import org.opengauss.datachecker.common.web.Result;
 import org.opengauss.datachecker.extract.kafka.KafkaManagerService;
+import org.opengauss.datachecker.extract.service.CsvManagementService;
 import org.opengauss.datachecker.extract.service.DataExtractService;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -42,7 +43,8 @@ public class ExtractCleanController {
     private KafkaManagerService kafkaManagerService;
     @Resource
     private ShutdownService shutdownService;
-
+    @Resource
+    private CsvManagementService csvManagementService;
     /**
      * clear the endpoint information and reinitialize the environment.
      *
@@ -65,12 +67,7 @@ public class ExtractCleanController {
 
     @PostMapping("/extract/shutdown")
     Result<Void> shutdown(@RequestBody String message) {
-        shutdownService.shutdown(message);
-        return Result.success();
-    }
-
-    @PostMapping("/extract/csv/shutdown")
-    Result<Void> csvShutdown(@RequestBody String message) {
+        csvManagementService.close();
         shutdownService.shutdown(message);
         return Result.success();
     }
