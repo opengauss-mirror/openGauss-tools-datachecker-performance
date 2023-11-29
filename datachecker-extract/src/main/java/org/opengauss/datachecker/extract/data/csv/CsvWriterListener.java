@@ -16,6 +16,7 @@
 package org.opengauss.datachecker.extract.data.csv;
 
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.parser.Feature;
 import org.apache.commons.io.input.Tailer;
 import org.apache.commons.io.input.TailerListenerAdapter;
 import org.apache.commons.lang3.StringUtils;
@@ -61,6 +62,9 @@ public class CsvWriterListener implements CsvListener {
             public void handle(String line) {
                 try {
                     isTailEnd = StringUtils.equalsIgnoreCase(line, ExtConstants.CSV_LISTENER_END);
+                    if (isTailEnd) {
+                        return;
+                    }
                     JSONObject writeLog = JSONObject.parseObject(line);
                     if (skipNoInvalidSlice(writeLog)) {
                         return;
@@ -75,7 +79,7 @@ public class CsvWriterListener implements CsvListener {
                         checkSlicePtnNum(slice);
                         MapUtils.put(tableSliceLogs, slice.getTable(), slice);
                     } else if (Objects.equals(sliceLogType, SliceLogType.INDEX)) {
-                        SliceIndexVo sliceIndex = JSONObject.parseObject(line, SliceIndexVo.class);
+                        SliceIndexVo sliceIndex = JSONObject.parseObject(line, SliceIndexVo.class,Feature.AllowISO8601DateFormat);
                         if (Objects.equals(sliceIndex.getIndexStatus(), SliceIndexStatus.END)) {
                             List<SliceVo> sliceList = tableSliceLogs.get(sliceIndex.getTable());
                             listenerQueue.addAll(sliceList);

@@ -76,6 +76,7 @@ public class AsyncCheckStarter {
     @Async
     public void start() {
         CheckMode checkMode = environment.getCheckMode();
+        processLogService.saveProcessLog();
         switch (checkMode) {
             case INCREMENT:
                 checkedIncrement();
@@ -99,7 +100,6 @@ public class AsyncCheckStarter {
     }
 
     private void checkedFullMode() {
-        processLogService.saveProcessLog();
         EmptyDataBaseCheckLoader emptyDatabase = SpringUtil.getBean(EmptyDataBaseCheckLoader.class);
         emptyDatabase.load(environment);
         MetaDataLoader metadata = SpringUtil.getBean(MetaDataLoader.class);

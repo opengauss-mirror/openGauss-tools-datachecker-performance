@@ -74,7 +74,10 @@ public class SliceCheckEventHandler {
                 executor.submit(new SliceCheckWorker(checkEvent, sliceCheckContext, registerCenter));
             }
         } else {
-            log.info("slice check event {} table structure diff", checkEvent.getCheckName());
+            log.info("slice check event , table structure diff [{}][{} : {}]", checkEvent.getCheckName(),
+                checkEvent.getSource()
+                          .getTableHash(), checkEvent.getSink()
+                                                     .getTableHash());
             handleTableStructureDiff(checkEvent);
         }
     }

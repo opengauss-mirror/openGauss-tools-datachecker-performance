@@ -98,7 +98,8 @@ public class BaseDataService {
     public List<TableMetadata> queryTableMetadataList() {
         List<TableMetadata> metadataList = dataAccessService.queryTableMetadataList();
         List<String> tableList = queryTableNameList();
-        return metadataList.stream().filter(meta -> tableList.contains(meta.getTableName()))
+        return metadataList.stream()
+                           .filter(meta -> tableList.contains(meta.getTableName()))
                            .collect(Collectors.toList());
     }
 
@@ -155,6 +156,7 @@ public class BaseDataService {
             return tableMetadata;
         }
         updateTableColumnMetaData(tableMetadata);
+        log.debug("query table metadata {} -- {} ", tableName, tableMetadata);
         MetaDataCache.put(tableName, tableMetadata);
         return tableMetadata;
     }
@@ -176,7 +178,8 @@ public class BaseDataService {
     }
 
     private List<ColumnsMetaData> getTablePrimaryColumn(List<ColumnsMetaData> columnsMetaData) {
-        return columnsMetaData.stream().filter(meta -> ColumnKey.PRI.equals(meta.getColumnKey()))
+        return columnsMetaData.stream()
+                              .filter(meta -> ColumnKey.PRI.equals(meta.getColumnKey()))
                               .sorted(Comparator.comparing(ColumnsMetaData::getOrdinalPosition))
                               .collect(Collectors.toList());
     }
@@ -196,9 +199,9 @@ public class BaseDataService {
         StringBuffer buffer = new StringBuffer();
         columnsMetas.sort(Comparator.comparing(ColumnsMetaData::getOrdinalPosition));
         columnsMetas.forEach(column -> {
-            buffer.append(column.getColumnName()).append(column.getOrdinalPosition());
+            buffer.append(column.getColumnName())
+                  .append(column.getOrdinalPosition());
         });
-        KafkaAvroDeserializerConfig a;
         return HASH_UTIL.hashBytes(buffer.toString());
     }
 
@@ -212,13 +215,14 @@ public class BaseDataService {
         List<String> filterTableList = ruleAdapterService.executeTableRule(List.of(table));
         if (CollectionUtils.isNotEmpty(filterTableList)) {
             TableMetadata tableMetadata = queryTableMetadata(table);
-            return hasPrimary(tableMetadata);
+            if (Objects.isNull(tableMetadata)) {
+                log.warn("table [{}] did not queried by queryTableMetadata", table);
+                return false;
+            }
+            return tableMetadata.hasPrimary();
         } else {
+            log.warn("table [{}] does not in checklist", table);
             return false;
         }
-    }
-
-    private boolean hasPrimary(TableMetadata tableMetadata) {
-        return !Objects.isNull(tableMetadata) && tableMetadata.hasPrimary();
     }
 }

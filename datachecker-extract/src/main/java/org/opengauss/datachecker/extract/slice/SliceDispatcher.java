@@ -22,6 +22,7 @@ import org.opengauss.datachecker.common.entry.extract.SliceVo;
 import org.opengauss.datachecker.common.service.DynamicThreadPoolManager;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.MapUtils;
+import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.opengauss.datachecker.extract.data.BaseDataService;
 import org.opengauss.datachecker.extract.data.csv.CsvListener;
 import org.opengauss.datachecker.extract.slice.factory.SliceFactory;
@@ -101,8 +102,12 @@ public class SliceDispatcher implements Runnable {
                         batchUnprocessedTableSlices(executor);
                     }
                     if (listener.isFinished()) {
+                        log.info("listener is finished , and will be closed");
                         listener.stop();
-                        while (executor.getTaskCount() == executor.getCompletedTaskCount()) {
+                        while (executor.getTaskCount() > executor.getCompletedTaskCount()) {
+                            ThreadUtil.sleepHalfSecond();
+                        }
+                        if (executor.getTaskCount() == executor.getCompletedTaskCount()) {
                             sliceRegister.notifyDispatchCsvSliceFinished();
                             stop();
                             dynamicThreadPoolManager.closeDynamicThreadPoolMonitor();
@@ -145,6 +150,9 @@ public class SliceDispatcher implements Runnable {
         unprocessedTableSlices.forEach((table, unprocessedSlices) -> {
             if (checkTopicRegistered(table)) {
                 doTableUnprocessedSlices(executor, table, unprocessedSlices);
+            } else {
+                SliceVo sliceVo = unprocessedSlices.get(0);
+                sliceRegister.registerTopic(table, sliceVo.getPtnNum());
             }
         });
     }
@@ -170,7 +178,8 @@ public class SliceDispatcher implements Runnable {
             if (Objects.isNull(sliceVo) && unprocessedTableSlices.isEmpty()) {
                 waitTimes++;
                 if (waitTimes % LOG_PERIOD == 0) {
-                    log.info("slice dispatcher is waiting for slice task from {}", listener.getClass().getSimpleName());
+                    log.info("slice dispatcher is waiting for slice task from {}", listener.getClass()
+                                                                                           .getSimpleName());
                     waitTimes = 0;
                 }
                 lock.wait(WAIT_ONE_SECOND);
@@ -186,7 +195,8 @@ public class SliceDispatcher implements Runnable {
      */
     private void waitingForIdle(ThreadPoolExecutor executor) throws InterruptedException {
         synchronized (lock) {
-            while (executor.getQueue().size() > MAX_DISPATCHER_QUEUE_SIZE) {
+            while (executor.getQueue()
+                           .size() > MAX_DISPATCHER_QUEUE_SIZE) {
                 lock.wait(WAIT_ONE_SECOND);
             }
         }

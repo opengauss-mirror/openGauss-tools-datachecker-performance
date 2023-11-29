@@ -70,14 +70,18 @@ public abstract class AbstractDataAccessService implements DataAccessService {
      * @return tableMetadata
      */
     protected TableMetadata wrapperTableMetadata(TableMetadata tableMetadata) {
-        return tableMetadata.setDataBaseType(properties.getDatabaseType()).setEndpoint(properties.getEndpoint())
+        if (tableMetadata == null) {
+            return null;
+        }
+        return tableMetadata.setDataBaseType(properties.getDatabaseType())
+                            .setEndpoint(properties.getEndpoint())
                             .setOgCompatibilityB(isOgCompatibilityB);
     }
 
     /**
      * jdbc mode does not use it
      *
-     * @param table       table
+     * @param table          table
      * @param fileName       fileName
      * @param differenceList differenceList
      * @return
@@ -94,10 +98,12 @@ public abstract class AbstractDataAccessService implements DataAccessService {
      * @return tableMetadata
      */
     protected List<TableMetadata> wrapperTableMetadata(List<TableMetadata> list) {
-        list.stream().forEach(meta -> {
-            meta.setDataBaseType(properties.getDatabaseType()).setEndpoint(properties.getEndpoint())
-                .setOgCompatibilityB(isOgCompatibilityB);
-        });
+        list.stream()
+            .forEach(meta -> {
+                meta.setDataBaseType(properties.getDatabaseType())
+                    .setEndpoint(properties.getEndpoint())
+                    .setOgCompatibilityB(isOgCompatibilityB);
+            });
         return list;
     }
 
@@ -105,8 +111,8 @@ public abstract class AbstractDataAccessService implements DataAccessService {
         LocalDateTime start = LocalDateTime.now();
         NamedParameterJdbcTemplate jdbc = new NamedParameterJdbcTemplate(jdbcTemplate);
         List<T> results = jdbc.query(sql, paramMap, rowMapper);
-        log.debug("query sql:<{}> size:{} cost:{}", sql, results.size(),
-            Duration.between(start, LocalDateTime.now()).toSeconds());
+        log.debug("query sql:<{}> size:{} cost:{}", sql, results.size(), Duration.between(start, LocalDateTime.now())
+                                                                                 .toSeconds());
         return results;
     }
 

@@ -33,7 +33,7 @@ public class BaseSlice {
     private boolean isWholeTable = false;
     private Endpoint endpoint;
     /**
-     * slice no
+     * slice no , 1 first
      */
     private int no;
     /**
