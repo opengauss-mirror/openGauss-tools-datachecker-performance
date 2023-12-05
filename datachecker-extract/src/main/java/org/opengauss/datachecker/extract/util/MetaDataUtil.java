@@ -35,8 +35,11 @@ import java.util.stream.Collectors;
  */
 public class MetaDataUtil {
     private static final List<String> numberDataTypes =
-        List.of("integer", "int", "long", "smallint", "mediumint", "bigint");
-
+        List.of("integer", "int", "uint1", "uint2", "uint4", "uint8", "long", "decimal", "numeric", "smallint",
+            "NUMBER", "tinyint", "mediumint", "bigint");
+    private static final List<String> dataTypes =
+        List.of("integer", "int", "uint1", "uint2", "uint4", "uint8", "long", "decimal", "numeric", "NUMBER",
+            "smallint", "tinyint", "mediumint", "bigint", "character", "char", "varchar", "character varying","CHAR");
     /**
      * getTableColumns
      *
@@ -98,5 +101,12 @@ public class MetaDataUtil {
             return false;
         }
         return numberDataTypes.contains(primaryKey.getDataType());
+    }
+
+    public static boolean isInvalidPrimaryKey(ColumnsMetaData primaryKey) {
+        if (primaryKey.getColumnKey() != ColumnKey.PRI) {
+            return false;
+        }
+        return !dataTypes.contains(primaryKey.getDataType());
     }
 }

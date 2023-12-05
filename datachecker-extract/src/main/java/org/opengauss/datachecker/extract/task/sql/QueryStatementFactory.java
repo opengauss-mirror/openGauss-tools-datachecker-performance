@@ -37,8 +37,12 @@ public class QueryStatementFactory {
      */
     public AutoSliceQueryStatement createSliceQueryStatement(CheckPoint checkPoint, TableMetadata tableMetadata) {
         if (checkPoint.checkInvalidPrimaryKey(tableMetadata)) {
+            String dataType = tableMetadata.getPrimaryMetas()
+                                           .get(0)
+                                           .getDataType();
             throw new ExtractPrimaryKeyException(
-                "current not support primary key type  for this table " + tableMetadata.getTableName());
+                "current not support primary key type  for this table " + tableMetadata.getTableName() + " dataType : "
+                    + dataType);
         }
         return new SinglePrimaryAutoSliceQueryStatement(checkPoint);
     }
@@ -60,9 +64,9 @@ public class QueryStatementFactory {
     public FullQueryStatement createFullQueryStatement() {
         return tableMetadata -> {
             final SelectSqlBuilder sqlBuilder = new SelectSqlBuilder(tableMetadata);
-            sqlBuilder.isDivisions(false).builder();
-            return new QuerySqlEntry(tableMetadata.getTableName(), sqlBuilder.isDivisions(false).builder(), 0,
-                tableMetadata.getTableRows());
+            String fullSql = sqlBuilder.isDivisions(false)
+                                       .builder();
+            return new QuerySqlEntry(tableMetadata.getTableName(), fullSql, 0, tableMetadata.getTableRows());
         };
     }
 }

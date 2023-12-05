@@ -15,6 +15,7 @@
 
 package org.opengauss.datachecker.extract.controller;
 
+import org.apache.commons.collections4.MapUtils;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
@@ -32,6 +33,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -62,6 +64,10 @@ public class ConfigController {
     public void distributeConfig(@RequestBody GlobalConfig config) {
         ConfigCache.setCheckMode(config.getCheckMode());
         ConfigCache.put(ConfigConstants.CHECK_PATH,config.getProcessPath());
+        Map<String, Object> commonConfig = config.getCommonConfig();
+        if (MapUtils.isNotEmpty(commonConfig)) {
+            commonConfig.forEach(ConfigCache::put);
+        }
         processLogService.saveProcessLog();
         ruleAdapterService.init(config.getRules());
         log.info("init filter rule config ");

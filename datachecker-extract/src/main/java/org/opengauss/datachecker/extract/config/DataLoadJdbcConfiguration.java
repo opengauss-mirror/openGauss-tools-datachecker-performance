@@ -45,6 +45,7 @@ public class DataLoadJdbcConfiguration {
     private MysqlMetaDataMapper mysqlMetaDataMapper;
     @Resource
     private OpgsMetaDataMapper opgsMetaDataMapper;
+
     @Value("${spring.extract.dataLoadMode}")
     private DataLoad dataLoadMode;
 

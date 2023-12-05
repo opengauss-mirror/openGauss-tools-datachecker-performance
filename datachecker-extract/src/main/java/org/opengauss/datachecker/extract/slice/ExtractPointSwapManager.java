@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 /**
  * @author ：wangchao
@@ -75,7 +76,7 @@ public class ExtractPointSwapManager {
                         records.forEach(record -> {
                             if (Objects.equals(record.key(), Endpoint.CHECK.getDescription())) {
                                 CheckPointData pointData = JSONObject.parseObject(record.value(), CheckPointData.class);
-                                tableCheckPointCache.put(pointData.getTableName(), pointData.getCheckPointList());
+                                tableCheckPointCache.put(pointData.getTableName(), translateDigitPoint(pointData));
                                 deliveredCount.getAndIncrement();
                                 log.info("swap summarized checkpoint of table [{}]:[{}] ", deliveredCount, pointData);
                             }
@@ -92,6 +93,13 @@ public class ExtractPointSwapManager {
                 }
             }
         });
+    }
+
+    private List<Object> translateDigitPoint(CheckPointData pointData) {
+        return pointData.isDigit() ? pointData.getCheckPointList()
+                                              .stream()
+                                              .map(obj -> Long.parseLong((String) obj))
+                                              .collect(Collectors.toList()) : pointData.getCheckPointList();
     }
 
     private void trySubscribe() {
