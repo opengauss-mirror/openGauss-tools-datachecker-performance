@@ -18,6 +18,7 @@ package org.opengauss.datachecker.extract.dml;
 import org.apache.commons.lang3.StringUtils;
 import org.opengauss.datachecker.common.entry.enums.DataBaseType;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
+import org.opengauss.datachecker.common.util.SqlUtil;
 import org.opengauss.datachecker.extract.constants.ExtConstants;
 import org.springframework.lang.NonNull;
 import org.springframework.util.Assert;
@@ -79,7 +80,7 @@ public class SelectDmlBuilder extends DmlBuilder {
     public SelectDmlBuilder conditionPrimary(@NonNull ColumnsMetaData primaryMeta) {
         Assert.isTrue(StringUtils.isNotEmpty(primaryMeta.getColumnName()),
             "Table metadata primary key field name is empty");
-        condition = primaryMeta.getColumnName().concat(IN);
+        condition = SqlUtil.escape(primaryMeta.getColumnName(),dataBaseType).concat(IN);
         return this;
     }
 
@@ -133,6 +134,6 @@ public class SelectDmlBuilder extends DmlBuilder {
 
     public String build() {
         return Fragment.SELECT + columns + Fragment.FROM + schema + Fragment.LINKER + tableName + Fragment.WHERE
-            + condition + Fragment.END;
+            + condition;
     }
 }

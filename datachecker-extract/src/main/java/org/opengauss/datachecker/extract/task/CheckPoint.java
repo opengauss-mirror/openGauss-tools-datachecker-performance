@@ -16,10 +16,16 @@
 package org.opengauss.datachecker.extract.task;
 
 import org.apache.logging.log4j.Logger;
+import org.opengauss.datachecker.common.config.ConfigCache;
+import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.common.DataAccessParam;
+import org.opengauss.datachecker.common.entry.enums.DataBaseType;
+import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.util.LogUtils;
+import org.opengauss.datachecker.common.util.SqlUtil;
 import org.opengauss.datachecker.extract.data.access.DataAccessService;
+import org.opengauss.datachecker.extract.util.MetaDataUtil;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -35,12 +41,7 @@ import java.util.stream.Collectors;
  */
 public class CheckPoint {
     private static final Logger log = LogUtils.getLogger();
-    private static final List<String> numberDataTypes =
-        List.of("integer", "int", "uint1", "uint2", "uint4", "uint8", "long", "decimal", "numeric", "smallint","tinyint",
-            "mediumint", "bigint");
-    private static final List<String> dataTypes =
-        List.of("integer", "int", "uint1", "uint2", "uint4", "uint8", "long", "decimal", "numeric", "smallint","tinyint",
-            "mediumint", "bigint", "character", "char", "varchar", "character varying");
+
     private final DataAccessService dataAccessService;
 
     /**
@@ -66,10 +67,10 @@ public class CheckPoint {
         String pkName = getPkName(tableMetadata);
         String schema = tableMetadata.getSchema();
         String tableName = tableMetadata.getTableName();
-
-        DataAccessParam param = new DataAccessParam().setSchema(schema)
-                                                     .setName(tableName)
-                                                     .setColName(pkName);
+        DataBaseType dataBaseType = ConfigCache.getValue(ConfigConstants.DATA_BASE_TYPE, DataBaseType.class);
+        DataAccessParam param = new DataAccessParam().setSchema(SqlUtil.escape(schema, dataBaseType))
+                                                     .setName(SqlUtil.escape(tableName, dataBaseType))
+                                                     .setColName(SqlUtil.escape(pkName, dataBaseType));
         String minCheckPoint = dataAccessService.min(param);
         param.setOffset(slice);
         Object maxPoint = dataAccessService.max(param);
@@ -90,10 +91,9 @@ public class CheckPoint {
     }
 
     public boolean checkPkNumber(TableMetadata tableMetadata) {
-        String dataType = tableMetadata.getPrimaryMetas()
-                                       .get(0)
-                                       .getDataType();
-        return numberDataTypes.contains(dataType);
+        ColumnsMetaData pkColumn = tableMetadata.getPrimaryMetas()
+                                                .get(0);
+        return MetaDataUtil.isDigitPrimaryKey(pkColumn);
     }
 
     private String getPkName(TableMetadata tableMetadata) {
@@ -136,9 +136,8 @@ public class CheckPoint {
     }
 
     public boolean checkInvalidPrimaryKey(TableMetadata tableMetadata) {
-        String columnType = tableMetadata.getPrimaryMetas()
-                                         .get(0)
-                                         .getDataType();
-        return !dataTypes.contains(columnType);
+        ColumnsMetaData pkColumn = tableMetadata.getPrimaryMetas()
+                                                .get(0);
+        return MetaDataUtil.isInvalidPrimaryKey(pkColumn);
     }
 }

@@ -15,9 +15,12 @@
 
 package org.opengauss.datachecker.extract.config;
 
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.annotation.AsyncConfigurer;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 /**
  * AsyncConfig
@@ -29,5 +32,22 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableAsync
 @EnableScheduling
 @Configuration
-public class AsyncConfig {
+public class AsyncConfig implements AsyncConfigurer {
+
+    /**
+     * Asynchronous processing scenario for data extraction non-core business
+     *
+     * @return ThreadPoolTaskExecutor
+     */
+    @Override
+    @Bean(name = "taskAsyncExecutor")
+    public ThreadPoolTaskExecutor getAsyncExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(1);
+        executor.setMaxPoolSize(5);
+        executor.setQueueCapacity(1000);
+        executor.setThreadNamePrefix("TaskAsyncExecutor-");
+        executor.initialize();
+        return executor;
+    }
 }

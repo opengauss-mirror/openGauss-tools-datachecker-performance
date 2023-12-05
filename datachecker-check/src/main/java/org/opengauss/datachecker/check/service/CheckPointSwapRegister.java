@@ -219,6 +219,7 @@ public class CheckPointSwapRegister {
         }
 
         return checkPointData.setTableName(tableName)
+                             .setDigit(digit)
                              .setCheckPointList(listDistinctAndToSorted(digit, checkPointList));
     }
 

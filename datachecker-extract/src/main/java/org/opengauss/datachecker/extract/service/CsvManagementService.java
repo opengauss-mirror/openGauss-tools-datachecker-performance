@@ -86,8 +86,12 @@ public class CsvManagementService {
     }
 
     public void close() {
-        listener.stop();
+        if (Objects.nonNull(listener)) {
+            listener.stop();
+        }
         dynamicThreadPoolManager.closeDynamicThreadPoolMonitor();
-        sliceDispatcher.stop();
+        if (Objects.nonNull(sliceDispatcher)) {
+            sliceDispatcher.stop();
+        }
     }
 }

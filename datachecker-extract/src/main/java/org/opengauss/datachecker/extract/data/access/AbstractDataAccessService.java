@@ -21,7 +21,6 @@ import org.opengauss.datachecker.common.entry.enums.DataBaseMeta;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.extract.config.ExtractProperties;
-import org.opengauss.datachecker.extract.dao.MetaSqlMapper;
 import org.opengauss.datachecker.extract.task.ResultSetHandlerFactory;
 import org.opengauss.datachecker.extract.task.ResultSetHashHandler;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -117,6 +116,6 @@ public abstract class AbstractDataAccessService implements DataAccessService {
     }
 
     protected String getSql(DataBaseMeta type) {
-        return MetaSqlMapper.getMetaSql(properties.getDatabaseType(), type);
+        return null;
     }
 }

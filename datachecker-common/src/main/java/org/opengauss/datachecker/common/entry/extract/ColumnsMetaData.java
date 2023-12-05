@@ -40,6 +40,7 @@ import java.util.Objects;
 @ToString
 public class ColumnsMetaData implements Comparable<ColumnsMetaData> {
     public static final String AUTO_INCREMENT = "auto_increment";
+    private String schema;
     /**
      * Table
      */
