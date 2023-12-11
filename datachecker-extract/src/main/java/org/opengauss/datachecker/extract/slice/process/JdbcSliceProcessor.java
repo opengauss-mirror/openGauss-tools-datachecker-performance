@@ -114,9 +114,10 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
                 Map<String, String> result = new TreeMap<>();
                 List<long[]> offsetList = new LinkedList<>();
                 List<ListenableFuture<SendResult<String, String>>> batchFutures = new LinkedList<>();
+                final String tableName= slice.getTable();
                 while (resultSet.next()) {
                     rowCount++;
-                    batchFutures.add(sliceSender.resultSetTranslateAndSendSync(rsmd, resultSet, result, slice.getNo()));
+                    batchFutures.add(sliceSender.resultSetTranslateAndSendSync(tableName,rsmd, resultSet, result, slice.getNo()));
                     if (batchFutures.size() == FETCH_SIZE) {
                         offsetList.add(getBatchFutureRecordOffsetScope(batchFutures));
                         batchFutures.clear();

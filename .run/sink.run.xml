@@ -2,6 +2,7 @@
   <configuration default="false" name="sink" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" singleton="false">
     <module name="datachecker-extract" />
     <option name="SPRING_BOOT_MAIN_CLASS" value="org.opengauss.datachecker.extract.ExtractApplication" />
+    <option name="VM_PARAMETERS" value="-Xms256m -Xmx512m" />
     <option name="PROGRAM_PARAMETERS" value="--sink" />
     <option name="ALTERNATIVE_JRE_PATH" />
     <method v="2">

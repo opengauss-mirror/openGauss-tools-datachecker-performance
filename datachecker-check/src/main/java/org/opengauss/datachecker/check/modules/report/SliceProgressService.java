@@ -107,17 +107,13 @@ public class SliceProgressService {
     private void refreshCheckProgress(long count) {
         checkProgress.setTableCount(totalTable)
                      .setCompleteCount(completedTableCount)
-                     .setTotalRows(count)
-                     .setCurrentTime(LocalDateTime.now());
-        checkProgress.setTotal(TABLE_ROW_COUNT.values()
-                     .stream()
-                     .mapToLong(Long::longValue)
-                     .sum());
+                     .setRows(count)
+                     .setCurrentTime(LocalDateTime.now())
+                     .setTotal(checkProgress.getTotal() + count);
         long cost = Duration.between(checkProgress.getStartTime(), checkProgress.getCurrentTime())
                             .toSeconds();
         checkProgress.setCost(cost);
-        checkProgress.setSpeed((int) (checkProgress.getTotal() / (cost == 0 ? 1 : cost)));
-        checkProgress.setAvgSpeed(checkProgress.getSpeed());
+        checkProgress.setAvgSpeed((int) (checkProgress.getTotal() / (cost == 0 ? 1 : cost)));
         if (completedTableCount == totalTable) {
             checkProgress.setEndTime(checkProgress.getCurrentTime());
             checkProgress.setStatus(END);

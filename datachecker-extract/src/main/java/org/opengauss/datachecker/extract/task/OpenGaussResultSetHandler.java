@@ -16,7 +16,9 @@
 package org.opengauss.datachecker.extract.task;
 
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -32,18 +34,23 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
     private final Map<String, TypeHandler> typeHandlers = new ConcurrentHashMap<>();
 
     {
-        TypeHandler byteaToString = (rs, columnLabel, displaySize) -> bytesToString(rs.getBytes(columnLabel));
-        TypeHandler blobToString = (rs, columnLabel, displaySize) -> rs.getString(columnLabel);
-        TypeHandler clobToString = (rs, columnLabel, displaySize) -> rs.getString(columnLabel);
-        TypeHandler xmlToString = (rs, columnLabel, displaySize) -> rs.getString(columnLabel);
-        TypeHandler bitToString = (rs, columnLabel, displaySize) -> "B'" + rs.getString(columnLabel) + "'";
-        TypeHandler booleanToString = (rs, columnLabel, displaySize) -> booleanToString(rs, columnLabel);
-        TypeHandler numericToString = (rs, columnLabel, displaySize) -> floatingPointNumberToString(rs, columnLabel);
-        TypeHandler float4ToString = (rs, columnLabel, displaySize) -> float4ToString(rs, columnLabel);
+        TypeHandler byteaToString = (rs, columnLabel) -> bytesToString(rs.getBytes(columnLabel));
+        TypeHandler blobToString = (rs, columnLabel) -> rs.getString(columnLabel);
+        TypeHandler clobToString = (rs, columnLabel) -> rs.getString(columnLabel);
+        TypeHandler xmlToString = (rs, columnLabel) -> rs.getString(columnLabel);
+        TypeHandler bitToString = (rs, columnLabel) -> "B'" + rs.getString(columnLabel) + "'";
+        TypeHandler booleanToString = (rs, columnLabel) -> booleanToString(rs, columnLabel);
+        TypeHandler numericToString = (rs, columnLabel) -> floatingPointNumberToString(rs, columnLabel);
+        TypeHandler numeric0ToString = (rs, columnLabel) -> numeric0ToString(rs, columnLabel);
+        TypeHandler float4ToString = (rs, columnLabel) -> float4ToString(rs, columnLabel);
+        TypeHandler intToString = (rs, columnLabel) -> intToString(rs, columnLabel);
 
         // float4 - float real
+        typeHandlers.put(OpenGaussType.INT4, numeric0ToString);
+        typeHandlers.put(OpenGaussType.INTEGER, float4ToString);
         typeHandlers.put(OpenGaussType.FLOAT4, float4ToString);
         typeHandlers.put(OpenGaussType.NUMERIC, numericToString);
+        typeHandlers.put(OpenGaussType.NUMERIC0, numeric0ToString);
 
         // byte binary blob
         typeHandlers.put(OpenGaussType.BYTEA, byteaToString);
@@ -63,20 +70,40 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
         typeHandlers.put(OpenGaussType.TIMESTAMPTZ, this::getTimestampFormat);
     }
 
+    private String intToString(ResultSet rs, String columnLabel) throws SQLException {
+        return rs.getString(columnLabel);
+    }
+
     private String float4ToString(ResultSet rs, String columnLabel) throws SQLException {
         return Float.toString(rs.getFloat(columnLabel));
     }
 
     @Override
-    public String convert(ResultSet resultSet, String columnTypeName, String columnLabel, int displaySize)
-        throws SQLException {
-        if (typeHandlers.containsKey(columnTypeName)) {
+    public String convert(ResultSet resultSet, int columnIdx, ResultSetMetaData rsmd) throws SQLException {
+        String columnLabel = rsmd.getColumnLabel(columnIdx);
+        String columnTypeName = getPgColumnTypeName(rsmd, columnIdx);
+        if (OpenGaussType.isBigInteger(columnTypeName) || OpenGaussType.isNumeric0(columnTypeName,
+            rsmd.getPrecision(columnIdx), rsmd.getScale(columnIdx))) {
+            return numeric0ToString(resultSet, columnLabel);
+        } else if (OpenGaussType.isInteger(columnTypeName)) {
+            return intToString(resultSet, columnLabel);
+        } else if (typeHandlers.containsKey(columnTypeName)) {
             return typeHandlers.get(columnTypeName)
-                               .convert(resultSet, columnLabel, displaySize);
+                               .convert(resultSet, columnLabel);
         } else {
             Object object = resultSet.getObject(columnLabel);
             return Objects.isNull(object) ? NULL : object.toString();
         }
+    }
+
+    private String getPgColumnTypeName(ResultSetMetaData rsmd, int columnIdx) throws SQLException {
+        String columnTypeName = rsmd.getColumnTypeName(columnIdx);
+        if (columnTypeName.contains(OpenGaussType.pg_catalog)) {
+            columnTypeName = rsmd.getColumnTypeName(columnIdx)
+                                 .replaceAll(OpenGaussType.pg_catalog_type_quotation, OpenGaussType.empty)
+                                 .replace(OpenGaussType.pg_catalog_type_split, OpenGaussType.empty);
+        }
+        return columnTypeName;
     }
 
     protected String booleanToString(ResultSet rs, String columnLabel) throws SQLException {
@@ -86,11 +113,28 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
 
     @SuppressWarnings("all")
     interface OpenGaussType {
+        String pg_catalog = "pg_catalog";
+        String pg_catalog_type_quotation = "\"";
+        String pg_catalog_type_split = "pg_catalog.";
+        String empty = "";
         String BYTEA = "bytea";
         String BOOLEAN = "bool";
         String BLOB = "blob";
         String NUMERIC = "numeric";
+        String NUMERIC0 = "numeric0";
+        String FLOAT1 = "float4";
+        String FLOAT2 = "float4";
         String FLOAT4 = "float4";
+        String FLOAT8 = "float4";
+        String INTEGER = "Integer";
+        String INT1 = "int1";
+        String INT2 = "int2";
+        String INT4 = "int4";
+        String INT8 = "int8";
+        String UINT1 = "uint1";
+        String UINT2 = "uint2";
+        String UINT4 = "uint4";
+        String UINT8 = "uint8";
         String VARCHAR = "varchar";
         String BPCHAR = "bpchar";
         String DATE = "date";
@@ -100,5 +144,26 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
         String CLOB = "clob";
         String XML = "xml";
         String BIT = "bit";
+        List<String> digit =
+            List.of(NUMERIC, INT1, INT2, INT4, INT8, UINT1, UINT2, UINT4, UINT8, FLOAT1, FLOAT2, FLOAT4, FLOAT8,
+                INTEGER);
+        List<String> integerList = List.of(INT1, INT2, INT4, INT8, UINT1, UINT2, UINT4, UINT8, INTEGER);
+        List<String> bigintegerList = List.of(INT8, UINT8);
+
+        public static boolean isDigit(String typeName) {
+            return digit.contains(typeName);
+        }
+
+        public static boolean isNumeric0(String typeName, int precision, int scale) {
+            return NUMERIC.equalsIgnoreCase(typeName) && precision > 0 && scale == 0;
+        }
+
+        public static boolean isInteger(String typeName) {
+            return integerList.contains(typeName);
+        }
+
+        public static boolean isBigInteger(String typeName) {
+            return bigintegerList.contains(typeName);
+        }
     }
 }

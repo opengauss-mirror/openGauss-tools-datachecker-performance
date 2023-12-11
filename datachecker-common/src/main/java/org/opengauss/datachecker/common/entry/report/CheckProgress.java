@@ -29,15 +29,14 @@ import java.time.LocalDateTime;
  */
 @Data
 @Accessors(chain = true)
-@JSONType(orders = {"mode", "status", "tableCount", "completeCount", "total", "totalRows", "speed", "avgSpeed", "cost",
+@JSONType(orders = {"mode", "status", "tableCount", "completeCount", "total", "rows", "avgSpeed", "cost",
     "startTime", "currentTime", "endTime"})
 public class CheckProgress {
     private short status;
     private int tableCount;
     private int completeCount;
     private long total;
-    private long totalRows;
-    private int speed;
+    private long rows;
     private int avgSpeed;
     private long cost;
     private CheckMode mode;

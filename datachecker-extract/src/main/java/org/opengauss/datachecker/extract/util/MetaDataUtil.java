@@ -23,6 +23,7 @@ import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -39,7 +40,12 @@ public class MetaDataUtil {
             "NUMBER", "tinyint", "mediumint", "bigint");
     private static final List<String> dataTypes =
         List.of("integer", "int", "uint1", "uint2", "uint4", "uint8", "long", "decimal", "numeric", "NUMBER",
-            "smallint", "tinyint", "mediumint", "bigint", "character", "char", "varchar", "character varying","CHAR");
+            "smallint", "tinyint", "mediumint", "bigint", "character", "char", "varchar", "character varying", "CHAR");
+
+    private static final List<String> digitalDataTypes =
+        List.of("integer", "int", "uint1", "uint2", "uint4", "uint8", "long", "decimal", "numeric", "smallint",
+            "number", "tinyint", "mediumint", "bigint", "double", "float");
+
     /**
      * getTableColumns
      *
@@ -76,8 +82,10 @@ public class MetaDataUtil {
         if (Objects.isNull(columnsMetas)) {
             return emptyList();
         }
-        return columnsMetas.stream().sorted(Comparator.comparing(ColumnsMetaData::getOrdinalPosition))
-                           .map(ColumnsMetaData::getColumnName).collect(Collectors.toUnmodifiableList());
+        return columnsMetas.stream()
+                           .sorted(Comparator.comparing(ColumnsMetaData::getOrdinalPosition))
+                           .map(ColumnsMetaData::getColumnName)
+                           .collect(Collectors.toUnmodifiableList());
     }
 
     /**
@@ -101,6 +109,11 @@ public class MetaDataUtil {
             return false;
         }
         return numberDataTypes.contains(primaryKey.getDataType());
+    }
+
+    public static boolean isDigitKey(ColumnsMetaData primaryKey) {
+        return digitalDataTypes.contains(primaryKey.getDataType()
+                                                   .toLowerCase(Locale.getDefault()));
     }
 
     public static boolean isInvalidPrimaryKey(ColumnsMetaData primaryKey) {

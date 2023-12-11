@@ -22,9 +22,11 @@ import org.opengauss.datachecker.extract.data.access.CsvDataAccessService;
 import org.opengauss.datachecker.extract.data.access.DataAccessService;
 import org.opengauss.datachecker.extract.data.access.MysqlDataAccessService;
 import org.opengauss.datachecker.extract.data.access.OpgsDataAccessService;
+import org.opengauss.datachecker.extract.data.access.OracleDataAccessService;
 import org.opengauss.datachecker.extract.data.mapper.MetaDataMapper;
 import org.opengauss.datachecker.extract.data.mapper.MysqlMetaDataMapper;
 import org.opengauss.datachecker.extract.data.mapper.OpgsMetaDataMapper;
+import org.opengauss.datachecker.extract.data.mapper.OracleMetaDataMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -93,7 +95,9 @@ public class DataAccessAutoConfiguration {
                 return new OpgsDataAccessService((OpgsMetaDataMapper) mybatisMappers.get(targetDataBaseType));
             } else if (Objects.equals(DataBaseType.MS, targetDataBaseType)) {
                 return new MysqlDataAccessService((MysqlMetaDataMapper) mybatisMappers.get(targetDataBaseType));
-            }else {
+            } else if (Objects.equals(DataBaseType.O, targetDataBaseType)) {
+                return new OracleDataAccessService((OracleMetaDataMapper) mybatisMappers.get(targetDataBaseType));
+            } else {
                 return new MysqlDataAccessService((MysqlMetaDataMapper) mybatisMappers.get(DataBaseType.MS));
             }
         }

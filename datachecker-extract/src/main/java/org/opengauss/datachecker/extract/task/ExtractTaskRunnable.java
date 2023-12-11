@@ -141,13 +141,16 @@ public class ExtractTaskRunnable implements Runnable {
         try {
             FullQueryStatement fullQueryStatement = factory.createFullQueryStatement();
             QuerySqlEntry querySqlEntry = fullQueryStatement.builderByTaskOffset(context.getTableMetadata());
-            connection = jdbcOperation.get().tryConnectionAndClosedAutoCommit(context.evaluateMemorySize());
-            rowCount = jdbcOperation.get().resultSetHandler(connection, querySqlEntry, context, FETCH_SIZE);
+            connection = jdbcOperation.get()
+                                      .tryConnectionAndClosedAutoCommit(context.evaluateMemorySize());
+            rowCount = jdbcOperation.get()
+                                    .resultSetHandler(connection, querySqlEntry, context, FETCH_SIZE);
         } catch (SQLException ex) {
             log.error("jdbc query  {} error : {}", context.getTableName(), ex.getMessage());
             throw new ExtractDataAccessException();
         } finally {
-            jdbcOperation.get().releaseConnection(connection);
+            jdbcOperation.get()
+                         .releaseConnection(connection);
             log.info("query table [{}] row-count [{}] cost [{}] milliseconds", context.getTableName(), rowCount,
                 Duration.between(start, LocalDateTime.now())
                         .toMillis());
@@ -190,16 +193,19 @@ public class ExtractTaskRunnable implements Runnable {
             executor.submit(() -> {
                 Connection connection = null;
                 try {
-                    connection = jdbcOperation.get().tryConnectionAndClosedAutoCommit(context.evaluateMemorySize(sliceSize));
-                    totalRowCount.addAndGet(
-                        jdbcOperation.get().resultSetHandlerParallelContext(connection, queryEntry, context, FETCH_SIZE));
+                    connection = jdbcOperation.get()
+                                              .tryConnectionAndClosedAutoCommit(context.evaluateMemorySize(sliceSize));
+                    totalRowCount.addAndGet(jdbcOperation.get()
+                                                         .resultSetHandlerParallelContext(connection, queryEntry,
+                                                             context, FETCH_SIZE));
                 } catch (SQLException ex) {
                     exceptionCount.incrementAndGet();
                     log.error("jdbc parallel query [{}] error : {}", queryEntry.getSql(), ex.getMessage());
                     throw new ExtractDataAccessException();
                 } finally {
                     countDown(context.getTableName(), countDownLatch, executor);
-                    jdbcOperation.get().releaseConnection(connection);
+                    jdbcOperation.get()
+                                 .releaseConnection(connection);
                 }
             });
         });
@@ -223,8 +229,10 @@ public class ExtractTaskRunnable implements Runnable {
     }
 
     private void enableParallelQueryDop(int taskOffset) throws SQLException {
-        int dop = Math.min(taskOffset, jdbcOperation.get().getParallelQueryDop());
-        jdbcOperation.get().enableDatabaseParallelQuery(dop);
+        int dop = Math.min(taskOffset, jdbcOperation.get()
+                                                    .getParallelQueryDop());
+        jdbcOperation.get()
+                     .enableDatabaseParallelQuery(dop);
     }
 
     private String getTableColumnInformation(TableMetadata tableMetadata) {
@@ -235,7 +243,8 @@ public class ExtractTaskRunnable implements Runnable {
     }
 
     private boolean isNotSlice() {
-        return taskUtilHelper.noTableSlice() || jdbcOperation.get().getParallelQueryDop() == 1;
+        return taskUtilHelper.noTableSlice() || jdbcOperation.get()
+                                                             .getParallelQueryDop() == 1;
     }
 
     private void countDown(String tableName, CountDownLatch countDownLatch, ThreadPoolExecutor executor) {
@@ -559,7 +568,7 @@ public class ExtractTaskRunnable implements Runnable {
          */
         public void resultSetMultiplePartitionsHandler(ResultSetMetaData rsmd, ResultSet rs,
             Map<String, String> result) {
-            resultSetHandler.putOneResultSetToMap(rsmd, rs, result);
+            resultSetHandler.putOneResultSetToMap(getTableName(), rsmd, rs, result);
             RowDataHash dataHash = handler(primary, columns, result);
             result.clear();
             kafkaOperate.sendMultiplePartitionsRowData(dataHash);
@@ -571,7 +580,7 @@ public class ExtractTaskRunnable implements Runnable {
          * @param rs rs
          */
         public void resultSetSinglePartitionHandler(ResultSetMetaData rsmd, ResultSet rs, Map<String, String> result) {
-            resultSetHandler.putOneResultSetToMap(rsmd, rs, result);
+            resultSetHandler.putOneResultSetToMap(getTableName(), rsmd, rs, result);
             RowDataHash dataHash = handler(primary, columns, result);
             result.clear();
             kafkaOperate.sendSinglePartitionRowData(dataHash);

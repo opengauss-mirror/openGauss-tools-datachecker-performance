@@ -19,6 +19,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.opengauss.datachecker.common.entry.enums.DataBaseType;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.extract.constants.ExtConstants;
+import org.opengauss.datachecker.extract.util.MetaDataUtil;
 import org.springframework.lang.NonNull;
 import org.springframework.util.Assert;
 
@@ -66,7 +67,7 @@ public class DeleteDmlBuilder extends DmlBuilder {
     public DeleteDmlBuilder condition(@NonNull ColumnsMetaData primaryMeta, String value) {
         Assert.isTrue(StringUtils.isNotEmpty(primaryMeta.getColumnName()),
             "Table metadata primary key field name is empty");
-        if (DIGITAL.contains(primaryMeta.getDataType())) {
+        if (MetaDataUtil.isDigitKey(primaryMeta)) {
             condition = primaryMeta.getColumnName().concat(EQUAL).concat(value);
         } else {
             condition =
@@ -108,7 +109,7 @@ public class DeleteDmlBuilder extends DmlBuilder {
                 if (idx > 0) {
                     condition = condition.concat(AND);
                 }
-                if (DIGITAL.contains(mate.getDataType())) {
+                if (MetaDataUtil.isDigitKey(mate)) {
                     condition = condition.concat(mate.getColumnName()).concat(EQUAL).concat(split[idx]);
                 } else {
                     condition =

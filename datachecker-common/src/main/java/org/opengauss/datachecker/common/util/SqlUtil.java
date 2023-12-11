@@ -29,30 +29,38 @@ import java.util.function.Function;
  * @since ：11
  */
 public class SqlUtil {
-    private static final String MYSQL_ESCAPE = "`";
-    private static final String OPENGAUSS_ESCAPE = "\"";
-    private static final String OPENGAUSS_B_ESCAPE = "`";
+    public static final String escape_back_quote = "`";
+    public static final String escape_double_quote = "\"";
+
     private static final Map<DataBaseType, Function<String, String>> ESCAPE = new HashMap<>();
     private static final Map<DataBaseType, Function<String, String>> ESCAPEB = new HashMap<>();
 
     static {
-        ESCAPE.put(DataBaseType.MS, (key) -> MYSQL_ESCAPE + key + MYSQL_ESCAPE);
-        ESCAPE.put(DataBaseType.OG, (key) -> OPENGAUSS_ESCAPE + key + OPENGAUSS_ESCAPE);
-        ESCAPEB.put(DataBaseType.OG, (key) -> OPENGAUSS_B_ESCAPE + key + OPENGAUSS_B_ESCAPE);
+        ESCAPE.put(DataBaseType.MS, (key) -> quote(key, escape_back_quote));
+        ESCAPE.put(DataBaseType.OG, (key) -> quote(key, escape_double_quote));
+        ESCAPEB.put(DataBaseType.OG, (key) -> quote(key, escape_back_quote));
+        ESCAPE.put(DataBaseType.O, (key) -> quote(key, escape_double_quote));
+    }
+
+    public static String quote(String key, String quote) {
+        return quote + key + quote;
     }
 
     public static String escape(String content, DataBaseType dataBaseType) {
         if (ESCAPE.containsKey(dataBaseType)) {
-            return ESCAPE.get(dataBaseType).apply(content);
+            return ESCAPE.get(dataBaseType)
+                         .apply(content);
         }
         return content;
     }
 
     public static String escape(String content, DataBaseType dataBaseType, boolean isOgCompatibilityB) {
         if (isOgCompatibilityB) {
-            return ESCAPEB.get(dataBaseType).apply(content);
+            return ESCAPEB.get(dataBaseType)
+                          .apply(content);
         } else if (ESCAPE.containsKey(dataBaseType)) {
-            return ESCAPE.get(dataBaseType).apply(content);
+            return ESCAPE.get(dataBaseType)
+                         .apply(content);
         }
         return content;
     }
