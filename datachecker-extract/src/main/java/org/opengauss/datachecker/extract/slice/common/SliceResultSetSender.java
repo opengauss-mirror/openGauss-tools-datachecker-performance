@@ -66,25 +66,27 @@ public class SliceResultSetSender {
      * @param rs  rs
      * @param sNo sNo
      */
-    public void resultSetTranslateAndSend(ResultSetMetaData rsmd, ResultSet rs, Map<String, String> result, int sNo) {
-        RowDataHash dataHash = resultSetTranslate(rsmd, rs, result, sNo);
+    public void resultSetTranslateAndSend(String tableName, ResultSetMetaData rsmd, ResultSet rs,
+        Map<String, String> result, int sNo) {
+        RowDataHash dataHash = resultSetTranslate(tableName, rsmd, rs, result, sNo);
         kafkaOperate.sendRowData(dataHash);
     }
 
-    public void resultSetTranslateAndSendRandom(ResultSetMetaData rsmd, ResultSet rs, Map<String, String> result,
-        int sNo) {
-        RowDataHash dataHash = resultSetTranslate(rsmd, rs, result, sNo);
+    public void resultSetTranslateAndSendRandom(String tableName, ResultSetMetaData rsmd, ResultSet rs,
+        Map<String, String> result, int sNo) {
+        RowDataHash dataHash = resultSetTranslate(tableName, rsmd, rs, result, sNo);
         kafkaOperate.sendRowDataRandomPartition(dataHash);
     }
 
-    public ListenableFuture<SendResult<String, String>> resultSetTranslateAndSendSync(ResultSetMetaData rsmd,
-        ResultSet rs, Map<String, String> result, int sNo) {
-        RowDataHash dataHash = resultSetTranslate(rsmd, rs, result, sNo);
+    public ListenableFuture<SendResult<String, String>> resultSetTranslateAndSendSync(String tableName,
+        ResultSetMetaData rsmd, ResultSet rs, Map<String, String> result, int sNo) {
+        RowDataHash dataHash = resultSetTranslate(tableName, rsmd, rs, result, sNo);
         return kafkaOperate.sendRowDataSync(dataHash);
     }
 
-    public RowDataHash resultSetTranslate(ResultSetMetaData rsmd, ResultSet rs, Map<String, String> result, int sNo) {
-        resultSetHandler.putOneResultSetToMap(rsmd, rs, result);
+    public RowDataHash resultSetTranslate(String tableName, ResultSetMetaData rsmd, ResultSet rs,
+        Map<String, String> result, int sNo) {
+        resultSetHandler.putOneResultSetToMap(tableName, rsmd, rs, result);
         RowDataHash dataHash = handler(primary, columns, result);
         dataHash.setSNo(sNo);
         result.clear();

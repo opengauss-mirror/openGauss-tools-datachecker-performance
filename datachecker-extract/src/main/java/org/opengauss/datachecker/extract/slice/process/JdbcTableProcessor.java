@@ -97,7 +97,7 @@ public class JdbcTableProcessor extends AbstractTableProcessor {
                     int rowCount = 0;
                     while (resultSet.next()) {
                         rowCount++;
-                        sliceSender.resultSetTranslateAndSendRandom(rsmd, resultSet, result, i);
+                        sliceSender.resultSetTranslateAndSendRandom(table, rsmd, resultSet, result, i);
                     }
                     sliceSender.resultFlush();
                     tableRowCount += rowCount;
@@ -133,7 +133,7 @@ public class JdbcTableProcessor extends AbstractTableProcessor {
                 int rowCount = 0;
                 while (resultSet.next()) {
                     rowCount++;
-                    sliceSender.resultSetTranslateAndSendRandom(rsmd, resultSet, result, 0);
+                    sliceSender.resultSetTranslateAndSendRandom(table, rsmd, resultSet, result, 0);
                 }
                 tableRowCount += rowCount;
                 log.info("finish {} , {}: {}", table, rowCount, tableRowCount);
@@ -144,7 +144,8 @@ public class JdbcTableProcessor extends AbstractTableProcessor {
         } finally {
             jdbcOperation.releaseConnection(connection);
             log.info("query table [{}] row-count [{}] cost [{}] milliseconds", table, tableRowCount,
-                Duration.between(start, LocalDateTime.now()).toMillis());
+                Duration.between(start, LocalDateTime.now())
+                        .toMillis());
         }
         return tableRowCount;
     }

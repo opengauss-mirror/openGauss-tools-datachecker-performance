@@ -38,6 +38,8 @@ public class ResultSetHandlerFactory {
             return new MysqlResultSetHandler();
         } else if (Objects.equals(databaseType, DataBaseType.OG)) {
             return new OpenGaussResultSetHandler();
+        }  else if (Objects.equals(databaseType, DataBaseType.O)) {
+            return new OracleResultSetHandler();
         } else {
             return null;
         }

@@ -24,8 +24,12 @@ spring:
   kafka:
     bootstrap-servers: localhost:9092
   datasource:
+    # driver-class-name: com.mysql.cj.jdbc.Driver
+    # url: jdbc:mysql://127.0.0.1:3306/test?useSSL=false&useUnicode=true&characterEncoding=utf-8&serverTimezone=UTC&allowPublicKeyRetrieval=true
     driver-class-name: org.opengauss.Driver
-    url: jdbc:opengauss://localhost:5432/postgres?useSSL=false&useUnicode=true&characterEncoding=utf-8&serverTimezone=UTC
+    url: jdbc:opengauss://127.0.0.1:5432/postgres?useSSL=false&useUnicode=true&characterEncoding=utf-8&serverTimezone=UTC
+    # driver-class-name: oracle.jdbc.OracleDriver
+    # url: jdbc:oracle:thin:@127.0.0.1:1521/TEST
     username:
     password: 'xxxx'  # The password text may contain special characters, which need to be enclosed in quotation marks
     # Configure initialization connection pool size, minimum number of connections, and maximum number of connections

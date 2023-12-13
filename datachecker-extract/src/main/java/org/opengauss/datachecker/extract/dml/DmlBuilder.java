@@ -21,6 +21,7 @@ import org.opengauss.datachecker.common.entry.enums.DataBaseType;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.util.HexUtil;
 import org.opengauss.datachecker.common.util.SqlUtil;
+import org.opengauss.datachecker.extract.util.MetaDataUtil;
 
 import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
@@ -69,12 +70,7 @@ public class DmlBuilder {
      * and
      */
     protected static final String AND = " and ";
-    /**
-     * mysql dataType
-     */
-    protected static final List<String> DIGITAL =
-        List.of("int", "integer", "tinyint", "smallint", "mediumint", "bit", "bigint", "double", "float", "decimal",
-            "year");
+
     protected static final List<String> BLOB_LIST = List.of("blob", "tinyblob", "mediumblob", "longblob");
     protected static final List<String> BINARY = List.of("binary", "varbinary");
     /**
@@ -181,7 +177,7 @@ public class DmlBuilder {
         List<String> valueList = new ArrayList<>();
         columnsMetaList.forEach(columnMeta -> {
             final String columnName = columnMeta.getColumnName();
-            if (DIGITAL.contains(columnMeta.getDataType())) {
+            if (MetaDataUtil.isDigitKey(columnMeta)) {
                 valueList.add(columnsValue.get(columnName));
             } else if (BLOB_LIST.contains(columnMeta.getDataType())) {
                 valueList.add(SINGLE_QUOTES + columnsValue.get(columnName) + SINGLE_QUOTES);

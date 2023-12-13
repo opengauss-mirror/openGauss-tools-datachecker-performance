@@ -20,6 +20,7 @@ import org.opengauss.datachecker.common.entry.enums.DataBaseType;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.util.HexUtil;
+import org.opengauss.datachecker.extract.util.MetaDataUtil;
 
 import javax.validation.constraints.NotNull;
 import java.util.List;
@@ -107,7 +108,7 @@ public class UpdateDmlBuilder extends DmlBuilder {
         final List<ColumnsMetaData> primaryMetaDatas = metadata.getPrimaryMetas();
         for (ColumnsMetaData primaryMeta : primaryMetaDatas) {
             builder.append(primaryMeta.getColumnName()).append(Fragment.EQUAL);
-            if (isDigital(primaryMeta.getDataType())) {
+            if (MetaDataUtil.isDigitKey(primaryMeta)) {
                 builder.append(columnsValues.get(primaryMeta.getColumnName()));
             } else if (BLOB_LIST.contains(primaryMeta.getDataType())) {
                 builder.append(convertValue(HexUtil.toHex(columnsValues.get(primaryMeta.getColumnName()))));
@@ -127,9 +128,7 @@ public class UpdateDmlBuilder extends DmlBuilder {
         return Fragment.SINGLE_QUOTES + fieldValue + Fragment.SINGLE_QUOTES;
     }
 
-    private boolean isDigital(String dataType) {
-        return DIGITAL.contains(dataType);
-    }
+
 
     private String buildColumnsValue() {
         StringBuilder builder = new StringBuilder();
@@ -141,7 +140,7 @@ public class UpdateDmlBuilder extends DmlBuilder {
             final String columnName = columnMeta.getColumnName();
             builder.append(columnName).append(Fragment.EQUAL);
             final String columnValue = columnsValues.get(columnName);
-            if (isDigital(columnMeta.getDataType())) {
+            if (MetaDataUtil.isDigitKey(columnMeta)) {
                 builder.append(columnValue);
             } else if (BLOB_LIST.contains(columnMeta.getDataType())) {
                 builder.append(convertValue(HexUtil.toHex(columnValue)));

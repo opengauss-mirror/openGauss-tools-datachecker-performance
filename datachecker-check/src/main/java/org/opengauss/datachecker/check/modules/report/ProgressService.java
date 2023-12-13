@@ -135,10 +135,9 @@ public class ProgressService {
         return (process) -> {
             process.setCompleteCount(completeCount);
             process.setCost(calcCost(now));
-            process.setSpeed(checkRateCache.getCurrentSecondSpeed());
             process.setAvgSpeed(checkRateCache.getAvgSpeed(process.getCost()));
             process.setTotal(checkRateCache.getTotal());
-            process.setTotalRows(checkRateCache.getTotalRows());
+            process.setRows(checkRateCache.getTotalRows());
             process.setCurrentTime(now);
             if (completeCount == process.getTableCount()) {
                 process.setEndTime(now);

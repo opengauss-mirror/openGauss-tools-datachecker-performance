@@ -15,6 +15,7 @@ spring:
     schema: test
     databaseType: MS # For MySQL
     # databaseType: OG # For openGauss
+    # databaseType: O # For Oracle
     query-dop: 8 # jdbc Parallel Query  config
     dataLoadMode: jdbc # jdbc or csv
     debezium-enable: false
@@ -34,6 +35,8 @@ spring:
     url: jdbc:mysql://127.0.0.1:3306/mysql?useSSL=false&useUnicode=true&characterEncoding=utf-8&serverTimezone=UTC&allowPublicKeyRetrieval=true
     # driver-class-name: org.opengauss.Driver # For openGauss
     # url: # jdbc:opengauss://127.0.0.1:5432/postgres?useSSL=false&useUnicode=true&characterEncoding=utf-8&serverTimezone=UTC # For openGauss
+    # driver-class-name: oracle.jdbc.OracleDriver
+    # url: jdbc:oracle:thin:@127.0.0.1:1521/TEST
     username:
     password: 'xxxx' # The password text may contain special characters, which need to be enclosed in quotation marks
     # Configure initialization connection pool size, minimum number of connections, and maximum number of connections

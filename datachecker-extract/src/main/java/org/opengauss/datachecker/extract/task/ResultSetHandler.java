@@ -20,6 +20,7 @@ import org.opengauss.datachecker.common.util.HexUtil;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.lang.NonNull;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.sql.Blob;
 import java.sql.Date;
@@ -44,7 +45,7 @@ import java.util.stream.IntStream;
  * @since 11
  **/
 public abstract class ResultSetHandler {
-    private static final Logger log = LogUtils.getLogger();
+    protected static final Logger log = LogUtils.getLogger();
     protected static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     protected static final DateTimeFormatter YEAR = DateTimeFormatter.ofPattern("yyyy");
     protected static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm:ss");
@@ -54,36 +55,47 @@ public abstract class ResultSetHandler {
     protected static final String EMPTY = "";
     protected static final String NULL = null;
     protected static final String FLOATING_POINT_NUMBER_ZERO = "0.0";
+    protected static final String INT_NUMBER_ZERO = "0";
+
+    protected static final int NUMERIC_SCALE_F84 = -84;
+    protected static final int NUMERIC_SCALE_0 = 0;
 
     /**
      * Convert the current query result set into map according to the metadata information of the result set
      *
+     * @param tableName JDBC Data query table
      * @param rsmd      JDBC Data query result set
      * @param resultSet JDBC Data query result set
      * @param values    values
      * @return JDBC Data encapsulation results
      */
-    public Map<String, String> putOneResultSetToMap(ResultSetMetaData rsmd, ResultSet resultSet,
+    public Map<String, String> putOneResultSetToMap(final String tableName, ResultSetMetaData rsmd, ResultSet resultSet,
         Map<String, String> values) {
         try {
             IntStream.rangeClosed(1, rsmd.getColumnCount())
-                    .forEach(columnIdx -> {
-                        String columnLabel = null;
-                        String tableName = null;
-                        try {
-                            columnLabel = rsmd.getColumnLabel(columnIdx);
-                            tableName = rsmd.getTableName(columnIdx);
-                            values.put(columnLabel, convert(resultSet, rsmd.getColumnTypeName(columnIdx), columnLabel,
-                                    rsmd.getColumnDisplaySize(columnIdx)));
-                        } catch (SQLException ex) {
-                            log.error("putOneResultSetToMap Convert data [{}:{}] {} error ", tableName, columnLabel,
-                                    ex.getMessage(), ex);
-                        }
-                    });
+                     .forEach(columnIdx -> {
+                         String columnLabel = null;
+                         try {
+                             columnLabel = rsmd.getColumnLabel(columnIdx);
+                             values.put(columnLabel, convert(resultSet, columnIdx, rsmd));
+                         } catch (SQLException ex) {
+                             log.error(" Convert data [{}:{}] {} error ", tableName, columnLabel, ex.getMessage(), ex);
+                         }
+                     });
         } catch (SQLException ex) {
-            log.error("putOneResultSetToMap get data metadata information exception", ex);
+            log.error(" parse data metadata information exception", ex);
         }
         return values;
+    }
+
+    private String getTableName(ResultSetMetaData rsmd) {
+        String tableName = null;
+        try {
+            tableName = rsmd.getTableName(1);
+        } catch (SQLException ex) {
+            log.error(" Convert data [{}:{}] {} error ", tableName, ex.getMessage(), ex);
+        }
+        return tableName;
     }
 
     /**
@@ -94,11 +106,11 @@ public abstract class ResultSetHandler {
      */
     public Map<String, String> putOneResultSetToMap(ResultSet resultSet) throws SQLException {
         final ResultSetMetaData rsmd = resultSet.getMetaData();
-        return putOneResultSetToMap(rsmd, resultSet, new TreeMap<>());
+        String tableName = rsmd.getTableName(1);
+        return putOneResultSetToMap(tableName, rsmd, resultSet, new TreeMap<>());
     }
 
-    protected abstract String convert(ResultSet resultSet, String columnTypeName, String columnLabel, int displaySize)
-        throws SQLException;
+    protected abstract String convert(ResultSet resultSet, int columnIdx, ResultSetMetaData rsmd) throws SQLException;
 
     protected String floatingPointNumberToString(@NonNull ResultSet resultSet, String columnLabel) throws SQLException {
         BigDecimal bigDecimal = resultSet.getBigDecimal(columnLabel);
@@ -106,20 +118,23 @@ public abstract class ResultSetHandler {
             Objects.isNull(bigDecimal) ? FLOATING_POINT_NUMBER_ZERO : Double.toString(bigDecimal.doubleValue());
     }
 
-    protected String getDateFormat(@NonNull ResultSet resultSet, String columnLabel, int displaySize)
-        throws SQLException {
+    protected String numeric0ToString(ResultSet rs, String columnLabel) throws SQLException {
+        BigDecimal bigDecimal = rs.getBigDecimal(columnLabel);
+        return rs.wasNull() ? NULL : Objects.isNull(bigDecimal) ? NULL : bigDecimal.toBigInteger()
+                                                                                   .toString();
+    }
+
+    protected String getDateFormat(@NonNull ResultSet resultSet, String columnLabel) throws SQLException {
         final Date date = resultSet.getDate(columnLabel);
         return Objects.nonNull(date) ? DATE.format(date.toLocalDate()) : NULL;
     }
 
-    protected String getTimeFormat(@NonNull ResultSet resultSet, String columnLabel, int displaySize)
-        throws SQLException {
+    protected String getTimeFormat(@NonNull ResultSet resultSet, String columnLabel) throws SQLException {
         final Time time = resultSet.getTime(columnLabel);
         return Objects.nonNull(time) ? TIME.format(time.toLocalTime()) : NULL;
     }
 
-    protected String getTimestampFormat(@NonNull ResultSet resultSet, String columnLabel, int displaySize)
-        throws SQLException {
+    protected String getTimestampFormat(@NonNull ResultSet resultSet, String columnLabel) throws SQLException {
         final Timestamp timestamp =
             resultSet.getTimestamp(columnLabel, Calendar.getInstance(TimeZone.getTimeZone("GMT+8")));
         return Objects.nonNull(timestamp) ? formatTimestamp(timestamp) : NULL;
@@ -130,13 +145,12 @@ public abstract class ResultSetHandler {
             TIMESTAMP.format(timestamp.toLocalDateTime());
     }
 
-    protected String getYearFormat(@NonNull ResultSet resultSet, String columnLabel, int displaySize)
-        throws SQLException {
+    protected String getYearFormat(@NonNull ResultSet resultSet, String columnLabel) throws SQLException {
         final Date date = resultSet.getDate(columnLabel);
         return Objects.nonNull(date) ? YEAR.format(date.toLocalDate()) : NULL;
     }
 
-    protected String blobToString(Blob blob) throws SQLException {
+    protected String blobToString(Blob blob) throws SQLException, IOException {
         if (Objects.isNull(blob)) {
             return NULL;
         }
@@ -147,7 +161,7 @@ public abstract class ResultSetHandler {
         return HexUtil.byteToHex(bytes);
     }
 
-    protected String trim(@NonNull ResultSet resultSet, String columnLabel, int displaySize) throws SQLException {
+    protected String trim(@NonNull ResultSet resultSet, String columnLabel) throws SQLException {
         final String string = resultSet.getString(columnLabel);
         return string == null ? NULL : string.stripTrailing();
     }
@@ -159,10 +173,9 @@ public abstract class ResultSetHandler {
          *
          * @param resultSet   resultSet
          * @param columnLabel columnLabel
-         * @param displaySize displaySize
          * @return result
          * @throws SQLException SQLException
          */
-        String convert(ResultSet resultSet, String columnLabel, int displaySize) throws SQLException;
+        String convert(ResultSet resultSet, String columnLabel) throws SQLException;
     }
 }
