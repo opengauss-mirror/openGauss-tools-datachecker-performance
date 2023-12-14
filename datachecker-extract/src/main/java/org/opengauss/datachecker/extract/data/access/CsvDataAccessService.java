@@ -37,6 +37,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -91,16 +92,15 @@ public class CsvDataAccessService implements DataAccessService {
             throw new CsvDataAccessException("csv metadata load failed");
         }
         try {
-
             Stream<String> lineOfTables = Files.lines(pathOfTables);
-            lineOfTables.parallel().forEach(tableJson -> {
+            lineOfTables.forEach(tableJson -> {
                 CsvTableMeta csvTableMeta = JSONObject.parseObject(tableJson, CsvTableMeta.class);
                 tableMetadataMap.put(csvTableMeta.getTable(), csvTableMeta.toTableMetadata());
             });
 
             Stream<String> lineOfColumns = Files.lines(pathOfColumns);
             List<ColumnsMetaData> columns = new LinkedList<>();
-            lineOfColumns.parallel().forEach(columnJson -> {
+            lineOfColumns.forEach(columnJson -> {
                 CsvTableColumnMeta csvColumnMeta = JSONObject.parseObject(columnJson, CsvTableColumnMeta.class);
                 columns.add(csvColumnMeta.toColumnsMetaData());
             });
@@ -116,7 +116,7 @@ public class CsvDataAccessService implements DataAccessService {
             log.error("load table name of csv exception : ", e);
             throw new ExtractDataAccessException("load table name of csv exception");
         }
-        return tableMetadataMap.values().stream().collect(Collectors.toList());
+        return new ArrayList<>(tableMetadataMap.values());
     }
 
     @Override
