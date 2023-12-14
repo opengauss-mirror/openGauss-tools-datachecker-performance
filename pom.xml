@@ -49,6 +49,10 @@
     </modules>
     <repositories>
         <repository>
+            <id>aliyun</id>
+            <url>http://maven.aliyun.com/nexus/content/groups/public/</url>
+        </repository>
+        <repository>
             <id>confluent</id>
             <url>http://packages.confluent.io/maven/</url>
         </repository>
