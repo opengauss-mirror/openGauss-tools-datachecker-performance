@@ -88,16 +88,6 @@ public abstract class ResultSetHandler {
         return values;
     }
 
-    private String getTableName(ResultSetMetaData rsmd) {
-        String tableName = null;
-        try {
-            tableName = rsmd.getTableName(1);
-        } catch (SQLException ex) {
-            log.error(" Convert data [{}:{}] {} error ", tableName, ex.getMessage(), ex);
-        }
-        return tableName;
-    }
-
     /**
      * Convert the current query result set into map according to the metadata information of the result set
      *

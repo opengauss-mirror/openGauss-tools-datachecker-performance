@@ -67,7 +67,7 @@ public class SliceCheckEventHandler {
      */
     public void handle(SliceCheckEvent checkEvent) {
         if (checkTableStructure(checkEvent)) {
-            log.info("slice check event {} is dispatched.", checkEvent.getCheckName());
+            log.info("slice check event {} is dispatched, and checked level=[isTableLevel={}]", checkEvent.getCheckName(),checkEvent.isTableLevel());
             if (checkEvent.isTableLevel()) {
                 executor.submit(new TableCheckWorker(checkEvent, sliceCheckContext));
             } else {

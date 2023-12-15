@@ -195,7 +195,7 @@ public class TableCheckWorker implements Runnable {
                .error(resultMsg).topic(getConcatTableTopics()).schema(slice.getSchema())
                .conditionLimit(getConditionLimit()).partitions(slice.getPtn()).isTableStructureEquals(true)
                .startTime(startTime).endTime(LocalDateTime.now()).isExistTableMiss(false, null)
-               .rowCount((int) sliceRowCont).errorRate(20)
+               .rowCount((int) sliceRowCont).errorRate(20).fileName(slice.getName())
                .checkMode(ConfigCache.getValue(ConfigConstants.CHECK_MODE, CheckMode.class))
                .keyDiff(difference.getOnlyOnLeft(), difference.getDiffering(), difference.getOnlyOnRight());
         CheckDiffResult result = builder.build();

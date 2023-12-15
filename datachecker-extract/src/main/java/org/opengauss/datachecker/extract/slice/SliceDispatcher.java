@@ -17,21 +17,22 @@ package org.opengauss.datachecker.extract.slice;
 
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.config.ConfigCache;
+import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.extract.SliceVo;
+import org.opengauss.datachecker.common.entry.extract.TableMetadata;
+import org.opengauss.datachecker.common.entry.extract.Topic;
 import org.opengauss.datachecker.common.service.DynamicThreadPoolManager;
 import org.opengauss.datachecker.common.util.LogUtils;
-import org.opengauss.datachecker.common.util.MapUtils;
+import org.opengauss.datachecker.common.util.SpringUtil;
 import org.opengauss.datachecker.common.util.ThreadUtil;
+import org.opengauss.datachecker.extract.cache.TopicCache;
 import org.opengauss.datachecker.extract.data.BaseDataService;
 import org.opengauss.datachecker.extract.data.csv.CsvListener;
 import org.opengauss.datachecker.extract.slice.factory.SliceFactory;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import javax.annotation.Resource;
 import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadPoolExecutor;
 
 import static org.opengauss.datachecker.common.constant.DynamicTpConstant.EXTRACT_EXECUTOR;
@@ -45,11 +46,8 @@ import static org.opengauss.datachecker.common.constant.DynamicTpConstant.EXTRAC
  */
 public class SliceDispatcher implements Runnable {
     private static final Logger log = LogUtils.getLogger();
-    private static final int LOG_PERIOD = 60;
     private static final int MAX_DISPATCHER_QUEUE_SIZE = 100;
     private static final int WAIT_ONE_SECOND = 1000;
-
-    private static final Map<String, List<SliceVo>> unprocessedTableSlices = new ConcurrentHashMap<>();
 
     private final Object lock = new Object();
     private final SliceFactory sliceFactory;
@@ -57,9 +55,8 @@ public class SliceDispatcher implements Runnable {
     private final BaseDataService baseDataService;
     private final SliceRegister sliceRegister;
     private final DynamicThreadPoolManager dynamicThreadPoolManager;
-
+    private TopicCache topicCache;
     private boolean isRunning = true;
-    private int waitTimes = 0;
 
     /**
      * construct slice dispatcher
@@ -76,6 +73,7 @@ public class SliceDispatcher implements Runnable {
         this.baseDataService = baseDataService;
         this.dynamicThreadPoolManager = dynamicThreadPoolManager;
         this.sliceFactory = new SliceFactory(baseDataService.getDataSource());
+        this.topicCache = SpringUtil.getBean(TopicCache.class);
     }
 
     @Override
@@ -88,7 +86,6 @@ public class SliceDispatcher implements Runnable {
                 while (isRunning) {
                     waitingForIdle(executor);
                     SliceVo sliceVo = listener.poll();
-                    waitingForNewSlice(sliceVo);
                     if (Objects.nonNull(sliceVo)) {
                         // check table by rule of table
                         if (!baseDataService.checkTableContains(sliceVo.getTable())) {
@@ -99,7 +96,7 @@ public class SliceDispatcher implements Runnable {
                         register(sliceVo);
                         doTableSlice(executor, sliceVo);
                     } else {
-                        batchUnprocessedTableSlices(executor);
+                        ThreadUtil.sleepMax2Second();
                     }
                     if (listener.isFinished()) {
                         log.info("listener is finished , and will be closed");
@@ -108,7 +105,6 @@ public class SliceDispatcher implements Runnable {
                             ThreadUtil.sleepHalfSecond();
                         }
                         if (executor.getTaskCount() == executor.getCompletedTaskCount()) {
-                            sliceRegister.notifyDispatchCsvSliceFinished();
                             stop();
                             dynamicThreadPoolManager.closeDynamicThreadPoolMonitor();
                         }
@@ -132,59 +128,18 @@ public class SliceDispatcher implements Runnable {
     private void doTableSlice(ThreadPoolExecutor executor, SliceVo sliceVo) {
         String table = sliceVo.getTable();
         if (checkTopicRegistered(table)) {
-            if (unprocessedTableSlices.containsKey(table)) {
-                List<SliceVo> unprocessedSlices = unprocessedTableSlices.get(table);
-                doTableUnprocessedSlices(executor, table, unprocessedSlices);
-            }
+
             executor.submit(sliceFactory.createSliceProcessor(sliceVo));
+            log.info("process slice from current queue {}", sliceVo.getName());
         }
     }
 
-    /**
-     * if we poll from listener is null, it means listener queue is empty. we have no more slice to do.
-     * so , we batch process the unprocessedTableSlices .
-     *
-     * @param executor executor
-     */
-    private void batchUnprocessedTableSlices(ThreadPoolExecutor executor) {
-        unprocessedTableSlices.forEach((table, unprocessedSlices) -> {
-            if (checkTopicRegistered(table)) {
-                doTableUnprocessedSlices(executor, table, unprocessedSlices);
-            } else {
-                SliceVo sliceVo = unprocessedSlices.get(0);
-                sliceRegister.registerTopic(table, sliceVo.getPtnNum());
-            }
-        });
-    }
-
-    private void doTableUnprocessedSlices(ThreadPoolExecutor executor, String table, List<SliceVo> unprocessedSlices) {
-        List<SliceVo> processedSlices = new LinkedList<>();
-        unprocessedSlices.forEach(unprocessed -> {
-            executor.submit(sliceFactory.createSliceProcessor(unprocessed));
-            processedSlices.add(unprocessed);
-        });
-        processedSlices.forEach(processed -> MapUtils.remove(unprocessedTableSlices, table, processed));
-        processedSlices.clear();
-    }
-
-    /**
-     * if current poll slice is null ,and  unprocessedTableSlices queue is empty, so we wait current thread.
-     *
-     * @param sliceVo sliceVo
-     * @throws InterruptedException InterruptedException
-     */
-    private void waitingForNewSlice(SliceVo sliceVo) throws InterruptedException {
-        synchronized (lock) {
-            if (Objects.isNull(sliceVo) && unprocessedTableSlices.isEmpty()) {
-                waitTimes++;
-                if (waitTimes % LOG_PERIOD == 0) {
-                    log.info("slice dispatcher is waiting for slice task from {}", listener.getClass()
-                                                                                           .getSimpleName());
-                    waitTimes = 0;
-                }
-                lock.wait(WAIT_ONE_SECOND);
-            }
-        }
+    private void updateSliceFetchSize(int maxFetchSize, SliceVo slice) {
+        TableMetadata tableMetadata = baseDataService.queryTableMetadata(slice.getTable());
+        slice.setFetchSize(Math.min((int) tableMetadata.getTableRows(), maxFetchSize));
+        slice.setWholeTable(slice.getTotal() <= 1);
+        Topic topic = topicCache.getTopic(slice.getTable());
+        slice.setPtnNum(topic.getPtnNum());
     }
 
     /**
@@ -215,10 +170,12 @@ public class SliceDispatcher implements Runnable {
      * @param sliceVo sliceVo
      */
     private void register(SliceVo sliceVo) {
-        sliceRegister.register(sliceVo);
-        if (sliceVo.getPtnNum() > 0 && !sliceRegister.registerTopic(sliceVo.getTable(), sliceVo.getPtnNum())) {
-            MapUtils.put(unprocessedTableSlices, sliceVo.getTable(), sliceVo);
+        while (sliceVo.getPtnNum() > 0 && !sliceRegister.registerTopic(sliceVo.getTable(), sliceVo.getPtnNum())) {
+            ThreadUtil.sleepMax2Second();
         }
+        int maxFetchSize = ConfigCache.getIntValue(ConfigConstants.MAXIMUM_TABLE_SLICE_SIZE);
+        updateSliceFetchSize(maxFetchSize, sliceVo);
+        sliceRegister.register(sliceVo);
     }
 
     /**

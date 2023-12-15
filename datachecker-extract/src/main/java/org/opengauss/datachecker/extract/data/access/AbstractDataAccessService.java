@@ -42,14 +42,12 @@ import java.util.Map;
  * @since ：11
  */
 public abstract class AbstractDataAccessService implements DataAccessService {
-    private static final Logger log = LogUtils.getLogger();
+    protected static final Logger log = LogUtils.getLogger();
     protected boolean isOgCompatibilityB = false;
     @Resource
     protected JdbcTemplate jdbcTemplate;
     @Resource
     protected ExtractProperties properties;
-    private final ResultSetHashHandler resultSetHashHandler = new ResultSetHashHandler();
-    private final ResultSetHandlerFactory resultSetFactory = new ResultSetHandlerFactory();
 
     @Override
     public <T> List<T> query(String sql, Map<String, Object> param, RowMapper<T> rowMapper) {

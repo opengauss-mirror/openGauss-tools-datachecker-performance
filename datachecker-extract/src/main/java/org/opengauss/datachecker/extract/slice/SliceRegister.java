@@ -89,13 +89,6 @@ public class SliceRegister {
     }
 
     /**
-     * notify check server ,that dispatch csv slice is finished
-     */
-    public void notifyDispatchCsvSliceFinished() {
-        checkingClient.notifyDispatchCsvSliceFinished();
-    }
-
-    /**
      * start table checkpoint monitor
      */
     public void startCheckPointMonitor() {
