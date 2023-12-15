@@ -64,8 +64,10 @@ public class DeleteTopicsEventListener implements ApplicationListener<DeleteTopi
             final DeleteTopics deleteOption = (DeleteTopics) source;
             deleteTopic(deleteOption.getTopicList());
             feignClient.notifyCheckTableFinished(Endpoint.SOURCE, deleteOption.getTableName());
+            log.info("notified delete table[{}] topic: {}.", deleteOption.getTableName(), Endpoint.SOURCE);
             ThreadUtil.sleep(100);
             feignClient.notifyCheckTableFinished(Endpoint.SINK, deleteOption.getTableName());
+            log.info("notified delete table[{}] topic: {}.", deleteOption.getTableName(), Endpoint.SINK);
         } catch (Exception exception) {
             log.error("delete topic has error ", exception);
         } finally {

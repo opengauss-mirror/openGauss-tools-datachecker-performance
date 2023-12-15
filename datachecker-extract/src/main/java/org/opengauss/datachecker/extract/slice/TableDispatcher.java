@@ -129,7 +129,7 @@ public class TableDispatcher implements Runnable {
         tableSlice.setTotal(1);
         tableSlice.setEndpoint(ConfigCache.getEndPoint());
         tableSlice.setTableHash(tableMetadata.getTableHash());
-        tableSlice.setPtnNum(TopicUtil.calcPartitions(TaskUtil.calcAutoTaskCount(tableMetadata.getTableRows())));
+        tableSlice.setPtnNum(1);
         return tableSlice;
     }
 

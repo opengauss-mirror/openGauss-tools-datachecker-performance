@@ -130,6 +130,7 @@ public class CheckResultManagerService implements ApplicationContextAware {
         if (CollectionUtils.isNotEmpty(updateDiffs)) {
             RepairEntry update = new RepairEntry();
             update.setTable(tableFailed.getTable()).setSchema(tableFailed.getSchema())
+                  .setFileName(tableFailed.getFileName())
                   .setOgCompatibility(ogCompatibility).setDiffSet(updateDiffs);
             final List<String> updateRepairs = feignClient.buildRepairStatementUpdateDml(Endpoint.SOURCE, update);
             appendLogFile(repairFile, updateRepairs);
@@ -141,6 +142,7 @@ public class CheckResultManagerService implements ApplicationContextAware {
         if (CollectionUtils.isNotEmpty(insertDiffs)) {
             RepairEntry insert = new RepairEntry();
             insert.setTable(tableFailed.getTable()).setSchema(tableFailed.getSchema())
+                  .setFileName(tableFailed.getFileName())
                   .setOgCompatibility(ogCompatibility).setDiffSet(insertDiffs);
             final List<String> insertRepairs = feignClient.buildRepairStatementInsertDml(Endpoint.SOURCE, insert);
             appendLogFile(repairFile, insertRepairs);
@@ -152,6 +154,7 @@ public class CheckResultManagerService implements ApplicationContextAware {
         if (CollectionUtils.isNotEmpty(deleteDiffs)) {
             RepairEntry delete = new RepairEntry();
             delete.setTable(tableFailed.getTable()).setSchema(tableFailed.getSchema())
+                  .setFileName(tableFailed.getFileName())
                   .setOgCompatibility(ogCompatibility).setDiffSet(deleteDiffs);
             final List<String> deleteRepairs = feignClient.buildRepairStatementDeleteDml(Endpoint.SOURCE, delete);
             appendLogFile(repairFile, deleteRepairs);

@@ -116,9 +116,6 @@ public interface CheckingFeignClient {
     @PostMapping("/update/register/slice")
     void refreshRegisterSlice(@RequestBody SliceExtend sliceExt);
 
-    @PostMapping("/notify/dispatch/csv/slice/finished")
-    void notifyDispatchCsvSliceFinished();
-
     /**
      * start table checkpoint monitor
      */

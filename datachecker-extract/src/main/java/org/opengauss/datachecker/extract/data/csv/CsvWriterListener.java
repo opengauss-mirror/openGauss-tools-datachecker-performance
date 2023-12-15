@@ -35,7 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
@@ -47,7 +47,7 @@ import java.util.concurrent.LinkedBlockingQueue;
  */
 public class CsvWriterListener implements CsvListener {
     private static final Logger log = LogUtils.getLogger();
-    private final Map<String, List<SliceVo>> tableSliceLogs = new ConcurrentHashMap<>();
+    private final Map<String, List<SliceVo>> tableSliceLogs = new ConcurrentSkipListMap<>();
     private final BlockingQueue<SliceVo> listenerQueue = new LinkedBlockingQueue<>();
     private Tailer tailer;
     private TailerMonitor tailerMonitor;
@@ -63,14 +63,18 @@ public class CsvWriterListener implements CsvListener {
                 try {
                     isTailEnd = StringUtils.equalsIgnoreCase(line, ExtConstants.CSV_LISTENER_END);
                     if (isTailEnd) {
+                        log.info("writer tail end log ：{}", line);
+                        stop();
                         return;
                     }
                     JSONObject writeLog = JSONObject.parseObject(line);
                     if (skipNoInvalidSlice(writeLog)) {
+                        log.warn("writer skip no invalid slice log ：{}", line);
                         return;
                     }
                     String schema = writeLog.getString("schema");
                     if (skipNoMatchSchema(ConfigCache.getSchema(), schema)) {
+                        log.warn("writer skip no match schema log ：{}", line);
                         return;
                     }
                     SliceLogType sliceLogType = SliceLogType.valueOf(writeLog.getString("type"));
@@ -79,18 +83,20 @@ public class CsvWriterListener implements CsvListener {
                         checkSlicePtnNum(slice);
                         MapUtils.put(tableSliceLogs, slice.getTable(), slice);
                     } else if (Objects.equals(sliceLogType, SliceLogType.INDEX)) {
-                        SliceIndexVo sliceIndex = JSONObject.parseObject(line, SliceIndexVo.class,Feature.AllowISO8601DateFormat);
+                        SliceIndexVo sliceIndex =
+                            JSONObject.parseObject(line, SliceIndexVo.class, Feature.AllowISO8601DateFormat);
                         if (Objects.equals(sliceIndex.getIndexStatus(), SliceIndexStatus.END)) {
                             List<SliceVo> sliceList = tableSliceLogs.get(sliceIndex.getTable());
                             listenerQueue.addAll(sliceList);
                             tableSliceLogs.remove(sliceIndex.getTable());
+                            log.info("writer add table ：{}", sliceIndex.getTable());
                         } else if (Objects.equals(sliceIndex.getIndexStatus(), SliceIndexStatus.NONE)) {
                             tableSliceLogs.remove(sliceIndex.getTable());
                         }
                     }
-                    log.info("writer add log ：{}", line);
+                    log.debug("writer add log ：{}", line);
                 } catch (Exception ex) {
-                    log.error("writer log listener error ：" + ex.getMessage());
+                    log.error("writer log listener error ：{} : {}", ex.getMessage(), line);
                 }
             }
 

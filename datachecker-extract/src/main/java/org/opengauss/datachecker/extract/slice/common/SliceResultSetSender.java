@@ -42,10 +42,12 @@ import java.util.Map;
 public class SliceResultSetSender {
     protected static final Logger log = LogUtils.getBusinessLogger();
     private static final HashHandler hashHandler = new HashHandler();
+    private static final String csv_null_value = "null";
     private final ResultSetHandler resultSetHandler;
     private final SliceKafkaAgents kafkaOperate;
     private final List<String> columns;
     private final List<String> primary;
+    private final String tableName;
 
     /**
      * constructor
@@ -57,6 +59,7 @@ public class SliceResultSetSender {
         this.resultSetHandler = new ResultSetHandlerFactory().createHandler(tableMetadata.getDataBaseType());
         this.columns = MetaDataUtil.getTableColumns(tableMetadata);
         this.primary = MetaDataUtil.getTablePrimaryColumns(tableMetadata);
+        this.tableName = tableMetadata.getTableName();
         this.kafkaOperate = kafkaOperate;
     }
 
@@ -175,7 +178,8 @@ public class SliceResultSetSender {
 
     private void parse(String[] nextLine, Map<String, String> result) {
         for (int idx = 0; idx < nextLine.length && idx < columns.size(); idx++) {
-            result.put(columns.get(idx), nextLine[idx]);
+            result.put(columns.get(idx),
+                csv_null_value.equalsIgnoreCase(nextLine[idx]) ? csv_null_value : nextLine[idx]);
         }
     }
 }

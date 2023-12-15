@@ -54,18 +54,22 @@ public class CsvReaderListener implements CsvListener {
                 try {
                     isTailEnd = StringUtils.equalsIgnoreCase(line, ExtConstants.CSV_LISTENER_END);
                     if (isTailEnd) {
+                        log.info("reader tail end log ：{}", line);
+                        stop();
                         return;
                     }
                     SliceVo slice = JSONObject.parseObject(line, SliceVo.class);
                     if (skipNoInvalidSlice(slice)) {
+                        log.warn("reader skip no invalid slice log ：{}", line);
                         return;
                     }
                     if (skipNoMatchSchema(ConfigCache.getSchema(), slice.getSchema())) {
+                        log.warn("reader skip no match schema log ：{}", line);
                         return;
                     }
                     checkSlicePtnNum(slice);
                     listenerQueue.add(slice);
-                    log.info("reader add log ：{}", line);
+                    log.debug("reader add log ：{}", line);
                 } catch (Exception ex) {
                     log.error("reader log listener error ：" + ex.getMessage());
                 }

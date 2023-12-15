@@ -62,13 +62,13 @@ public class TaskRegisterCenter {
         lock.lock();
         try {
             if (center.containsKey(sliceVo.getName())) {
-                log.info("{} register slice [{}] , current = [{},{},{}]", sliceVo.getEndpoint(), sliceVo.getName(),
-                    tableCount.get(), sliceTotalCount.get(), center.size());
+                log.debug("{} register slice [{}] ", sliceVo.getEndpoint(), sliceVo.getName());
                 return;
             }
+            log.debug("{} register slice [{}] ", sliceVo.getEndpoint(), sliceVo.getName());
             center.put(sliceVo.getName(), sliceVo);
             addTableSliceCounter(sliceVo);
-            log.info("{} register slice [{}] , current = [{},{},{}]", sliceVo.getEndpoint(), sliceVo.getName(),
+            log.info("register slice [{}] , current = [tableCount={},sliceTotal={},currentSize={}]", sliceVo.getName(),
                 tableCount.get(), sliceTotalCount.get(), center.size());
         } finally {
             lock.unlock();
