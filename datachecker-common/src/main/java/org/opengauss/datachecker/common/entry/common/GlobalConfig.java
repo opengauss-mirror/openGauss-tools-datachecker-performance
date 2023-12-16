@@ -19,6 +19,7 @@ import lombok.Data;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.entry.enums.RuleType;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -31,6 +32,13 @@ import java.util.Map;
 public class GlobalConfig {
     private CheckMode checkMode;
     private String processPath;
-    private Map<String,Object> commonConfig;
+    private Map<String, Object> commonConfig;
     private Map<RuleType, List<Rule>> rules;
+
+    public void addCommonConfig(String key, Object value) {
+        if (commonConfig == null) {
+            commonConfig = new HashMap<>();
+        }
+        commonConfig.put(key, value);
+    }
 }

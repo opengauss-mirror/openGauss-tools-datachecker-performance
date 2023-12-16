@@ -29,8 +29,10 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.text.DecimalFormat;
 import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TimeZone;
@@ -45,6 +47,10 @@ import java.util.stream.IntStream;
  * @since 11
  **/
 public abstract class ResultSetHandler {
+    private static Map<Integer, DecimalFormat> decimalFormatCache = new HashMap<>();
+    private static final String decimal_format_pattern_start = "0.";
+    private static final String decimal_format_pattern_append_zero = "0";
+
     protected static final Logger log = LogUtils.getLogger();
     protected static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     protected static final DateTimeFormatter YEAR = DateTimeFormatter.ofPattern("yyyy");
@@ -59,6 +65,16 @@ public abstract class ResultSetHandler {
 
     protected static final int NUMERIC_SCALE_F84 = -84;
     protected static final int NUMERIC_SCALE_0 = 0;
+    protected static final int NUMERIC_PRECISION_0 = 0;
+    protected final boolean supplyZero;
+
+    public ResultSetHandler() {
+        this.supplyZero = false;
+    }
+
+    public ResultSetHandler(Boolean supplyZero) {
+        this.supplyZero = supplyZero;
+    }
 
     /**
      * Convert the current query result set into map according to the metadata information of the result set
@@ -101,6 +117,29 @@ public abstract class ResultSetHandler {
     }
 
     protected abstract String convert(ResultSet resultSet, int columnIdx, ResultSetMetaData rsmd) throws SQLException;
+
+    protected String floatingPointNumberToString(@NonNull ResultSet resultSet, String columnLabel, Integer scale)
+        throws SQLException {
+        DecimalFormat scaleFormatter = getDecimalFormat(scale);
+        BigDecimal bigDecimal = resultSet.getBigDecimal(columnLabel);
+        return resultSet.wasNull() ? FLOATING_POINT_NUMBER_ZERO :
+            Objects.isNull(bigDecimal) ? FLOATING_POINT_NUMBER_ZERO : scaleFormatter.format((bigDecimal.doubleValue()));
+    }
+
+    private static DecimalFormat getDecimalFormat(Integer scale) {
+        DecimalFormat scaleFormatter;
+        if (decimalFormatCache.containsKey(scale)) {
+            scaleFormatter = decimalFormatCache.get(scale);
+        } else {
+            String pattern = decimal_format_pattern_start;
+            for (int i = 0; i < scale; i++) {
+                pattern = pattern + decimal_format_pattern_append_zero;
+            }
+            scaleFormatter = new DecimalFormat(pattern);
+            decimalFormatCache.put(scale, scaleFormatter);
+        }
+        return scaleFormatter;
+    }
 
     protected String floatingPointNumberToString(@NonNull ResultSet resultSet, String columnLabel) throws SQLException {
         BigDecimal bigDecimal = resultSet.getBigDecimal(columnLabel);
