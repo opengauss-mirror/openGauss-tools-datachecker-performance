@@ -16,6 +16,7 @@
 package org.opengauss.datachecker.extract.slice.common;
 
 import org.apache.logging.log4j.Logger;
+import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.RowDataHash;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.util.LogUtils;
@@ -46,6 +47,7 @@ public class SliceResultSetSender {
     private final ResultSetHandler resultSetHandler;
     private final SliceKafkaAgents kafkaOperate;
     private final List<String> columns;
+    private final List<ColumnsMetaData> columnMetas;
     private final List<String> primary;
     private final String tableName;
 
@@ -58,6 +60,7 @@ public class SliceResultSetSender {
     public SliceResultSetSender(@NonNull TableMetadata tableMetadata, SliceKafkaAgents kafkaOperate) {
         this.resultSetHandler = new ResultSetHandlerFactory().createHandler(tableMetadata.getDataBaseType());
         this.columns = MetaDataUtil.getTableColumns(tableMetadata);
+        this.columnMetas = tableMetadata.getColumnsMetas();
         this.primary = MetaDataUtil.getTablePrimaryColumns(tableMetadata);
         this.tableName = tableMetadata.getTableName();
         this.kafkaOperate = kafkaOperate;
@@ -177,8 +180,10 @@ public class SliceResultSetSender {
     }
 
     private void parse(String[] nextLine, Map<String, String> result) {
-        for (int idx = 0; idx < nextLine.length && idx < columns.size(); idx++) {
-            result.put(columns.get(idx),
+        int idx;
+        for (ColumnsMetaData column : columnMetas) {
+            idx = column.getOrdinalPosition() - 1;
+            result.put(column.getColumnName(),
                 csv_null_value.equalsIgnoreCase(nextLine[idx]) ? csv_null_value : nextLine[idx]);
         }
     }

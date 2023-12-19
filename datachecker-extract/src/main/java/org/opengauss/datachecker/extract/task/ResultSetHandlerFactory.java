@@ -15,6 +15,8 @@
 
 package org.opengauss.datachecker.extract.task;
 
+import org.opengauss.datachecker.common.config.ConfigCache;
+import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.enums.DataBaseType;
 
 import java.util.Objects;
@@ -34,11 +36,12 @@ public class ResultSetHandlerFactory {
      * @return ResultSetHandler
      */
     public ResultSetHandler createHandler(DataBaseType databaseType) {
+        Boolean supplyZero = ConfigCache.getBooleanValue(ConfigConstants.FLOATING_POINT_DATA_SUPPLY_ZERO);
         if (Objects.equals(databaseType, DataBaseType.MS)) {
             return new MysqlResultSetHandler();
         } else if (Objects.equals(databaseType, DataBaseType.OG)) {
-            return new OpenGaussResultSetHandler();
-        }  else if (Objects.equals(databaseType, DataBaseType.O)) {
+            return new OpenGaussResultSetHandler(supplyZero);
+        } else if (Objects.equals(databaseType, DataBaseType.O)) {
             return new OracleResultSetHandler();
         } else {
             return null;

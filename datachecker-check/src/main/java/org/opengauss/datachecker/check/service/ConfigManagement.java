@@ -52,6 +52,8 @@ public class ConfigManagement {
     private int fetchMaxBytes;
     @Value("${spring.kafka.consumer.request-timeout-ms}")
     private int requestTimeoutMs;
+    @Value("${spring.check.floating-point-data-supply-zero}")
+    private boolean floatingPointDataSupplyZero;
 
     /**
      * config management init
@@ -61,6 +63,7 @@ public class ConfigManagement {
         ConfigCache.put(ConfigConstants.CHECK_PATH, checkProperties.getDataPath());
         ConfigCache.put(ConfigConstants.BUCKET_CAPACITY, checkProperties.getBucketExpectCapacity());
         ConfigCache.put(ConfigConstants.ENDPOINT, Endpoint.CHECK);
+        ConfigCache.put(ConfigConstants.FLOATING_POINT_DATA_SUPPLY_ZERO, floatingPointDataSupplyZero);
         initKafka();
     }
 

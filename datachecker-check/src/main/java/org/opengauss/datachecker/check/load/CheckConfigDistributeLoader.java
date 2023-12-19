@@ -21,6 +21,8 @@ import org.opengauss.datachecker.check.config.DataCheckProperties;
 import org.opengauss.datachecker.check.config.RuleConfig;
 import org.opengauss.datachecker.check.modules.rule.RuleParser;
 import org.opengauss.datachecker.check.service.ConfigManagement;
+import org.opengauss.datachecker.common.config.ConfigCache;
+import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.common.GlobalConfig;
 import org.opengauss.datachecker.common.entry.common.Rule;
 import org.opengauss.datachecker.common.entry.csv.CsvPathConfig;
@@ -73,6 +75,8 @@ public class CheckConfigDistributeLoader extends AbstractCheckLoader {
             GlobalConfig globalConfig = new GlobalConfig();
             globalConfig.setRules(rules);
             globalConfig.setCheckMode(checkMode);
+            globalConfig.addCommonConfig(ConfigConstants.FLOATING_POINT_DATA_SUPPLY_ZERO,
+                ConfigCache.getBooleanValue(ConfigConstants.FLOATING_POINT_DATA_SUPPLY_ZERO));
             globalConfig.setProcessPath(checkProperties.getDataPath());
             feignClient.distributeConfig(checkMode, globalConfig);
             log.info("check distribute rule config success.");

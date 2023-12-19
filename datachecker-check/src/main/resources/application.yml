@@ -12,6 +12,7 @@ spring:
   check:
     core-pool-size: 2
     maximum-pool-size: 10
+    floating-point-data-supply-zero: false
   application:
     name: gs_datacheck
   config:

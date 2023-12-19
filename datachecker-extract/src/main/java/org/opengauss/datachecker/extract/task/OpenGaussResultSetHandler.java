@@ -47,7 +47,7 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
 
         // float4 - float real
         typeHandlers.put(OpenGaussType.INT4, numeric0ToString);
-        typeHandlers.put(OpenGaussType.INTEGER, float4ToString);
+        typeHandlers.put(OpenGaussType.INTEGER, numeric0ToString);
         typeHandlers.put(OpenGaussType.FLOAT4, float4ToString);
         typeHandlers.put(OpenGaussType.NUMERIC, numericToString);
         typeHandlers.put(OpenGaussType.NUMERIC0, numeric0ToString);
@@ -70,6 +70,14 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
         typeHandlers.put(OpenGaussType.TIMESTAMPTZ, this::getTimestampFormat);
     }
 
+    public OpenGaussResultSetHandler() {
+        super();
+    }
+
+    public OpenGaussResultSetHandler(Boolean supplyZero) {
+        super(supplyZero);
+    }
+
     private String intToString(ResultSet rs, String columnLabel) throws SQLException {
         return rs.getString(columnLabel);
     }
@@ -82,8 +90,11 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
     public String convert(ResultSet resultSet, int columnIdx, ResultSetMetaData rsmd) throws SQLException {
         String columnLabel = rsmd.getColumnLabel(columnIdx);
         String columnTypeName = getPgColumnTypeName(rsmd, columnIdx);
-        if (OpenGaussType.isBigInteger(columnTypeName) || OpenGaussType.isNumeric0(columnTypeName,
-            rsmd.getPrecision(columnIdx), rsmd.getScale(columnIdx))) {
+        if (OpenGaussType.isNumeric(columnTypeName)) {
+            return convertNumericToString(rsmd, resultSet, columnIdx);
+        } else if (OpenGaussType.isFloat(columnTypeName)) {
+            return float4ToString(resultSet, columnLabel);
+        } else if (OpenGaussType.isBigInteger(columnTypeName)) {
             return numeric0ToString(resultSet, columnLabel);
         } else if (OpenGaussType.isInteger(columnTypeName)) {
             return intToString(resultSet, columnLabel);
@@ -93,6 +104,24 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
         } else {
             Object object = resultSet.getObject(columnLabel);
             return Objects.isNull(object) ? NULL : object.toString();
+        }
+    }
+
+    private String convertNumericToString(ResultSetMetaData rsmd, ResultSet resultSet, int columnIdx)
+        throws SQLException {
+        int precision = rsmd.getPrecision(columnIdx);
+        int scale = rsmd.getScale(columnIdx);
+        String columnLabel = rsmd.getColumnLabel(columnIdx);
+        if (OpenGaussType.isNumericDefault(precision, scale)) {
+            return floatingPointNumberToString(resultSet, columnLabel);
+        } else if (OpenGaussType.isNumericFloat(precision, scale)) {
+            if (supplyZero) {
+                return floatingPointNumberToString(resultSet, columnLabel, scale);
+            } else {
+                return floatingPointNumberToString(resultSet, columnLabel);
+            }
+        } else {
+            return numeric0ToString(resultSet, columnLabel);
         }
     }
 
@@ -149,13 +178,26 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
                 INTEGER);
         List<String> integerList = List.of(INT1, INT2, INT4, INT8, UINT1, UINT2, UINT4, UINT8, INTEGER);
         List<String> bigintegerList = List.of(INT8, UINT8);
+        List<String> floatList = List.of(FLOAT1, FLOAT2, FLOAT4, FLOAT8);
 
         public static boolean isDigit(String typeName) {
             return digit.contains(typeName);
         }
 
         public static boolean isNumeric0(String typeName, int precision, int scale) {
-            return NUMERIC.equalsIgnoreCase(typeName) && precision > 0 && scale == 0;
+            return isNumeric(typeName) && precision > NUMERIC_PRECISION_0 && scale == NUMERIC_SCALE_0;
+        }
+
+        public static boolean isFloat(String typeName) {
+            return floatList.contains(typeName);
+        }
+
+        public static boolean isNumericFloat(int precision, int scale) {
+            return precision > NUMERIC_PRECISION_0 && scale > NUMERIC_SCALE_0;
+        }
+
+        public static boolean isNumericDefault(int precision, int scale) {
+            return precision == NUMERIC_PRECISION_0 && scale == NUMERIC_SCALE_0;
         }
 
         public static boolean isInteger(String typeName) {
@@ -164,6 +206,10 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
 
         public static boolean isBigInteger(String typeName) {
             return bigintegerList.contains(typeName);
+        }
+
+        public static boolean isNumeric(String typeName) {
+            return NUMERIC.equalsIgnoreCase(typeName);
         }
     }
 }

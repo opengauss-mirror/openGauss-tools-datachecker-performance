@@ -47,6 +47,7 @@ public interface ConfigConstants {
 
     String MAXIMUM_TABLE_SLICE_SIZE = "spring.check.maximum-table-slice-size";
     String MAXIMUM_TOPIC_SIZE = "spring.check.maximum-topic-size";
+    String FLOATING_POINT_DATA_SUPPLY_ZERO = "spring.check.floating-point-data-supply-zero";
 
     /**
      * with table slice check, config the maximum number of threads in the thread pool
