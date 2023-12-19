@@ -36,11 +36,9 @@ public class MysqlResultSetHandler extends ResultSetHandler {
     private final Map<MysqlType, TypeHandler> typeHandlers = new ConcurrentHashMap<>();
 
     {
-        TypeHandler binaryToString = (rs, columnLabel) -> byteToStringTrim(rs.getBytes(columnLabel));
-        TypeHandler varbinaryToString = (rs, columnLabel) -> bytesToString(rs.getBytes(columnLabel));
+        TypeHandler binaryToString = (rs, columnLabel) -> bytesToString(rs.getBytes(columnLabel));
         TypeHandler blobToString = (rs, columnLabel) -> HexUtil.byteToHexTrim(rs.getBytes(columnLabel));
         TypeHandler numericToString = (rs, columnLabel) -> floatingPointNumberToString(rs, columnLabel);
-        TypeHandler bitBooleanToString = (rs, columnLabel) -> rs.getString(columnLabel);
 
         typeHandlers.put(MysqlType.FLOAT_UNSIGNED, numericToString);
         typeHandlers.put(MysqlType.FLOAT, numericToString);
@@ -48,10 +46,9 @@ public class MysqlResultSetHandler extends ResultSetHandler {
         typeHandlers.put(MysqlType.DOUBLE_UNSIGNED, numericToString);
         typeHandlers.put(MysqlType.DECIMAL, numericToString);
         typeHandlers.put(MysqlType.DECIMAL_UNSIGNED, numericToString);
-        typeHandlers.put(MysqlType.BIT, bitBooleanToString);
         // byte binary blob
         typeHandlers.put(MysqlType.BINARY, binaryToString);
-        typeHandlers.put(MysqlType.VARBINARY, varbinaryToString);
+        typeHandlers.put(MysqlType.VARBINARY, binaryToString);
 
         typeHandlers.put(MysqlType.BLOB, blobToString);
         typeHandlers.put(MysqlType.LONGBLOB, blobToString);
@@ -66,13 +63,11 @@ public class MysqlResultSetHandler extends ResultSetHandler {
         typeHandlers.put(MysqlType.YEAR, this::getYearFormat);
     }
 
-    private String bitToString(ResultSet resultSet, String columnLabel, int displaySize) throws SQLException {
-        if (displaySize == 1) {
-            return String.valueOf(resultSet.getInt(columnLabel));
-        } else {
-            Object object = resultSet.getObject(columnLabel);
-            return Objects.isNull(object) ? NULL : object.toString();
+    private String bitToString(ResultSet resultSet, String columnLabel, int precision) throws SQLException {
+        if (precision == 1) {
+            return resultSet.getString(columnLabel);
         }
+        return HexUtil.byteToHexTrim(resultSet.getBytes(columnLabel));
     }
 
     private String byteToStringTrim(byte[] bytes) {
@@ -83,8 +78,11 @@ public class MysqlResultSetHandler extends ResultSetHandler {
     protected String convert(ResultSet resultSet, int columnIdx, ResultSetMetaData rsmd) throws SQLException {
         String columnLabel = rsmd.getColumnLabel(columnIdx);
         String columnTypeName = rsmd.getColumnTypeName(columnIdx);
+        int precision = rsmd.getPrecision(columnIdx);
         final MysqlType mysqlType = MysqlType.getByName(columnTypeName);
-        if (typeHandlers.containsKey(mysqlType)) {
+        if (MysqlType.BIT.equals(mysqlType)) {
+            return bitToString(resultSet, columnLabel, precision);
+        } else if (typeHandlers.containsKey(mysqlType)) {
             return typeHandlers.get(mysqlType)
                                .convert(resultSet, columnLabel);
         } else {
