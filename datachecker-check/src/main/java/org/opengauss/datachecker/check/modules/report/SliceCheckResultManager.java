@@ -121,6 +121,7 @@ public class SliceCheckResultManager {
         CheckFailed failed = translateCheckFailed(List.of(result));
         String failedLogPath = ConfigCache.getCheckResult() + CheckResultConstants.FAILED_LOG_NAME;
         FileUtils.writeAppendFile(failedLogPath, JsonObjectUtil.prettyFormatMillis(failed) + ",");
+        refreshSummary();
     }
 
     /**
@@ -219,7 +220,8 @@ public class SliceCheckResultManager {
 
     private CheckFailed translateCheckFailed(List<CheckDiffResult> tableFiledList) {
         CheckFailed failed = new CheckFailed();
-        BeanUtils.copyProperties(tableFiledList.get(0), failed);
+        CheckDiffResult resultCommon = tableFiledList.get(0);
+        BeanUtils.copyProperties(resultCommon, failed);
         StringBuffer hasMore = new StringBuffer();
         Set<String> insertKeySet = fetchInsertDiffKeys.fetchKey(tableFiledList);
         Set<String> deleteKeySet = fetchDeleteDiffKeys.fetchKey(tableFiledList);
@@ -233,8 +235,10 @@ public class SliceCheckResultManager {
               .setKeyUpdateSet(getKeyList(updateKeySet, hasMore, "update key has more;"));
         String message = String.format(FAILED_MESSAGE, failed.getKeyInsertSize(), failed.getKeyUpdateSize(),
             failed.getKeyDeleteSize());
-        failed.setMessage(message)
-              .setHasMore(hasMore.toString())
+        if (resultCommon.isTableStructureEquals()) {
+            failed.setMessage(message);
+        }
+        failed.setHasMore(hasMore.toString())
               .setRowCount(fetchRowCount.fetchCount(tableFiledList))
               .setCost(calcCheckTaskCost(failed.getStartTime(), failed.getEndTime()));
         return failed;

@@ -55,6 +55,8 @@ public class CheckTableStructureService {
     private EndpointMetaDataManager endpointMetaDataManager;
     @Resource
     private SliceCheckResultManager sliceCheckResultManager;
+    @Resource
+    private TaskRegisterCenter taskRegisterCenter;
 
     private CheckTableInfo checkTableInfo = new CheckTableInfo();
 
@@ -62,11 +64,9 @@ public class CheckTableStructureService {
         if (source.size() == sink.size()) {
             final List<String> sourceUpperList = source.stream()
                                                        .map(ColumnsMetaData::getColumnName)
-                                                       .map(String::toUpperCase)
                                                        .collect(Collectors.toList());
             final List<String> diffKeyList = sink.stream()
                                                  .map(ColumnsMetaData::getColumnName)
-                                                 .map(String::toUpperCase)
                                                  .filter(key -> !sourceUpperList.contains(key))
                                                  .collect(Collectors.toList());
             return diffKeyList.isEmpty();
@@ -132,6 +132,7 @@ public class CheckTableStructureService {
         if (!isTableStructureEquals) {
             taskManagerService.refreshTableExtractStatus(tableName, Endpoint.CHECK, -1);
             LocalDateTime now = LocalDateTime.now();
+            checkTableInfo.addStructure(tableName);
             final Database database = checkEnvironment.getDatabase(Endpoint.SOURCE);
             final CheckDiffResultBuilder builder = CheckDiffResultBuilder.builder();
             CheckDiffResult result = builder.process(processNo)
@@ -141,6 +142,7 @@ public class CheckTableStructureService {
                                             .endTime(now)
                                             .schema(database.getSchema())
                                             .build();
+            taskRegisterCenter.refreshCheckedTableCompleted(tableName);
             sliceCheckResultManager.addTableStructureDiffResult(tableName,result);
             log.debug("compared  table[{}] field names not match source={},sink={}", tableName,
                 getFieldNames(sourceMeta), getFieldNames(sinkMeta));

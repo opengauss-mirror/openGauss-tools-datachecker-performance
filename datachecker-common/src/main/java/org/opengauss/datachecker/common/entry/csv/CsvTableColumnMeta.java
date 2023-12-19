@@ -19,6 +19,7 @@ import lombok.Data;
 import org.opengauss.datachecker.common.entry.enums.ColumnKey;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 
+import java.util.Locale;
 import java.util.Objects;
 
 /**
@@ -46,7 +47,7 @@ public class CsvTableColumnMeta {
     public ColumnsMetaData toColumnsMetaData() {
         ColumnsMetaData column = new ColumnsMetaData();
         column.setTableName(table)
-              .setColumnName(column_name)
+              .setColumnName(Objects.nonNull(column_name) ? column_name.toLowerCase(Locale.ENGLISH) : "")
               .setColumnType(column_data_type)
               .setDataType(Objects.nonNull(column_type) ? column_type : column_data_type)
               .setOrdinalPosition(column_index)

@@ -139,21 +139,40 @@ public class TaskRegisterCenter {
      * @param sliceVo slice
      */
     public boolean refreshAndCheckTableCompleted(SliceVo sliceVo) {
-        lock.lock();
-        try {
-            int tableReleaseSize = sliceTableCounter.get(sliceVo.getTable());
-            tableReleaseSize--;
-            sliceTableCounter.put(sliceVo.getTable(), tableReleaseSize);
-            log.debug("table [{}] slice release {}", sliceVo.getTable(), tableReleaseSize);
-            return tableReleaseSize == 0;
-        } finally {
-            lock.unlock();
-        }
+        return refreshCheckedTableCompleted(sliceVo.getTable());
     }
 
+    /**
+     * check table is all checked complete.
+     *
+     * @param tableCount table count
+     * @return boolean true | false
+     */
     public boolean checkCompletedAll(int tableCount) {
         return sliceTableCounter.values()
                                 .stream()
                                 .allMatch(count -> count == 0) && sliceTableCounter.size() == tableCount;
+    }
+
+    /**
+     * refresh table checked complete.
+     *
+     * @param tableName table
+     * @return boolean true|false
+     */
+    public boolean refreshCheckedTableCompleted(String tableName) {
+        lock.lock();
+        try {
+            int tableReleaseSize = 0;
+            if (sliceTableCounter.containsKey(tableName)) {
+                tableReleaseSize = sliceTableCounter.get(tableName);
+                tableReleaseSize--;
+                sliceTableCounter.put(tableName, tableReleaseSize);
+                log.debug("table [{}] slice release {}", tableName, tableReleaseSize);
+            }
+            return tableReleaseSize == 0;
+        } finally {
+            lock.unlock();
+        }
     }
 }

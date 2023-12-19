@@ -29,27 +29,54 @@ import java.util.List;
  * @since ：11
  */
 @Data
-@JSONType(orders = {"sinkLoss", "sinkExcess", "miss", "lossTables", "excessTables"})
+@JSONType(orders = {"sinkLoss", "sinkExcess", "miss", "structure", "lossTables", "excessTables", "structureTables"})
 public class CheckTableInfo {
     private int sourceTableTotalSize;
     private int sinkTableTotalSize;
     private int sinkLoss;
     private int sinkExcess;
     private int miss;
+    private int structure;
     private List<String> lossTables = new LinkedList<>();
     private List<String> excessTables = new LinkedList<>();
+    private List<String> structureTables = new LinkedList<>();
 
+    /**
+     * add source loss table
+     *
+     * @param tableName table
+     */
     public void addSource(String tableName) {
         lossTables.add(tableName);
         sinkLoss++;
     }
 
+    /**
+     * add sink loss table
+     *
+     * @param tableName table
+     */
     public void addSink(String tableName) {
         excessTables.add(tableName);
         sinkExcess++;
     }
 
+    /**
+     * add table structure checked failed
+     *
+     * @param tableName table
+     */
+    public void addStructure(String tableName) {
+        structureTables.add(tableName);
+        structure++;
+    }
+
+    /**
+     * get check table count
+     *
+     * @return count
+     */
     public int fetchCheckedTableCount() {
-        return (sourceTableTotalSize + sinkTableTotalSize - sinkLoss - sinkExcess) / 2;
+        return (sourceTableTotalSize + sinkTableTotalSize - sinkLoss - sinkExcess) / 2 - structure;
     }
 }
