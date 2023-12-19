@@ -59,7 +59,7 @@
 
     <select id="queryTableColumnsMetaDataB" resultMap="columnMetadataMap">
         select ca1.*,
-            case when my_seq.sequence_name is null then '' else 'auto_increment' end as extra from (( SELECT c.relname tableName ,a.attname columnName , a.attnum ordinalPosition,
+            case when my_seq.sequence_name is null then '' else 'auto_increment' end as extra from (( SELECT c.relname tableName ,lower(a.attname) columnName , a.attnum ordinalPosition,
             (CASE WHEN (t.typtype = 'd'::`char`)  THEN CASE WHEN ((bt.typelem <![CDATA[<>]]> (0)::oid) AND (bt.typlen = (-1))) THEN 'ARRAY'::text  WHEN (nbt.nspname = 'pg_catalog'::name)
             THEN format_type(t.typbasetype, NULL::integer)  ELSE 'USER-DEFINED'::text END ELSE CASE WHEN ((t.typelem <![CDATA[<>]]> (0)::oid) AND (t.typlen = (-1)))
             THEN 'ARRAY'::text WHEN (nt.nspname = 'pg_catalog'::name) THEN format_type(a.atttypid, NULL::integer)  ELSE 'USER-DEFINED'::text END END)::information_schema.character_data AS dataType ,

@@ -15,6 +15,7 @@
 
 package org.opengauss.datachecker.check.client;
 
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.constant.WorkerSwitch;
 import org.opengauss.datachecker.common.entry.common.GlobalConfig;
 import org.opengauss.datachecker.common.entry.common.RepairEntry;
@@ -26,6 +27,7 @@ import org.opengauss.datachecker.common.entry.extract.ExtractTask;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.exception.CheckingException;
 import org.opengauss.datachecker.common.exception.DispatchClientException;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.web.Result;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.NonNull;
@@ -44,6 +46,8 @@ import java.util.Map;
  */
 @Service
 public class FeignClientService {
+    private static final Logger log = LogUtils.getLogger();
+
     @Autowired
     private ExtractSourceFeignClient extractSourceClient;
     @Autowired
@@ -269,18 +273,20 @@ public class FeignClientService {
     }
 
     public void shutdown(String message) {
-        List.of(Endpoint.SOURCE, Endpoint.SINK)
-            .parallelStream()
-            .forEach(endpoint -> {
-                shutdown(endpoint, message);
-            });
+        shutdown(Endpoint.SOURCE, message);
+        shutdown(Endpoint.SINK, message);
     }
 
-    private void shutdown(Endpoint endpoint, String message) {
+    private boolean shutdown(Endpoint endpoint, String message) {
+        Result<Void> result;
         try {
-            getClient(endpoint).shutdown(message);
+            result = getClient(endpoint).shutdown(message);
         } catch (Exception ignored) {
+            result = Result.error(ignored.getMessage());
+            log.error("shutdown {} service error", endpoint);
         }
+        log.info("shutdown {} service {}}", endpoint, result.getMessage());
+        return result.isSuccess();
     }
 
     /**

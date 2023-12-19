@@ -79,6 +79,7 @@ public class SliceCheckEventHandler {
                           .getTableHash(), checkEvent.getSink()
                                                      .getTableHash());
             handleTableStructureDiff(checkEvent);
+            registerCenter.refreshCheckedTableCompleted(checkEvent.getSlice().getTable());
         }
     }
 
