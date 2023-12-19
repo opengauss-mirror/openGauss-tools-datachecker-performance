@@ -27,7 +27,8 @@ public class HexUtil {
             bit = bs[i] & 0x0f;
             sb.append(CHARS[bit]);
         }
-        return sb.toString().trim();
+        return sb.toString()
+                 .trim();
     }
 
     /**
@@ -39,7 +40,9 @@ public class HexUtil {
     public static String byteToHex(byte[] data) {
         StringBuilder result = new StringBuilder();
         for (byte datum : data) {
-            result.append(Integer.toHexString((datum & 0xFF) | 0x100).toUpperCase().substring(1, 3));
+            result.append(Integer.toHexString((datum & 0xFF) | 0x100)
+                                 .toUpperCase()
+                                 .substring(1, 3));
         }
         return result.toString();
     }
@@ -85,13 +88,68 @@ public class HexUtil {
         while (fast < end) {
             if (data[fast] != 0) {
                 while (slow < fast) {
-                    result.append(Integer.toHexString((data[slow++] & 0xFF) | 0x100).toUpperCase().substring(1, 3));
+                    result.append(Integer.toHexString((data[slow++] & 0xFF) | 0x100)
+                                         .toUpperCase()
+                                         .substring(1, 3));
                 }
                 slow = fast;
             }
             fast++;
         }
-        result.append(Integer.toHexString((data[slow] & 0xFF) | 0x100).toUpperCase().substring(1, 3));
+        result.append(Integer.toHexString((data[slow] & 0xFF) | 0x100)
+                             .toUpperCase()
+                             .substring(1, 3));
         return result.toString();
+    }
+
+    /**
+     * binary string translate to hex string
+     *
+     * @param binary binary
+     * @return hex
+     */
+    public static String binaryToHex(String binary) {
+        if (!isValidBinary(binary)) {
+            return "";
+        }
+        String paddedBinary = padZeroes(binary);
+        StringBuilder hexBuilder = new StringBuilder();
+        for (int i = 0; i < paddedBinary.length(); i += 4) {
+            char group = getBinaryToHexChar(paddedBinary.substring(i, i + 4));
+            hexBuilder.append(group);
+        }
+        return hexBuilder.toString();
+    }
+
+    private static boolean isValidBinary(String binary) {
+        return binary != null && !binary.isEmpty() && binary.matches("[0-1]+");
+    }
+
+    private static String padZeroes(String binary) {
+        while (binary.length() % 4 != 0) {
+            binary = "0" + binary;
+        }
+        return binary;
+    }
+
+    private static char getBinaryToHexChar(String binaryGroup) {
+        return BinaryHex.valueOf(binaryGroup).hexChar;
+    }
+
+    /**
+     * binary hex mapping
+     */
+    enum BinaryHex {
+        B0000("0000", '0'), B0001("0001", '1'), B0002("0010", '2'), B0003("0011", '3'), B0004("0100", '4'), B0005(
+            "0101", '5'), B0006("0110", '6'), B0007("1000", '7'), B0008("0001", '8'), B0009("1001", '9'), B00010("1010",
+            'A'), B00011("1011", 'B'), B00012("1100", 'C'), B00013("1101", 'D'), B00014("1110", 'E'), B00015("1111",
+            'F');
+        private final String code;
+        private final char hexChar;
+
+        BinaryHex(String code, char hexChar) {
+            this.code = code;
+            this.hexChar = hexChar;
+        }
     }
 }

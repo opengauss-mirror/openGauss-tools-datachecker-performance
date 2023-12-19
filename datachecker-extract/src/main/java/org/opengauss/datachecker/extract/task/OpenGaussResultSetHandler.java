@@ -15,10 +15,13 @@
 
 package org.opengauss.datachecker.extract.task;
 
+import org.opengauss.datachecker.common.util.HexUtil;
+
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -38,7 +41,8 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
         TypeHandler blobToString = (rs, columnLabel) -> rs.getString(columnLabel);
         TypeHandler clobToString = (rs, columnLabel) -> rs.getString(columnLabel);
         TypeHandler xmlToString = (rs, columnLabel) -> rs.getString(columnLabel);
-        TypeHandler bitToString = (rs, columnLabel) -> "B'" + rs.getString(columnLabel) + "'";
+        TypeHandler bitToString = (rs, columnLabel) -> bitToString(rs, columnLabel);
+        TypeHandler binaryToString = (rs, columnLabel) -> binaryToString(rs, columnLabel);
         TypeHandler booleanToString = (rs, columnLabel) -> booleanToString(rs, columnLabel);
         TypeHandler numericToString = (rs, columnLabel) -> floatingPointNumberToString(rs, columnLabel);
         TypeHandler numeric0ToString = (rs, columnLabel) -> numeric0ToString(rs, columnLabel);
@@ -59,6 +63,8 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
         typeHandlers.put(OpenGaussType.CLOB, clobToString);
         typeHandlers.put(OpenGaussType.XML, xmlToString);
         typeHandlers.put(OpenGaussType.BIT, bitToString);
+        typeHandlers.put(OpenGaussType.binary, binaryToString);
+        typeHandlers.put(OpenGaussType.varbinary, binaryToString);
 
         // The openGauss jdbc driver obtains the character,character varying  type as varchar
         typeHandlers.put(OpenGaussType.BPCHAR, this::trim);
@@ -68,6 +74,16 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
         typeHandlers.put(OpenGaussType.TIME, this::getTimeFormat);
         typeHandlers.put(OpenGaussType.TIMESTAMP, this::getTimestampFormat);
         typeHandlers.put(OpenGaussType.TIMESTAMPTZ, this::getTimestampFormat);
+    }
+
+    private String binaryToString(ResultSet rs, String columnLabel) throws SQLException {
+        String binary = rs.getString(columnLabel);
+        return rs.wasNull() ? NULL : Objects.isNull(binary) ? NULL : binary.substring(2)
+                                                                           .toUpperCase(Locale.ENGLISH);
+    }
+
+    private String bitToString(ResultSet rs, String columnLabel) throws SQLException {
+        return HexUtil.binaryToHex(rs.getString(columnLabel));
     }
 
     public OpenGaussResultSetHandler() {
@@ -123,6 +139,7 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
         } else {
             return numeric0ToString(resultSet, columnLabel);
         }
+
     }
 
     private String getPgColumnTypeName(ResultSetMetaData rsmd, int columnIdx) throws SQLException {
@@ -173,6 +190,8 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
         String CLOB = "clob";
         String XML = "xml";
         String BIT = "bit";
+        String binary = "binary";
+        String varbinary = "varbinary";
         List<String> digit =
             List.of(NUMERIC, INT1, INT2, INT4, INT8, UINT1, UINT2, UINT4, UINT8, FLOAT1, FLOAT2, FLOAT4, FLOAT8,
                 INTEGER);
