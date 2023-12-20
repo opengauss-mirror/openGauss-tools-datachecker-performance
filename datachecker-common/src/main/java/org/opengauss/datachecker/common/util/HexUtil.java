@@ -1,6 +1,23 @@
+/*
+ * Copyright (c) 2022-2022 Huawei Technologies Co.,Ltd.
+ *
+ * openGauss is licensed under Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *
+ *           http://license.coscl.org.cn/MulanPSL2
+ *
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+ * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+ * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
+ */
+
 package org.opengauss.datachecker.common.util;
 
 /**
+ * HexUtil
+ *
  * @author ：wangchao
  * @date ：Created in 2023/3/10
  * @since ：11
@@ -133,23 +150,26 @@ public class HexUtil {
     }
 
     private static char getBinaryToHexChar(String binaryGroup) {
-        return BinaryHex.valueOf(binaryGroup).hexChar;
+        return BinaryHex.hexOf(binaryGroup);
     }
 
     /**
      * binary hex mapping
      */
-    enum BinaryHex {
-        B0000("0000", '0'), B0001("0001", '1'), B0002("0010", '2'), B0003("0011", '3'), B0004("0100", '4'), B0005(
-            "0101", '5'), B0006("0110", '6'), B0007("1000", '7'), B0008("0001", '8'), B0009("1001", '9'), B00010("1010",
-            'A'), B00011("1011", 'B'), B00012("1100", 'C'), B00013("1101", 'D'), B00014("1110", 'E'), B00015("1111",
-            'F');
-        private final String code;
+    public enum BinaryHex {
+        B0000("0000", '0'), B0001("0001", '1'), B0010("0010", '2'), B0011("0011", '3'), B0100("0100", '4'), B0101(
+            "0101", '5'), B0110("0110", '6'), B0111("0111", '7'), B1000("1000", '8'), B1001("1001", '9'), B1010("1010",
+            'A'), B1011("1011", 'B'), B1100("1100", 'C'), B1101("1101", 'D'), B1110("1110", 'E'), B1111("1111", 'F');
+        private final String name;
         private final char hexChar;
 
-        BinaryHex(String code, char hexChar) {
-            this.code = code;
+        BinaryHex(String name, char hexChar) {
+            this.name = name;
             this.hexChar = hexChar;
+        }
+
+        public static char hexOf(String name) {
+            return valueOf("B" + name).hexChar;
         }
     }
 }
