@@ -41,6 +41,7 @@ import java.util.Objects;
 public class JdbcDataOperations {
     private static final Logger log = LogUtils.getBusinessLogger();
     private static final String OPEN_GAUSS_PARALLEL_QUERY = "set query_dop to %s;";
+    private static final String OPEN_GAUSS_EXTRA_FLOAT_DIGITS = "set extra_float_digits to 0;";
     private static final int LOG_WAIT_TIMES = 600;
 
     private final DataSource jdbcDataSource;
@@ -88,8 +89,20 @@ public class JdbcDataOperations {
         Connection connection = jdbcDataSource.getConnection();
         if (connection.getAutoCommit()) {
             connection.setAutoCommit(false);
+            setExtraFloatDigitsParameter(connection);
         }
         return connection;
+    }
+
+    public void setExtraFloatDigitsParameter(Connection connection) {
+        if (Objects.equals(DataBaseType.OG, ConfigCache.getValue(ConfigConstants.DATA_BASE_TYPE, DataBaseType.class))) {
+            try {
+                PreparedStatement ps = connection.prepareStatement(OPEN_GAUSS_EXTRA_FLOAT_DIGITS);
+                ps.execute();
+            } catch (SQLException sql) {
+                sql.printStackTrace();
+            }
+        }
     }
 
     /**
@@ -108,14 +121,12 @@ public class JdbcDataOperations {
      * @param queryDop queryDop
      * @throws SQLException SQLException
      */
-    public void enableDatabaseParallelQuery(int queryDop) throws SQLException {
+    public void enableDatabaseParallelQuery(Connection connection, int queryDop) throws SQLException {
         if (Objects.equals(DataBaseType.OG, ConfigCache.getValue(ConfigConstants.DATA_BASE_TYPE, DataBaseType.class))) {
-            Connection connection = getConnectionAndClosedAutoCommit();
-            try (PreparedStatement ps = connection
-                .prepareStatement(String.format(OPEN_GAUSS_PARALLEL_QUERY, queryDop))) {
+            try (PreparedStatement ps = connection.prepareStatement(
+                String.format(OPEN_GAUSS_PARALLEL_QUERY, queryDop))) {
                 ps.execute();
             }
-            DataSourceUtils.doReleaseConnection(connection, jdbcDataSource);
         }
     }
 

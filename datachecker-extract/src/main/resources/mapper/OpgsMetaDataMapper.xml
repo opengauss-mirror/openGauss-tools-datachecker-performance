@@ -100,9 +100,7 @@
 
     <select id="queryPointList" resultType="string">
         select s.${param.colName}
-        from (
-                 SELECT ROWNUM rn, ${param.colName} from ${param.schema}.${param.name} order by ${param.colName} asc
-             ) s
+        from ( select row_number() over(order by r.${param.colName} asc) as rn,r.${param.colName} from ${param.schema}.${param.name}  r ) s
         where mod(s.rn, #{param.offset}) = 0
     </select>
 </mapper>
