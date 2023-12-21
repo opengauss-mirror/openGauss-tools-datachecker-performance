@@ -46,8 +46,9 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
         TypeHandler booleanToString = (rs, columnLabel) -> booleanToString(rs, columnLabel);
         TypeHandler numericToString = (rs, columnLabel) -> floatingPointNumberToString(rs, columnLabel);
         TypeHandler numeric0ToString = (rs, columnLabel) -> numeric0ToString(rs, columnLabel);
-        TypeHandler float4ToString = (rs, columnLabel) -> float4ToString(rs, columnLabel);
+        TypeHandler float4ToString = (rs, columnLabel) -> floatingPointNumberToString(rs, columnLabel);
         TypeHandler intToString = (rs, columnLabel) -> intToString(rs, columnLabel);
+        TypeHandler bpCharToString = (rs, columnLabel) -> fixedLenCharToString(rs, columnLabel);
 
         // float4 - float real
         typeHandlers.put(OpenGaussType.INT4, numeric0ToString);
@@ -55,6 +56,7 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
         typeHandlers.put(OpenGaussType.FLOAT4, float4ToString);
         typeHandlers.put(OpenGaussType.NUMERIC, numericToString);
         typeHandlers.put(OpenGaussType.NUMERIC0, numeric0ToString);
+        typeHandlers.put(OpenGaussType.BPCHAR, bpCharToString);
 
         // byte binary blob
         typeHandlers.put(OpenGaussType.BYTEA, byteaToString);
@@ -65,9 +67,6 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
         typeHandlers.put(OpenGaussType.BIT, bitToString);
         typeHandlers.put(OpenGaussType.binary, binaryToString);
         typeHandlers.put(OpenGaussType.varbinary, binaryToString);
-
-        // The openGauss jdbc driver obtains the character,character varying  type as varchar
-        typeHandlers.put(OpenGaussType.BPCHAR, this::trim);
 
         // date time timestamp
         typeHandlers.put(OpenGaussType.DATE, this::getDateFormat);
@@ -98,10 +97,6 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
         return rs.getString(columnLabel);
     }
 
-    private String float4ToString(ResultSet rs, String columnLabel) throws SQLException {
-        return Float.toString(rs.getFloat(columnLabel));
-    }
-
     @Override
     public String convert(ResultSet resultSet, int columnIdx, ResultSetMetaData rsmd) throws SQLException {
         String columnLabel = rsmd.getColumnLabel(columnIdx);
@@ -109,7 +104,7 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
         if (OpenGaussType.isNumeric(columnTypeName)) {
             return convertNumericToString(rsmd, resultSet, columnIdx);
         } else if (OpenGaussType.isFloat(columnTypeName)) {
-            return float4ToString(resultSet, columnLabel);
+            return floatingPointNumberToString(resultSet, columnLabel);
         } else if (OpenGaussType.isBigInteger(columnTypeName)) {
             return numeric0ToString(resultSet, columnLabel);
         } else if (OpenGaussType.isInteger(columnTypeName)) {

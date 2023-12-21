@@ -74,6 +74,9 @@ public class SliceVo extends BaseSlice {
     }
 
     public String toSimpleString() {
+        if (super.getTotal() == 1) {
+            return super.getName() + " total=" + super.getTotal() + " no=" + super.getNo() + ", [ fetch full ]";
+        }
         return super.getName() + " total=" + super.getTotal() + " no=" + super.getNo() + ", [" + super.getBeginIdx()
             + " , " + super.getEndIdx() + " ]" + " fetchSize=" + super.getFetchSize();
     }

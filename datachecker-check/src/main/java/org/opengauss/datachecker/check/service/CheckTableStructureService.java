@@ -64,9 +64,11 @@ public class CheckTableStructureService {
         if (source.size() == sink.size()) {
             final List<String> sourceUpperList = source.stream()
                                                        .map(ColumnsMetaData::getColumnName)
+                                                       .map(String::toLowerCase)
                                                        .collect(Collectors.toList());
             final List<String> diffKeyList = sink.stream()
                                                  .map(ColumnsMetaData::getColumnName)
+                                                 .map(String::toLowerCase)
                                                  .filter(key -> !sourceUpperList.contains(key))
                                                  .collect(Collectors.toList());
             return diffKeyList.isEmpty();
@@ -143,7 +145,7 @@ public class CheckTableStructureService {
                                             .schema(database.getSchema())
                                             .build();
             taskRegisterCenter.refreshCheckedTableCompleted(tableName);
-            sliceCheckResultManager.addTableStructureDiffResult(tableName,result);
+            sliceCheckResultManager.addTableStructureDiffResult(tableName, result);
             log.debug("compared  table[{}] field names not match source={},sink={}", tableName,
                 getFieldNames(sourceMeta), getFieldNames(sinkMeta));
         }
@@ -169,7 +171,7 @@ public class CheckTableStructureService {
                                         .isExistTableMiss(true, onlyExistEndpoint)
                                         .build();
         taskManagerService.refreshTableExtractStatus(tableName, Endpoint.CHECK, -1);
-        sliceCheckResultManager.addTableStructureDiffResult(tableName,result);
+        sliceCheckResultManager.addTableStructureDiffResult(tableName, result);
         log.error("compared the field names in table[{}](case ignored) and the result is not match", tableName);
         return onlyExistEndpoint;
     }
@@ -191,7 +193,12 @@ public class CheckTableStructureService {
     @FunctionalInterface
     interface CompareTableStructure {
         /**
-         * Compare whether the source and destination table structures are the same
+         * Compare whether the source and destination table structures are the same.
+         * <p>
+         * When comparing table structures, ignore the capitalization of field names.
+         * But in metadata, the capitalization of column names cannot be modified,
+         * otherwise there is a possibility that query columns do not exist.
+         * This is because the database itself determines the column case recognition pattern.
          *
          * @param source source
          * @param sink   sink

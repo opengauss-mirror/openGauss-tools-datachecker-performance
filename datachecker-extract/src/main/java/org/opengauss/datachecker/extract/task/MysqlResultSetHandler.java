@@ -39,6 +39,7 @@ public class MysqlResultSetHandler extends ResultSetHandler {
         TypeHandler binaryToString = (rs, columnLabel) -> bytesToString(rs.getBytes(columnLabel));
         TypeHandler blobToString = (rs, columnLabel) -> HexUtil.byteToHexTrim(rs.getBytes(columnLabel));
         TypeHandler numericToString = (rs, columnLabel) -> floatingPointNumberToString(rs, columnLabel);
+        TypeHandler charToString = (rs, columnLabel) -> fixedLenCharToString(rs, columnLabel);
 
         typeHandlers.put(MysqlType.FLOAT_UNSIGNED, numericToString);
         typeHandlers.put(MysqlType.FLOAT, numericToString);
@@ -49,6 +50,8 @@ public class MysqlResultSetHandler extends ResultSetHandler {
         // byte binary blob
         typeHandlers.put(MysqlType.BINARY, binaryToString);
         typeHandlers.put(MysqlType.VARBINARY, binaryToString);
+
+        typeHandlers.put(MysqlType.CHAR, charToString);
 
         typeHandlers.put(MysqlType.BLOB, blobToString);
         typeHandlers.put(MysqlType.LONGBLOB, blobToString);

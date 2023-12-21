@@ -15,7 +15,6 @@
 
 package org.opengauss.datachecker.check.load;
 
-import org.opengauss.datachecker.check.modules.check.ExportCheckResult;
 import org.opengauss.datachecker.check.modules.report.SliceProgressService;
 import org.opengauss.datachecker.check.service.CheckService;
 import org.opengauss.datachecker.check.event.KafkaTopicDeleteProvider;

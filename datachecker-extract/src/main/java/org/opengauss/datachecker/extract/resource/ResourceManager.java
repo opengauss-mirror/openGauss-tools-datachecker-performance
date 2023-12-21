@@ -85,8 +85,7 @@ public class ResourceManager {
         lock.lock();
         try {
             tryAvailableTimes.incrementAndGet();
-            final JvmInfo memory = MemoryManager.getJvmInfo();
-            if (connectionCount.get() > 2 && memory.isAvailable(freeSize)) {
+            if (connectionCount.get() > 2 && checkFreeMemory(freeSize)) {
                 connectionCount.decrementAndGet();
                 tryAvailableTimes.set(0);
                 return true;
@@ -96,6 +95,16 @@ public class ResourceManager {
                 }
                 return false;
             }
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public boolean checkFreeMemory(long allocSize) {
+        lock.lock();
+        try {
+            long freeMemory = Runtime.getRuntime().freeMemory();
+            return freeMemory > allocSize;
         } finally {
             lock.unlock();
         }

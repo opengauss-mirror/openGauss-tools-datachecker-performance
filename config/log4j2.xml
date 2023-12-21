@@ -14,7 +14,7 @@
   ~ See the Mulan PSL v2 for more details.
   -->
 
-<Configuration status="INFO" monitorInterval="600">
+<Configuration status="OFF" monitorInterval="600">
     <Properties>
         <!--Property LOG_HOME must be absolute path dir -->
         <Property name="LOG_HOME">logs</Property>
@@ -76,11 +76,15 @@
         </AsyncLogger>
         <AsyncLogger name="business" level="${LOG_LEVEL}">
             <AppenderRef ref="business"/>
-        </AsyncLogger>
-        <AsyncLogger name="kafka" level="${LOG_LEVEL}">
             <AppenderRef ref="kafka"/>
         </AsyncLogger>
         <logger name="org.apache.kafka" level="off" />
+        <logger name="oshi.util" level="off" />
+        <logger name="org.hibernate.validator" level="off" />
+        <logger name="org.springframework" level="off" />
+        <logger name="_org.springframework.web" level="off" />
+        <logger name="org.mybatis.spring" level="off" />
+        <logger name="com.alibaba.druid.pool" level="off" />
     </Loggers>
 
 </Configuration>

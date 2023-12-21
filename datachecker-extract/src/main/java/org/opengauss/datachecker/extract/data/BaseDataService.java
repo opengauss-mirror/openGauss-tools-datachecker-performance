@@ -34,6 +34,7 @@ import javax.sql.DataSource;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -195,11 +196,23 @@ public class BaseDataService {
         return ruleAdapterService.executeColumnRule(columns);
     }
 
+    /**
+     * Compare whether the source and destination table structures are the same.
+     * <p>
+     * When comparing table structures, ignore the capitalization of field names.
+     * But in metadata, the capitalization of column names cannot be modified,
+     * otherwise there is a possibility that query columns do not exist.
+     * This is because the database itself determines the column case recognition pattern.
+     *
+     * @param columnsMetas columnsMetas
+     * @return cloumn hash
+     */
     private long calcTableHash(List<ColumnsMetaData> columnsMetas) {
         StringBuffer buffer = new StringBuffer();
         columnsMetas.sort(Comparator.comparing(ColumnsMetaData::getOrdinalPosition));
         columnsMetas.forEach(column -> {
-            buffer.append(column.getColumnName())
+            buffer.append(column.getColumnName()
+                                .toLowerCase(Locale.ENGLISH))
                   .append(column.getOrdinalPosition());
         });
         return HASH_UTIL.hashBytes(buffer.toString());

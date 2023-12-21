@@ -49,7 +49,7 @@ import java.util.stream.IntStream;
 public abstract class ResultSetHandler {
     private static Map<Integer, DecimalFormat> decimalFormatCache = new HashMap<>();
     private static final String decimal_format_pattern_start = "0.";
-    private static final String decimal_format_pattern_append_zero = "0";
+    private static final String decimal_append_zero = "0";
 
     protected static final Logger log = LogUtils.getLogger();
     protected static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -104,6 +104,10 @@ public abstract class ResultSetHandler {
         return values;
     }
 
+    protected String fixedLenCharToString(ResultSet rs, String columnLabel) throws SQLException {
+        return rs.getString(columnLabel);
+    }
+
     /**
      * Convert the current query result set into map according to the metadata information of the result set
      *
@@ -131,10 +135,7 @@ public abstract class ResultSetHandler {
         if (decimalFormatCache.containsKey(scale)) {
             scaleFormatter = decimalFormatCache.get(scale);
         } else {
-            String pattern = decimal_format_pattern_start;
-            for (int i = 0; i < scale; i++) {
-                pattern = pattern + decimal_format_pattern_append_zero;
-            }
+            String pattern = decimal_format_pattern_start + decimal_append_zero.repeat(Math.max(0, scale));
             scaleFormatter = new DecimalFormat(pattern);
             decimalFormatCache.put(scale, scaleFormatter);
         }
@@ -143,14 +144,12 @@ public abstract class ResultSetHandler {
 
     protected String floatingPointNumberToString(@NonNull ResultSet resultSet, String columnLabel) throws SQLException {
         BigDecimal bigDecimal = resultSet.getBigDecimal(columnLabel);
-        return resultSet.wasNull() ? FLOATING_POINT_NUMBER_ZERO :
-            Objects.isNull(bigDecimal) ? FLOATING_POINT_NUMBER_ZERO : Double.toString(bigDecimal.doubleValue());
+        return Objects.isNull(bigDecimal) ? NULL : Double.toString(bigDecimal.doubleValue());
     }
 
     protected String numeric0ToString(ResultSet rs, String columnLabel) throws SQLException {
         BigDecimal bigDecimal = rs.getBigDecimal(columnLabel);
-        return rs.wasNull() ? NULL : Objects.isNull(bigDecimal) ? NULL : bigDecimal.toBigInteger()
-                                                                                   .toString();
+        return Objects.isNull(bigDecimal) ? NULL : bigDecimal.toBigInteger().toString();
     }
 
     protected String getDateFormat(@NonNull ResultSet resultSet, String columnLabel) throws SQLException {
