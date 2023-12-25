@@ -17,11 +17,13 @@ package org.opengauss.datachecker.extract.service;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.Logger;
+import org.opengauss.datachecker.common.config.ConfigCache;
+import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.enums.ColumnKey;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.MetadataLoadProcess;
+import org.opengauss.datachecker.common.entry.extract.PrimaryColumnBean;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
-import org.opengauss.datachecker.common.thread.ThreadPoolFactory;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.opengauss.datachecker.extract.cache.MetaDataCache;
@@ -102,9 +104,10 @@ public class MetaDataService {
         if (CollectionUtils.isEmpty(tableMetadataList)) {
             return tableMetadataMap;
         }
+        Map<String, List<PrimaryColumnBean>> tablePrimaryColumns = baseDataService.queryTablePrimaryColumns();
         List<Future<?>> futures = new LinkedList<>();
-        int maxConnection = resourceManager.maxConnectionCount();
-        ExecutorService executor = Executors.newFixedThreadPool(Math.max(1, maxConnection / 2));
+        int initConnection = ConfigCache.getIntValue(ConfigConstants.DRUID_INITIAL_SIZE);
+        ExecutorService executor = Executors.newFixedThreadPool(Math.max(1, initConnection / 2));
         metadataLoadProcess.setTotal(tableMetadataList.size());
         tableMetadataList.forEach(tableMetadata -> {
             Future<?> future = executor.submit(() -> {
@@ -112,7 +115,8 @@ public class MetaDataService {
                 if (resourceManager.isShutdown()) {
                     log.warn("extract service is shutdown ,task set table metadata of table is canceled!");
                 } else {
-                    baseDataService.updateTableColumnMetaData(tableMetadata);
+                    List<PrimaryColumnBean> primaryColumnList = tablePrimaryColumns.get(tableMetadata.getTableName());
+                    baseDataService.updateTableColumnMetaData(tableMetadata, primaryColumnList);
                     tableMetadataMap.put(tableMetadata.getTableName(), tableMetadata);
                 }
                 log.debug("load table and its columns {}  hasPrimary={}", tableMetadata.getTableName(),

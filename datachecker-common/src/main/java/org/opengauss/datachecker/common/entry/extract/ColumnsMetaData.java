@@ -68,22 +68,53 @@ public class ColumnsMetaData implements Comparable<ColumnsMetaData> {
 
     private String extra;
 
+    /**
+     * get column name and column type
+     *
+     * @return message
+     */
     public String getColumnMsg() {
         return " [" + columnName + " : " + columnType + "]";
     }
 
+    /**
+     * get column name and format name lowercase
+     *
+     * @return lowercase column name
+     */
+    public String getLowerCaseColumnName() {
+        return columnName.toLowerCase(Locale.ENGLISH);
+    }
+
+    /**
+     * check current column is auto increment column
+     *
+     * @return true | false
+     */
     public boolean isAutoIncrementColumn() {
         if (columnKey == null || columnKey != ColumnKey.PRI) {
             return false;
         }
-        return !StringUtils.isEmpty(getExtra()) && getExtra().toLowerCase(Locale.ENGLISH).contains(AUTO_INCREMENT);
+        return !StringUtils.isEmpty(getExtra()) && getExtra().toLowerCase(Locale.ENGLISH)
+                                                             .contains(AUTO_INCREMENT);
     }
 
+    /**
+     * pase resultSet metadata to ColumnsMetaData
+     *
+     * @param rs rs
+     * @return ColumnsMetaData
+     * @throws SQLException
+     */
     public static ColumnsMetaData parse(ResultSet rs) throws SQLException {
         ColumnsMetaData columnsMetaData = new ColumnsMetaData();
-        columnsMetaData.setTableName(rs.getString(1)).setColumnName(rs.getString(2)).setOrdinalPosition(rs.getInt(3))
-                       .setDataType(rs.getString(4)).setColumnType(rs.getString(5))
-                       .setColumnKey(EnumUtil.valueOf(ColumnKey.class, rs.getString(6))).setExtra(rs.getString(7));
+        columnsMetaData.setTableName(rs.getString(1))
+                       .setColumnName(rs.getString(2))
+                       .setOrdinalPosition(rs.getInt(3))
+                       .setDataType(rs.getString(4))
+                       .setColumnType(rs.getString(5))
+                       .setColumnKey(EnumUtil.valueOf(ColumnKey.class, rs.getString(6)))
+                       .setExtra(rs.getString(7));
         return columnsMetaData;
     }
 

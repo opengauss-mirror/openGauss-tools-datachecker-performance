@@ -15,12 +15,12 @@
 
 package org.opengauss.datachecker.extract.data;
 
-import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.entry.enums.ColumnKey;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
+import org.opengauss.datachecker.common.entry.extract.PrimaryColumnBean;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.LongHashFunctionWrapper;
@@ -32,6 +32,7 @@ import org.springframework.stereotype.Service;
 import javax.annotation.Resource;
 import javax.sql.DataSource;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
@@ -104,6 +105,20 @@ public class BaseDataService {
                            .collect(Collectors.toList());
     }
 
+    /**
+     * query current db of all table primary column
+     *
+     * @return <table , List[primary column] >
+     */
+    public Map<String, List<PrimaryColumnBean>> queryTablePrimaryColumns() {
+        List<PrimaryColumnBean> columnBeanList = dataAccessService.queryTablePrimaryColumns();
+        if (CollectionUtils.isEmpty(columnBeanList)) {
+            return new HashMap<>();
+        }
+        return columnBeanList.stream()
+                             .collect(Collectors.groupingBy(PrimaryColumnBean::getTableName));
+    }
+
     private List<String> filterByTableRules(List<String> tableNameList) {
         return ruleAdapterService.executeTableRule(tableNameList);
     }
@@ -156,7 +171,7 @@ public class BaseDataService {
         if (Objects.isNull(tableMetadata)) {
             return tableMetadata;
         }
-        updateTableColumnMetaData(tableMetadata);
+        updateTableColumnMetaData(tableMetadata, null);
         log.debug("query table metadata {} -- {} ", tableName, tableMetadata);
         MetaDataCache.put(tableName, tableMetadata);
         return tableMetadata;
@@ -165,17 +180,38 @@ public class BaseDataService {
     /**
      * update table metadata, and filter column rules
      *
-     * @param tableMetadata table metadata
+     * @param tableMetadata      table metadata
+     * @param primaryColumnBeans primary column
      */
-    public void updateTableColumnMetaData(TableMetadata tableMetadata) {
+    public void updateTableColumnMetaData(TableMetadata tableMetadata, List<PrimaryColumnBean> primaryColumnBeans) {
         String tableName = tableMetadata.getTableName();
         final List<ColumnsMetaData> columns = dataAccessService.queryTableColumnsMetaData(tableName);
         if (Objects.isNull(columns)) {
             log.error("table columns metadata is null ,{}", tableName);
+            return;
         }
+        if (Objects.isNull(primaryColumnBeans)) {
+            primaryColumnBeans = dataAccessService.queryTablePrimaryColumns(tableName);
+        }
+        if (Objects.nonNull(primaryColumnBeans)) {
+            List<String> primaryColumnNameList = getPrimaryColumnNames(primaryColumnBeans);
+            for (ColumnsMetaData column : columns) {
+                if (primaryColumnNameList.contains(column.getLowerCaseColumnName())) {
+                    column.setColumnKey(ColumnKey.PRI);
+                }
+            }
+        }
+
         tableMetadata.setColumnsMetas(ruleAdapterService.executeColumnRule(columns));
         tableMetadata.setPrimaryMetas(getTablePrimaryColumn(columns));
         tableMetadata.setTableHash(calcTableHash(columns));
+    }
+
+    private List<String> getPrimaryColumnNames(List<PrimaryColumnBean> primaryColumnBeans) {
+        return primaryColumnBeans.stream()
+                                 .map(PrimaryColumnBean::getColumnName)
+                                 .map(String::toLowerCase)
+                                 .collect(Collectors.toList());
     }
 
     private List<ColumnsMetaData> getTablePrimaryColumn(List<ColumnsMetaData> columnsMetaData) {

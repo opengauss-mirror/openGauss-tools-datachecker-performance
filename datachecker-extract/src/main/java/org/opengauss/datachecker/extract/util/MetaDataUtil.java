@@ -39,7 +39,7 @@ public class MetaDataUtil {
         List.of("integer", "int", "uint1", "uint2", "uint4", "uint8", "long", "decimal", "numeric", "smallint",
             "NUMBER", "tinyint", "mediumint", "bigint");
     private static final List<String> dataTypes =
-        List.of("integer", "int", "uint1", "uint2", "uint4", "uint8", "long", "decimal", "numeric", "NUMBER",
+        List.of("integer", "int", "uint1", "uint2", "uint4", "uint8", "long", "decimal", "numeric", "NUMBER","VARCHAR2",
             "smallint", "tinyint", "mediumint", "bigint", "character", "char", "varchar", "character varying", "CHAR");
 
     private static final List<String> digitalDataTypes =

@@ -13,27 +13,25 @@
  * See the Mulan PSL v2 for more details.
  */
 
-package org.opengauss.datachecker.extract.data.mapper;
+package org.opengauss.datachecker.common.entry.extract;
 
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Select;
-import org.opengauss.datachecker.common.entry.enums.OgCompatibility;
+import lombok.Data;
 
 /**
- * OpgsMetaDataMapper
+ * PrimaryColumnBean
  *
  * @author ：wangchao
- * @date ：Created in 2023/7/11
+ * @date ：Created in 2023/12/23
  * @since ：11
  */
-@Mapper
-public interface OpgsMetaDataMapper extends MetaDataMapper {
-
+@Data
+public class PrimaryColumnBean {
     /**
-     * check og database compatibility
-     *
-     * @return compatibility
+     * Table
      */
-    @Select("show sql_compatibility;")
-    OgCompatibility sqlCompatibility();
+    private String tableName;
+    /**
+     * Primary key column name
+     */
+    private String columnName;
 }

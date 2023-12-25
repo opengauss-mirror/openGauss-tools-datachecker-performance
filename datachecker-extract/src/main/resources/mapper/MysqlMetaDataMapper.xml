@@ -20,6 +20,11 @@
         <result property="extra" column="extra"/>
     </resultMap>
 
+    <resultMap id="primaryColumnBeanMap" type="org.opengauss.datachecker.common.entry.extract.PrimaryColumnBean">
+        <id property="tableName" column="tableName"/>
+        <result property="columnName" column="columnName"/>
+    </resultMap>
+
     <select id="health" resultType="boolean">
          SELECT 1 FROM DUAL
     </select>
@@ -67,6 +72,17 @@
         where table_schema=#{schema} and table_name =#{name} order by ordinal_position asc
     </select>
 
+    <select id="queryTablePrimaryColumns" resultMap="primaryColumnBeanMap">
+         select table_name tableName ,lower(column_name) columnName
+        from information_schema.columns
+        where table_schema=#{schema} and column_key='PRI' order by ordinal_position asc
+    </select>
+
+    <select id="queryTablePrimaryColumnsByTableName" resultMap="primaryColumnBeanMap">
+        select table_name tableName ,lower(column_name) columnName
+        from information_schema.columns
+        where table_schema=#{schema} and table_name =#{name} and column_key='PRI' order by ordinal_position asc
+    </select>
     <select id="rowCount" resultType="long">
         select count(1) from ${schema}.${name};
     </select>

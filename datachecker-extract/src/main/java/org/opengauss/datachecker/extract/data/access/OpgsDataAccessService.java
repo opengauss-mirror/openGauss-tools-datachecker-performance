@@ -18,6 +18,7 @@ package org.opengauss.datachecker.extract.data.access;
 import org.opengauss.datachecker.common.entry.common.DataAccessParam;
 import org.opengauss.datachecker.common.entry.enums.OgCompatibility;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
+import org.opengauss.datachecker.common.entry.extract.PrimaryColumnBean;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.extract.data.mapper.OpgsMetaDataMapper;
 
@@ -57,10 +58,17 @@ public class OpgsDataAccessService extends AbstractDataAccessService {
     }
 
     @Override
+    public List<PrimaryColumnBean> queryTablePrimaryColumns() {
+        return opgsMetaDataMapper.queryTablePrimaryColumns(properties.getSchema());
+    }
+
+    @Override
+    public List<PrimaryColumnBean> queryTablePrimaryColumns(String tableName) {
+        return opgsMetaDataMapper.queryTablePrimaryColumnsByTableName(properties.getSchema(),tableName);
+    }
+
+    @Override
     public List<ColumnsMetaData> queryTableColumnsMetaData(String tableName) {
-        if (isOgCompatibilityB) {
-            return opgsMetaDataMapper.queryTableColumnsMetaDataB(properties.getSchema(), tableName);
-        }
         return opgsMetaDataMapper.queryTableColumnsMetaData(properties.getSchema(), tableName);
     }
 

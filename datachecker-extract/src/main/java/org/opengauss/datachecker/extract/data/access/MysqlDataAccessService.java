@@ -17,6 +17,7 @@ package org.opengauss.datachecker.extract.data.access;
 
 import org.opengauss.datachecker.common.entry.common.DataAccessParam;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
+import org.opengauss.datachecker.common.entry.extract.PrimaryColumnBean;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.extract.data.mapper.MysqlMetaDataMapper;
 
@@ -59,6 +60,16 @@ public class MysqlDataAccessService extends AbstractDataAccessService {
     @Override
     public TableMetadata queryTableMetadata(String tableName) {
         return wrapperTableMetadata(mysqlMetaDataMapper.queryTableMetadata(properties.getSchema(), tableName));
+    }
+
+    @Override
+    public List<PrimaryColumnBean> queryTablePrimaryColumns() {
+        return mysqlMetaDataMapper.queryTablePrimaryColumns(properties.getSchema());
+    }
+
+    @Override
+    public List<PrimaryColumnBean> queryTablePrimaryColumns(String tableName) {
+        return mysqlMetaDataMapper.queryTablePrimaryColumnsByTableName(properties.getSchema(),tableName);
     }
 
     @Override
