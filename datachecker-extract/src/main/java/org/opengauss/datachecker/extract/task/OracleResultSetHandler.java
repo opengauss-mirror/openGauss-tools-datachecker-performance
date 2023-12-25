@@ -20,7 +20,6 @@ import org.opengauss.datachecker.common.util.HexUtil;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Reader;
-import java.sql.Clob;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -40,8 +39,9 @@ public class OracleResultSetHandler extends ResultSetHandler {
     private final Map<String, TypeHandler> typeHandlers = new ConcurrentHashMap<>();
 
     {
-        TypeHandler blobToString = (rs, columnLabel) -> HexUtil.byteToHexTrim(rs.getBytes(columnLabel));
-        TypeHandler clobToString = (rs, columnLabel) -> clobToString(rs.getClob(columnLabel));
+        TypeHandler blobToString = (rs, columnLabel) -> blobToString(rs, columnLabel);
+        TypeHandler rawToString = (rs, columnLabel) -> rawToString(rs, columnLabel);
+        TypeHandler clobToString = (rs, columnLabel) -> clobToString(rs, columnLabel);
         TypeHandler xmlToString = (rs, columnLabel) -> rs.getString(columnLabel);
         TypeHandler numberToString = (rs, columnLabel) -> floatingPointNumberToString(rs, columnLabel);
         TypeHandler number0ToString = (rs, columnLabel) -> numeric0ToString(rs, columnLabel);
@@ -50,6 +50,7 @@ public class OracleResultSetHandler extends ResultSetHandler {
         typeHandlers.put(OracleType.NUMBER, numberToString);
         typeHandlers.put(OracleType.NUMBER0, number0ToString);
         // byte binary blob
+        typeHandlers.put(OracleType.RAW, rawToString);
         typeHandlers.put(OracleType.NCLOB, clobToString);
         typeHandlers.put(OracleType.BLOB, blobToString);
         typeHandlers.put(OracleType.CLOB, clobToString);
@@ -59,6 +60,43 @@ public class OracleResultSetHandler extends ResultSetHandler {
         typeHandlers.put(OracleType.DATE, this::getTimestampFormat);
         typeHandlers.put(OracleType.TIMESTAMP, this::getTimestampFormat);
         typeHandlers.put(OracleType.TIMESTAMPTZ, this::getTimestampFormat);
+    }
+
+    private String rawToString(ResultSet resultSet, String columnLabel) throws SQLException {
+        return resultSet.getString(columnLabel);
+    }
+
+    private String blobToString(ResultSet resultSet, String columnLabel) throws SQLException {
+        if (resultSet.wasNull()) {
+            return NULL;
+        }
+        return HexUtil.byteToHexTrim(resultSet.getBytes(columnLabel));
+    }
+
+    protected synchronized String clobToString(ResultSet resultSet, String columnLabel) throws SQLException {
+        if (resultSet.wasNull()) {
+            return NULL;
+        }
+        StringBuffer sb = new StringBuffer();
+        BufferedReader bf = null;
+        Reader reader = null;
+        try {
+            reader = resultSet.getCharacterStream(columnLabel);
+            if (reader == null) {
+                return NULL;
+            }
+            bf = new BufferedReader(reader);
+            String line;
+            while ((line = bf.readLine()) != null) {
+                sb.append(line);
+            }
+        } catch (IOException io) {
+            log.error("read clobToString error");
+        } finally {
+            closeBufferedReader(bf);
+            closeReader(reader);
+        }
+        return sb.toString();
     }
 
     @Override
@@ -78,24 +116,9 @@ public class OracleResultSetHandler extends ResultSetHandler {
         }
     }
 
-    protected String clobToString(Clob clob) throws SQLException {
-        if (Objects.isNull(clob)) {
-            return NULL;
-        }
-        StringBuffer sb = new StringBuffer();
-        try (Reader reader = clob.getCharacterStream(); BufferedReader bf = new BufferedReader(reader)) {
-            String line;
-            while ((line = bf.readLine()) != null) {
-                sb.append(line);
-            }
-        } catch (IOException io) {
-            log.error("read blob error");
-        }
-        return sb.toString();
-    }
-
     @SuppressWarnings("all")
     interface OracleType {
+        String RAW = "RAW";
         String BLOB = "BLOB";
         String NCLOB = "NCLOB";
         String CLOB = "CLOB";
@@ -128,6 +151,25 @@ public class OracleResultSetHandler extends ResultSetHandler {
 
         public static boolean isNumeric0(String typeName, int scale) {
             return NUMBER.equalsIgnoreCase(typeName) && scale >= NUMERIC_SCALE_F84 && scale <= NUMERIC_SCALE_0;
+        }
+    }
+    private void closeBufferedReader(BufferedReader bf) {
+        try {
+            if (Objects.nonNull(bf)) {
+                bf.close();
+            }
+        } catch (IOException e) {
+            log.error("close BufferedReader error");
+        }
+    }
+
+    private void closeReader(Reader reader) {
+        try {
+            if (Objects.nonNull(reader)) {
+                reader.close();
+            }
+        } catch (IOException e) {
+            log.error("close Reader error");
         }
     }
 }

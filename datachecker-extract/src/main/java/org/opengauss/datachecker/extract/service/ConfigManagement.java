@@ -58,7 +58,6 @@ public class ConfigManagement {
     @Value("${spring.check.extend-maximum-pool-size}")
     private int extendMaxPoolSize = 10;
 
-
     @Value("${spring.datasource.druid.initialSize}")
     private int initialSize;
     @Value("${spring.datasource.druid.minIdle}")
@@ -73,6 +72,8 @@ public class ConfigManagement {
     private int minEvictableIdleTimeMillis;
     @Value("${spring.lifecycle.timeout-per-shutdown-phase}")
     private int timeoutPerShutdownPhase;
+    @Value("${spring.extract.object-size-expansion-factor}")
+    private int objectSizeExpansionFactor;
 
     /**
      * init csv config
@@ -137,9 +138,9 @@ public class ConfigManagement {
         ConfigCache.put(ConfigConstants.DRUID_MIN_EVICTABLE_IDLE_TIME_MILLIS, minEvictableIdleTimeMillis);
     }
 
-    private static void setExtractConfig(ExtractProperties properties) {
+    private void setExtractConfig(ExtractProperties properties) {
         ConfigCache.put(ConfigConstants.ENDPOINT, properties.getEndpoint());
         ConfigCache.put(ConfigConstants.DATA_BASE_TYPE, properties.getDatabaseType());
+        ConfigCache.put(ConfigConstants.OBJECT_SIZE_EXPANSION_FACTOR, objectSizeExpansionFactor);
     }
-
 }

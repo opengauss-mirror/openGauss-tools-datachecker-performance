@@ -115,6 +115,8 @@ public class MetaDataService {
                     baseDataService.updateTableColumnMetaData(tableMetadata);
                     tableMetadataMap.put(tableMetadata.getTableName(), tableMetadata);
                 }
+                log.debug("load table and its columns {}  hasPrimary={}", tableMetadata.getTableName(),
+                    tableMetadata.hasPrimary());
                 resourceManager.release();
             });
             futures.add(future);

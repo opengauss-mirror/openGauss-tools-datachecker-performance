@@ -65,6 +65,7 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
             SliceExtend sliceExtend = createSliceExtend(tableMetadata.getTableHash());
             if (!slice.isEmptyTable()) {
                 QuerySqlEntry queryStatement = createQueryStatement(tableMetadata);
+                log.debug("table [{}] query statement :  {}", queryStatement.getTable(), queryStatement.getSql());
                 executeQueryStatement(queryStatement, tableMetadata, sliceExtend);
             } else {
                 log.info("table slice [{}] is empty ", slice.toSimpleString());
@@ -101,11 +102,13 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
             long estimatedRowCount = slice.isSlice() ? slice.getFetchSize() : tableMetadata.getTableRows();
             long estimatedMemorySize = estimatedMemorySize(tableMetadata.getAvgRowLength(), estimatedRowCount);
             connection = jdbcOperation.tryConnectionAndClosedAutoCommit(estimatedMemorySize);
+            log.debug("slice [{}] fetch jdbc connection.", slice.getName());
             SliceKafkaAgents kafkaAgents = context.createSliceKafkaAgents(slice);
             SliceResultSetSender sliceSender = new SliceResultSetSender(tableMetadata, kafkaAgents);
 
             try (PreparedStatement ps = connection.prepareStatement(sqlEntry.getSql());
                 ResultSet resultSet = ps.executeQuery()) {
+                log.debug("slice [{}] jdbc execute query complete.", slice.getName());
                 LocalDateTime jdbcQuery = LocalDateTime.now();
                 jdbcQueryCost = durationBetweenToMillis(start, jdbcQuery);
                 resultSet.setFetchSize(FETCH_SIZE);
@@ -114,10 +117,10 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
                 Map<String, String> result = new TreeMap<>();
                 List<long[]> offsetList = new LinkedList<>();
                 List<ListenableFuture<SendResult<String, String>>> batchFutures = new LinkedList<>();
-                final String tableName= slice.getTable();
+                final String tableName = slice.getTable();
                 while (resultSet.next()) {
                     rowCount++;
-                    batchFutures.add(sliceSender.resultSetTranslateAndSendSync(tableName,rsmd, resultSet, result, slice.getNo()));
+                    batchFutures.add(sliceSender.resultSetTranslateAndSendSync(tableName, rsmd, resultSet, result, slice.getNo()));
                     if (batchFutures.size() == FETCH_SIZE) {
                         offsetList.add(getBatchFutureRecordOffsetScope(batchFutures));
                         batchFutures.clear();
@@ -137,6 +140,7 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
             throw new ExtractDataAccessException(ex);
         } finally {
             jdbcOperation.releaseConnection(connection);
+            log.debug("slice [{}] release jdbc connection.", slice.getName());
             sliceAllCost = durationBetweenToMillis(start, LocalDateTime.now());
             log.info("query slice [{}] cost [{} /{} /{}] milliseconds", sliceExtend.toSimpleString(), jdbcQueryCost,
                 sendDataCost, sliceAllCost);

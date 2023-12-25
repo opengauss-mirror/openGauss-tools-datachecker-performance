@@ -41,6 +41,7 @@ public interface ConfigConstants {
     String ENDPOINT = "spring.extract.endpoint";
     String QUERY_DOP = "spring.extract.query-dop";
     String DATA_BASE_TYPE = "spring.extract.databaseType";
+    String OBJECT_SIZE_EXPANSION_FACTOR = "spring.extract.object-size-expansion-factor";
 
 
     String MEMORY_MONITOR = "spring.memory-monitor-enable";

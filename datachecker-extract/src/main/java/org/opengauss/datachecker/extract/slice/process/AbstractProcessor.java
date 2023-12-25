@@ -15,6 +15,8 @@
 
 package org.opengauss.datachecker.extract.slice.process;
 
+import org.opengauss.datachecker.common.config.ConfigCache;
+import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.extract.SliceExtend;
 import org.opengauss.datachecker.extract.slice.SliceProcessorContext;
 
@@ -29,9 +31,11 @@ import java.math.BigDecimal;
  */
 public abstract class AbstractProcessor implements SliceProcessor {
     protected SliceProcessorContext context;
+    protected int objectSizeExpansionFactor;
 
     public AbstractProcessor(SliceProcessorContext context) {
         this.context = context;
+        this.objectSizeExpansionFactor = ConfigCache.getIntValue(ConfigConstants.OBJECT_SIZE_EXPANSION_FACTOR);
     }
 
     /**
@@ -44,7 +48,9 @@ public abstract class AbstractProcessor implements SliceProcessor {
     protected long estimatedMemorySize(long rowLength, long sliceSize) {
         BigDecimal rowLengthNum = BigDecimal.valueOf(rowLength);
         BigDecimal sliceSizeNum = BigDecimal.valueOf(sliceSize);
-        return rowLengthNum.multiply(sliceSizeNum).longValue();
+        return rowLengthNum.multiply(sliceSizeNum)
+                           .multiply(BigDecimal.valueOf(objectSizeExpansionFactor))
+                           .longValue();
     }
 
     /**
