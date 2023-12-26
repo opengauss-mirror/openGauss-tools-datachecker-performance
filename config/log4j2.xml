@@ -81,7 +81,7 @@
         <logger name="org.apache.kafka" level="off" />
         <logger name="oshi.util" level="off" />
         <logger name="org.hibernate.validator" level="off" />
-        <logger name="org.springframework" level="off" />
+        <logger name="org.springframework" level="error" />
         <logger name="_org.springframework.web" level="off" />
         <logger name="org.mybatis.spring" level="off" />
         <logger name="com.alibaba.druid.pool" level="off" />

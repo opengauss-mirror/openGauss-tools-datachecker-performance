@@ -18,6 +18,7 @@ package org.opengauss.datachecker.extract.data.mapper;
 import org.apache.ibatis.annotations.Param;
 import org.opengauss.datachecker.common.entry.common.DataAccessParam;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
+import org.opengauss.datachecker.common.entry.extract.PrimaryColumnBean;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 
 import java.util.List;
@@ -61,6 +62,22 @@ public interface MetaDataMapper {
      * @return ColumnsMetaData
      */
     List<ColumnsMetaData> queryTableColumnsMetaData(@Param("schema") String schema, @Param("name") String tableName);
+
+    /**
+     * queryTablePrimaryColumns
+     *
+     * @param schema schema
+     * @return primary column
+     */
+    List<PrimaryColumnBean> queryTablePrimaryColumns(@Param("schema") String schema);
+
+    /**
+     * queryTablePrimaryColumns
+     *
+     * @param schema schema
+     * @return primary column
+     */
+    List<PrimaryColumnBean> queryTablePrimaryColumnsByTableName(@Param("schema") String schema, @Param("name") String tableName);
 
     /**
      * query table TableMetadata

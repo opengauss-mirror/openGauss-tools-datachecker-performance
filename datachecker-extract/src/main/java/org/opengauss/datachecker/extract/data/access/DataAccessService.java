@@ -18,6 +18,7 @@ package org.opengauss.datachecker.extract.data.access;
 import org.opengauss.datachecker.common.entry.check.Difference;
 import org.opengauss.datachecker.common.entry.common.DataAccessParam;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
+import org.opengauss.datachecker.common.entry.extract.PrimaryColumnBean;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.springframework.jdbc.core.RowMapper;
 
@@ -56,6 +57,21 @@ public interface DataAccessService {
      * @return TableMetadata list
      */
     List<TableMetadata> queryTableMetadataList();
+
+    /**
+     * queryTablePrimaryColumns
+     *
+     * @return primary column
+     */
+    List<PrimaryColumnBean> queryTablePrimaryColumns();
+
+    /**
+     * queryTablePrimaryColumns
+     *
+     * @param tableName tableName
+     * @return primary column
+     */
+    List<PrimaryColumnBean> queryTablePrimaryColumns(String tableName);
 
     /**
      * query table ColumnsMetaData

@@ -15,9 +15,11 @@
         <result property="ordinalPosition" column="column_id"/>
         <result property="dataType" column="data_type"/>
         <result property="columnType" column="data_type"/>
-        <result property="columnKey" column="constraint_type" javaType="org.opengauss.datachecker.common.entry.enums.ColumnKey"
-                typeHandler="org.opengauss.datachecker.extract.data.mapper.handler.EnumKeyTypeHandler"/>
-        <result property="extra" column="extra"/>
+    </resultMap>
+
+    <resultMap id="primaryColumnBeanMap" type="org.opengauss.datachecker.common.entry.extract.PrimaryColumnBean">
+        <id property="tableName" column="TABLE_NAME"/>
+        <result property="columnName" column="COLUMN_NAME"/>
     </resultMap>
 
     <select id="health" resultType="boolean">
@@ -41,15 +43,19 @@
     </select>
 
     <select id="queryTableColumnsMetaData" resultMap="columnMetadataMap">
-       select c.owner as schema, c.table_name, c.column_name as name, c.data_type, c.data_length,
-         c.data_precision, c.data_scale, c.nullable, c.column_id,CASE pc.constraint_type WHEN 'P' THEN 'PRI' ELSE pc.constraint_type END AS constraint_type
+        select c.owner as schema, c.table_name, c.column_name as name, c.data_type, c.data_length, c.data_precision, c.data_scale, c.nullable, c.column_id
         from all_tab_columns c
-        left join (
-                    SELECT A.COLUMN_NAME,B.constraint_type FROM ALL_CONS_COLUMNS A,ALL_CONSTRAINTS B
-                    WHERE A.constraint_name = B.constraint_name AND  B.constraint_type = 'P'
-                         AND A.OWNER = #{schema} AND A.table_name =#{name}
-                 ) pc on c.column_name=pc.column_name
         WHERE c.OWNER =  #{schema}  and c.table_name= #{name} order by c.column_id asc
+    </select>
+
+    <select id="queryTablePrimaryColumns" resultMap="primaryColumnBeanMap">
+        SELECT A.TABLE_NAME, A.COLUMN_NAME FROM ALL_CONS_COLUMNS A,ALL_CONSTRAINTS B
+        WHERE A.constraint_name = B.constraint_name AND  B.constraint_type = 'P' AND A.OWNER = #{schema}
+    </select>
+
+    <select id="queryTablePrimaryColumnsByTableName" resultMap="primaryColumnBeanMap">
+       SELECT A.TABLE_NAME, A.COLUMN_NAME FROM ALL_CONS_COLUMNS A,ALL_CONSTRAINTS B
+        WHERE A.constraint_name = B.constraint_name AND  B.constraint_type = 'P' AND A.OWNER = #{schema} and A.TABLE_NAME =#{name} ;
     </select>
 
     <select id="rowCount" resultType="long">
