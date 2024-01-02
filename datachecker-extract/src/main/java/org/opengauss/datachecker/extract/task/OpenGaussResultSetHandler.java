@@ -44,17 +44,12 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
         TypeHandler bitToString = (rs, columnLabel) -> bitToString(rs, columnLabel);
         TypeHandler binaryToString = (rs, columnLabel) -> binaryToString(rs, columnLabel);
         TypeHandler booleanToString = (rs, columnLabel) -> booleanToString(rs, columnLabel);
-        TypeHandler numericToString = (rs, columnLabel) -> floatingPointNumberToString(rs, columnLabel);
         TypeHandler numeric0ToString = (rs, columnLabel) -> numeric0ToString(rs, columnLabel);
-        TypeHandler float4ToString = (rs, columnLabel) -> floatingPointNumberToString(rs, columnLabel);
-        TypeHandler intToString = (rs, columnLabel) -> intToString(rs, columnLabel);
         TypeHandler bpCharToString = (rs, columnLabel) -> fixedLenCharToString(rs, columnLabel);
 
         // float4 - float real
         typeHandlers.put(OpenGaussType.INT4, numeric0ToString);
         typeHandlers.put(OpenGaussType.INTEGER, numeric0ToString);
-        typeHandlers.put(OpenGaussType.FLOAT4, float4ToString);
-        typeHandlers.put(OpenGaussType.NUMERIC, numericToString);
         typeHandlers.put(OpenGaussType.NUMERIC0, numeric0ToString);
         typeHandlers.put(OpenGaussType.BPCHAR, bpCharToString);
 
@@ -104,7 +99,13 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
         if (OpenGaussType.isNumeric(columnTypeName)) {
             return convertNumericToString(rsmd, resultSet, columnIdx);
         } else if (OpenGaussType.isFloat(columnTypeName)) {
-            return floatingPointNumberToString(resultSet, columnLabel);
+            int precision = rsmd.getPrecision(columnIdx);
+            int scale = rsmd.getScale(columnIdx);
+            if (precision > scale && scale > 0) {
+                return floatingPointNumberToString(resultSet, columnLabel, scale);
+            } else {
+                return floatNumberToString(resultSet, columnLabel);
+            }
         } else if (OpenGaussType.isBigInteger(columnTypeName)) {
             return numeric0ToString(resultSet, columnLabel);
         } else if (OpenGaussType.isInteger(columnTypeName)) {
@@ -123,18 +124,15 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
         int precision = rsmd.getPrecision(columnIdx);
         int scale = rsmd.getScale(columnIdx);
         String columnLabel = rsmd.getColumnLabel(columnIdx);
-        if (OpenGaussType.isNumericDefault(precision, scale)) {
-            return floatingPointNumberToString(resultSet, columnLabel);
-        } else if (OpenGaussType.isNumericFloat(precision, scale)) {
-            if (supplyZero) {
-                return floatingPointNumberToString(resultSet, columnLabel, scale);
-            } else {
-                return floatingPointNumberToString(resultSet, columnLabel);
-            }
-        } else {
+        if (isNumericDefault(precision, scale)) {
+            return floatNumberToString(resultSet, columnLabel);
+        } else if (isNumeric0(precision, scale)) {
             return numeric0ToString(resultSet, columnLabel);
+        } else if (isNumericFloat(precision, scale)) {
+            return floatingPointNumberToString(resultSet, columnLabel, scale);
+        } else {
+            return floatNumberToString(resultSet, columnLabel);
         }
-
     }
 
     private String getPgColumnTypeName(ResultSetMetaData rsmd, int columnIdx) throws SQLException {
@@ -163,10 +161,10 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
         String BLOB = "blob";
         String NUMERIC = "numeric";
         String NUMERIC0 = "numeric0";
-        String FLOAT1 = "float4";
-        String FLOAT2 = "float4";
+        String FLOAT1 = "float1";
+        String FLOAT2 = "float2";
         String FLOAT4 = "float4";
-        String FLOAT8 = "float4";
+        String FLOAT8 = "float8";
         String INTEGER = "Integer";
         String INT1 = "int1";
         String INT2 = "int2";
@@ -194,34 +192,52 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
         List<String> bigintegerList = List.of(INT8, UINT8);
         List<String> floatList = List.of(FLOAT1, FLOAT2, FLOAT4, FLOAT8);
 
+        /**
+         * typeName is {@value digit}
+         *
+         * @param typeName typeName
+         * @return
+         */
         public static boolean isDigit(String typeName) {
             return digit.contains(typeName);
         }
 
-        public static boolean isNumeric0(String typeName, int precision, int scale) {
-            return isNumeric(typeName) && precision > NUMERIC_PRECISION_0 && scale == NUMERIC_SCALE_0;
-        }
-
+        /**
+         * typeName is List.of(FLOAT1, FLOAT2, FLOAT4, FLOAT8)
+         *
+         * @param typeName typeName
+         * @return
+         */
         public static boolean isFloat(String typeName) {
             return floatList.contains(typeName);
         }
 
-        public static boolean isNumericFloat(int precision, int scale) {
-            return precision > NUMERIC_PRECISION_0 && scale > NUMERIC_SCALE_0;
-        }
-
-        public static boolean isNumericDefault(int precision, int scale) {
-            return precision == NUMERIC_PRECISION_0 && scale == NUMERIC_SCALE_0;
-        }
-
+        /**
+         * typeName is  List.of(INT1, INT2, INT4, INT8, UINT1, UINT2, UINT4, UINT8, INTEGER)
+         *
+         * @param typeName typeName
+         * @return
+         */
         public static boolean isInteger(String typeName) {
             return integerList.contains(typeName);
         }
 
+        /**
+         * typeName is List.of(INT8, UINT8)
+         *
+         * @param typeName typeName
+         * @return
+         */
         public static boolean isBigInteger(String typeName) {
             return bigintegerList.contains(typeName);
         }
 
+        /**
+         * typeName is numeric
+         *
+         * @param typeName typeName
+         * @return
+         */
         public static boolean isNumeric(String typeName) {
             return NUMERIC.equalsIgnoreCase(typeName);
         }
