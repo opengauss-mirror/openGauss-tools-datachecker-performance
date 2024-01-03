@@ -246,9 +246,9 @@ public class SliceCheckWorker implements Runnable {
         List<Difference> entriesOnlyOnRight = collectorDeleteOrInsert(bucketDifference.entriesOnlyOnRight());
         List<Difference> differing = collectorUpdate(bucketDifference.entriesDiffering());
 
-        log.debug("diff slice {} insert {}", slice.getName(), bucketDifference.entriesOnlyOnLeft());
-        log.debug("diff slice {} delete {}", slice.getName(), bucketDifference.entriesOnlyOnRight());
-        log.debug("diff slice {} update {}", slice.getName(), bucketDifference.entriesDiffering());
+        log.debug("diff slice {} insert {}", slice.getName(), bucketDifference.entriesOnlyOnLeft().size());
+        log.debug("diff slice {} delete {}", slice.getName(), bucketDifference.entriesOnlyOnRight().size());
+        log.debug("diff slice {} update {}", slice.getName(), bucketDifference.entriesDiffering().size());
         return DifferencePair.of(entriesOnlyOnLeft, entriesOnlyOnRight, differing);
     }
 

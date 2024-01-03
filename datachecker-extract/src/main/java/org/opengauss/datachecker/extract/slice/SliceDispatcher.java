@@ -31,7 +31,7 @@ import org.opengauss.datachecker.extract.data.BaseDataService;
 import org.opengauss.datachecker.extract.data.csv.CsvListener;
 import org.opengauss.datachecker.extract.slice.factory.SliceFactory;
 
-import javax.annotation.Resource;
+import java.io.File;
 import java.util.Objects;
 import java.util.concurrent.ThreadPoolExecutor;
 
@@ -88,8 +88,16 @@ public class SliceDispatcher implements Runnable {
                     SliceVo sliceVo = listener.poll();
                     if (Objects.nonNull(sliceVo)) {
                         // check table by rule of table
-                        if (!baseDataService.checkTableContains(sliceVo.getTable())) {
-                            log.info("slice dispatcher is ignoring slice of {}", sliceVo.getTable());
+                        String table = sliceVo.getTable();
+                        if (!baseDataService.checkTableContains(table)) {
+                            log.info("distributors ignore [{}] table shards based on table rules", table);
+                            notifyIgnoreCsvName(endPoint, sliceVo.getName(), "table rules");
+                            continue;
+                        }
+                        TableMetadata tableMetadata = baseDataService.getTableMetadata(table);
+                        if (!tableMetadata.hasPrimary()) {
+                            log.info("distributors ignore [{}] table because of it's no primary", table);
+                            notifyIgnoreCsvName(endPoint, sliceVo.getName(), "table no primary");
                             continue;
                         }
                         sliceVo.setEndpoint(endPoint);
@@ -116,6 +124,16 @@ public class SliceDispatcher implements Runnable {
         }
     }
 
+    private void notifyIgnoreCsvName(Endpoint endPoint, String ignoreCsvName, String reason) {
+        if (Objects.equals(Endpoint.SOURCE, endPoint)) {
+            String csvDataPath = ConfigCache.getCsvData();
+            File file = new File(csvDataPath, ignoreCsvName);
+            if (file.exists() && file.renameTo(new File(csvDataPath, ignoreCsvName + ".check"))) {
+                log.debug("rename csv sharding completed [{}] by {}", ignoreCsvName, reason);
+            }
+        }
+    }
+
     /**
      * check current slice whether registered topic ,
      * if true , then add slice to the executor,
@@ -128,7 +146,6 @@ public class SliceDispatcher implements Runnable {
     private void doTableSlice(ThreadPoolExecutor executor, SliceVo sliceVo) {
         String table = sliceVo.getTable();
         if (checkTopicRegistered(table)) {
-
             executor.submit(sliceFactory.createSliceProcessor(sliceVo));
             log.info("process slice from current queue {}", sliceVo.getName());
         }

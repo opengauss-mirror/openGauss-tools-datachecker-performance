@@ -183,8 +183,11 @@ public class SliceResultSetSender {
         int idx;
         for (ColumnsMetaData column : columnMetas) {
             idx = column.getOrdinalPosition() - 1;
-            result.put(column.getColumnName(),
-                csv_null_value.equalsIgnoreCase(nextLine[idx]) ? csv_null_value : nextLine[idx]);
+            if (csv_null_value.equalsIgnoreCase(nextLine[idx])) {
+                result.put(column.getColumnName(), csv_null_value);
+            } else {
+                result.put(column.getColumnName(), nextLine[idx]);
+            }
         }
     }
 }

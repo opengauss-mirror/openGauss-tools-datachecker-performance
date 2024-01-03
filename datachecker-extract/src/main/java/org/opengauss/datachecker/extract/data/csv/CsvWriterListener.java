@@ -86,17 +86,21 @@ public class CsvWriterListener implements CsvListener {
                         SliceIndexVo sliceIndex =
                             JSONObject.parseObject(line, SliceIndexVo.class, Feature.AllowISO8601DateFormat);
                         if (Objects.equals(sliceIndex.getIndexStatus(), SliceIndexStatus.END)) {
-                            List<SliceVo> sliceList = tableSliceLogs.get(sliceIndex.getTable());
-                            listenerQueue.addAll(sliceList);
-                            tableSliceLogs.remove(sliceIndex.getTable());
-                            log.info("writer add table ：{}", sliceIndex.getTable());
+                            if (tableSliceLogs.containsKey(sliceIndex.getTable())) {
+                                List<SliceVo> sliceList = tableSliceLogs.get(sliceIndex.getTable());
+                                listenerQueue.addAll(sliceList);
+                                tableSliceLogs.remove(sliceIndex.getTable());
+                                log.info("writer add table ：{}", sliceIndex.getTable());
+                            } else {
+                                log.error("csv writer log [{}] not found!", sliceIndex.getTable());
+                            }
                         } else if (Objects.equals(sliceIndex.getIndexStatus(), SliceIndexStatus.NONE)) {
                             tableSliceLogs.remove(sliceIndex.getTable());
                         }
                     }
                     log.debug("writer add log ：{}", line);
                 } catch (Exception ex) {
-                    log.error("writer log listener error ：{} : {}", ex.getMessage(), line);
+                    log.error("writer log listener error ：{}", line, ex);
                 }
             }
 

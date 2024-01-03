@@ -82,9 +82,11 @@
         <logger name="oshi.util" level="off" />
         <logger name="org.hibernate.validator" level="off" />
         <logger name="org.springframework" level="error" />
-        <logger name="_org.springframework.web" level="off" />
-        <logger name="org.mybatis.spring" level="off" />
+        <logger name="_org.springframework.web" level="error" />
+        <logger name="org.mybatis.spring" level="error" />
+        <logger name="org.apache.ibatis" level="error" />
         <logger name="com.alibaba.druid.pool" level="off" />
+        <logger name="org.apache.catalina" level="off" />
     </Loggers>
 
 </Configuration>

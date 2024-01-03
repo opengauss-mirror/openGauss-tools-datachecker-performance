@@ -60,8 +60,6 @@ public abstract class ResultSetHandler {
     protected static final DateTimeFormatter TIMESTAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     protected static final String EMPTY = "";
     protected static final String NULL = null;
-    protected static final String FLOATING_POINT_NUMBER_ZERO = "0.0";
-    protected static final String INT_NUMBER_ZERO = "0";
 
     protected static final int NUMERIC_SCALE_F84 = -84;
     protected static final int NUMERIC_SCALE_0 = 0;
@@ -122,12 +120,22 @@ public abstract class ResultSetHandler {
 
     protected abstract String convert(ResultSet resultSet, int columnIdx, ResultSetMetaData rsmd) throws SQLException;
 
+    /**
+     * CSV MODE : Zero padding at the end of floating-point decimals specific to CSV mode
+     *
+     * @param resultSet   resultSet
+     * @param columnLabel columnLabel
+     * @param scale       scale
+     * @return data of string
+     * @throws SQLException
+     */
     protected String floatingPointNumberToString(@NonNull ResultSet resultSet, String columnLabel, Integer scale)
         throws SQLException {
-        DecimalFormat scaleFormatter = getDecimalFormat(scale);
         BigDecimal bigDecimal = resultSet.getBigDecimal(columnLabel);
-        return resultSet.wasNull() ? FLOATING_POINT_NUMBER_ZERO :
-            Objects.isNull(bigDecimal) ? FLOATING_POINT_NUMBER_ZERO : scaleFormatter.format((bigDecimal.doubleValue()));
+        if (Objects.isNull(bigDecimal)) {
+            return NULL;
+        }
+        return getDecimalFormat(scale).format(bigDecimal.doubleValue());
     }
 
     private static DecimalFormat getDecimalFormat(Integer scale) {
@@ -135,21 +143,59 @@ public abstract class ResultSetHandler {
         if (decimalFormatCache.containsKey(scale)) {
             scaleFormatter = decimalFormatCache.get(scale);
         } else {
-            String pattern = decimal_format_pattern_start + decimal_append_zero.repeat(Math.max(0, scale));
+            String pattern;
+            if (scale == 0) {
+                pattern = decimal_append_zero;
+            } else {
+                pattern = decimal_format_pattern_start + decimal_append_zero.repeat(Math.max(0, scale));
+            }
             scaleFormatter = new DecimalFormat(pattern);
             decimalFormatCache.put(scale, scaleFormatter);
         }
         return scaleFormatter;
     }
 
+    /**
+     * float and double data type translate to string,we must be use bigDecimal get the data,
+     * and use toString format the data to a string.
+     *
+     * @param resultSet   rs
+     * @param columnLabel columnLabel
+     * @return format
+     * @throws SQLException
+     */
     protected String floatingPointNumberToString(@NonNull ResultSet resultSet, String columnLabel) throws SQLException {
         BigDecimal bigDecimal = resultSet.getBigDecimal(columnLabel);
-        return Objects.isNull(bigDecimal) ? NULL : Double.toString(bigDecimal.doubleValue());
+        if (Objects.isNull(bigDecimal)) {
+            return NULL;
+        }
+        String value = bigDecimal.toString();
+        if (isScientificNotation(value)) {
+            return new BigDecimal(value).toPlainString();
+        }
+        return value;
+    }
+
+    protected String floatNumberToString(@NonNull ResultSet resultSet, String columnLabel) throws SQLException {
+        float floatValue = resultSet.getFloat(columnLabel);
+        if (resultSet.wasNull()) {
+            return NULL;
+        }
+        String value = String.valueOf(floatValue);
+        if (isScientificNotation(value)) {
+            return new BigDecimal(value).toPlainString();
+        }
+        return value;
+    }
+
+    private boolean isScientificNotation(String value) {
+        return value.contains("E") || value.contains("e");
     }
 
     protected String numeric0ToString(ResultSet rs, String columnLabel) throws SQLException {
         BigDecimal bigDecimal = rs.getBigDecimal(columnLabel);
-        return Objects.isNull(bigDecimal) ? NULL : bigDecimal.toBigInteger().toString();
+        return Objects.isNull(bigDecimal) ? NULL : bigDecimal.toBigInteger()
+                                                             .toString();
     }
 
     protected String getDateFormat(@NonNull ResultSet resultSet, String columnLabel) throws SQLException {
@@ -192,6 +238,25 @@ public abstract class ResultSetHandler {
     protected String trim(@NonNull ResultSet resultSet, String columnLabel) throws SQLException {
         final String string = resultSet.getString(columnLabel);
         return string == null ? NULL : string.stripTrailing();
+    }
+
+    public static boolean isNumericFloat(int precision, int scale) {
+        return precision > NUMERIC_PRECISION_0 && scale > NUMERIC_SCALE_0;
+    }
+
+    public static boolean isNumeric0(int precision, int scale) {
+        return precision > NUMERIC_PRECISION_0 && scale == NUMERIC_SCALE_0;
+    }
+
+    /**
+     * if dataType is numeric ,then check precision and scale is zero.
+     *
+     * @param precision precision
+     * @param scale     scale
+     * @return boolean
+     */
+    public static boolean isNumericDefault(int precision, int scale) {
+        return precision == NUMERIC_PRECISION_0 && scale == NUMERIC_SCALE_0;
     }
 
     @FunctionalInterface
