@@ -25,6 +25,7 @@ import org.opengauss.datachecker.extract.config.DataSourceConfig;
 import org.opengauss.datachecker.extract.config.DruidDataSourceConfig;
 import org.opengauss.datachecker.extract.resource.ResourceManager;
 import org.opengauss.datachecker.extract.service.ConfigManagement;
+import org.opengauss.datachecker.extract.slice.SliceProcessorContext;
 import org.opengauss.datachecker.extract.task.ExtractThreadSupport;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -48,6 +49,8 @@ public class StartLoadRunner implements ApplicationRunner {
     private ResourceManager resourceManager;
     @Resource
     private MemoryManagerService memoryManagerService;
+    @Resource
+    private SliceProcessorContext sliceProcessorContext;
 
 
     @Override
@@ -58,6 +61,7 @@ public class StartLoadRunner implements ApplicationRunner {
         resourceManager.initMaxConnectionCount();
 
         initExtractContextDataSource();
+        sliceProcessorContext.startSliceStatusFeedbackService();
     }
 
     private void initExtractContextDataSource() {

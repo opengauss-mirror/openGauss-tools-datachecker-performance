@@ -61,11 +61,7 @@ public class CsvSliceProcessor extends AbstractSliceProcessor {
             log.info("csv slice processor start , [{}]", slice.toSimpleString());
             TableMetadata tableMetadata = context.getTableMetaData(slice.getTable());
             sliceExtend = createSliceExtend(tableMetadata.getTableHash());
-            if (!slice.isEmptyTable()) {
-                executeQueryStatement(tableMetadata, sliceExtend);
-            } else {
-                log.info("table slice [{}] is empty ", slice.getName());
-            }
+            executeQueryStatement(tableMetadata, sliceExtend);
         } catch (Exception ex) {
             log.error("csv slice processor , [{}] : ", slice.toSimpleString(), ex);
         } finally {
