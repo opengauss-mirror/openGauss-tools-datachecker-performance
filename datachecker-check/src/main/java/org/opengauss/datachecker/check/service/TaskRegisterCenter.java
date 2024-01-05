@@ -166,8 +166,10 @@ public class TaskRegisterCenter {
             int tableReleaseSize = 0;
             if (sliceTableCounter.containsKey(tableName)) {
                 tableReleaseSize = sliceTableCounter.get(tableName);
-                tableReleaseSize--;
-                sliceTableCounter.put(tableName, tableReleaseSize);
+                if (tableReleaseSize > 0) {
+                    tableReleaseSize--;
+                    sliceTableCounter.put(tableName, tableReleaseSize);
+                }
                 log.debug("table [{}] slice release {}", tableName, tableReleaseSize);
             }
             return tableReleaseSize == 0;

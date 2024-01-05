@@ -10,7 +10,7 @@ spring:
   extract:
     schema: jack
     databaseType: OG  #OG opengauss
-    object-size-expansion-factor: 4
+    object-size-expansion-factor: 1
     endpoint: SINK
     dataLoadMode: jdbc # jdbc or csv
     query-dop: 1 # jdbc Parallel Query  config

@@ -10,7 +10,7 @@ spring:
   extract:
     schema: test
     databaseType: MS  # MS mysql
-    object-size-expansion-factor: 4
+    object-size-expansion-factor: 1
     endpoint: SOURCE
     dataLoadMode: jdbc # jdbc or csv
     query-dop: 1 # jdbc Parallel Query  config

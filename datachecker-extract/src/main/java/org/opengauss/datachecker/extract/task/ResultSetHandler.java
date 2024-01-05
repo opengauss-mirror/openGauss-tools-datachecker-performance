@@ -99,6 +99,7 @@ public abstract class ResultSetHandler {
         } catch (SQLException ex) {
             log.error(" parse data metadata information exception", ex);
         }
+//        log.info("data:{}", values);
         return values;
     }
 
@@ -188,7 +189,7 @@ public abstract class ResultSetHandler {
         return value;
     }
 
-    private boolean isScientificNotation(String value) {
+    protected boolean isScientificNotation(String value) {
         return value.contains("E") || value.contains("e");
     }
 

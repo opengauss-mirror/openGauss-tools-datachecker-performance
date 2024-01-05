@@ -41,6 +41,7 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 import javax.sql.DataSource;
+import java.util.Objects;
 
 /**
  * SliceProcessorContext
@@ -66,6 +67,7 @@ public class SliceProcessorContext {
     private CheckingFeignClient checkingFeignClient;
     @Resource
     private TopicCache topicCache;
+    private SliceStatusFeedbackService sliceStatusFeedbackService;
 
     /**
      * create slice kafka agents
@@ -140,9 +142,8 @@ public class SliceProcessorContext {
      *
      * @param sliceExtend slice extend
      */
-    @Retryable(maxAttempts = 3)
     public void feedbackStatus(SliceExtend sliceExtend) {
-        checkingFeignClient.refreshRegisterSlice(sliceExtend);
+        sliceStatusFeedbackService.addFeedbackStatus(sliceExtend);
     }
 
     /**
@@ -152,5 +153,16 @@ public class SliceProcessorContext {
      */
     public MemoryOperations getMemoryDataOperations() {
         return new MemoryOperations(resourceManager);
+    }
+
+    public void startSliceStatusFeedbackService() {
+        sliceStatusFeedbackService = new SliceStatusFeedbackService(checkingFeignClient);
+        sliceStatusFeedbackService.feedback();
+    }
+
+    public void shutdownSliceStatusFeedbackService() {
+        if (Objects.nonNull(sliceStatusFeedbackService)) {
+            sliceStatusFeedbackService.stop();
+        }
     }
 }

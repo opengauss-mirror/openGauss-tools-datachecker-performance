@@ -189,5 +189,6 @@ public class SliceResultSetSender {
                 result.put(column.getColumnName(), nextLine[idx]);
             }
         }
+//        log.info("data:{}", result);
     }
 }

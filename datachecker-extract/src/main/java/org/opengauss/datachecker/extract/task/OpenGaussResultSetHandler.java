@@ -34,7 +34,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @since ：11
  */
 public class OpenGaussResultSetHandler extends ResultSetHandler {
-    private final Map<String, TypeHandler> typeHandlers = new ConcurrentHashMap<>();
+    protected final Map<String, TypeHandler> typeHandlers = new ConcurrentHashMap<>();
 
     {
         TypeHandler byteaToString = (rs, columnLabel) -> bytesToString(rs.getBytes(columnLabel));
@@ -88,7 +88,7 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
         super(supplyZero);
     }
 
-    private String intToString(ResultSet rs, String columnLabel) throws SQLException {
+    protected String intToString(ResultSet rs, String columnLabel) throws SQLException {
         return rs.getString(columnLabel);
     }
 
@@ -135,7 +135,7 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
         }
     }
 
-    private String getPgColumnTypeName(ResultSetMetaData rsmd, int columnIdx) throws SQLException {
+    protected String getPgColumnTypeName(ResultSetMetaData rsmd, int columnIdx) throws SQLException {
         String columnTypeName = rsmd.getColumnTypeName(columnIdx);
         if (columnTypeName.contains(OpenGaussType.pg_catalog)) {
             columnTypeName = rsmd.getColumnTypeName(columnIdx)
