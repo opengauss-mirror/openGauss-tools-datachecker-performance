@@ -41,7 +41,8 @@ spring:
     schema-tables: ${spring.csv.path}/${spring.csv.schema}_information_schema_tables.csv
     schema-columns: ${spring.csv.path}/${spring.csv.schema}_information_schema_columns.csv
     sleep-interval: 100 # 毫秒
-
+    task-dispatcher-interval: 3 # csv task dispatcher period (unit second)
+    max-dispatcher-size: 5 # csv task dispatcher size
 data:
   check:
     data-path: local_path/xxx

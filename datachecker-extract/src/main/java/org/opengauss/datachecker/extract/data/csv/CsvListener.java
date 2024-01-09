@@ -16,7 +16,10 @@
 package org.opengauss.datachecker.extract.data.csv;
 
 import org.opengauss.datachecker.common.entry.extract.SliceVo;
+import org.opengauss.datachecker.extract.client.CheckingFeignClient;
 import org.opengauss.datachecker.extract.constants.ExtConstants;
+
+import java.util.List;
 
 /**
  * CsvListener
@@ -29,16 +32,18 @@ public interface CsvListener {
 
     /**
      * init csv listener
+     *
+     * @param checkingClient
      */
-    void initCsvListener();
+    void initCsvListener(CheckingFeignClient checkingClient);
 
     /**
-     * poll slice vo from listener queue
-     * Retrieves and removes the head of this queue, or returns null if this queue is empty
+     * fetch table's all slices
      *
-     * @return slice
+     * @param table
+     * @return slices
      */
-    SliceVo poll();
+    List<SliceVo> fetchTableSliceList(String table);
 
     /**
      * stop tailer listener
@@ -47,13 +52,14 @@ public interface CsvListener {
 
     /**
      * check slice ptn num, if ptn num is invalid, set min ptn num
+     *
      * @param slice slice
      */
     default void checkSlicePtnNum(SliceVo slice) {
         if (slice.getPtnNum() < ExtConstants.MIN_TOPIC_PTN_NUM) {
             slice.setPtnNum(ExtConstants.MIN_TOPIC_PTN_NUM);
         }
-    };
+    }
 
     /**
      * listener is finished
@@ -61,4 +67,10 @@ public interface CsvListener {
      * @return true | false
      */
     boolean isFinished();
+
+    /**
+     * release slice cache of table
+     * @param table table
+     */
+    void releaseSliceCache(String table);
 }

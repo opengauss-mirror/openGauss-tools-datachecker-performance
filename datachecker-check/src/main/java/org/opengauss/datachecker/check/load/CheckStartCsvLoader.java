@@ -18,6 +18,7 @@ package org.opengauss.datachecker.check.load;
 import org.opengauss.datachecker.check.client.FeignClientService;
 import org.opengauss.datachecker.check.event.KafkaTopicDeleteProvider;
 import org.opengauss.datachecker.check.modules.report.SliceProgressService;
+import org.opengauss.datachecker.check.service.CsvProcessManagement;
 import org.opengauss.datachecker.check.service.TaskRegisterCenter;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
@@ -46,6 +47,8 @@ public class CheckStartCsvLoader extends AbstractCheckLoader {
     private SliceProgressService sliceProgressService;
     @Resource
     private KafkaTopicDeleteProvider kafkaTopicDeleteProvider;
+    @Resource
+    private CsvProcessManagement csvProcessManagement;
 
     @Override
     public void load(CheckEnvironment checkEnvironment) {
@@ -54,7 +57,7 @@ public class CheckStartCsvLoader extends AbstractCheckLoader {
             sliceProgressService.startProgressing();
             int count = feignClient.fetchCheckTableCount();
             sliceProgressService.updateTotalTableCount(count);
-
+            csvProcessManagement.startTaskDispatcher();
             feignClient.enableCsvExtractService();
             log.info("enabled data check csv mode");
             kafkaTopicDeleteProvider.deleteTopicIfTableCheckedCompleted();
@@ -64,6 +67,7 @@ public class CheckStartCsvLoader extends AbstractCheckLoader {
             while (!registerCenter.checkCompletedAll(count)) {
                 ThreadUtil.sleepOneSecond();
             }
+            csvProcessManagement.closeTaskDispatcher();
             shutdown(CSV_CHECK_COMPLETED);
         }
     }

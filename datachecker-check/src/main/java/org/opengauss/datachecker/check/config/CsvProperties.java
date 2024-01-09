@@ -33,7 +33,8 @@ import org.springframework.stereotype.Component;
 @Component
 @ConfigurationProperties(prefix = "spring.csv")
 @JSONType(
-    orders = {"sync", "schema", "path", "data", "reader", "writer", "schemaTables", "schemaColumns", "sleepInterval"})
+    orders = {"sync", "schema", "path", "data", "reader", "writer", "schemaTables", "schemaColumns", "sleepInterval",
+        "taskDispatcherInterval", "maxDispatcherSize"})
 public class CsvProperties {
     private boolean sync;
     private String schema;
@@ -44,6 +45,8 @@ public class CsvProperties {
     private String schemaTables;
     private String schemaColumns;
     private long sleepInterval = 100;
+    private int taskDispatcherInterval = 3;
+    private int maxDispatcherSize = 5;
 
     /**
      * translate properties to csv path config

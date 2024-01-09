@@ -70,15 +70,14 @@ public interface CheckingFeignClient {
     /**
      * register topic
      *
-     * @param table           tableName
-     * @param ptnNum ptnNum
-     * @param endpoint        current endpoint
+     * @param table    tableName
+     * @param ptnNum   ptnNum
+     * @param endpoint current endpoint
      * @return topic
      */
     @PostMapping("/register/topic")
     Topic registerTopic(@RequestParam(value = "tableName") @NotEmpty String table,
-        @RequestParam(value = "ptnNum") int ptnNum,
-        @RequestParam(value = "endpoint") @NonNull Endpoint endpoint);
+        @RequestParam(value = "ptnNum") int ptnNum, @RequestParam(value = "endpoint") @NonNull Endpoint endpoint);
 
     /**
      * health check
@@ -95,7 +94,8 @@ public interface CheckingFeignClient {
     Map<String, Integer> queryTableCheckStatus();
 
     @GetMapping("/get/feign/request")
-    boolean getFeignRequest(@RequestParam(value = "requestName") String requestName, @RequestParam(value = "value") String value);
+    boolean getFeignRequest(@RequestParam(value = "requestName") String requestName,
+        @RequestParam(value = "value") String value);
 
     @GetMapping("/release/feign/request")
     boolean releaseFeignRequest(@RequestParam(value = "requestName") String requestName);
@@ -133,12 +133,14 @@ public interface CheckingFeignClient {
     /**
      * register table checkpoint list
      *
-     * @param endpoint endpoint
-     * @param tableName tableName
+     * @param endpoint   endpoint
+     * @param tableName  tableName
      * @param checkPoint checkPoint
      */
     @PostMapping("/register/checkpoint")
     void registerCheckPoint(@RequestParam(name = "endpoint") @NotEmpty Endpoint endpoint,
-                            @RequestParam(name = "tableName") @NotEmpty String tableName,
-                            @RequestBody List<Object> checkPoint);
+        @RequestParam(name = "tableName") @NotEmpty String tableName, @RequestBody List<Object> checkPoint);
+
+    @PostMapping("/notify/check/table/index/completed")
+    void notifyTableIndexCompleted(@RequestBody List<String> completedTableList);
 }

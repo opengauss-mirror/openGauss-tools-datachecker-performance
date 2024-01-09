@@ -229,4 +229,12 @@ public interface ExtractFeignClient {
 
     @GetMapping("/fetch/check/table/count")
     Result<Integer> fetchCheckTableCount();
+
+    /**
+     * csv dispatcher tables
+     *
+     * @param list tables
+     */
+    @PostMapping("/csv/dispatcher/tables")
+    void dispatcherTables(@RequestBody List<String> list);
 }

@@ -367,4 +367,9 @@ public class FeignClientService {
             throw new DispatchClientException(Endpoint.SOURCE, "check database error: " + ignored.getMessage());
         }
     }
+
+    public void dispatcherTables(List<String> list) {
+        getClient(Endpoint.SOURCE).dispatcherTables(list);
+        getClient(Endpoint.SINK).dispatcherTables(list);
+    }
 }

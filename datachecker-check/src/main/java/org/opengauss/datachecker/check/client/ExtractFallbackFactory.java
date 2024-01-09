@@ -199,5 +199,10 @@ public class ExtractFallbackFactory implements FallbackFactory<ExtractFeignClien
         public Result<Integer> fetchCheckTableCount() {
             return null;
         }
+
+        @Override
+        public void dispatcherTables(List<String> list) {
+
+        }
     }
 }
