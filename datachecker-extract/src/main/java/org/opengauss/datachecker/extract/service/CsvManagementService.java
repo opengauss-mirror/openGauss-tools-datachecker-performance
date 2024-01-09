@@ -21,6 +21,7 @@ import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.service.DynamicThreadPoolManager;
 import org.opengauss.datachecker.common.util.LogUtils;
+import org.opengauss.datachecker.extract.client.CheckingFeignClient;
 import org.opengauss.datachecker.extract.slice.SliceDispatcher;
 import org.opengauss.datachecker.extract.slice.SliceRegister;
 import org.opengauss.datachecker.extract.data.BaseDataService;
@@ -31,6 +32,7 @@ import org.opengauss.datachecker.extract.slice.TableDispatcher;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -50,6 +52,8 @@ public class CsvManagementService {
     private DynamicThreadPoolManager dynamicThreadPoolManager;
     @Resource
     private SliceRegister sliceRegister;
+    @Resource
+    private CheckingFeignClient checkingClient;
     private CsvListener listener;
     private SliceDispatcher sliceDispatcher = null;
 
@@ -70,7 +74,7 @@ public class CsvManagementService {
             listener = new CsvWriterListener();
         }
         baseDataService.queryTableMetadataList();
-        listener.initCsvListener();
+        listener.initCsvListener(checkingClient);
         // start slice dispatcher core thread
         sliceDispatcher = new SliceDispatcher(dynamicThreadPoolManager, sliceRegister, baseDataService, listener);
         Thread thread = new Thread(sliceDispatcher);
@@ -93,5 +97,9 @@ public class CsvManagementService {
         if (Objects.nonNull(sliceDispatcher)) {
             sliceDispatcher.stop();
         }
+    }
+
+    public void dispatcherTables(List<String> list) {
+        sliceDispatcher.addSliceTables(list);
     }
 }

@@ -27,7 +27,8 @@ import lombok.Data;
  */
 @Data
 @JSONType(
-    orders = {"sync", "schema", "path", "data", "reader", "writer", "schemaTables", "schemaColumns", "sleepInterval"})
+    orders = {"sync", "schema", "path", "data", "reader", "writer", "schemaTables", "schemaColumns", "sleepInterval",
+        "taskDispatcherInterval", "maxDispatcherSize"})
 public class CsvPathConfig {
     private boolean sync;
     private String schema;
@@ -38,4 +39,6 @@ public class CsvPathConfig {
     private String schemaTables;
     private String schemaColumns;
     private long sleepInterval = 100;
+    private int taskDispatcherInterval = 3;
+    private int maxDispatcherSize = 5;
 }

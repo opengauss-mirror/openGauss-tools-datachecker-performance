@@ -20,10 +20,12 @@ import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.web.Result;
 import org.opengauss.datachecker.extract.service.CsvManagementService;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
+import java.util.List;
 
 /**
  * CheckCsvController
@@ -52,5 +54,15 @@ public class CheckCsvController {
             csvManagementService.startCsvNoSliceLogProcess();
         }
         return Result.success();
+    }
+
+    /**
+     * csv dispatcher tables
+     *
+     * @param list tables
+     */
+    @PostMapping("/csv/dispatcher/tables")
+    public void dispatcherTables(@RequestBody List<String> list) {
+        csvManagementService.dispatcherTables(list);
     }
 }

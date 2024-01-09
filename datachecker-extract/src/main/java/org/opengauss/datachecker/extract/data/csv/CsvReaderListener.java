@@ -23,12 +23,15 @@ import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.entry.extract.SliceVo;
 import org.opengauss.datachecker.common.util.LogUtils;
+import org.opengauss.datachecker.common.util.MapUtils;
+import org.opengauss.datachecker.extract.client.CheckingFeignClient;
 import org.opengauss.datachecker.extract.constants.ExtConstants;
 
 import java.io.File;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * CsvReaderListener
@@ -39,13 +42,12 @@ import java.util.concurrent.LinkedBlockingQueue;
  */
 public class CsvReaderListener implements CsvListener {
     private static final Logger log = LogUtils.getLogger();
-    private final BlockingQueue<SliceVo> listenerQueue = new LinkedBlockingQueue<>();
+    private final Map<String, List<SliceVo>> readerSliceMap = new ConcurrentHashMap<>();
     private Tailer tailer;
-    private TailerMonitor tailerMonitor;
     private boolean isTailEnd = false;
 
     @Override
-    public void initCsvListener() {
+    public void initCsvListener(CheckingFeignClient checkingClient) {
         log.info("csv reader listener is starting .");
         // creates and starts a Tailer for read writer logs in real time
         tailer = Tailer.create(new File(ConfigCache.getReader()), new TailerListenerAdapter() {
@@ -68,34 +70,34 @@ public class CsvReaderListener implements CsvListener {
                         return;
                     }
                     checkSlicePtnNum(slice);
-                    listenerQueue.add(slice);
+                    MapUtils.put(readerSliceMap, slice.getTable(), slice);
                     log.debug("reader add log ：{}", line);
                 } catch (Exception ex) {
                     log.error("reader log listener error ：" + ex.getMessage());
                 }
             }
         }, ConfigCache.getCsvLogMonitorInterval(), false);
-
-        tailerMonitor = new TailerMonitor(tailer, listenerQueue);
-        Thread thread = new Thread(tailerMonitor);
-        thread.start();
         log.info("csv reader listener is started .");
     }
 
     @Override
-    public SliceVo poll() {
-        return listenerQueue.poll();
+    public List<SliceVo> fetchTableSliceList(String table) {
+        return readerSliceMap.get(table);
+    }
+
+    @Override
+    public void releaseSliceCache(String table) {
+        readerSliceMap.remove(table);
     }
 
     @Override
     public boolean isFinished() {
-        return isTailEnd && listenerQueue.isEmpty();
+        return isTailEnd && readerSliceMap.isEmpty();
     }
 
     @Override
     public void stop() {
         if (Objects.nonNull(tailer)) {
-            tailerMonitor.stop();
             tailer.stop();
         }
     }

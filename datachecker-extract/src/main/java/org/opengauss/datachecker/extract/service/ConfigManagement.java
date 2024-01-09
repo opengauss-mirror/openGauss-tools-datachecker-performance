@@ -94,6 +94,8 @@ public class ConfigManagement {
         ConfigCache.put(ConfigConstants.CSV_SLEEP_INTERVAL, config.getSleepInterval());
         ConfigCache.put(ConfigConstants.CSV_SCHEMA_TABLES_PATH, config.getSchemaTables());
         ConfigCache.put(ConfigConstants.CSV_SCHEMA_COLUMNS_PATH, config.getSchemaColumns());
+        ConfigCache.put(ConfigConstants.CSV_TASK_DISPATCHER_INTERVAL, config.getTaskDispatcherInterval());
+        ConfigCache.put(ConfigConstants.CSV_MAX_DISPATCHER_SIZE, config.getMaxDispatcherSize());
         ConfigCache.put(ConfigConstants.CHECK_MODE, CheckMode.CSV);
     }
 

@@ -15,6 +15,8 @@
 
 package org.opengauss.datachecker.extract.slice;
 
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
@@ -32,7 +34,10 @@ import org.opengauss.datachecker.extract.data.csv.CsvListener;
 import org.opengauss.datachecker.extract.slice.factory.SliceFactory;
 
 import java.io.File;
+import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 
 import static org.opengauss.datachecker.common.constant.DynamicTpConstant.EXTRACT_EXECUTOR;
@@ -48,7 +53,7 @@ public class SliceDispatcher implements Runnable {
     private static final Logger log = LogUtils.getLogger();
     private static final int MAX_DISPATCHER_QUEUE_SIZE = 100;
     private static final int WAIT_ONE_SECOND = 1000;
-
+    private final BlockingQueue<String> tableQueue = new LinkedBlockingQueue<>();
     private final Object lock = new Object();
     private final SliceFactory sliceFactory;
     private final CsvListener listener;
@@ -57,6 +62,7 @@ public class SliceDispatcher implements Runnable {
     private final DynamicThreadPoolManager dynamicThreadPoolManager;
     private TopicCache topicCache;
     private boolean isRunning = true;
+    private final int maxFetchSize;
 
     /**
      * construct slice dispatcher
@@ -74,6 +80,7 @@ public class SliceDispatcher implements Runnable {
         this.dynamicThreadPoolManager = dynamicThreadPoolManager;
         this.sliceFactory = new SliceFactory(baseDataService.getDataSource());
         this.topicCache = SpringUtil.getBean(TopicCache.class);
+        this.maxFetchSize = ConfigCache.getIntValue(ConfigConstants.MAXIMUM_TABLE_SLICE_SIZE);
     }
 
     @Override
@@ -85,27 +92,33 @@ public class SliceDispatcher implements Runnable {
                 Endpoint endPoint = ConfigCache.getEndPoint();
                 while (isRunning) {
                     waitingForIdle(executor);
-                    SliceVo sliceVo = listener.poll();
-                    if (Objects.nonNull(sliceVo)) {
-                        // check table by rule of table
-                        String table = sliceVo.getTable();
-                        if (!baseDataService.checkTableContains(table)) {
-                            log.info("distributors ignore [{}] table shards based on table rules", table);
-                            notifyIgnoreCsvName(endPoint, sliceVo.getName(), "table rules");
-                            continue;
-                        }
-                        TableMetadata tableMetadata = baseDataService.getTableMetadata(table);
-                        if (!tableMetadata.hasPrimary()) {
-                            log.info("distributors ignore [{}] table because of it's no primary", table);
-                            notifyIgnoreCsvName(endPoint, sliceVo.getName(), "table no primary");
-                            continue;
-                        }
-                        sliceVo.setEndpoint(endPoint);
-                        register(sliceVo);
-                        doTableSlice(executor, sliceVo);
-                    } else {
-                        ThreadUtil.sleepMax2Second();
+                    String table = tableQueue.poll();
+                    if (StringUtils.isEmpty(table)) {
+                        continue;
                     }
+                    // check table by rule of table
+                    if (!baseDataService.checkTableContains(table)) {
+                        log.info("distributors ignore [{}] table shards based on table rules", table);
+                        notifyIgnoreCsvName(endPoint, table, "table rules");
+                        listener.releaseSliceCache(table);
+                        continue;
+                    }
+                    TableMetadata tableMetadata = baseDataService.queryTableMetadata(table);
+                    if (!tableMetadata.hasPrimary()) {
+                        log.info("distributors ignore [{}] table because of it's no primary", table);
+                        notifyIgnoreCsvName(endPoint, table, "table no primary");
+                        listener.releaseSliceCache(table);
+                        continue;
+                    }
+                    List<SliceVo> tableSliceList = listener.fetchTableSliceList(table);
+                    if (CollectionUtils.isNotEmpty(tableSliceList)) {
+                        tableSliceList.forEach(sliceVo -> {
+                            sliceVo.setEndpoint(endPoint);
+                            register(sliceVo);
+                            doTableSlice(executor, sliceVo);
+                        });
+                    }
+
                     if (listener.isFinished()) {
                         log.info("listener is finished , and will be closed");
                         listener.stop();
@@ -124,13 +137,17 @@ public class SliceDispatcher implements Runnable {
         }
     }
 
-    private void notifyIgnoreCsvName(Endpoint endPoint, String ignoreCsvName, String reason) {
+    private void notifyIgnoreCsvName(Endpoint endPoint, String ignoreCsvTableName, String reason) {
         if (Objects.equals(Endpoint.SOURCE, endPoint)) {
             String csvDataPath = ConfigCache.getCsvData();
-            File file = new File(csvDataPath, ignoreCsvName);
-            if (file.exists() && file.renameTo(new File(csvDataPath, ignoreCsvName + ".check"))) {
-                log.debug("rename csv sharding completed [{}] by {}", ignoreCsvName, reason);
-            }
+            List<SliceVo> tableSliceList = listener.fetchTableSliceList(ignoreCsvTableName);
+            tableSliceList.forEach(slice -> {
+                String ignoreCsvName = slice.getName();
+                File file = new File(csvDataPath, ignoreCsvName);
+                if (file.exists() && file.renameTo(new File(csvDataPath, ignoreCsvName + ".check"))) {
+                    log.debug("rename csv sharding completed [{}] by {}", ignoreCsvName, reason);
+                }
+            });
         }
     }
 
@@ -190,7 +207,6 @@ public class SliceDispatcher implements Runnable {
         while (sliceVo.getPtnNum() > 0 && !sliceRegister.registerTopic(sliceVo.getTable(), sliceVo.getPtnNum())) {
             ThreadUtil.sleepMax2Second();
         }
-        int maxFetchSize = ConfigCache.getIntValue(ConfigConstants.MAXIMUM_TABLE_SLICE_SIZE);
         updateSliceFetchSize(maxFetchSize, sliceVo);
         sliceRegister.register(sliceVo);
     }
@@ -200,5 +216,11 @@ public class SliceDispatcher implements Runnable {
      */
     public void stop() {
         isRunning = false;
+    }
+
+    public void addSliceTables(List<String> list) {
+        if (CollectionUtils.isNotEmpty(list)) {
+            tableQueue.addAll(list);
+        }
     }
 }

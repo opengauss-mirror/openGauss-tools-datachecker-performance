@@ -32,6 +32,8 @@ public interface ConfigConstants {
     String CSV_SCHEMA_TABLES_PATH = "spring.csv.schema-tables";
     String CSV_SCHEMA_COLUMNS_PATH = "spring.csv.schema-columns";
     String CSV_SLEEP_INTERVAL = "spring.csv.sleep-interval";
+    String CSV_TASK_DISPATCHER_INTERVAL = "spring.csv.task-dispatcher-interval";
+    String CSV_MAX_DISPATCHER_SIZE = "spring.csv.max-dispatcher-size";
 
     String CHECK_MODE = "check_mode";
     String PROCESS_NO = "check.process.id";
@@ -76,4 +78,5 @@ public interface ConfigConstants {
      * lifecycle graceful shutdown wait time
      */
     String TIMEOUT_PER_SHUTDOWN_PHASE = "spring.lifecycle.timeout-per-shutdown-phase";
+
 }
