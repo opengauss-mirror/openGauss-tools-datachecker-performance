@@ -40,8 +40,12 @@ public class MapUtils {
      */
     public static <K, T> void put(Map<K, List<T>> map, K key, T vObject) {
         map.compute(key, (k, value) -> {
-            if (value == null) {
-                value = new LinkedList<>();
+            if (value == null) { // 第一次判断，提高效率
+                synchronized (MapUtils.class) { // 进入同步块，确保只有一个线程能获取到锁
+                    if (value == null) { // 再次判断，在多线程情况下避免不必要的初始化操作
+                        value = new LinkedList<>();
+                    }
+                }
             }
             value.add(vObject);
             return value;
@@ -80,8 +84,12 @@ public class MapUtils {
      */
     public static <K, S, T> void put(Map<K, Map<S, T>> map, K key, S vKey, T vValue) {
         map.compute(key, (valueKey, vMap) -> {
-            if (vMap == null) {
-                vMap = new HashMap<>();
+            if (vMap == null) { // 第一次判断，提高效率
+                synchronized (MapUtils.class) { // 进入同步块，确保只有一个线程能获取到锁
+                    if (vMap == null) { // 再次判断，在多线程情况下避免不必要的初始化操作
+                        vMap = new HashMap<>();
+                    }
+                }
             }
             vMap.put(vKey, vValue);
             return vMap;
@@ -101,7 +109,8 @@ public class MapUtils {
      */
     public static <K, S, T> T get(Map<K, Map<S, T>> map, K key, S vKey) {
         if (map.containsKey(key)) {
-            return map.get(key).get(vKey);
+            return map.get(key)
+                      .get(vKey);
         } else {
             return null;
         }
