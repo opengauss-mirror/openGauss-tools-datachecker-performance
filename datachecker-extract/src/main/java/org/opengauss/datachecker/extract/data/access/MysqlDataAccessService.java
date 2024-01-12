@@ -38,6 +38,11 @@ public class MysqlDataAccessService extends AbstractDataAccessService {
     }
 
     @Override
+    public String sqlMode() {
+        return mysqlMetaDataMapper.sqlMode();
+    }
+
+    @Override
     public boolean health() {
         return mysqlMetaDataMapper.health();
     }

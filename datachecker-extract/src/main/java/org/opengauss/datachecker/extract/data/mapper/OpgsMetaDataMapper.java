@@ -36,4 +36,11 @@ public interface OpgsMetaDataMapper extends MetaDataMapper {
      */
     @Select("show sql_compatibility;")
     OgCompatibility sqlCompatibility();
+
+    /**
+     * session sql_compatibility B sql mode
+     *
+     * @return sql mode
+     */
+    String dolphinSqlMode();
 }

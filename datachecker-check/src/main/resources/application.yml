@@ -61,7 +61,7 @@ data:
     # 0 is not delete; 1 is delete when checked all completed ; 2 is deleted when checked a table
     auto-delete-topic: 2
     increment-max-diff-count: 10
-
+    sql_mode_pad_char_to_full_length: false # sql_mode : pad_char_to_full_length disabled
 rules:
   # There are three types of filtering rules: table-level rules, row-level rules, and column-level rules.
   # Rules are configured in the form of List collection.

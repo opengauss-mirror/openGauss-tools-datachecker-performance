@@ -22,6 +22,11 @@
         <result property="columnName" column="COLUMN_NAME"/>
     </resultMap>
 
+    <!-- oracle does not have sql mode -->
+    <select id="sqlMode" resultType="String">
+          SELECT 1 FROM DUAL
+    </select>
+
     <select id="health" resultType="boolean">
          SELECT 1 FROM DUAL
     </select>

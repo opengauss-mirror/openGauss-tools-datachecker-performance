@@ -24,6 +24,14 @@
         <result property="columnName" column="columnName"/>
     </resultMap>
 
+    <select id="sqlMode" resultType="String">
+         SHOW sql_mode;
+    </select>
+
+    <select id="dolphinSqlMode" resultType="String">
+         show dolphin.sql_mode;;
+    </select>
+
     <select id="health" resultType="boolean">
          SELECT 1
     </select>

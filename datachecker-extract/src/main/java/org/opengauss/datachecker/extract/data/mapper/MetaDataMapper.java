@@ -32,6 +32,13 @@ import java.util.List;
  */
 public interface MetaDataMapper {
     /**
+     * session sql mode
+     *
+     * @return sql mode
+     */
+    String sqlMode();
+
+    /**
      * check jdbc health
      *
      * @return true | false
@@ -77,7 +84,8 @@ public interface MetaDataMapper {
      * @param schema schema
      * @return primary column
      */
-    List<PrimaryColumnBean> queryTablePrimaryColumnsByTableName(@Param("schema") String schema, @Param("name") String tableName);
+    List<PrimaryColumnBean> queryTablePrimaryColumnsByTableName(@Param("schema") String schema,
+        @Param("name") String tableName);
 
     /**
      * query table TableMetadata

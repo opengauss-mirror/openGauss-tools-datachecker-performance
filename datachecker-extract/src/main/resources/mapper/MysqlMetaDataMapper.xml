@@ -25,6 +25,10 @@
         <result property="columnName" column="columnName"/>
     </resultMap>
 
+    <select id="sqlMode" resultType="String">
+         SELECT @@global.sql_mode;
+    </select>
+
     <select id="health" resultType="boolean">
          SELECT 1 FROM DUAL
     </select>

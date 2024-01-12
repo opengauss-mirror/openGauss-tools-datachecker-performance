@@ -58,6 +58,10 @@ public interface ConfigConstants {
     String EXTEND_MAXIMUM_POOL_SIZE = "spring.check.extend-maximum-pool-size";
     String BUCKET_CAPACITY = "data.check.bucket-expect-capacity";
     String CHECK_PATH = "data.check.data-path";
+    String SQL_MODE_PAD_CHAR_TO_FULL_LENGTH = "data.check.sql_mode_pad_char_to_full_length";
+    String SQL_MODE_NAME_PAD_CHAR_TO_FULL_LENGTH = "pad_char_to_full_length";
+    String SQL_MODE_VALUE_CACHE = "data.check.sql_mode_value_cache";
+    String SQL_MODE_FORCE_REFRESH = "data.check.sql_mode_force_refresh";
 
     String KAFKA_SERVERS = "spring.kafka.bootstrap-servers";
     String KAFKA_AUTO_COMMIT = "spring.kafka.consumer.enable-auto-commit";
@@ -78,5 +82,5 @@ public interface ConfigConstants {
      * lifecycle graceful shutdown wait time
      */
     String TIMEOUT_PER_SHUTDOWN_PHASE = "spring.lifecycle.timeout-per-shutdown-phase";
-
+    String OG_COMPATIBILITY_B = "openGauss.Compatibility.B";
 }

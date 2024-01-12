@@ -38,6 +38,11 @@ public class OracleDataAccessService extends AbstractDataAccessService {
     }
 
     @Override
+    public String sqlMode() {
+        return null;
+    }
+
+    @Override
     public boolean health() {
         return oracleMetaDataMapper.health();
     }
