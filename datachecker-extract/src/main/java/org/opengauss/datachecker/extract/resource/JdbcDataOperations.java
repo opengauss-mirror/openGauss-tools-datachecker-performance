@@ -15,7 +15,7 @@
 
 package org.opengauss.datachecker.extract.resource;
 
-import com.alibaba.druid.pool.DruidDataSource;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
@@ -46,6 +46,8 @@ public class JdbcDataOperations {
 
     private final DataSource jdbcDataSource;
     private final ResourceManager resourceManager;
+    private final boolean isForceRefreshConnectionSqlMode;
+    private String sqlModeRefreshStatement = "";
 
     /**
      * constructor
@@ -56,6 +58,21 @@ public class JdbcDataOperations {
     public JdbcDataOperations(DataSource jdbcDataSource, ResourceManager resourceManager) {
         this.jdbcDataSource = jdbcDataSource;
         this.resourceManager = resourceManager;
+        this.isForceRefreshConnectionSqlMode = ConfigCache.getBooleanValue(ConfigConstants.SQL_MODE_FORCE_REFRESH);
+        initSqlModeRefreshStatement();
+    }
+
+    private void initSqlModeRefreshStatement() {
+        if (isForceRefreshConnectionSqlMode) {
+            String sqlMode = ConfigCache.getValue(ConfigConstants.SQL_MODE_VALUE_CACHE);
+            if (ConfigCache.getBooleanValue(ConfigConstants.OG_COMPATIBILITY_B)) {
+                // openGauss compatibility B set database sql mode must be set dolphin.sql_mode
+                sqlModeRefreshStatement = "set dolphin.sql_mode ='" + sqlMode + "'";
+            } else {
+                // mysql and openGauss compatibility A set database sql mode grammar is same
+                sqlModeRefreshStatement = "set sql_mode ='" + sqlMode + "'";
+            }
+        }
     }
 
     /**
@@ -91,17 +108,24 @@ public class JdbcDataOperations {
             connection.setAutoCommit(false);
             setExtraFloatDigitsParameter(connection);
         }
+        if (isForceRefreshConnectionSqlMode && StringUtils.isNotEmpty(sqlModeRefreshStatement)) {
+            execute(connection, sqlModeRefreshStatement);
+        }
         return connection;
     }
 
     public void setExtraFloatDigitsParameter(Connection connection) {
         if (Objects.equals(DataBaseType.OG, ConfigCache.getValue(ConfigConstants.DATA_BASE_TYPE, DataBaseType.class))) {
-            try {
-                PreparedStatement ps = connection.prepareStatement(OPEN_GAUSS_EXTRA_FLOAT_DIGITS);
-                ps.execute();
-            } catch (SQLException sql) {
-                sql.printStackTrace();
-            }
+            execute(connection, OPEN_GAUSS_EXTRA_FLOAT_DIGITS);
+        }
+    }
+
+    private void execute(Connection connection, String statementSql) {
+        try {
+            PreparedStatement ps = connection.prepareStatement(statementSql);
+            ps.execute();
+        } catch (SQLException sql) {
+            sql.printStackTrace();
         }
     }
 

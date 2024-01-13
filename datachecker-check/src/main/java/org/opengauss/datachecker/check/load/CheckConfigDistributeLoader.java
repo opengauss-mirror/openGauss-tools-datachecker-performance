@@ -72,12 +72,7 @@ public class CheckConfigDistributeLoader extends AbstractCheckLoader {
                 config.rowRuleClear();
             }
             final Map<RuleType, List<Rule>> rules = ruleParser.parser(config);
-            GlobalConfig globalConfig = new GlobalConfig();
-            globalConfig.setRules(rules);
-            globalConfig.setCheckMode(checkMode);
-            globalConfig.addCommonConfig(ConfigConstants.FLOATING_POINT_DATA_SUPPLY_ZERO,
-                ConfigCache.getBooleanValue(ConfigConstants.FLOATING_POINT_DATA_SUPPLY_ZERO));
-            globalConfig.setProcessPath(checkProperties.getDataPath());
+            GlobalConfig globalConfig = initDistributeGlobalConfig(checkMode, rules);
             feignClient.distributeConfig(checkMode, globalConfig);
             log.info("check distribute rule config success.");
             // distribute csv config
@@ -93,5 +88,17 @@ public class CheckConfigDistributeLoader extends AbstractCheckLoader {
             log.error("distribute config error: ", ignore);
             throw new CheckingException("distribute config error");
         }
+    }
+
+    private GlobalConfig initDistributeGlobalConfig(CheckMode checkMode, Map<RuleType, List<Rule>> rules) {
+        GlobalConfig globalConfig = new GlobalConfig();
+        globalConfig.setRules(rules);
+        globalConfig.setCheckMode(checkMode);
+        globalConfig.setProcessPath(checkProperties.getDataPath());
+        globalConfig.addCommonConfig(ConfigConstants.FLOATING_POINT_DATA_SUPPLY_ZERO,
+            ConfigCache.getBooleanValue(ConfigConstants.FLOATING_POINT_DATA_SUPPLY_ZERO));
+        globalConfig.addCommonConfig(ConfigConstants.SQL_MODE_PAD_CHAR_TO_FULL_LENGTH,
+            ConfigCache.getBooleanValue(ConfigConstants.SQL_MODE_PAD_CHAR_TO_FULL_LENGTH));
+        return globalConfig;
     }
 }

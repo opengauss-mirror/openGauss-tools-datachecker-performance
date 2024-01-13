@@ -54,6 +54,8 @@ public class ConfigManagement {
     private int requestTimeoutMs;
     @Value("${spring.check.floating-point-data-supply-zero}")
     private boolean floatingPointDataSupplyZero;
+    @Value("${data.check.sql_mode_pad_char_to_full_length}")
+    private boolean sqlModePadCharToFullLength;
 
     /**
      * config management init
@@ -64,6 +66,7 @@ public class ConfigManagement {
         ConfigCache.put(ConfigConstants.BUCKET_CAPACITY, checkProperties.getBucketExpectCapacity());
         ConfigCache.put(ConfigConstants.ENDPOINT, Endpoint.CHECK);
         ConfigCache.put(ConfigConstants.FLOATING_POINT_DATA_SUPPLY_ZERO, floatingPointDataSupplyZero);
+        ConfigCache.put(ConfigConstants.SQL_MODE_PAD_CHAR_TO_FULL_LENGTH, sqlModePadCharToFullLength);
         initKafka();
     }
 

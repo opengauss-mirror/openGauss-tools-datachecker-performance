@@ -35,6 +35,13 @@ import java.util.Map;
  */
 public interface DataAccessService {
     /**
+     * session sql mode
+     *
+     * @return sql mode
+     */
+    String sqlMode();
+
+    /**
      * check jdbc health
      *
      * @return true | false

@@ -25,6 +25,7 @@ import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.service.ProcessLogService;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.web.Result;
+import org.opengauss.datachecker.extract.data.BaseDataService;
 import org.opengauss.datachecker.extract.load.ExtractEnvironmentContext;
 import org.opengauss.datachecker.extract.service.ConfigManagement;
 import org.opengauss.datachecker.extract.service.RuleAdapterService;
@@ -50,6 +51,8 @@ public class ConfigController {
     @Resource
     private ExtractEnvironmentContext context;
     @Resource
+    private BaseDataService baseDataService;
+    @Resource
     private RuleAdapterService ruleAdapterService;
     @Resource
     private ConfigManagement configManagement;
@@ -68,6 +71,7 @@ public class ConfigController {
         if (MapUtils.isNotEmpty(commonConfig)) {
             commonConfig.forEach(ConfigCache::put);
         }
+        baseDataService.initDataSourceSqlMode2ConfigCache();
         processLogService.saveProcessLog();
         ruleAdapterService.init(config.getRules());
         log.info("init filter rule config ");
@@ -75,6 +79,7 @@ public class ConfigController {
             context.loadDatabaseMetaData();
             context.loadProgressChecking();
         }
+
     }
 
     /**

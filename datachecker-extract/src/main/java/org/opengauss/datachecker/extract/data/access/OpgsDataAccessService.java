@@ -15,6 +15,8 @@
 
 package org.opengauss.datachecker.extract.data.access;
 
+import org.opengauss.datachecker.common.config.ConfigCache;
+import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.common.DataAccessParam;
 import org.opengauss.datachecker.common.entry.enums.OgCompatibility;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
@@ -44,7 +46,13 @@ public class OpgsDataAccessService extends AbstractDataAccessService {
     @PostConstruct
     public boolean isOgCompatibilityB() {
         isOgCompatibilityB = Objects.equals(OgCompatibility.B, opgsMetaDataMapper.sqlCompatibility());
-        return false;
+        ConfigCache.put(ConfigConstants.OG_COMPATIBILITY_B, isOgCompatibilityB);
+        return isOgCompatibilityB;
+    }
+
+    @Override
+    public String sqlMode() {
+        return isOgCompatibilityB() ? opgsMetaDataMapper.dolphinSqlMode() : opgsMetaDataMapper.sqlMode();
     }
 
     @Override
@@ -64,7 +72,7 @@ public class OpgsDataAccessService extends AbstractDataAccessService {
 
     @Override
     public List<PrimaryColumnBean> queryTablePrimaryColumns(String tableName) {
-        return opgsMetaDataMapper.queryTablePrimaryColumnsByTableName(properties.getSchema(),tableName);
+        return opgsMetaDataMapper.queryTablePrimaryColumnsByTableName(properties.getSchema(), tableName);
     }
 
     @Override

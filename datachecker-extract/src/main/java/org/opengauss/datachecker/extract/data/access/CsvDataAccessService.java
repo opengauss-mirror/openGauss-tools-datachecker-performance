@@ -60,6 +60,11 @@ public class CsvDataAccessService implements DataAccessService {
     private Map<String, TableMetadata> tableMetadataMap = new ConcurrentHashMap<>();
 
     @Override
+    public String sqlMode() {
+        return null;
+    }
+
+    @Override
     public boolean health() {
         return true;
     }

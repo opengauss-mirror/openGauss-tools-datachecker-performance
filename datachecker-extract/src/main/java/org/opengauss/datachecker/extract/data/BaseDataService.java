@@ -18,6 +18,8 @@ package org.opengauss.datachecker.extract.data;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.logging.log4j.Logger;
+import org.opengauss.datachecker.common.config.ConfigCache;
+import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.enums.ColumnKey;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.PrimaryColumnBean;
@@ -31,6 +33,7 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import javax.sql.DataSource;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -272,6 +275,27 @@ public class BaseDataService {
         } else {
             log.warn("table [{}] does not in checklist", table);
             return false;
+        }
+    }
+
+    public void initDataSourceSqlMode2ConfigCache() {
+        String sqlMode = dataAccessService.sqlMode();
+        if (Objects.isNull(sqlMode)) {
+            ConfigCache.put(ConfigConstants.SQL_MODE_FORCE_REFRESH, false);
+        } else {
+            String[] sqlModeArray = sqlMode.split(",");
+            String newSqlMode = Arrays.stream(sqlModeArray)
+                                      .filter(mode -> !mode.equalsIgnoreCase(
+                                          ConfigConstants.SQL_MODE_NAME_PAD_CHAR_TO_FULL_LENGTH))
+                                      .collect(Collectors.joining(","));
+            if (ConfigCache.getBooleanValue(ConfigConstants.SQL_MODE_PAD_CHAR_TO_FULL_LENGTH)) {
+                newSqlMode += ConfigConstants.SQL_MODE_NAME_PAD_CHAR_TO_FULL_LENGTH;
+            }
+            boolean isForceRefreshConnectionSqlMode = sqlMode.length() != newSqlMode.length();
+            if (isForceRefreshConnectionSqlMode) {
+                ConfigCache.put(ConfigConstants.SQL_MODE_VALUE_CACHE, newSqlMode);
+            }
+            ConfigCache.put(ConfigConstants.SQL_MODE_FORCE_REFRESH, isForceRefreshConnectionSqlMode);
         }
     }
 }
