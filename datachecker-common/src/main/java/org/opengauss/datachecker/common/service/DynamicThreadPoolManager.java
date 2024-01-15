@@ -21,6 +21,7 @@ import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
@@ -97,7 +98,7 @@ public class DynamicThreadPoolManager {
     /**
      * get Extend Free Thread Pool Executor
      *
-     * @param topicSize topicSize
+     * @param topicSize         topicSize
      * @param extendMaxPoolSize extendMaxPoolSize
      * @return ExecutorService
      */
@@ -107,9 +108,9 @@ public class DynamicThreadPoolManager {
             return EXECUTOR_SERVICE_CACHE.get(freeDtpList.get(0));
         }
         long count = EXECUTOR_SERVICE_CACHE.keySet()
-                .stream()
-                .filter(dtpName -> dtpName.startsWith(DynamicTpConstant.EXTEND_EXECUTOR))
-                .count();
+                                           .stream()
+                                           .filter(dtpName -> dtpName.startsWith(DynamicTpConstant.EXTEND_EXECUTOR))
+                                           .count();
         if (count < topicSize) {
             return buildExtendDtpExecutor(DynamicTpConstant.EXTEND_EXECUTOR + (count + 1), extendMaxPoolSize);
         } else {
@@ -122,8 +123,8 @@ public class DynamicThreadPoolManager {
         List<String> freeDtpList = new LinkedList<>();
         EXECUTOR_SERVICE_CACHE.forEach((dtpName, dtpPool) -> {
             if (dtpName.startsWith(DynamicTpConstant.EXTEND_EXECUTOR) && dtpPool.getQueue()
-                    .isEmpty()
-                    && dtpPool.getActiveCount() == 0) {
+                                                                                .isEmpty()
+                && dtpPool.getActiveCount() == 0) {
                 freeDtpList.add(dtpName);
             }
         });
@@ -133,5 +134,16 @@ public class DynamicThreadPoolManager {
     private ThreadPoolExecutor buildExtendDtpExecutor(String extendDtpName, int extendMaxPoolSize) {
         dynamicThreadPool.buildExtendDtpExecutor(EXECUTOR_SERVICE_CACHE, extendDtpName, 1, extendMaxPoolSize);
         return EXECUTOR_SERVICE_CACHE.get(extendDtpName);
+    }
+
+    public boolean allExecutorFree() {
+        List<String> freeDtpList = new LinkedList<>();
+        EXECUTOR_SERVICE_CACHE.forEach((dtpName, dtpPool) -> {
+            if (dtpPool.getQueue()
+                       .isEmpty() && dtpPool.getActiveCount() == 0) {
+                freeDtpList.add(dtpName);
+            }
+        });
+        return EXECUTOR_SERVICE_CACHE.size() == freeDtpList.size();
     }
 }

@@ -65,8 +65,6 @@ public class SliceProcessorContext {
     private KafkaConsumerConfig kafkaConsumerConfig;
     @Resource
     private CheckingFeignClient checkingFeignClient;
-    @Resource
-    private TopicCache topicCache;
     private SliceStatusFeedbackService sliceStatusFeedbackService;
 
     /**
@@ -84,13 +82,13 @@ public class SliceProcessorContext {
     }
 
     public SliceKafkaAgents createSliceKafkaAgents(String table, int ptn) {
-        Topic topic = topicCache.getTopic(table);
+        Topic topic = TopicCache.getTopic(table);
         String topicName = topic.getTopicName(ConfigCache.getEndPoint());
         return new SliceKafkaAgents(kafkaTemplate, kafkaConsumerConfig.createConsumer(), topicName, ptn);
     }
 
     public SliceKafkaAgents createSliceKafkaAgents(String table) {
-        Topic topic = topicCache.getTopic(table);
+        Topic topic = TopicCache.getTopic(table);
         return new SliceKafkaAgents(kafkaTemplate, kafkaConsumerConfig.createConsumer(), topic);
     }
 

@@ -130,8 +130,6 @@ public class DataExtractServiceImpl implements DataExtractService {
     @Autowired
     private BaseDataService baseDataService;
     @Resource
-    private TopicCache topicCache;
-    @Resource
     private TableCheckPointCache tableCheckPointCache;
     @Resource
     private DynamicThreadPoolManager dynamicThreadPoolManager;
@@ -169,7 +167,7 @@ public class DataExtractServiceImpl implements DataExtractService {
             log.info("The current endpoint is not the source endpoint, and the task cannot be built");
             return new ArrayList<>(0);
         }
-        topicCache.initEndpoint(extractProperties.getEndpoint());
+        TopicCache.initEndpoint(extractProperties.getEndpoint());
         if (atomicProcessNo.compareAndSet(PROCESS_NO_RESET, processNo)) {
             Set<String> tableNames = MetaDataCache.getAllKeys();
             List<ExtractTask> taskList = extractTaskBuilder.builder(tableNames);
@@ -333,14 +331,14 @@ public class DataExtractServiceImpl implements DataExtractService {
                     }
                     ThreadUtil.requestConflictingSleeping();
                     registerTopic(task);
-                    while (!topicCache.canCreateTopic(maximumTopicSize)) {
+                    while (!TopicCache.canCreateTopic(maximumTopicSize)) {
                         ThreadUtil.sleep(1000);
                     }
                     Topic topic = task.getTopic();
                     Endpoint endpoint = extractProperties.getEndpoint();
                     log.info("try to create [{}] [{}]", topic.getTopicName(endpoint), topic.getPtnNum());
                     kafkaAdminService.createTopic(topic.getTopicName(endpoint), topic.getPtnNum());
-                    topicCache.add(topic);
+                    TopicCache.add(topic);
                     while (!tableCheckPointCache.getAll()
                                                 .containsKey(tableName)) {
                         ThreadUtil.sleepHalfSecond();

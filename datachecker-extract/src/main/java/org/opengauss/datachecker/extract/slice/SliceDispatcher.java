@@ -60,7 +60,6 @@ public class SliceDispatcher implements Runnable {
     private final BaseDataService baseDataService;
     private final SliceRegister sliceRegister;
     private final DynamicThreadPoolManager dynamicThreadPoolManager;
-    private TopicCache topicCache;
     private boolean isRunning = true;
     private final int maxFetchSize;
 
@@ -79,7 +78,6 @@ public class SliceDispatcher implements Runnable {
         this.baseDataService = baseDataService;
         this.dynamicThreadPoolManager = dynamicThreadPoolManager;
         this.sliceFactory = new SliceFactory(baseDataService.getDataSource());
-        this.topicCache = SpringUtil.getBean(TopicCache.class);
         this.maxFetchSize = ConfigCache.getIntValue(ConfigConstants.MAXIMUM_TABLE_SLICE_SIZE);
     }
 
@@ -89,6 +87,8 @@ public class SliceDispatcher implements Runnable {
             log.info("slice dispatcher is starting ...");
             synchronized (lock) {
                 final ThreadPoolExecutor executor = dynamicThreadPoolManager.getExecutor(EXTRACT_EXECUTOR);
+                int topicSize = ConfigCache.getIntValue(ConfigConstants.MAXIMUM_TOPIC_SIZE);
+                int extendMaxPoolSize = ConfigCache.getIntValue(ConfigConstants.EXTEND_MAXIMUM_POOL_SIZE);
                 Endpoint endPoint = ConfigCache.getEndPoint();
                 while (isRunning) {
                     waitingForIdle(executor);
@@ -111,24 +111,31 @@ public class SliceDispatcher implements Runnable {
                         continue;
                     }
                     List<SliceVo> tableSliceList = listener.fetchTableSliceList(table);
-                    if (CollectionUtils.isNotEmpty(tableSliceList)) {
+                    if (tableSliceList.size() <= 20) {
+                        log.debug("table [{}] get main executor success", table);
                         tableSliceList.forEach(sliceVo -> {
                             sliceVo.setEndpoint(endPoint);
                             register(sliceVo);
                             doTableSlice(executor, sliceVo);
                         });
+                    } else {
+                        ThreadPoolExecutor extendExecutor =
+                            (ThreadPoolExecutor) dynamicThreadPoolManager.getFreeExecutor(topicSize, extendMaxPoolSize);
+                        log.debug("table [{}] get extend executor success", table);
+                        tableSliceList.forEach(sliceVo -> {
+                            sliceVo.setEndpoint(endPoint);
+                            register(sliceVo);
+                            doTableSlice(extendExecutor, sliceVo);
+                        });
                     }
-
                     if (listener.isFinished()) {
                         log.info("listener is finished , and will be closed");
                         listener.stop();
-                        while (executor.getTaskCount() > executor.getCompletedTaskCount()) {
+                        while (!dynamicThreadPoolManager.allExecutorFree()) {
                             ThreadUtil.sleepHalfSecond();
                         }
-                        if (executor.getTaskCount() == executor.getCompletedTaskCount()) {
-                            stop();
-                            dynamicThreadPoolManager.closeDynamicThreadPoolMonitor();
-                        }
+                        stop();
+                        dynamicThreadPoolManager.closeDynamicThreadPoolMonitor();
                     }
                 }
             }
@@ -172,7 +179,7 @@ public class SliceDispatcher implements Runnable {
         TableMetadata tableMetadata = baseDataService.queryTableMetadata(slice.getTable());
         slice.setFetchSize(Math.min((int) tableMetadata.getTableRows(), maxFetchSize));
         slice.setWholeTable(slice.getTotal() <= 1);
-        Topic topic = topicCache.getTopic(slice.getTable());
+        Topic topic = TopicCache.getTopic(slice.getTable());
         slice.setPtnNum(topic.getPtnNum());
     }
 
