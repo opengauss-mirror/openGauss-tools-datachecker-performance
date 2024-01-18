@@ -41,8 +41,6 @@ public class SliceRegister {
     @Resource
     private CheckingFeignClient checkingClient;
     @Resource
-    private TopicCache topicCache;
-    @Resource
     private KafkaAdminService kafkaAdminService;
 
     /**
@@ -62,16 +60,16 @@ public class SliceRegister {
      * @return true | false
      */
     public boolean registerTopic(String tableName, int ptnNum) {
-        Topic topic = topicCache.getTopic(tableName);
+        Topic topic = TopicCache.getTopic(tableName);
         if (Objects.nonNull(topic)) {
             return true;
         }
-        if (!topicCache.canCreateTopic(ConfigCache.getIntValue(ConfigConstants.MAXIMUM_TOPIC_SIZE))) {
+        if (!TopicCache.canCreateTopic(ConfigCache.getIntValue(ConfigConstants.MAXIMUM_TOPIC_SIZE))) {
             return false;
         }
         topic = checkingClient.registerTopic(tableName, ptnNum, ConfigCache.getEndPoint());
         if (kafkaAdminService.createTopic(topic.getTopicName(ConfigCache.getEndPoint()), topic.getPtnNum())) {
-            topicCache.add(topic);
+            TopicCache.add(topic);
             return true;
         } else {
             return false;
@@ -85,7 +83,7 @@ public class SliceRegister {
      * @return true | false
      */
     public boolean checkTopicRegistered(String table) {
-        return Objects.nonNull(topicCache.getTopic(table));
+        return Objects.nonNull(TopicCache.getTopic(table));
     }
 
     /**

@@ -57,8 +57,6 @@ public class ExtractController {
     private MetaDataService metaDataService;
     @Resource
     private DataExtractService dataExtractService;
-    @Resource
-    private TopicCache topicCache;
 
     /**
      * loading database metadata information
@@ -227,6 +225,6 @@ public class ExtractController {
      */
     @PostMapping("/notify/check/finished")
     public void notifyCheckTableFinished(@RequestParam(name = "tableName") String tableName) {
-        topicCache.removeTopic(tableName);
+        TopicCache.removeTopic(tableName);
     }
 }

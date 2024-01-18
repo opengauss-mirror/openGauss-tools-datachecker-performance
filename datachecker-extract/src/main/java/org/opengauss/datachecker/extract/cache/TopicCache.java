@@ -31,7 +31,6 @@ import java.util.concurrent.locks.ReentrantLock;
  * @date ：Created in 2023/4/23
  * @since ：11
  */
-@Service
 public class TopicCache {
     private static final Map<String, Topic> TOPIC_CACHE = new ConcurrentHashMap<>();
     private static volatile Endpoint endpoint;
@@ -42,7 +41,7 @@ public class TopicCache {
      *
      * @param currentEndpoint currentEndpoint
      */
-    public void initEndpoint(Endpoint currentEndpoint) {
+    public static void initEndpoint(Endpoint currentEndpoint) {
         endpoint = currentEndpoint;
     }
 
@@ -51,7 +50,7 @@ public class TopicCache {
      *
      * @param topic topic
      */
-    public void add(Topic topic) {
+    public static void add(Topic topic) {
         lock.lock();
         try {
             if (Objects.isNull(topic)) {
@@ -74,11 +73,16 @@ public class TopicCache {
      * @param table table name
      * @return Topic
      */
-    public Topic getTopic(String table) {
-        return TOPIC_CACHE.get(table);
+    public static Topic getTopic(String table) {
+        lock.lock();
+        try {
+            return TOPIC_CACHE.get(table);
+        } finally {
+            lock.unlock();
+        }
     }
 
-    public void removeTopic(String table) {
+    public static void removeTopic(String table) {
         lock.lock();
         try {
             TOPIC_CACHE.remove(table);
@@ -87,7 +91,7 @@ public class TopicCache {
         }
     }
 
-    public boolean canCreateTopic(int maxTopicNum) {
+    public static boolean canCreateTopic(int maxTopicNum) {
         lock.lock();
         try {
             return maxTopicNum > TOPIC_CACHE.size();
@@ -96,7 +100,12 @@ public class TopicCache {
         }
     }
 
-    public int size() {
-        return TOPIC_CACHE.size();
+    public static int size() {
+        lock.lock();
+        try {
+            return TOPIC_CACHE.size();
+        } finally {
+            lock.unlock();
+        }
     }
 }
