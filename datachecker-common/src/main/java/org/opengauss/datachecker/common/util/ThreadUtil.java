@@ -35,6 +35,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
  */
 public class ThreadUtil {
     private static final Logger log = LogUtils.getLogger();
+
     /**
      * Thread hibernation
      *
@@ -44,7 +45,7 @@ public class ThreadUtil {
         try {
             Thread.sleep(millisTime);
         } catch (InterruptedException ie) {
-            log.error("thread sleep interrupted exception ");
+            log.warn("thread sleep interrupted exception ");
         }
     }
 
@@ -55,7 +56,7 @@ public class ThreadUtil {
         try {
             Thread.sleep(RandomUtils.nextLong(50, 500));
         } catch (InterruptedException ie) {
-            log.error("thread sleep interrupted exception ");
+            log.warn("thread sleep interrupted exception ");
         }
     }
 
@@ -95,7 +96,7 @@ public class ThreadUtil {
               .filter(thread -> StringUtils.startsWith(thread.getName(), name))
               .forEach(thread -> {
                   thread.interrupt();
-                  log.error("thread [{}] has interrupted", thread.getName());
+                  log.warn("thread [{}] has interrupted", thread.getName());
               });
     }
 

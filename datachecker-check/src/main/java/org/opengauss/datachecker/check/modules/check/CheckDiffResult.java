@@ -159,4 +159,13 @@ public class CheckDiffResult {
             }
         }
     }
+
+    @Override
+    public String toString() {
+        return "CheckDiffResult{" + "process='" + process + '\'' + ", schema='" + schema + '\'' + ", table='" + table
+            + '\'' + ", topic='" + topic + '\'' + ", fileName='" + fileName + '\'' + ", sno=" + sno + ", rowCount="
+            + rowCount + ", totalRepair=" + totalRepair + ", isTableStructureEquals=" + isTableStructureEquals
+            + ", checkMode=" + checkMode + ", startTime=" + startTime + ", endTime=" + endTime + ", result='" + result
+            + '\'' + ", message='" + message + '\'' + ", error='" + error + '\'' + '}';
+    }
 }
