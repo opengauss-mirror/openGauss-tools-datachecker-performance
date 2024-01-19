@@ -60,14 +60,21 @@ public class SliceFactory {
         if (Objects.isNull(datasource)) {
             return new CsvSliceProcessor(sliceVo, processorContext);
         }
-        return new JdbcSliceProcessor(datasource, sliceVo, processorContext);
+        return new JdbcSliceProcessor(sliceVo, processorContext);
     }
 
+    /**
+     * create slice processor<br>
+     *
+     * @param table          table
+     * @param tableFilePaths tableFilePaths
+     * @return SliceProcessor
+     */
     public SliceProcessor createTableProcessor(String table, List<Path> tableFilePaths) {
         SliceProcessorContext processorContext = SpringUtil.getBean(SliceProcessorContext.class);
         if (Objects.isNull(datasource)) {
             return new CsvTableProcessor(table, tableFilePaths, processorContext);
         }
-        return new JdbcTableProcessor(datasource, table, processorContext);
+        return new JdbcTableProcessor(table, processorContext);
     }
 }

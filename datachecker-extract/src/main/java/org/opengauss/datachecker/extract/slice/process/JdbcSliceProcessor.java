@@ -21,7 +21,6 @@ import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.exception.ExtractDataAccessException;
 import org.opengauss.datachecker.extract.resource.JdbcDataOperations;
 import org.opengauss.datachecker.extract.slice.SliceProcessorContext;
-import org.opengauss.datachecker.extract.slice.common.SliceKafkaAgents;
 import org.opengauss.datachecker.extract.slice.common.SliceResultSetSender;
 import org.opengauss.datachecker.extract.task.sql.FullQueryStatement;
 import org.opengauss.datachecker.extract.task.sql.QuerySqlEntry;
@@ -29,7 +28,6 @@ import org.opengauss.datachecker.extract.task.sql.SliceQueryStatement;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.util.concurrent.ListenableFuture;
 
-import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -40,6 +38,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * JdbcSliceProcessor
@@ -49,23 +48,32 @@ import java.util.TreeMap;
  * @since ：11
  */
 public class JdbcSliceProcessor extends AbstractSliceProcessor {
-
     private final JdbcDataOperations jdbcOperation;
+    private final String table;
+    private final AtomicInteger rowCount = new AtomicInteger(0);
 
-    public JdbcSliceProcessor(DataSource datasource, SliceVo slice, SliceProcessorContext context) {
+    /**
+     * JdbcSliceProcessor
+     *
+     * @param slice   slice
+     * @param context context
+     */
+    public JdbcSliceProcessor(SliceVo slice, SliceProcessorContext context) {
         super(slice, context);
-        this.jdbcOperation = context.getJdbcDataOperations(datasource);
+        this.jdbcOperation = context.getJdbcDataOperations();
+        this.table = slice.getTable();
+        this.rowCount.set(0);
     }
 
     @Override
     public void run() {
         log.info("table slice [{}] is beginning to extract data", slice.toSimpleString());
         try {
-            TableMetadata tableMetadata = context.getTableMetaData(slice.getTable());
+            TableMetadata tableMetadata = context.getTableMetaData(table);
             SliceExtend sliceExtend = createSliceExtend(tableMetadata.getTableHash());
             if (!slice.isEmptyTable()) {
                 QuerySqlEntry queryStatement = createQueryStatement(tableMetadata);
-                log.debug("table [{}] query statement :  {}", queryStatement.getTable(), queryStatement.getSql());
+                log.debug("table [{}] query statement :  {}", table, queryStatement.getSql());
                 executeQueryStatement(queryStatement, tableMetadata, sliceExtend);
             } else {
                 log.info("table slice [{}] is empty ", slice.toSimpleString());
@@ -79,7 +87,7 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
         }
     }
 
-    protected QuerySqlEntry createQueryStatement(TableMetadata tableMetadata) {
+    private QuerySqlEntry createQueryStatement(TableMetadata tableMetadata) {
         if (slice.isSlice()) {
             SliceQueryStatement sliceStatement = context.createSliceQueryStatement();
             return sliceStatement.buildSlice(tableMetadata, slice);
@@ -89,10 +97,9 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
         }
     }
 
-    protected SliceExtend executeQueryStatement(QuerySqlEntry sqlEntry, TableMetadata tableMetadata,
+    private SliceExtend executeQueryStatement(QuerySqlEntry sqlEntry, TableMetadata tableMetadata,
         SliceExtend sliceExtend) {
         final LocalDateTime start = LocalDateTime.now();
-        int rowCount = 0;
         Connection connection = null;
         long jdbcQueryCost = 0;
         long sendDataCost = 0;
@@ -103,8 +110,8 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
             long estimatedMemorySize = estimatedMemorySize(tableMetadata.getAvgRowLength(), estimatedRowCount);
             connection = jdbcOperation.tryConnectionAndClosedAutoCommit(estimatedMemorySize);
             log.debug("slice [{}] fetch jdbc connection.", slice.getName());
-            SliceKafkaAgents kafkaAgents = context.createSliceKafkaAgents(slice);
-            SliceResultSetSender sliceSender = new SliceResultSetSender(tableMetadata, kafkaAgents);
+            SliceResultSetSender sliceSender = createSliceResultSetSender(tableMetadata);
+            sliceExtend.setStartOffset(sliceSender.checkOffsetEnd());
 
             try (PreparedStatement ps = connection.prepareStatement(sqlEntry.getSql());
                 ResultSet resultSet = ps.executeQuery()) {
@@ -112,27 +119,8 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
                 LocalDateTime jdbcQuery = LocalDateTime.now();
                 jdbcQueryCost = durationBetweenToMillis(start, jdbcQuery);
                 resultSet.setFetchSize(FETCH_SIZE);
-                ResultSetMetaData rsmd = resultSet.getMetaData();
-                sliceExtend.setStartOffset(sliceSender.checkOffsetEnd());
-                Map<String, String> result = new TreeMap<>();
-                List<long[]> offsetList = new LinkedList<>();
-                List<ListenableFuture<SendResult<String, String>>> batchFutures = new LinkedList<>();
-                final String tableName = slice.getTable();
-                while (resultSet.next()) {
-                    rowCount++;
-                    batchFutures.add(sliceSender.resultSetTranslateAndSendSync(tableName, rsmd, resultSet, result, slice.getNo()));
-                    if (batchFutures.size() == FETCH_SIZE) {
-                        offsetList.add(getBatchFutureRecordOffsetScope(batchFutures));
-                        batchFutures.clear();
-                    }
-                }
-                if (batchFutures.size() > 0) {
-                    offsetList.add(getBatchFutureRecordOffsetScope(batchFutures));
-                    batchFutures.clear();
-                }
-                sliceExtend.setStartOffset(getMinOffset(offsetList));
-                sliceExtend.setEndOffset(getMaxOffset(offsetList));
-                sliceExtend.setCount(rowCount);
+                List<long[]> offsetList = sliceQueryResultAndSendSync(sliceSender, resultSet);
+                updateExtendSliceOffsetAndCount(sliceExtend, rowCount.get(), offsetList);
                 sendDataCost = durationBetweenToMillis(jdbcQuery, LocalDateTime.now());
             }
             return sliceExtend;
@@ -145,5 +133,36 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
             log.info("query slice [{}] cost [{} /{} /{}] milliseconds", sliceExtend.toSimpleString(), jdbcQueryCost,
                 sendDataCost, sliceAllCost);
         }
+    }
+
+    private List<long[]> sliceQueryResultAndSendSync(SliceResultSetSender sliceSender, ResultSet resultSet)
+        throws SQLException {
+        ResultSetMetaData rsmd = resultSet.getMetaData();
+        Map<String, String> result = new TreeMap<>();
+        List<long[]> offsetList = new LinkedList<>();
+        List<ListenableFuture<SendResult<String, String>>> batchFutures = new LinkedList<>();
+        while (resultSet.next()) {
+            this.rowCount.incrementAndGet();
+            batchFutures.add(sliceSender.resultSetTranslateAndSendSync(table, rsmd, resultSet, result, slice.getNo()));
+            if (batchFutures.size() == FETCH_SIZE) {
+                offsetList.add(getBatchFutureRecordOffsetScope(batchFutures));
+                batchFutures.clear();
+            }
+        }
+        if (batchFutures.size() > 0) {
+            offsetList.add(getBatchFutureRecordOffsetScope(batchFutures));
+            batchFutures.clear();
+        }
+        return offsetList;
+    }
+
+    private SliceResultSetSender createSliceResultSetSender(TableMetadata tableMetadata) {
+        return new SliceResultSetSender(tableMetadata, context.createSliceKafkaAgents(slice));
+    }
+
+    private void updateExtendSliceOffsetAndCount(SliceExtend sliceExtend, int rowCount, List<long[]> offsetList) {
+        sliceExtend.setStartOffset(getMinOffset(offsetList));
+        sliceExtend.setEndOffset(getMaxOffset(offsetList));
+        sliceExtend.setCount(rowCount);
     }
 }

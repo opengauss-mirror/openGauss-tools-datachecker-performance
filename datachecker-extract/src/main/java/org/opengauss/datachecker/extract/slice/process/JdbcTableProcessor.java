@@ -24,7 +24,6 @@ import org.opengauss.datachecker.extract.task.sql.AutoSliceQueryStatement;
 import org.opengauss.datachecker.extract.task.sql.FullQueryStatement;
 import org.opengauss.datachecker.extract.task.sql.QuerySqlEntry;
 
-import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -48,9 +47,15 @@ public class JdbcTableProcessor extends AbstractTableProcessor {
 
     private SliceResultSetSender sliceSender;
 
-    public JdbcTableProcessor(DataSource datasource, String table, SliceProcessorContext context) {
+    /**
+     * JdbcTableProcessor
+     *
+     * @param table   table
+     * @param context context
+     */
+    public JdbcTableProcessor(String table, SliceProcessorContext context) {
         super(table, context);
-        this.jdbcOperation = context.getJdbcDataOperations(datasource);
+        this.jdbcOperation = context.getJdbcDataOperations();
     }
 
     @Override
@@ -110,7 +115,8 @@ public class JdbcTableProcessor extends AbstractTableProcessor {
         } finally {
             jdbcOperation.releaseConnection(connection);
             log.info("query table [{}] row-count [{}] cost [{}] milliseconds", table, tableRowCount,
-                Duration.between(start, LocalDateTime.now()).toMillis());
+                Duration.between(start, LocalDateTime.now())
+                        .toMillis());
         }
         return tableRowCount;
     }

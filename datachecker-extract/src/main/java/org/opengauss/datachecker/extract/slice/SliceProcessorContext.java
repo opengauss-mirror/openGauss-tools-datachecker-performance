@@ -15,7 +15,6 @@
 
 package org.opengauss.datachecker.extract.slice;
 
-import com.alibaba.druid.pool.DruidDataSource;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.entry.extract.SliceExtend;
 import org.opengauss.datachecker.common.entry.extract.SliceVo;
@@ -36,11 +35,9 @@ import org.opengauss.datachecker.extract.task.sql.FullQueryStatement;
 import org.opengauss.datachecker.extract.task.sql.QueryStatementFactory;
 import org.opengauss.datachecker.extract.task.sql.SliceQueryStatement;
 import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
-import javax.sql.DataSource;
 import java.util.Objects;
 
 /**
@@ -105,11 +102,10 @@ public class SliceProcessorContext {
     /**
      * ceeate jdbc data operations
      *
-     * @param dataSource datasource
      * @return JdbcDataOperations
      */
-    public JdbcDataOperations getJdbcDataOperations(DataSource dataSource) {
-        return new JdbcDataOperations(dataSource, resourceManager);
+    public JdbcDataOperations getJdbcDataOperations() {
+        return new JdbcDataOperations(resourceManager);
     }
 
     /**

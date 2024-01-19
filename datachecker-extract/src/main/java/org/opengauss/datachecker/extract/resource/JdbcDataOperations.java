@@ -23,9 +23,7 @@ import org.opengauss.datachecker.common.entry.enums.DataBaseType;
 import org.opengauss.datachecker.common.exception.ExtractDataAccessException;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.ThreadUtil;
-import org.springframework.jdbc.datasource.DataSourceUtils;
 
-import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -43,29 +41,37 @@ public class JdbcDataOperations {
     private static final String OPEN_GAUSS_PARALLEL_QUERY = "set query_dop to %s;";
     private static final String OPEN_GAUSS_EXTRA_FLOAT_DIGITS = "set extra_float_digits to 0;";
     private static final int LOG_WAIT_TIMES = 600;
+    private static final String DOLPHIN_B_COMPATIBILITY_MODE_ON = "set dolphin.b_compatibility_mode to on;";
 
-    private final DataSource jdbcDataSource;
+    private final boolean isOpenGauss;
+    private final boolean isOgCompatibilityB;
     private final ResourceManager resourceManager;
     private final boolean isForceRefreshConnectionSqlMode;
+
     private String sqlModeRefreshStatement = "";
 
     /**
      * constructor
      *
-     * @param jdbcDataSource  datasource
      * @param resourceManager resourceManager
      */
-    public JdbcDataOperations(DataSource jdbcDataSource, ResourceManager resourceManager) {
-        this.jdbcDataSource = jdbcDataSource;
+    public JdbcDataOperations(ResourceManager resourceManager) {
         this.resourceManager = resourceManager;
         this.isForceRefreshConnectionSqlMode = ConfigCache.getBooleanValue(ConfigConstants.SQL_MODE_FORCE_REFRESH);
+        this.isOpenGauss = checkDatabaseIsOpenGauss();
+        this.isOgCompatibilityB = isOpenGauss ? ConfigCache.getBooleanValue(ConfigConstants.OG_COMPATIBILITY_B) : false;
         initSqlModeRefreshStatement();
+    }
+
+    private boolean checkDatabaseIsOpenGauss() {
+        return Objects.equals(DataBaseType.OG,
+            ConfigCache.getValue(ConfigConstants.DATA_BASE_TYPE, DataBaseType.class));
     }
 
     private void initSqlModeRefreshStatement() {
         if (isForceRefreshConnectionSqlMode) {
             String sqlMode = ConfigCache.getValue(ConfigConstants.SQL_MODE_VALUE_CACHE);
-            if (ConfigCache.getBooleanValue(ConfigConstants.OG_COMPATIBILITY_B)) {
+            if (isOgCompatibilityB) {
                 // openGauss compatibility B set database sql mode must be set dolphin.sql_mode
                 sqlModeRefreshStatement = "set dolphin.sql_mode ='" + sqlMode + "'";
             } else {
@@ -80,9 +86,8 @@ public class JdbcDataOperations {
      *
      * @param allocMemory allocMemory
      * @return Connection
-     * @throws SQLException SQLException
      */
-    public synchronized Connection tryConnectionAndClosedAutoCommit(long allocMemory) throws SQLException {
+    public synchronized Connection tryConnectionAndClosedAutoCommit(long allocMemory) {
         takeConnection(allocMemory);
         return getConnectionAndClosedAutoCommit();
     }
@@ -91,32 +96,31 @@ public class JdbcDataOperations {
      * try to get a jdbc connection and close auto commit.
      *
      * @return Connection
-     * @throws SQLException SQLException
      */
-    public synchronized Connection tryConnectionAndClosedAutoCommit() throws SQLException {
+    public synchronized Connection tryConnectionAndClosedAutoCommit() {
         takeConnection(0);
         return getConnectionAndClosedAutoCommit();
     }
 
-    private Connection getConnectionAndClosedAutoCommit() throws SQLException {
+    private Connection getConnectionAndClosedAutoCommit() {
         if (isShutdown()) {
             String message = "extract service is shutdown ,task of table is canceled!";
             throw new ExtractDataAccessException(message);
         }
-        Connection connection = jdbcDataSource.getConnection();
-        if (connection.getAutoCommit()) {
-            connection.setAutoCommit(false);
-            setExtraFloatDigitsParameter(connection);
-        }
-        if (isForceRefreshConnectionSqlMode && StringUtils.isNotEmpty(sqlModeRefreshStatement)) {
-            execute(connection, sqlModeRefreshStatement);
-        }
+        Connection connection = ConnectionMgr.getConnection();
+        initJdbcConnectionEnvParameter(connection);
         return connection;
     }
 
-    public void setExtraFloatDigitsParameter(Connection connection) {
-        if (Objects.equals(DataBaseType.OG, ConfigCache.getValue(ConfigConstants.DATA_BASE_TYPE, DataBaseType.class))) {
+    private void initJdbcConnectionEnvParameter(Connection connection) {
+        if (isOpenGauss) {
             execute(connection, OPEN_GAUSS_EXTRA_FLOAT_DIGITS);
+            if (isOgCompatibilityB) {
+                execute(connection, DOLPHIN_B_COMPATIBILITY_MODE_ON);
+            }
+        }
+        if (isForceRefreshConnectionSqlMode && StringUtils.isNotEmpty(sqlModeRefreshStatement)) {
+            execute(connection, sqlModeRefreshStatement);
         }
     }
 
@@ -136,7 +140,7 @@ public class JdbcDataOperations {
      */
     public synchronized void releaseConnection(Connection connection) {
         resourceManager.release();
-        DataSourceUtils.releaseConnection(connection, jdbcDataSource);
+        ConnectionMgr.close(connection, null, null);
     }
 
     /**
@@ -146,7 +150,7 @@ public class JdbcDataOperations {
      * @throws SQLException SQLException
      */
     public void enableDatabaseParallelQuery(Connection connection, int queryDop) throws SQLException {
-        if (Objects.equals(DataBaseType.OG, ConfigCache.getValue(ConfigConstants.DATA_BASE_TYPE, DataBaseType.class))) {
+        if (isOpenGauss) {
             try (PreparedStatement ps = connection.prepareStatement(
                 String.format(OPEN_GAUSS_PARALLEL_QUERY, queryDop))) {
                 ps.execute();
