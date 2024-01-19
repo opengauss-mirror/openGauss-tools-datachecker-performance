@@ -58,6 +58,14 @@ public class ConfigManagement {
     @Value("${spring.check.extend-maximum-pool-size}")
     private int extendMaxPoolSize = 10;
 
+    @Value("${spring.datasource.driver-class-name}")
+    private String driverClassName;
+    @Value("${spring.datasource.url}")
+    private String dsUrl;
+    @Value("${spring.datasource.username}")
+    private String dsUname;
+    @Value("${spring.datasource.password}")
+    private String dsPw;
     @Value("${spring.datasource.druid.initialSize}")
     private int initialSize;
     @Value("${spring.datasource.druid.minIdle}")
@@ -132,6 +140,11 @@ public class ConfigManagement {
             ConfigCache.put(ConfigConstants.DRUID_MAX_ACTIVE, 100);
             return;
         }
+        ConfigCache.put(ConfigConstants.DRIVER_CLASS_NAME, driverClassName);
+        ConfigCache.put(ConfigConstants.DS_URL, dsUrl);
+        ConfigCache.put(ConfigConstants.DS_USER_NAME, dsUname);
+        ConfigCache.put(ConfigConstants.DS_PASSWORD, dsPw);
+
         ConfigCache.put(ConfigConstants.DRUID_INITIAL_SIZE, initialSize);
         ConfigCache.put(ConfigConstants.DRUID_MIN_IDLE, minIdle);
         ConfigCache.put(ConfigConstants.DRUID_MAX_ACTIVE, maxActive);
