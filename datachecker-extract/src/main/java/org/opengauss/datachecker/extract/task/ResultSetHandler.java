@@ -99,7 +99,6 @@ public abstract class ResultSetHandler {
         } catch (SQLException ex) {
             log.error(" parse data metadata information exception", ex);
         }
-//        log.info("data:{}", values);
         return values;
     }
 

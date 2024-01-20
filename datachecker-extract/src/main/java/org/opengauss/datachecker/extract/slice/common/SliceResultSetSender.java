@@ -15,11 +15,9 @@
 
 package org.opengauss.datachecker.extract.slice.common;
 
-import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.RowDataHash;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
-import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.extract.task.ResultSetHandler;
 import org.opengauss.datachecker.extract.task.ResultSetHandlerFactory;
 import org.opengauss.datachecker.extract.util.HashHandler;
@@ -41,9 +39,9 @@ import java.util.Map;
  * @since ：11
  */
 public class SliceResultSetSender {
-    protected static final Logger log = LogUtils.getBusinessLogger();
-    private static final HashHandler hashHandler = new HashHandler();
-    private static final String csv_null_value = "null";
+    private static final HashHandler HASH_HANDLER = new HashHandler();
+    private static final String CSV_NULL_VALUE = "null";
+
     private final ResultSetHandler resultSetHandler;
     private final SliceKafkaAgents kafkaOperate;
     private final List<String> columns;
@@ -67,31 +65,42 @@ public class SliceResultSetSender {
     }
 
     /**
-     * parse result set to RowDataHash
+     * resultSetTranslateAndSendRandom
      *
-     * @param rs  rs
-     * @param sNo sNo
+     * @param rsmd   rsmd
+     * @param rs     rs
+     * @param result result
+     * @param sNo    sNo
      */
-    public void resultSetTranslateAndSend(String tableName, ResultSetMetaData rsmd, ResultSet rs,
-        Map<String, String> result, int sNo) {
-        RowDataHash dataHash = resultSetTranslate(tableName, rsmd, rs, result, sNo);
-        kafkaOperate.sendRowData(dataHash);
-    }
-
-    public void resultSetTranslateAndSendRandom(String tableName, ResultSetMetaData rsmd, ResultSet rs,
-        Map<String, String> result, int sNo) {
-        RowDataHash dataHash = resultSetTranslate(tableName, rsmd, rs, result, sNo);
+    public void resultSetTranslateAndSendRandom(ResultSetMetaData rsmd, ResultSet rs, Map<String, String> result,
+        int sNo) {
+        RowDataHash dataHash = resultSetTranslate(rsmd, rs, result, sNo);
         kafkaOperate.sendRowDataRandomPartition(dataHash);
     }
 
-    public ListenableFuture<SendResult<String, String>> resultSetTranslateAndSendSync(String tableName,
-        ResultSetMetaData rsmd, ResultSet rs, Map<String, String> result, int sNo) {
-        RowDataHash dataHash = resultSetTranslate(tableName, rsmd, rs, result, sNo);
+    /**
+     * resultSetTranslateAndSendSync
+     *
+     * @param rsmd   rsmd
+     * @param rs     rs
+     * @param result result
+     * @param sNo    sNo
+     */
+    public ListenableFuture<SendResult<String, String>> resultSetTranslateAndSendSync(ResultSetMetaData rsmd,
+        ResultSet rs, Map<String, String> result, int sNo) {
+        RowDataHash dataHash = resultSetTranslate(rsmd, rs, result, sNo);
         return kafkaOperate.sendRowDataSync(dataHash);
     }
 
-    public RowDataHash resultSetTranslate(String tableName, ResultSetMetaData rsmd, ResultSet rs,
-        Map<String, String> result, int sNo) {
+    /**
+     * resultSetTranslate
+     *
+     * @param rsmd   rsmd
+     * @param rs     rs
+     * @param result result
+     * @param sNo    sNo
+     */
+    public RowDataHash resultSetTranslate(ResultSetMetaData rsmd, ResultSet rs, Map<String, String> result, int sNo) {
         resultSetHandler.putOneResultSetToMap(tableName, rsmd, rs, result);
         RowDataHash dataHash = handler(primary, columns, result);
         dataHash.setSNo(sNo);
@@ -99,10 +108,18 @@ public class SliceResultSetSender {
         return dataHash;
     }
 
+    /**
+     * checkOffsetEnd
+     *
+     * @return checkOffsetEnd
+     */
     public long checkOffsetEnd() {
         return kafkaOperate.checkTopicPartitionEndOffset();
     }
 
+    /**
+     * agentsClosed
+     */
     public void agentsClosed() {
         kafkaOperate.agentsClosed();
     }
@@ -121,9 +138,9 @@ public class SliceResultSetSender {
      * @return Returns the hash calculation result of extracted data
      */
     private RowDataHash handler(List<String> primary, List<String> columns, Map<String, String> rowData) {
-        long rowHash = hashHandler.xx3Hash(rowData, columns);
-        String primaryValue = hashHandler.value(rowData, primary);
-        long primaryHash = hashHandler.xx3Hash(rowData, primary);
+        long rowHash = HASH_HANDLER.xx3Hash(rowData, columns);
+        String primaryValue = HASH_HANDLER.value(rowData, primary);
+        long primaryHash = HASH_HANDLER.xx3Hash(rowData, primary);
         RowDataHash hashData = new RowDataHash();
         hashData.setKey(primaryValue)
                 .setKHash(primaryHash)
@@ -183,12 +200,11 @@ public class SliceResultSetSender {
         int idx;
         for (ColumnsMetaData column : columnMetas) {
             idx = column.getOrdinalPosition() - 1;
-            if (csv_null_value.equalsIgnoreCase(nextLine[idx])) {
-                result.put(column.getColumnName(), csv_null_value);
+            if (CSV_NULL_VALUE.equalsIgnoreCase(nextLine[idx])) {
+                result.put(column.getColumnName(), CSV_NULL_VALUE);
             } else {
                 result.put(column.getColumnName(), nextLine[idx]);
             }
         }
-//        log.info("data:{}", result);
     }
 }

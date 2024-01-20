@@ -20,6 +20,8 @@ import org.springframework.lang.NonNull;
 import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Locale;
+import java.util.Objects;
 
 /**
  * OpenGaussCsvResultSetHandler
@@ -40,5 +42,17 @@ public class OpenGaussCsvResultSetHandler extends OpenGaussResultSetHandler {
             return new BigDecimal(floatValue).toPlainString();
         }
         return floatValue;
+    }
+
+    @Override
+    protected String bitToString(ResultSet rs, String columnLabel) throws SQLException {
+        return rs.getString(columnLabel);
+    }
+
+    @Override
+    protected String binaryToString(ResultSet rs, String columnLabel) throws SQLException {
+        String binary = rs.getString(columnLabel);
+        return rs.wasNull() ? NULL : Objects.isNull(binary) ? NULL : binary.substring(2)
+                                                                           .toUpperCase(Locale.ENGLISH);
     }
 }
