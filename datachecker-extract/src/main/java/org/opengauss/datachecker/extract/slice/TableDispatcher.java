@@ -183,7 +183,7 @@ public class TableDispatcher implements Runnable {
      * @param sliceVo sliceVo
      */
     private void register(SliceVo sliceVo) {
-        sliceRegister.register(sliceVo);
+        sliceRegister.batchRegister(List.of(sliceVo));
         while (sliceVo.getPtnNum() > 0 && !sliceRegister.registerTopic(sliceVo.getTable(), sliceVo.getPtnNum())) {
             synchronized (lockIdle) {
                 try {

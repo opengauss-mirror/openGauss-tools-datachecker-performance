@@ -26,7 +26,6 @@ import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.entry.extract.Topic;
 import org.opengauss.datachecker.common.service.DynamicThreadPoolManager;
 import org.opengauss.datachecker.common.util.LogUtils;
-import org.opengauss.datachecker.common.util.SpringUtil;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.opengauss.datachecker.extract.cache.TopicCache;
 import org.opengauss.datachecker.extract.data.BaseDataService;
@@ -54,7 +53,6 @@ public class SliceDispatcher implements Runnable {
     private static final int MAX_DISPATCHER_QUEUE_SIZE = 100;
     private static final int WAIT_ONE_SECOND = 1000;
     private final BlockingQueue<String> tableQueue = new LinkedBlockingQueue<>();
-    private final Object lock = new Object();
     private final SliceFactory sliceFactory;
     private final CsvListener listener;
     private final BaseDataService baseDataService;
@@ -85,7 +83,7 @@ public class SliceDispatcher implements Runnable {
     public void run() {
         try {
             log.info("slice dispatcher is starting ...");
-            synchronized (lock) {
+            synchronized (SliceDispatcher.class) {
                 final ThreadPoolExecutor executor = dynamicThreadPoolManager.getExecutor(EXTRACT_EXECUTOR);
                 int topicSize = ConfigCache.getIntValue(ConfigConstants.MAXIMUM_TOPIC_SIZE);
                 int extendMaxPoolSize = ConfigCache.getIntValue(ConfigConstants.EXTEND_MAXIMUM_POOL_SIZE);
@@ -111,32 +109,35 @@ public class SliceDispatcher implements Runnable {
                         continue;
                     }
                     List<SliceVo> tableSliceList = listener.fetchTableSliceList(table);
+                    if (CollectionUtils.isEmpty(tableSliceList)) {
+                        log.warn("table slice is empty, retry to: [{}]", table);
+                        tableSliceList = listener.fetchTableSliceList(table);
+                        if (CollectionUtils.isEmpty(tableSliceList)) {
+                            log.warn("table slice is empty, ignore: [{}]", table);
+                            continue;
+                        }
+                    }
+                    SliceVo vo = tableSliceList.get(0);
+                    canRegister(table, vo.getPtnNum());
+                    sliceRegister.batchRegister(tableSliceList);
                     if (tableSliceList.size() <= 20) {
                         log.debug("table [{}] get main executor success", table);
-                        tableSliceList.forEach(sliceVo -> {
-                            sliceVo.setEndpoint(endPoint);
-                            register(sliceVo);
-                            doTableSlice(executor, sliceVo);
-                        });
+                        tableSliceList.forEach(sliceVo -> doTableSlice(executor, sliceVo));
                     } else {
                         ThreadPoolExecutor extendExecutor =
                             (ThreadPoolExecutor) dynamicThreadPoolManager.getFreeExecutor(topicSize, extendMaxPoolSize);
                         log.debug("table [{}] get extend executor success", table);
-                        tableSliceList.forEach(sliceVo -> {
-                            sliceVo.setEndpoint(endPoint);
-                            register(sliceVo);
-                            doTableSlice(extendExecutor, sliceVo);
-                        });
+                        tableSliceList.forEach(sliceVo -> doTableSlice(extendExecutor, sliceVo));
                     }
-                    if (listener.isFinished()) {
-                        log.info("listener is finished , and will be closed");
-                        listener.stop();
-                        while (!dynamicThreadPoolManager.allExecutorFree()) {
-                            ThreadUtil.sleepHalfSecond();
-                        }
-                        stop();
-                        dynamicThreadPoolManager.closeDynamicThreadPoolMonitor();
+                }
+                if (listener.isFinished()) {
+                    log.info("listener is finished , and will be closed");
+                    listener.stop();
+                    while (!dynamicThreadPoolManager.allExecutorFree()) {
+                        ThreadUtil.sleepHalfSecond();
                     }
+                    stop();
+                    dynamicThreadPoolManager.closeDynamicThreadPoolMonitor();
                 }
             }
         } catch (Exception exception) {
@@ -177,8 +178,8 @@ public class SliceDispatcher implements Runnable {
 
     private void updateSliceFetchSize(int maxFetchSize, SliceVo slice) {
         TableMetadata tableMetadata = baseDataService.queryTableMetadata(slice.getTable());
-        slice.setFetchSize(Math.min((int) tableMetadata.getTableRows(), maxFetchSize));
         slice.setWholeTable(slice.getTotal() <= 1);
+        slice.setFetchSize(Math.min((int) tableMetadata.getTableRows(), maxFetchSize));
         Topic topic = TopicCache.getTopic(slice.getTable());
         slice.setPtnNum(topic.getPtnNum());
     }
@@ -190,11 +191,10 @@ public class SliceDispatcher implements Runnable {
      * @throws InterruptedException InterruptedException
      */
     private void waitingForIdle(ThreadPoolExecutor executor) throws InterruptedException {
-        synchronized (lock) {
-            while (executor.getQueue()
-                           .size() > MAX_DISPATCHER_QUEUE_SIZE) {
-                lock.wait(WAIT_ONE_SECOND);
-            }
+        BlockingQueue<Runnable> executorQueue = executor.getQueue();
+        Thread currentThread = Thread.currentThread();
+        while (executorQueue.size() > MAX_DISPATCHER_QUEUE_SIZE) {
+            currentThread.wait(WAIT_ONE_SECOND);
         }
     }
 
@@ -208,14 +208,15 @@ public class SliceDispatcher implements Runnable {
      * if register topic success, return and add current slice in executor queue.
      * if register not, add current slice in unprocessedTableSlices queue.
      *
-     * @param sliceVo sliceVo
+     * @param table  table
+     * @param pthNum pthNum
+     * @return boolean
      */
-    private void register(SliceVo sliceVo) {
-        while (sliceVo.getPtnNum() > 0 && !sliceRegister.registerTopic(sliceVo.getTable(), sliceVo.getPtnNum())) {
+    private boolean canRegister(String table, int pthNum) {
+        while (pthNum > 0 && !sliceRegister.registerTopic(table, pthNum)) {
             ThreadUtil.sleepMax2Second();
         }
-        updateSliceFetchSize(maxFetchSize, sliceVo);
-        sliceRegister.register(sliceVo);
+        return true;
     }
 
     /**
@@ -225,6 +226,11 @@ public class SliceDispatcher implements Runnable {
         isRunning = false;
     }
 
+    /**
+     * addSliceTables
+     *
+     * @param list list
+     */
     public void addSliceTables(List<String> list) {
         if (CollectionUtils.isNotEmpty(list)) {
             tableQueue.addAll(list);

@@ -369,41 +369,19 @@ public class DataExtractServiceImpl implements DataExtractService {
 
     private void addSliceProcessor(List<SliceVo> sliceVoList) {
         SliceFactory sliceFactory = new SliceFactory(baseDataService.getDataSource());
+        sliceRegister.batchRegister(sliceVoList);
         if (sliceVoList.size() <= 20) {
             ExecutorService executorService = dynamicThreadPoolManager.getExecutor(EXTRACT_EXECUTOR);
             log.debug("table [{}] get executorService success", sliceVoList.get(0)
                                                                            .getTable());
-            sliceVoList.forEach(sliceVo -> {
-                if (!registerExecutorSlice(executorService, sliceFactory, sliceVo)) {
-                    ThreadUtil.sleepMax2Second();
-                    log.info("register slice occur exception, wait half a second and try again");
-                    registerExecutorSlice(executorService, sliceFactory, sliceVo);
-                }
-            });
+            sliceVoList.forEach(sliceVo -> executorService.submit(sliceFactory.createSliceProcessor(sliceVo)));
         } else {
             int topicSize = ConfigCache.getIntValue(ConfigConstants.MAXIMUM_TOPIC_SIZE);
             int extendMaxPoolSize = ConfigCache.getIntValue(ConfigConstants.EXTEND_MAXIMUM_POOL_SIZE);
             ExecutorService extendExecutor = dynamicThreadPoolManager.getFreeExecutor(topicSize, extendMaxPoolSize);
             log.debug("table [{}] get extendExecutor success", sliceVoList.get(0)
                                                                           .getTable());
-            sliceVoList.forEach(sliceVo -> {
-                if (!registerExecutorSlice(extendExecutor, sliceFactory, sliceVo)) {
-                    ThreadUtil.sleepMax2Second();
-                    log.info("register slice occur exception, wait half a second and try again");
-                    registerExecutorSlice(extendExecutor, sliceFactory, sliceVo);
-                }
-            });
-        }
-    }
-
-    private boolean registerExecutorSlice(ExecutorService executor, SliceFactory sliceFactory, SliceVo sliceVo) {
-        try {
-            sliceRegister.register(sliceVo);
-            executor.submit(sliceFactory.createSliceProcessor(sliceVo));
-            return true;
-        } catch (Exception exp) {
-            log.error("register slice occur exception", exp);
-            return false;
+            sliceVoList.forEach(sliceVo -> extendExecutor.submit(sliceFactory.createSliceProcessor(sliceVo)));
         }
     }
 
