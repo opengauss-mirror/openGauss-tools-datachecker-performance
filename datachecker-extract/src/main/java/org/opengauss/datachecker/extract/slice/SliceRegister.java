@@ -26,6 +26,7 @@ import org.opengauss.datachecker.extract.kafka.KafkaAdminService;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -46,10 +47,20 @@ public class SliceRegister {
     /**
      * register slice to check service
      *
-     * @param sliceVo slice
+     * @param sliceList slice
      */
-    public void register(SliceVo sliceVo) {
-        checkingClient.registerSlice(sliceVo);
+    public void batchRegister(List<SliceVo> sliceList) {
+        List<SliceVo> tableSliceTmpList = new ArrayList<>();
+        sliceList.forEach(sliceVo -> {
+            tableSliceTmpList.add(sliceVo);
+            if (tableSliceTmpList.size() >= 10) {
+                checkingClient.batchRegisterSlice(tableSliceTmpList);
+                tableSliceTmpList.clear();
+            }
+        });
+        if (tableSliceTmpList.size() > 0) {
+            checkingClient.batchRegisterSlice(tableSliceTmpList);
+        }
     }
 
     /**
@@ -100,16 +111,5 @@ public class SliceRegister {
      */
     public void stopCheckPointMonitor(Endpoint endpoint) {
         checkingClient.stopCheckPointMonitor(endpoint);
-    }
-
-    /**
-     * register table checkPoint list
-     *
-     * @param endpoint       endpoint
-     * @param tableName      tableName
-     * @param checkPointList checkPointList
-     */
-    public void registerCheckPoint(Endpoint endpoint, String tableName, List<Object> checkPointList) {
-        checkingClient.registerCheckPoint(endpoint, tableName, checkPointList);
     }
 }

@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
+import java.util.List;
 
 /**
  * TaskRegisterController
@@ -45,11 +46,13 @@ public class TaskRegisterController {
     /**
      * register slice ,when extract endpoint listener slice log
      *
-     * @param slice slice
+     * @param sliceList sliceList
      */
-    @PostMapping("/register/slice")
-    public void registerSlice(@RequestBody SliceVo slice) {
-        taskRegisterCenter.register(slice);
+    @PostMapping("/batch/register/slice")
+    public void batchRegisterSliceList(@RequestBody List<SliceVo> sliceList) {
+        sliceList.forEach(slice -> {
+            taskRegisterCenter.register(slice);
+        });
     }
 
     /**
@@ -60,6 +63,18 @@ public class TaskRegisterController {
     @PostMapping("/update/register/slice")
     public void refreshRegisterSlice(@RequestBody SliceExtend sliceExt) {
         taskRegisterCenter.update(sliceExt);
+    }
+
+    /**
+     * update slice extract progress, when extract endpoint fetch slice data from jdbc/csv completed.
+     *
+     * @param sliceExtList slice extend info
+     */
+    @PostMapping("/batch/update/register/slice")
+    public void batchRefreshRegisterSlice(@RequestBody List<SliceExtend> sliceExtList) {
+        sliceExtList.forEach(sliceExt -> {
+            taskRegisterCenter.update(sliceExt);
+        });
     }
 
     /**

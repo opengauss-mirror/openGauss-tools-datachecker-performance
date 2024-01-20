@@ -103,10 +103,10 @@ public interface CheckingFeignClient {
     /**
      * register slice
      *
-     * @param sliceVo sliceVo
+     * @param sliceList sliceList
      */
-    @PostMapping("/register/slice")
-    void registerSlice(@RequestBody SliceVo sliceVo);
+    @PostMapping("/batch/register/slice")
+    void batchRegisterSlice(List<SliceVo> sliceList);
 
     /**
      * register slice
@@ -131,16 +131,10 @@ public interface CheckingFeignClient {
     void stopCheckPointMonitor(@RequestParam(value = "endpoint") Endpoint endpoint);
 
     /**
-     * register table checkpoint list
+     * notifyTableIndexCompleted
      *
-     * @param endpoint   endpoint
-     * @param tableName  tableName
-     * @param checkPoint checkPoint
+     * @param completedTableList completedTableList
      */
-    @PostMapping("/register/checkpoint")
-    void registerCheckPoint(@RequestParam(name = "endpoint") @NotEmpty Endpoint endpoint,
-        @RequestParam(name = "tableName") @NotEmpty String tableName, @RequestBody List<Object> checkPoint);
-
     @PostMapping("/notify/check/table/index/completed")
     void notifyTableIndexCompleted(@RequestBody List<String> completedTableList);
 }
