@@ -286,7 +286,7 @@ public class TableCheckWorker implements Runnable {
         // Get the Kafka partition number corresponding to the current task
         // Initialize source bucket column list data
         CountDownLatch countDownLatch = new CountDownLatch(checkTupleList.size());
-        checkTupleList.parallelStream().forEach(check -> {
+        checkTupleList.forEach(check -> {
             String topicName = checkContext.getTopicName(slice.getTable(), check.getEndpoint());
             TopicPartition topicPartition = new TopicPartition(topicName, ptn);
             initBucketList(check.getEndpoint(), topicPartition, check.getBuckets(), bucketDiff);

@@ -96,10 +96,10 @@ public class EndpointManagerService {
                 log.info("{} ：{} current state health", message, requestUri);
             } else {
                 endpointStatusManager.resetStatus(endpoint, Boolean.FALSE);
-                log.error("{} : {} current service status is abnormal", message, requestUri);
+                log.warn("{} : {} current service status is abnormal", message, requestUri);
             }
         } catch (Exception ce) {
-            log.error("{} : {} service unreachable", message, ce.getMessage());
+            log.warn("{} : {} service unreachable", message, ce.getMessage());
             endpointStatusManager.resetStatus(endpoint, Boolean.FALSE);
         }
     }

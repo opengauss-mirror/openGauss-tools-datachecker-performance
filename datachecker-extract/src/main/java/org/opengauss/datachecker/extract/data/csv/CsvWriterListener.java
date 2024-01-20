@@ -41,9 +41,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 /**
  * CsvWriterListener
@@ -54,26 +53,31 @@ import java.util.concurrent.TimeUnit;
  */
 public class CsvWriterListener implements CsvListener {
     private static final Logger log = LogUtils.getLogger();
+    private static final String SCHEMA = "schema";
+    private static final String TABLE_INDEX_COMPLETED_FEEDBACK = "table-index-completed-feedback";
+
     private final Map<String, List<SliceVo>> writerSliceMap = new ConcurrentSkipListMap<>();
     private final BlockingQueue<String> tableIndexCompletedList = new LinkedBlockingQueue<>();
+
     private Tailer tailer;
     private boolean isTailEnd = false;
     private CheckingFeignClient checkingClient;
-    private ScheduledExecutorService scheduledExecutor;
+    private ExecutorService feedbackExecutor;
+    private boolean isFeedbackRunning = true;
 
     @Override
     public void initCsvListener(CheckingFeignClient checkingClient) {
         this.checkingClient = checkingClient;
         log.info("csv writer listener is starting .");
-        // creates and starts a Tailer for read writer logs in real time
+        // creates and starts a tailer for read writer logs in real time
         tailer = Tailer.create(new File(ConfigCache.getWriter()), new TailerListenerAdapter() {
             @Override
             public void handle(String line) {
                 try {
                     isTailEnd = StringUtils.equalsIgnoreCase(line, ExtConstants.CSV_LISTENER_END);
                     if (isTailEnd) {
-                        log.info("writer tail end log ：{}", line);
-                        stop();
+                        log.info("the writer is end, stopped the tailer listener : {}", line);
+                        tailer.stop();
                         return;
                     }
                     JSONObject writeLog = JSONObject.parseObject(line);
@@ -81,9 +85,9 @@ public class CsvWriterListener implements CsvListener {
                         log.warn("writer skip no invalid slice log ：{}", line);
                         return;
                     }
-                    String schema = writeLog.getString("schema");
+                    String schema = writeLog.getString(SCHEMA);
                     if (skipNoMatchSchema(ConfigCache.getSchema(), schema)) {
-                        log.warn("writer skip no match schema log ：{}", line);
+                        log.warn("writer skip no match schema log : {}", line);
                         return;
                     }
                     SliceLogType sliceLogType = SliceLogType.valueOf(writeLog.getString("type"));
@@ -99,38 +103,43 @@ public class CsvWriterListener implements CsvListener {
                             tableIndexCompletedList.add(sliceIndex.getTable());
                         }
                     }
-                    log.debug("writer add log ：{}", line);
+                    log.debug("writer add log : {}", line);
                 } catch (Exception ex) {
-                    log.error("writer log listener error ：{}", line, ex);
+                    log.error("writer log listener error : {}", line, ex);
                 }
             }
         }, ConfigCache.getCsvLogMonitorInterval(), false);
-        startNotifyScheduledExecutor();
+        startNotifyExecutor();
         log.info("csv writer listener is started.");
     }
 
-    public void startNotifyScheduledExecutor() {
-        scheduledExecutor = ThreadUtil.newSingleThreadScheduledExecutor("table-index-completed-feedback");
-        int interval = ConfigCache.getIntValue(ConfigConstants.CSV_TASK_DISPATCHER_INTERVAL);
+    private void startNotifyExecutor() {
+        feedbackExecutor = ThreadUtil.newSingleThreadExecutor();
+        int interval = ConfigCache.getIntValue(ConfigConstants.CSV_TASK_DISPATCHER_INTERVAL) * 1000;
         int maxDispatcherSize = ConfigCache.getIntValue(ConfigConstants.CSV_MAX_DISPATCHER_SIZE);
-        scheduledExecutor.scheduleWithFixedDelay(() -> {
-            try {
-                if (tableIndexCompletedList.size() > 0) {
-                    List<String> completedTableList = new LinkedList<>();
-                    while (!tableIndexCompletedList.isEmpty() && completedTableList.size() < maxDispatcherSize) {
-                        completedTableList.add(tableIndexCompletedList.poll());
+        feedbackExecutor.submit(() -> {
+            Thread.currentThread().setName(TABLE_INDEX_COMPLETED_FEEDBACK);
+            List<String> completedTableList = new LinkedList<>();
+            while (isFeedbackRunning) {
+                try {
+                    if (tableIndexCompletedList.size() > 0) {
+                        while (!tableIndexCompletedList.isEmpty() && completedTableList.size() < maxDispatcherSize) {
+                            completedTableList.add(tableIndexCompletedList.poll());
+                        }
+                        if (CollectionUtils.isNotEmpty(completedTableList)) {
+                            checkingClient.notifyTableIndexCompleted(completedTableList);
+                            log.info("notify table can start checking [{}]", completedTableList);
+                        }
                     }
-                    if (CollectionUtils.isNotEmpty(completedTableList)) {
-                        checkingClient.notifyTableIndexCompleted(completedTableList);
-                    }
-                    log.info("notify table can start checking [{}]", completedTableList);
+                } catch (Exception ignore) {
+                    log.warn(" retry notifyTableIndexCompleted {}", completedTableList);
+                    tableIndexCompletedList.addAll(completedTableList);
+                } finally {
                     completedTableList.clear();
                 }
-            } catch (Exception ex) {
-                log.error("table-index-completed-feedbac error: ", ex);
+                ThreadUtil.sleep(interval);
             }
-
-        }, interval, interval, TimeUnit.SECONDS);
+        });
     }
 
     @Override
@@ -147,8 +156,11 @@ public class CsvWriterListener implements CsvListener {
     public void stop() {
         if (Objects.nonNull(tailer)) {
             tailer.stop();
-            writerSliceMap.clear();
-            scheduledExecutor.shutdownNow();
+        }
+        writerSliceMap.clear();
+        isFeedbackRunning = false;
+        if (Objects.nonNull(feedbackExecutor)) {
+            feedbackExecutor.shutdown();
         }
     }
 

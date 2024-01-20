@@ -45,7 +45,7 @@ public class HeartBeatStartLoader extends AbstractCheckLoader {
         while (!endpointManagerService.isEndpointHealth()) {
             isSourceHealth = endpointManagerService.checkEndpointHealth(Endpoint.SOURCE);
             isSinkHealth = endpointManagerService.checkEndpointHealth(Endpoint.SINK);
-            log.error("endpoint source={},sink={} does not health, please wait a moment!", isSourceHealth,
+            log.warn("endpoint source={},sink={} does not health, please wait a moment!", isSourceHealth,
                 isSinkHealth);
             ThreadUtil.sleep(retryIntervalTimes);
             retryTimes++;
