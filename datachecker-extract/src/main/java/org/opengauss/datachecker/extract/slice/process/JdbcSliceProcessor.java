@@ -71,13 +71,9 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
         try {
             TableMetadata tableMetadata = context.getTableMetaData(table);
             SliceExtend sliceExtend = createSliceExtend(tableMetadata.getTableHash());
-            if (!slice.isEmptyTable()) {
-                QuerySqlEntry queryStatement = createQueryStatement(tableMetadata);
-                log.debug("table [{}] query statement :  {}", table, queryStatement.getSql());
-                executeQueryStatement(queryStatement, tableMetadata, sliceExtend);
-            } else {
-                log.info("table slice [{}] is empty ", slice.toSimpleString());
-            }
+            QuerySqlEntry queryStatement = createQueryStatement(tableMetadata);
+            log.debug("table [{}] query statement :  {}", table, queryStatement.getSql());
+            executeQueryStatement(queryStatement, tableMetadata, sliceExtend);
             feedbackStatus(sliceExtend);
         } catch (Exception ex) {
             log.error("table slice [{}] is error", slice.toSimpleString(), ex);
@@ -97,8 +93,7 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
         }
     }
 
-    private SliceExtend executeQueryStatement(QuerySqlEntry sqlEntry, TableMetadata tableMetadata,
-        SliceExtend sliceExtend) {
+    private void executeQueryStatement(QuerySqlEntry sqlEntry, TableMetadata tableMetadata, SliceExtend sliceExtend) {
         final LocalDateTime start = LocalDateTime.now();
         Connection connection = null;
         long jdbcQueryCost = 0;
@@ -123,7 +118,6 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
                 updateExtendSliceOffsetAndCount(sliceExtend, rowCount.get(), offsetList);
                 sendDataCost = durationBetweenToMillis(jdbcQuery, LocalDateTime.now());
             }
-            return sliceExtend;
         } catch (SQLException ex) {
             throw new ExtractDataAccessException(ex);
         } finally {
@@ -143,7 +137,7 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
         List<ListenableFuture<SendResult<String, String>>> batchFutures = new LinkedList<>();
         while (resultSet.next()) {
             this.rowCount.incrementAndGet();
-            batchFutures.add(sliceSender.resultSetTranslateAndSendSync(table, rsmd, resultSet, result, slice.getNo()));
+            batchFutures.add(sliceSender.resultSetTranslateAndSendSync(rsmd, resultSet, result, slice.getNo()));
             if (batchFutures.size() == FETCH_SIZE) {
                 offsetList.add(getBatchFutureRecordOffsetScope(batchFutures));
                 batchFutures.clear();
