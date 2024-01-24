@@ -72,7 +72,7 @@
 
     <select id="queryTablePrimaryColumnsByTableName" resultMap="primaryColumnBeanMap">
        select tc.table_name tableName,c.column_name columnName from information_schema.table_constraints tc
-       left join information_schema.key_column_usage c on tc.constraint_name=c.constraint_name
+       left join information_schema.key_column_usage c on tc.constraint_name=c.constraint_name and tc.table_schema=c.table_schema
        where tc.constraint_type='PRIMARY KEY' and tc.table_schema=#{schema} and tc.table_name =#{name} ;
     </select>
 

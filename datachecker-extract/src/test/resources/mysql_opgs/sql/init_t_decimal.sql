@@ -1,0 +1,22 @@
+use test_schema;
+DROP TABLE IF EXISTS `t_decimal`;
+CREATE TABLE IF NOT EXISTS `t_decimal` (
+  `id` int(11) NOT NULL,
+  `c_decimal0` decimal(20,0) DEFAULT NULL,
+  `c_decimal1` decimal(20,1) DEFAULT NULL,
+  `c_decimal2` decimal(20,6) DEFAULT NULL,
+  `c_decimal3` decimal(20,10) DEFAULT NULL,
+  `c_decimal4` decimal(20,12) DEFAULT NULL,
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
+
+INSERT INTO `t_decimal` (`id`, `c_decimal0`, `c_decimal1`, `c_decimal2`, `c_decimal3`, `c_decimal4`) VALUES
+	(1, 0, 1.0, 1.000000, 1.0000000000, 1.000000000000),
+	(2, 1, 1.1, 1.100000, 1.0010000000, 1.000100000000),
+	(3, 26, 1.2, 1.010000, 1.1000000000, 1.100000000000),
+	(4, -21558565, 2.1, 0.000000, 0.0000000000, 0.000000000000),
+	(5, 214785987, -2.1, -0.010000, -0.0010000000, -0.000100000000),
+	(6, NULL, 0.0, -1000.090000, -10000.1900000000, -1000.190000000000),
+	(7, NULL, -1.0, -1.990000, 9999.9990000000, 999.999900000000),
+	(8, NULL, NULL, NULL, NULL, NULL);
+
