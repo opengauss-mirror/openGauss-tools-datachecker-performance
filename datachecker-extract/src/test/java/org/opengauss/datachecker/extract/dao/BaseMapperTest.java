@@ -31,6 +31,7 @@ import org.apache.ibatis.transaction.Transaction;
 import org.apache.ibatis.transaction.jdbc.JdbcTransaction;
 import org.opengauss.datachecker.common.exception.ExpectTableDataNotFountException;
 import org.opengauss.datachecker.common.exception.ExtractDataAccessException;
+import org.opengauss.datachecker.common.exception.ExtractJuintTestException;
 import org.springframework.core.env.PropertySource;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
@@ -156,6 +157,7 @@ public class BaseMapperTest<T> {
             mapper = mapperProxyFactory.newInstance(sqlSession);
         } catch (Exception ex) {
             log.error("build base mapper error", ex);
+            throw new ExtractJuintTestException("build base mapper error : ");
         }
     }
 
@@ -170,6 +172,7 @@ public class BaseMapperTest<T> {
             execTestSqlScript(scriptPath);
         } catch (Exception exc) {
             log.error("load test sql script error:", exc);
+            throw new ExtractJuintTestException("load test sql script error : " + scriptPath);
         }
     }
 
@@ -185,6 +188,7 @@ public class BaseMapperTest<T> {
             sc.runScript(reader);
         } catch (Exception exc) {
             log.error("load test sql script error:", exc);
+            throw new ExtractJuintTestException("load test sql script error : " + scriptPath);
         }
     }
 

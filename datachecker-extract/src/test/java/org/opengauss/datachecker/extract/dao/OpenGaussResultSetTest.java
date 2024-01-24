@@ -57,6 +57,25 @@ public class OpenGaussResultSetTest extends BaseDataResultSetHandlerTest<OpgsMet
     public void testDecimal() {
         testTable(schema, "t_decimal", "init_t_decimal.sql");
     }
+
+    @DisplayName("test openGauss t_char")
+    @Test
+    public void testChar() {
+        testTable(schema, "t_char", "init_t_char.sql");
+    }
+
+    @DisplayName("test openGauss t_varchar")
+    @Test
+    public void testVarchar() {
+        testTable(schema, "t_varchar", "init_t_varchar.sql");
+    }
+
+    @DisplayName("test openGauss t_text")
+    @Test
+    public void testText() {
+        testTable(schema, "t_text", "init_t_text_og.sql");
+    }
+
     @AfterAll
     void dropTestDatabaseT() {
         super.dropTestDatabase();
