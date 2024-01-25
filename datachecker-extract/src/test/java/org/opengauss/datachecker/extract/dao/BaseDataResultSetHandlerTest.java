@@ -20,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.hamcrest.CoreMatchers;
 import org.opengauss.datachecker.common.entry.extract.PrimaryColumnBean;
+import org.opengauss.datachecker.common.exception.ExtractJuintTestException;
 import org.opengauss.datachecker.extract.data.mapper.MetaDataMapper;
 import org.opengauss.datachecker.extract.task.ResultSetHandler;
 
@@ -108,6 +109,7 @@ public class BaseDataResultSetHandlerTest<M extends MetaDataMapper> extends Base
             }
         } catch (SQLException sqlErr) {
             log.error("test table [{}] error", tableName, sqlErr);
+            throw new ExtractJuintTestException("table:" + tableName + " query test data error ");
         } finally {
             close(resultSet);
             close(preparedStatement);
