@@ -80,7 +80,8 @@ public class SelectDmlBuilder extends DmlBuilder {
     public SelectDmlBuilder conditionPrimary(@NonNull ColumnsMetaData primaryMeta) {
         Assert.isTrue(StringUtils.isNotEmpty(primaryMeta.getColumnName()),
             "Table metadata primary key field name is empty");
-        condition = SqlUtil.escape(primaryMeta.getColumnName(),dataBaseType).concat(IN);
+        condition = SqlUtil.escape(primaryMeta.getColumnName(), dataBaseType, isOgCompatibilityB)
+                           .concat(IN);
         return this;
     }
 
@@ -112,9 +113,10 @@ public class SelectDmlBuilder extends DmlBuilder {
             final String[] split = compositeKey.split(ExtConstants.PRIMARY_DELIMITER);
             if (split.length == size) {
                 Object[] values = new Object[size];
-                IntStream.range(0, primaryMetas.size()).forEach(idx -> {
-                    values[idx] = split[idx];
-                });
+                IntStream.range(0, primaryMetas.size())
+                         .forEach(idx -> {
+                             values[idx] = split[idx];
+                         });
                 batchParam.add(values);
             }
         });
