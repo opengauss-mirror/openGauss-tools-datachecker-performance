@@ -41,7 +41,8 @@ import java.util.Map;
 public class SliceResultSetSender {
     private static final HashHandler HASH_HANDLER = new HashHandler();
     private static final String CSV_NULL_VALUE = "null";
-
+    private static final String BINARY_TYPE = "binary";
+    private static final String BLOB_TYPE = "blob";
     private final ResultSetHandler resultSetHandler;
     private final SliceKafkaAgents kafkaOperate;
     private final List<String> columns;
@@ -203,8 +204,23 @@ public class SliceResultSetSender {
             if (CSV_NULL_VALUE.equalsIgnoreCase(nextLine[idx])) {
                 result.put(column.getColumnName(), CSV_NULL_VALUE);
             } else {
-                result.put(column.getColumnName(), nextLine[idx]);
+                if (isBinaryOrBlob(column.getColumnType())) {
+                    result.put(column.getColumnName(), nextLine[idx].substring(1));
+                } else {
+                    result.put(column.getColumnName(), nextLine[idx]);
+                }
+
             }
         }
+    }
+
+    /**
+     * 判断当前类型是否是binary（binary/varbinary） 或者 blob(blob,tinyblob,blob,mediumblob,longblob) 类型
+     *
+     * @param columnType CSV场景加载表元数据类型
+     * @return boolean
+     */
+    private boolean isBinaryOrBlob(String columnType) {
+        return columnType.contains(BINARY_TYPE) || columnType.contains(BLOB_TYPE);
     }
 }

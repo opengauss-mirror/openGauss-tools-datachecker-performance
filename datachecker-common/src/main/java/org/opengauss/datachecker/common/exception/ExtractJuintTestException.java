@@ -28,5 +28,4 @@ public class ExtractJuintTestException extends RuntimeException {
     public ExtractJuintTestException(String message) {
         super(message);
     }
-
 }
