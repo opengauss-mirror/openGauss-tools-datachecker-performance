@@ -21,7 +21,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
-import org.opengauss.datachecker.extract.data.mapper.OpgsMetaDataMapper;
 import org.opengauss.datachecker.extract.task.OpenGaussResultSetHandler;
 
 /**
@@ -33,51 +32,56 @@ import org.opengauss.datachecker.extract.task.OpenGaussResultSetHandler;
  */
 @Slf4j
 @TestInstance(Lifecycle.PER_CLASS)
-public class OpenGaussResultSetTest extends BaseDataResultSetHandlerTest<OpgsMetaDataMapper> {
+public class OpenGaussResultSetTest extends BaseOpenGaussMapper {
     private static final String schema = "test_schema";
+    private final BaseDataResultSetHandlerTest dataResultSetHandler;
 
     public OpenGaussResultSetTest() {
-        super("mapper/OpgsMetaDataMapper.xml", new OpenGaussResultSetHandler());
+        super("mapper/OpgsMetaDataMapper.xml");
+        initTestDatabaseScript(baseMapperDs, testDatabaseInitScript);
+        dataResultSetHandler =
+            new BaseDataResultSetHandlerTest(testDataDir, getConnection(), new OpenGaussResultSetHandler(),
+                getMapper());
     }
 
     @DisplayName("test openGauss t_double")
     @Test
     public void testDouble() {
-        testTable(schema, "t_double", "init_t_double.sql");
+        dataResultSetHandler.testTable(schema, "t_double", "init_t_double.sql");
     }
 
     @DisplayName("test openGauss t_float")
     @Test
     public void testFloat() {
-        testTable(schema, "t_float", "init_t_float.sql");
+        dataResultSetHandler.testTable(schema, "t_float", "init_t_float.sql");
     }
 
     @DisplayName("test openGauss t_decimal")
     @Test
     public void testDecimal() {
-        testTable(schema, "t_decimal", "init_t_decimal.sql");
+        dataResultSetHandler.testTable(schema, "t_decimal", "init_t_decimal.sql");
     }
 
     @DisplayName("test openGauss t_char")
     @Test
     public void testChar() {
-        testTable(schema, "t_char", "init_t_char.sql");
+        dataResultSetHandler.testTable(schema, "t_char", "init_t_char.sql");
     }
 
     @DisplayName("test openGauss t_varchar")
     @Test
     public void testVarchar() {
-        testTable(schema, "t_varchar", "init_t_varchar.sql");
+        dataResultSetHandler.testTable(schema, "t_varchar", "init_t_varchar.sql");
     }
 
     @DisplayName("test openGauss t_text")
     @Test
     public void testText() {
-        testTable(schema, "t_text", "init_t_text_og.sql");
+        dataResultSetHandler.testTable(schema, "t_text", "init_t_text_og.sql");
     }
 
     @AfterAll
     void dropTestDatabaseT() {
-        super.dropTestDatabase();
+        super.dropTestDb(testDatabaseInitScript);
     }
 }

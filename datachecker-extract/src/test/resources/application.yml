@@ -3,8 +3,15 @@ server:
   shutdown: graceful
 debug: false
 spring:
+  memory-monitor-enable: false
   check:
     server-uri: http://127.0.0.1:9000
+    core-pool-size: 1
+    maximum-pool-size: 4
+    maximum-topic-size: 4
+    maximum-table-slice-size: 100000
+    extend-maximum-pool-size: 2
+    max-retry-times: 1000
   extract:
     schema: test
     databaseType: MS

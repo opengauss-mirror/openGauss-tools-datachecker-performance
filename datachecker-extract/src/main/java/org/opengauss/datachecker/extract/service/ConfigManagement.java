@@ -66,15 +66,15 @@ public class ConfigManagement {
     private String dsUname;
     @Value("${spring.datasource.password}")
     private String dsPw;
-    @Value("${spring.datasource.druid.initialSize}")
+    @Value("${spring.datasource.druid.initial-size}")
     private int initialSize;
-    @Value("${spring.datasource.druid.minIdle}")
+    @Value("${spring.datasource.druid.min-idle}")
     private int minIdle;
-    @Value("${spring.datasource.druid.maxActive}")
+    @Value("${spring.datasource.druid.max-active}")
     private int maxActive;
     @Value("${spring.datasource.druid.max-wait}")
     private int maxWait;
-    @Value("${spring.datasource.druid.validationQuery}")
+    @Value("${spring.datasource.druid.validation-query}")
     private String validationQuery;
     @Value("${spring.datasource.druid.min-evictable-idle-time-millis}")
     private int minEvictableIdleTimeMillis;

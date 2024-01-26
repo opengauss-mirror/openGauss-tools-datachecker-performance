@@ -209,7 +209,6 @@ public class SliceResultSetSender {
                 } else {
                     result.put(column.getColumnName(), nextLine[idx]);
                 }
-
             }
         }
     }

@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.opengauss.datachecker.common.service.ShutdownService;
 import org.opengauss.datachecker.common.util.ReflectUtil;
 import org.opengauss.datachecker.extract.client.CheckingFeignClient;
 import org.opengauss.datachecker.extract.config.ExtractProperties;
@@ -40,6 +41,8 @@ class IncrementDataAnalysisServiceTest {
     private DataConsolidationService mockConsolidationService;
     @Mock
     private CheckingFeignClient mockCheckingFeignClient;
+    @Mock
+    private ShutdownService shutdownService;
 
     private IncrementDataAnalysisService incrementDataAnalysisServiceUnderTest;
 
@@ -47,14 +50,16 @@ class IncrementDataAnalysisServiceTest {
     void setUp() {
         incrementDataAnalysisServiceUnderTest =
             new IncrementDataAnalysisService(mockExtractProperties, mockConsolidationService, mockCheckingFeignClient);
-        ScheduledExecutorService scheduled_executor = ReflectUtil
-            .getField(IncrementDataAnalysisService.class, incrementDataAnalysisServiceUnderTest,
+        ScheduledExecutorService scheduled_executor =
+            ReflectUtil.getField(IncrementDataAnalysisService.class, incrementDataAnalysisServiceUnderTest,
                 ScheduledExecutorService.class, "SCHEDULED_EXECUTOR");
         if (scheduled_executor != null) {
             scheduled_executor.shutdownNow();
             ReflectUtil.setField(IncrementDataAnalysisService.class, incrementDataAnalysisServiceUnderTest,
                 "SCHEDULED_EXECUTOR", null);
         }
+        ReflectUtil.setField(IncrementDataAnalysisService.class, incrementDataAnalysisServiceUnderTest,
+            "shutdownService", shutdownService);
     }
 
     @DisplayName("when config debezium is disable ,do nothing")
@@ -65,8 +70,8 @@ class IncrementDataAnalysisServiceTest {
         // Run the test
         incrementDataAnalysisServiceUnderTest.startIncrDataAnalysis();
 
-        final ScheduledExecutorService scheduled_executor = ReflectUtil
-            .getField(IncrementDataAnalysisService.class, incrementDataAnalysisServiceUnderTest,
+        final ScheduledExecutorService scheduled_executor =
+            ReflectUtil.getField(IncrementDataAnalysisService.class, incrementDataAnalysisServiceUnderTest,
                 ScheduledExecutorService.class, "SCHEDULED_EXECUTOR");
         assertThat(scheduled_executor).isNull();
     }
@@ -79,8 +84,8 @@ class IncrementDataAnalysisServiceTest {
         when(mockConsolidationService.isSourceEndpoint()).thenReturn(false);
         // Run the test
         incrementDataAnalysisServiceUnderTest.startIncrDataAnalysis();
-        final ScheduledExecutorService scheduled_executor = ReflectUtil
-            .getField(IncrementDataAnalysisService.class, incrementDataAnalysisServiceUnderTest,
+        final ScheduledExecutorService scheduled_executor =
+            ReflectUtil.getField(IncrementDataAnalysisService.class, incrementDataAnalysisServiceUnderTest,
                 ScheduledExecutorService.class, "SCHEDULED_EXECUTOR");
         assertThat(scheduled_executor).isNull();
     }
@@ -95,10 +100,10 @@ class IncrementDataAnalysisServiceTest {
         when(mockExtractProperties.getDebeziumNumPeriod()).thenReturn(1);
         when(mockExtractProperties.getDebeziumNumDefaultPeriod()).thenReturn(10);
         // Run the test
-        assertThatThrownBy(() -> incrementDataAnalysisServiceUnderTest.startIncrDataAnalysis())
-            .isInstanceOf(IllegalArgumentException.class);
-        ScheduledExecutorService scheduled_executor = ReflectUtil
-            .getField(IncrementDataAnalysisService.class, incrementDataAnalysisServiceUnderTest,
+        assertThatThrownBy(() -> incrementDataAnalysisServiceUnderTest.startIncrDataAnalysis()).isInstanceOf(
+            IllegalArgumentException.class);
+        ScheduledExecutorService scheduled_executor =
+            ReflectUtil.getField(IncrementDataAnalysisService.class, incrementDataAnalysisServiceUnderTest,
                 ScheduledExecutorService.class, "SCHEDULED_EXECUTOR");
         assertThat(scheduled_executor).isNotNull();
         scheduled_executor.shutdownNow();
@@ -114,10 +119,10 @@ class IncrementDataAnalysisServiceTest {
         when(mockExtractProperties.getDebeziumNumPeriod()).thenReturn(1);
         when(mockExtractProperties.getDebeziumNumDefaultPeriod()).thenReturn(10);
         // Run the test
-        assertThatThrownBy(() -> incrementDataAnalysisServiceUnderTest.startIncrDataAnalysis())
-            .isInstanceOf(IllegalArgumentException.class);
-        ScheduledExecutorService scheduled_executor = ReflectUtil
-            .getField(IncrementDataAnalysisService.class, incrementDataAnalysisServiceUnderTest,
+        assertThatThrownBy(() -> incrementDataAnalysisServiceUnderTest.startIncrDataAnalysis()).isInstanceOf(
+            IllegalArgumentException.class);
+        ScheduledExecutorService scheduled_executor =
+            ReflectUtil.getField(IncrementDataAnalysisService.class, incrementDataAnalysisServiceUnderTest,
                 ScheduledExecutorService.class, "SCHEDULED_EXECUTOR");
         assertThat(scheduled_executor).isNotNull();
         scheduled_executor.shutdownNow();
@@ -135,8 +140,8 @@ class IncrementDataAnalysisServiceTest {
         // Run the test
         incrementDataAnalysisServiceUnderTest.startIncrDataAnalysis();
 
-        ScheduledExecutorService scheduled_executor = ReflectUtil
-            .getField(IncrementDataAnalysisService.class, incrementDataAnalysisServiceUnderTest,
+        ScheduledExecutorService scheduled_executor =
+            ReflectUtil.getField(IncrementDataAnalysisService.class, incrementDataAnalysisServiceUnderTest,
                 ScheduledExecutorService.class, "SCHEDULED_EXECUTOR");
         assertThat(scheduled_executor).isNotNull();
         scheduled_executor.shutdownNow();

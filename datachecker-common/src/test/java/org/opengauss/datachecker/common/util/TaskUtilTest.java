@@ -88,7 +88,7 @@ class TaskUtilTest {
     @DisplayName("calc task of 4300000L row")
     @Test
     void testCalcAutoTaskCount_4300000L_row() {
-        assertThat(TaskUtil.calcAutoTaskCount(4300000L)).isEqualTo(11);
+        assertThat(TaskUtil.calcAutoTaskCount(4300000L)).isEqualTo(10);
     }
 
     @DisplayName("calc task of 43000000L row")

@@ -22,8 +22,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
-import org.opengauss.datachecker.extract.data.mapper.MysqlMetaDataMapper;
-import org.opengauss.datachecker.extract.task.MysqlResultSetHandler;
 
 import java.util.List;
 
@@ -38,20 +36,18 @@ import static org.hamcrest.MatcherAssert.assertThat;
  */
 @Slf4j
 @TestInstance(Lifecycle.PER_CLASS)
-public class MysqlMetaDataMapperTest extends BaseMapperTest<MysqlMetaDataMapper> {
+public class MysqlMetaDataMapperTest extends BaseMysqlMapper {
 
-    private String schema = "test_mysql_db";
-    protected MysqlResultSetHandler resultSetHandler;
+    private String schema = "test_schema";
 
     public MysqlMetaDataMapperTest() {
         super("mapper/MysqlMetaDataMapper.xml");
-        this.mapper = super.getMapper();
-        resultSetHandler = new MysqlResultSetHandler();
+        initTestDatabaseScript(baseMapperDs, testDatabaseInitScript);
     }
 
     @BeforeAll
     void setUp() {
-        loadTestSqlScript(testDatabaseInitScript + "/sql/init_t_double.sql");
+        SqlScriptUtils.execTestSqlScript(getConnection(), testDataDir + "/sql/" + "init_t_double.sql");
     }
 
     @Test
@@ -62,6 +58,6 @@ public class MysqlMetaDataMapperTest extends BaseMapperTest<MysqlMetaDataMapper>
 
     @AfterAll
     void dropTestDatabase() {
-        super.dropTestDb();
+        super.dropTestDb(testDatabaseInitScript);
     }
 }

@@ -18,12 +18,18 @@ package org.opengauss.datachecker.extract.dao;
 import com.alibaba.fastjson.JSONObject;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.io.IOUtils;
 import org.hamcrest.CoreMatchers;
 import org.opengauss.datachecker.common.entry.extract.PrimaryColumnBean;
+import org.opengauss.datachecker.common.exception.ExpectTableDataNotFountException;
 import org.opengauss.datachecker.common.exception.ExtractJuintTestException;
 import org.opengauss.datachecker.extract.data.mapper.MetaDataMapper;
 import org.opengauss.datachecker.extract.task.ResultSetHandler;
+import org.springframework.core.io.ClassPathResource;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -48,12 +54,18 @@ import static org.hamcrest.collection.IsMapContaining.hasEntry;
  * @since ：11
  */
 @Slf4j
-public class BaseDataResultSetHandlerTest<M extends MetaDataMapper> extends BaseMapperTest<MetaDataMapper> {
+public class BaseDataResultSetHandlerTest {
     protected final ResultSetHandler resultSetHandler;
+    protected final Connection connection;
+    protected final MetaDataMapper mapper;
+    protected final String testDataDir;
 
-    public BaseDataResultSetHandlerTest(String mapperName, ResultSetHandler resultSetHandler) {
-        super(mapperName);
+    public BaseDataResultSetHandlerTest(String testDataDir, Connection connection, ResultSetHandler resultSetHandler,
+        MetaDataMapper mapper) {
+        this.testDataDir = testDataDir;
         this.resultSetHandler = resultSetHandler;
+        this.connection = connection;
+        this.mapper = mapper;
     }
 
     /**
@@ -64,12 +76,12 @@ public class BaseDataResultSetHandlerTest<M extends MetaDataMapper> extends Base
      * @param script    script
      */
     public void testTable(String schema, String tableName, String script) {
-        loadTestSqlScript(script);
+        script = testDataDir + "/sql/" + script;
+        SqlScriptUtils.execTestSqlScript(connection, script);
         List<String> primaryKeyList = new ArrayList<>();
         Map<String, Map<String, String>> expectResult = testTableExpectResult(schema, tableName, primaryKeyList);
         List<Map<String, String>> result = new ArrayList<>();
         queryTableDataList(tableName, result);
-        System.out.println(JSONObject.toJSONString(result));
         assertThatData(result, expectResult, primaryKeyList);
     }
 
@@ -88,6 +100,22 @@ public class BaseDataResultSetHandlerTest<M extends MetaDataMapper> extends Base
     }
 
     /**
+     * 加载表预期结果对象
+     *
+     * @param tableName tableName
+     * @return
+     */
+    public List<Map<String, String>> expect(String tableName) {
+        try (InputStream inputStream = new ClassPathResource(
+            testDataDir + "/expect/" + tableName + ".json").getInputStream();) {
+            return JSONObject.parseObject(IOUtils.toString(inputStream, String.valueOf(StandardCharsets.UTF_8)),
+                List.class);
+        } catch (IOException ex) {
+            throw new ExpectTableDataNotFountException(tableName);
+        }
+    }
+
+    /**
      * queryTableDataList 测试步骤二 : 查询当前表记录数据
      *
      * @param tableName tableName
@@ -98,7 +126,6 @@ public class BaseDataResultSetHandlerTest<M extends MetaDataMapper> extends Base
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
         try {
-            Connection connection = getConnection();
             preparedStatement = connection.prepareStatement(executeQueryStatement);
             resultSet = preparedStatement.executeQuery();
             ResultSetMetaData rsmd = resultSet.getMetaData();
@@ -185,7 +212,31 @@ public class BaseDataResultSetHandlerTest<M extends MetaDataMapper> extends Base
                           .collect(Collectors.toList());
     }
 
-    protected void dropTestDatabase() {
-        super.dropTestDb();
+    /**
+     * 关闭测试结果集
+     *
+     * @param resultSet resultSet
+     */
+    public void close(ResultSet resultSet) {
+        if (resultSet != null) {
+            try {
+                resultSet.close();
+            } catch (SQLException sql) {
+            }
+        }
+    }
+
+    /**
+     * 关闭测试 preparedStatement
+     *
+     * @param preparedStatement preparedStatement
+     */
+    public void close(PreparedStatement preparedStatement) {
+        if (preparedStatement != null) {
+            try {
+                preparedStatement.close();
+            } catch (SQLException sql) {
+            }
+        }
     }
 }

@@ -19,8 +19,9 @@ import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.Test;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.util.LogUtils;
+import org.opengauss.datachecker.extract.boot.TestSourceActiveProfiles;
+import org.opengauss.datachecker.extract.boot.SpringBootStartTest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 
 import java.sql.SQLException;
 import java.util.Map;
@@ -32,8 +33,7 @@ import java.util.Map;
  * @date ：Created in 2022/5/14
  * @since ：11
  */
-@SpringBootTest
-public class MetaDataServiceTest {
+public class MetaDataServiceTest implements SpringBootStartTest, TestSourceActiveProfiles {
     private static final Logger log = LogUtils.getLogger();
     @Autowired
     private MetaDataService metaDataService;

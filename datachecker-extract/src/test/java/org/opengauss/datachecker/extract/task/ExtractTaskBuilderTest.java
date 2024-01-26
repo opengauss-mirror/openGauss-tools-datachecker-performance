@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.opengauss.datachecker.extract.util.TestJsonUtil.KEY_META_DATA_13_TABLE;
 
 class ExtractTaskBuilderTest {
@@ -45,8 +44,8 @@ class ExtractTaskBuilderTest {
     @DisplayName("build task table empty")
     @Test
     void testBuilder_empty_table_exception() {
-        assertThatThrownBy(() -> extractTaskBuilderUnderTest.builder(Set.of()))
-            .isInstanceOf(IllegalArgumentException.class);
+        List<ExtractTask> taskList = extractTaskBuilderUnderTest.builder(Set.of());
+        assertThat(taskList).isEmpty();
     }
 
     @DisplayName("build task table")

@@ -1,3 +1,18 @@
+/*
+ * Copyright (c) 2022-2022 Huawei Technologies Co.,Ltd.
+ *
+ * openGauss is licensed under Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *
+ *           http://license.coscl.org.cn/MulanPSL2
+ *
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+ * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+ * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
+ */
+
 package org.opengauss.datachecker.extract.task;
 
 import org.apache.logging.log4j.Logger;
@@ -16,20 +31,28 @@ import java.util.stream.LongStream;
 
 public class ExtractForkJoinTest {
     private static final Logger log = LogUtils.getLogger();
+
     @BeforeEach
     void setUp() {
     }
 
     @Test
     public void testParallelism1() throws ExecutionException, InterruptedException {
-        int cupNum = Runtime.getRuntime().availableProcessors();
+        int cupNum = Runtime.getRuntime()
+                            .availableProcessors();
         log.info("CPU num:{}", cupNum);
         long firstNum = 1;
         long lastNum = 10000;
-        List<Long> aList = LongStream.rangeClosed(firstNum, lastNum).boxed().collect(Collectors.toList());
-        aList.parallelStream().forEach(e -> {
-            log.info("输出:{}", e);
-        });
+        List<Long> aList = LongStream.rangeClosed(firstNum, lastNum)
+                                     .boxed()
+                                     .collect(Collectors.toList());
+        aList.parallelStream()
+             .forEach(e -> {
+                 if (e % 100 == 0) {
+                     System.out.println("");
+                 }
+                 System.out.print(e+",");
+             });
     }
 
     @Test
@@ -42,11 +65,14 @@ public class ExtractForkJoinTest {
             int dop = Math.min(querySqlList.size(), 5);
             ForkJoinPool customThreadPool = new ForkJoinPool(dop);
             customThreadPool.submit(() -> {
-                querySqlList.parallelStream().map(sql -> {
-                    log.error("{}", sql);
-                    return sql + "  exe end";
-                }).collect(Collectors.toList());
-            }).get();
+                querySqlList.parallelStream()
+                            .map(sql -> {
+                                System.out.println("输出:" + sql);
+                                return sql + "  exe end";
+                            })
+                            .collect(Collectors.toList());
+            })
+                            .get();
             System.out.println("执行结束");
         } catch (Exception ex) {
         }
@@ -63,19 +89,23 @@ public class ExtractForkJoinTest {
             int dop = Math.min(querySqlList.size(), 5);
             ForkJoinPool customThreadPool = new ForkJoinPool(dop);
             customThreadPool.submit(() -> {
-                querySqlList.parallelStream().map(sql -> {
-                    try {
-                        log.error("{}", sql);
-                        ThreadUtil.sleepHalfSecond();
-                    } finally {
-                        countDownLatch.countDown();
-                        if (countDownLatch.getCount() > 0) {
-                            log.error("exec sql [{}] remaining [{}] tasks", sql, countDownLatch.getCount());
-                        }
-                    }
-                    return sql + "  exe end";
-                }).collect(Collectors.toList());
-            }).get();
+                querySqlList.parallelStream()
+                            .map(sql -> {
+                                try {
+                                    System.out.println("输出:" + sql);
+                                    ThreadUtil.sleepHalfSecond();
+                                } finally {
+                                    countDownLatch.countDown();
+                                    if (countDownLatch.getCount() > 0) {
+                                        System.out.println(
+                                            "exec sql " + sql + " remaining " + countDownLatch.getCount() + " tasks");
+                                    }
+                                }
+                                return sql + "  exe end";
+                            })
+                            .collect(Collectors.toList());
+            })
+                            .get();
             countDownLatch.await();
             System.out.println("执行结束");
         } catch (Exception ex) {
@@ -84,15 +114,26 @@ public class ExtractForkJoinTest {
 
     @Test
     public void testParallelism4() {
-        int cupNum = Runtime.getRuntime().availableProcessors();
+        int cupNum = Runtime.getRuntime()
+                            .availableProcessors();
         log.info("CPU num:{}", cupNum);
         long firstNum = 1;
         long lastNum = 10000;
-        List<Long> aList = LongStream.rangeClosed(firstNum, lastNum).boxed().collect(Collectors.toList());
+        List<Long> aList = LongStream.rangeClosed(firstNum, lastNum)
+                                     .boxed()
+                                     .collect(Collectors.toList());
         ForkJoinPool forkJoinPool = new ForkJoinPool(8);
         try {
-            List<Long> longs =
-                forkJoinPool.submit(() -> aList.parallelStream().map(e -> e + 1).collect(Collectors.toList())).get();
+            List<Long> longs = forkJoinPool.submit(() -> aList.parallelStream()
+                                                              .map(e -> e + 1)
+                                                              .peek(es -> {
+                                                                  if (es % 100 == 0) {
+                                                                      System.out.println("");
+                                                                  }
+                                                                  System.out.print(es+",");
+                                                              })
+                                                              .collect(Collectors.toList()))
+                                           .get();
             //通过调用get方法，等待任务执行完毕
             System.out.println(longs.size());
             System.out.println("执行结束");
