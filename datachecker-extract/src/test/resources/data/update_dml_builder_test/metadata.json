@@ -57,5 +57,6 @@
     }
   ],
   "tableName": "t_data_checker_time_0018_01",
+  "schema": "test",
   "tableRows": 4
 }

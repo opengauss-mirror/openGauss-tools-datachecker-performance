@@ -1,3 +1,18 @@
+/*
+ * Copyright (c) 2022-2022 Huawei Technologies Co.,Ltd.
+ *
+ * openGauss is licensed under Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *
+ *           http://license.coscl.org.cn/MulanPSL2
+ *
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+ * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+ * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
+ */
+
 package org.opengauss.datachecker.extract.slice.process;
 
 import com.alibaba.fastjson.JSONObject;
@@ -15,6 +30,8 @@ import org.opengauss.datachecker.common.entry.enums.SliceIndexStatus;
 import org.opengauss.datachecker.common.entry.enums.SliceLogType;
 import org.opengauss.datachecker.common.entry.extract.SliceVo;
 import org.opengauss.datachecker.common.util.FileUtils;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
 import org.springframework.util.Assert;
 
 import java.io.BufferedReader;
@@ -47,8 +64,10 @@ class CsvSliceLogTest {
 
     @BeforeEach
     void setUp() throws IOException {
-        schema = "";
-        dirPath = Path.of("");
+        schema = "test";
+        Resource mapperResource = new ClassPathResource("data/csv/");
+        dirPath = mapperResource.getFile()
+                                .toPath();
         initLogs();
 
         parseCsvTableMeta(dirPath, schema);
@@ -84,42 +103,42 @@ class CsvSliceLogTest {
         }
     }
 
-
     private void scanCsvFile(Path dirPath) {
         if (Files.isDirectory(dirPath)) {
             File dir = dirPath.toFile();
             String[] fileNameList = dir.list();
             Assert.notNull(fileNameList, "chameleon dir does not have any files");
-            Arrays.stream(fileNameList).forEach(fileName -> {
-                if (fileName.equals(schema + schema_columns) || fileName.equals(schema + schema_tables)) {
-                    csvTablePaths.compute("metadata", (key, value) -> {
-                        if (value == null) {
-                            value = new ArrayList<>();
-                        }
-                        value.add(Path.of(fileName));
-                        return value;
-                    });
-                } else {
-                    sliceTableList.forEach(table -> {
-                        if (fileName.startsWith(table.getTableFilePrefix())) {
-                            csvTablePaths.compute(table.getTable(), (key, value) -> {
-                                if (value == null) {
-                                    value = new ArrayList<>();
-                                }
-                                value.add(Path.of(fileName));
-                                return value;
-                            });
-                        }
-                    });
-                }
-            });
+            Arrays.stream(fileNameList)
+                  .forEach(fileName -> {
+                      if (fileName.equals(schema + schema_columns) || fileName.equals(schema + schema_tables)) {
+                          csvTablePaths.compute("metadata", (key, value) -> {
+                              if (value == null) {
+                                  value = new ArrayList<>();
+                              }
+                              value.add(Path.of(fileName));
+                              return value;
+                          });
+                      } else {
+                          sliceTableList.forEach(table -> {
+                              if (fileName.startsWith(table.getTableFilePrefix())) {
+                                  csvTablePaths.compute(table.getTable(), (key, value) -> {
+                                      if (value == null) {
+                                          value = new ArrayList<>();
+                                      }
+                                      value.add(Path.of(fileName));
+                                      return value;
+                                  });
+                              }
+                          });
+                      }
+                  });
         }
     }
 
     @Test
     void testSourceRun() throws IOException {
         Path readerLog = Path.of(dirPath.toString(), "logs", "reader.log");
-        if(Files.exists(readerLog)){
+        if (Files.exists(readerLog)) {
             Files.delete(readerLog);
         }
         Files.createFile(readerLog);
@@ -129,31 +148,39 @@ class CsvSliceLogTest {
                 continue;
             }
             AtomicInteger sliceNo = new AtomicInteger(1);
-            tablePaths.stream().sorted(pathComparator()).forEach(sliceFile -> {
-                SliceVo sliceVo = new SliceVo();
-                sliceVo.setPtn(0);
-                sliceVo.setName(sliceFile.toString());
-                sliceVo.setTable(sliceTable.getTable());
-                sliceVo.setSchema(sliceTable.getSchema());
-                sliceVo.setNo(sliceNo.getAndIncrement());
-                sliceVo.setPtnNum(1);
-                sliceVo.setType(SliceLogType.SLICE);
-                sliceVo.setTotal(tablePaths.size());
-                sliceVo.setTableHash(sliceTable.getTable().hashCode());
-                SliceFileData file = parseFileData(sliceFile);
-                sliceVo.setFetchSize(file.getCount());
-                sliceVo.setBeginIdx(file.getSeqStart());
-                sliceVo.setEndIdx(file.getSeqEnd());
-                FileUtils.writeAppendFile(readerLog.toString(), JSONObject.toJSONString(sliceVo) + System.lineSeparator());
-            });
+            tablePaths.stream()
+                      .sorted(pathComparator())
+                      .forEach(sliceFile -> {
+                          SliceVo sliceVo = new SliceVo();
+                          sliceVo.setPtn(0);
+                          sliceVo.setName(sliceFile.toString());
+                          sliceVo.setTable(sliceTable.getTable());
+                          sliceVo.setSchema(sliceTable.getSchema());
+                          sliceVo.setNo(sliceNo.getAndIncrement());
+                          sliceVo.setPtnNum(1);
+                          sliceVo.setType(SliceLogType.SLICE);
+                          sliceVo.setTotal(tablePaths.size());
+                          sliceVo.setTableHash(sliceTable.getTable()
+                                                         .hashCode());
+                          SliceFileData file = parseFileData(sliceFile);
+                          sliceVo.setFetchSize(file.getCount());
+                          sliceVo.setBeginIdx(file.getSeqStart());
+                          sliceVo.setEndIdx(file.getSeqEnd());
+                          FileUtils.writeAppendFile(readerLog.toString(),
+                              JSONObject.toJSONString(sliceVo) + System.lineSeparator());
+                      });
         }
 
     }
 
     private Comparator<Path> pathComparator() {
         return (o1, o2) -> {
-            String[] o1Idx = o1.toString().replace(".csv", "").split("slice");
-            String[] o2Idx = o2.toString().replace(".csv", "").split("slice");
+            String[] o1Idx = o1.toString()
+                               .replace(".csv", "")
+                               .split("slice");
+            String[] o2Idx = o2.toString()
+                               .replace(".csv", "")
+                               .split("slice");
             return Integer.parseInt(o1Idx[1]) - Integer.parseInt(o2Idx[1]);
         };
     }
@@ -161,7 +188,7 @@ class CsvSliceLogTest {
     @Test
     void testSinkRun() throws IOException {
         Path writerLog = Path.of(dirPath.toString(), "logs", "writer.log");
-        if(Files.exists(writerLog)){
+        if (Files.exists(writerLog)) {
             Files.delete(writerLog);
         }
         Files.createFile(writerLog);
@@ -180,23 +207,27 @@ class CsvSliceLogTest {
             FileUtils.writeAppendFile(writerLog.toString(), JSONObject.toJSONString(sIndex) + System.lineSeparator());
 
             AtomicInteger sliceNo = new AtomicInteger(1);
-            tablePaths.stream().sorted(pathComparator()).forEach(sliceFile -> {
-                SliceVo sliceVo = new SliceVo();
-                sliceVo.setPtn(0);
-                sliceVo.setName(sliceFile.toString());
-                sliceVo.setTable(sliceTable.getTable());
-                sliceVo.setSchema(sliceTable.getSchema());
-                sliceVo.setNo(sliceNo.getAndIncrement());
-                sliceVo.setPtnNum(1);
-                sliceVo.setType(SliceLogType.SLICE);
-                sliceVo.setTotal(tablePaths.size());
-                sliceVo.setTableHash(sliceTable.getTable().hashCode());
-                SliceFileData file = parseFileData(sliceFile);
-                sliceVo.setFetchSize(file.getCount());
-                sliceVo.setBeginIdx(file.getSeqStart());
-                sliceVo.setEndIdx(file.getSeqEnd());
-                FileUtils.writeAppendFile(writerLog.toString(), JSONObject.toJSONString(sliceVo) + System.lineSeparator());
-            });
+            tablePaths.stream()
+                      .sorted(pathComparator())
+                      .forEach(sliceFile -> {
+                          SliceVo sliceVo = new SliceVo();
+                          sliceVo.setPtn(0);
+                          sliceVo.setName(sliceFile.toString());
+                          sliceVo.setTable(sliceTable.getTable());
+                          sliceVo.setSchema(sliceTable.getSchema());
+                          sliceVo.setNo(sliceNo.getAndIncrement());
+                          sliceVo.setPtnNum(1);
+                          sliceVo.setType(SliceLogType.SLICE);
+                          sliceVo.setTotal(tablePaths.size());
+                          sliceVo.setTableHash(sliceTable.getTable()
+                                                         .hashCode());
+                          SliceFileData file = parseFileData(sliceFile);
+                          sliceVo.setFetchSize(file.getCount());
+                          sliceVo.setBeginIdx(file.getSeqStart());
+                          sliceVo.setEndIdx(file.getSeqEnd());
+                          FileUtils.writeAppendFile(writerLog.toString(),
+                              JSONObject.toJSONString(sliceVo) + System.lineSeparator());
+                      });
 
             sIndex.setIndexStatus(SliceIndexStatus.END);
             sIndex.setTimestamp(LocalDateTime.now());

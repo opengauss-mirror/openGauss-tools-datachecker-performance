@@ -22,7 +22,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
-import org.opengauss.datachecker.extract.data.mapper.OpgsMetaDataMapper;
 import org.opengauss.datachecker.extract.task.OpenGaussResultSetHandler;
 
 import java.util.List;
@@ -38,20 +37,19 @@ import static org.hamcrest.MatcherAssert.assertThat;
  */
 @Slf4j
 @TestInstance(Lifecycle.PER_CLASS)
-public class OpgsMetaDataMapperTest extends BaseMapperTest<OpgsMetaDataMapper> {
+public class OpgsMetaDataMapperTest extends BaseOpenGaussMapper {
 
     private String schema = "test_schema";
     protected OpenGaussResultSetHandler resultSetHandler;
 
     public OpgsMetaDataMapperTest() {
         super("mapper/OpgsMetaDataMapper.xml");
-        this.mapper = super.getMapper();
-        resultSetHandler = new OpenGaussResultSetHandler();
+        initTestDatabaseScript(baseMapperDs, testDatabaseInitScript);
     }
 
     @BeforeAll
     void setUp() {
-        loadTestSqlScript("init_t_double.sql");
+        SqlScriptUtils.execTestSqlScript(getConnection(), testDataDir + "/sql/" + "init_t_double.sql");
     }
 
     @Test
@@ -62,6 +60,6 @@ public class OpgsMetaDataMapperTest extends BaseMapperTest<OpgsMetaDataMapper> {
 
     @AfterAll
     void dropTestDatabase() {
-        super.dropTestDb();
+        super.dropTestDb(testDatabaseInitScript);
     }
 }

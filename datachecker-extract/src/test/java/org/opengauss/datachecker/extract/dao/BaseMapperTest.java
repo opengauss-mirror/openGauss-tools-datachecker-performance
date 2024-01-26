@@ -15,9 +15,7 @@
 
 package org.opengauss.datachecker.extract.dao;
 
-import com.alibaba.fastjson.JSONObject;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.io.IOUtils;
 import org.apache.ibatis.binding.MapperProxyFactory;
 import org.apache.ibatis.builder.xml.XMLMapperBuilder;
 import org.apache.ibatis.datasource.unpooled.UnpooledDataSource;
@@ -25,11 +23,7 @@ import org.apache.ibatis.executor.Executor;
 import org.apache.ibatis.jdbc.ScriptRunner;
 import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.session.SqlSession;
-import org.apache.ibatis.session.TransactionIsolationLevel;
 import org.apache.ibatis.session.defaults.DefaultSqlSession;
-import org.apache.ibatis.transaction.Transaction;
-import org.apache.ibatis.transaction.jdbc.JdbcTransaction;
-import org.opengauss.datachecker.common.exception.ExpectTableDataNotFountException;
 import org.opengauss.datachecker.common.exception.ExtractDataAccessException;
 import org.opengauss.datachecker.common.exception.ExtractJuintTestException;
 import org.springframework.core.env.PropertySource;
@@ -37,18 +31,10 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.ResourcePropertySource;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.lang.reflect.ParameterizedType;
-import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -71,60 +57,20 @@ public class BaseMapperTest<T> {
     /**
      * 数据库连接
      */
-    private SqlSession sqlSession;
-    /**
-     * 执行
-     */
-    private static Executor executor;
-    /**
-     * 配置
-     */
-    private static Configuration configuration;
-    protected static String testDatabaseInitScript;
-    protected static String testDataDir;
+    private final SqlSession sqlSession;
 
-    static {
+    protected String testDatabaseInitScript;
+    protected String testDataDir;
+
+    protected static String getProperty(PropertySource rootProperty, String propertyKey) {
+        return Objects.requireNonNull(rootProperty.getProperty(propertyKey))
+                      .toString();
+    }
+
+    protected static void initTestDatabaseScript(String baseMapperDs,String testDatabaseInitScript) {
         try {
-            PropertySource rootProperty = new ResourcePropertySource(new ClassPathResource("test.properties"));
-            testDatabaseInitScript = getProperty(rootProperty, "test-database-init-script");
-            testDataDir = getProperty(rootProperty, "test-data-dir");
-            String baseMapperDs = "test-" + testDatabaseInitScript + ".properties";
-            System.out.println(baseMapperDs);
-            // 定义一个配置
-            configuration = new Configuration();
-            configuration.setCacheEnabled(false);
-            configuration.setLazyLoadingEnabled(false);
-            configuration.setAggressiveLazyLoading(true);
-            configuration.setDefaultStatementTimeout(20);
-            // 读取ces数据库 数据源配置并解析
             PropertySource propertySource = new ResourcePropertySource(
                 new ClassPathResource("init/" + testDatabaseInitScript + "/" + baseMapperDs));
-
-            initTestDatabaseScript(propertySource);
-            // 设置数据库链接
-            UnpooledDataSource dataSource = new UnpooledDataSource();
-            dataSource.setDriver(getProperty(propertySource, "driverClassName"));
-            dataSource.setUrl(getProperty(propertySource, "url"));
-            dataSource.setUsername(getProperty(propertySource, "username"));
-            dataSource.setPassword(getProperty(propertySource, "password"));
-            // 设置是我（测试设置事务不提交）
-            Transaction transaction =
-                new JdbcTransaction(dataSource, TransactionIsolationLevel.READ_UNCOMMITTED, false);
-            // 设置执行
-            executor = configuration.newExecutor(transaction);
-
-        } catch (Exception exception) {
-            log.error("load mybatis configuration error:", exception);
-        }
-    }
-
-    private static String getProperty(PropertySource rootProperty, String propertyKey) {
-        return rootProperty.getProperty(propertyKey)
-                           .toString();
-    }
-
-    private static void initTestDatabaseScript(PropertySource propertySource) {
-        try {
             UnpooledDataSource dataSource = new UnpooledDataSource();
             String url = getProperty(propertySource, "url");
             dataSource.setUrl(Objects.equals(testDatabaseInitScript, "mysql") ? getInitScriptUrl(url) : url);
@@ -142,8 +88,9 @@ public class BaseMapperTest<T> {
         }
     }
 
-    public BaseMapperTest(String mapperName) {
+    public BaseMapperTest(String mapperName, Configuration configuration, Executor executor, String testDataDir) {
         try {
+            this.testDataDir = testDataDir;
             // 解析mapper文件
             Resource mapperResource = new ClassPathResource(mapperName);
             XMLMapperBuilder xmlMapperBuilder =
@@ -151,44 +98,13 @@ public class BaseMapperTest<T> {
                     configuration.getSqlFragments());
             xmlMapperBuilder.parse();
             sqlSession = new DefaultSqlSession(configuration, executor, false);
-            ParameterizedType pt = (ParameterizedType) this.getClass()
-                                                           .getGenericSuperclass();
+            ParameterizedType pt = (ParameterizedType) ((Class) this.getClass()
+                                                                    .getGenericSuperclass()).getGenericSuperclass();
             mapperProxyFactory = new MapperProxyFactory<>((Class<T>) (pt.getActualTypeArguments()[0]));
             mapper = mapperProxyFactory.newInstance(sqlSession);
         } catch (Exception ex) {
             log.error("build base mapper error", ex);
             throw new ExtractJuintTestException("build base mapper error : ");
-        }
-    }
-
-    /**
-     * 加载数据库待测试表结构以及表数据
-     *
-     * @param scriptPath 指定表测试脚本路径
-     */
-    public void loadTestSqlScript(String scriptPath) {
-        try {
-            scriptPath = testDataDir + "/sql/" + scriptPath;
-            execTestSqlScript(scriptPath);
-        } catch (Exception exc) {
-            log.error("load test sql script error:", exc);
-            throw new ExtractJuintTestException("load test sql script error : " + scriptPath);
-        }
-    }
-
-    /**
-     * execTestSqlScript
-     *
-     * @param scriptPath scriptPath
-     */
-    public void execTestSqlScript(String scriptPath) {
-        try {
-            ScriptRunner sc = new ScriptRunner(sqlSession.getConnection());
-            Reader reader = new InputStreamReader(new ClassPathResource(scriptPath).getInputStream());
-            sc.runScript(reader);
-        } catch (Exception exc) {
-            log.error("load test sql script error:", exc);
-            throw new ExtractJuintTestException("load test sql script error : " + scriptPath);
         }
     }
 
@@ -217,67 +133,23 @@ public class BaseMapperTest<T> {
     /**
      * 返回Mybatis Mapper接口实例
      *
-     * @return
+     * @return T
      */
     public T getMapper() {
         return mapper;
     }
 
     /**
-     * 加载表预期结果对象
-     *
-     * @param tableName tableName
-     * @return
-     */
-    public List<Map<String, String>> expect(String tableName) {
-        try (InputStream inputStream = new ClassPathResource(
-            testDataDir + "/expect/" + tableName + ".json").getInputStream();) {
-            return JSONObject.parseObject(IOUtils.toString(inputStream, String.valueOf(StandardCharsets.UTF_8)),
-                List.class);
-        } catch (IOException ex) {
-            throw new ExpectTableDataNotFountException(tableName);
-        }
-    }
-
-    /**
      * 删除测试数据库
      */
-    public void dropTestDb() {
-        execTestSqlScript("init/" + testDatabaseInitScript + "/sql/drop.sql");
-    }
-
-    /**
-     * 关闭测试结果集
-     *
-     * @param resultSet resultSet
-     */
-    public void close(ResultSet resultSet) {
-        if (resultSet != null) {
-            try {
-                resultSet.close();
-            } catch (SQLException sql) {
-            }
-        }
-    }
-
-    /**
-     * 关闭测试 preparedStatement
-     *
-     * @param preparedStatement preparedStatement
-     */
-    public void close(PreparedStatement preparedStatement) {
-        if (preparedStatement != null) {
-            try {
-                preparedStatement.close();
-            } catch (SQLException sql) {
-            }
-        }
+    public void dropTestDb(String testDatabaseInitScript) {
+        SqlScriptUtils.execTestSqlScript(getConnection(), "init/" + testDatabaseInitScript + "/sql/drop.sql");
     }
 
     /**
      * 获取测试连接
      *
-     * @return
+     * @return Connection
      */
     public Connection getConnection() {
         return sqlSession.getConnection();

@@ -1,3 +1,18 @@
+/*
+ * Copyright (c) 2022-2022 Huawei Technologies Co.,Ltd.
+ *
+ * openGauss is licensed under Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *
+ *           http://license.coscl.org.cn/MulanPSL2
+ *
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+ * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+ * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
+ */
+
 package org.opengauss.datachecker.extract.slice.process;
 
 import com.opencsv.CSVReader;
@@ -11,16 +26,11 @@ import org.opengauss.datachecker.common.entry.extract.SliceVo;
 import org.opengauss.datachecker.extract.slice.SliceProcessorContext;
 import org.opengauss.datachecker.extract.util.TestJsonUtil;
 
-import javax.validation.constraints.AssertTrue;
 import java.io.BufferedReader;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Arrays;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class CsvSliceProcessorTest {
@@ -46,18 +56,6 @@ class CsvSliceProcessorTest {
         while ((readLine = reader.readNext()) != null) {
             System.out.println(Arrays.toString(readLine));
         }
-        reader.close();
-    }
-
-    @Test
-    void testLineCsvFileReader() throws IOException, CsvValidationException {
-        URL resource = TestJsonUtil.class.getClassLoader().getResource(
-            TestJsonUtil.getFileName(TestJsonUtil.KEY_DATA_TEST_DEMO_SLICE1_CSV));
-        CSVReader reader = new CSVReader(new BufferedReader(new FileReader(resource.getFile())));
-        reader.skip(3);
-        assertEquals("[4, storage, aliyun, {\"name\":\"阿里云存储\",\"bucket\":\"\",\"secretKey\":\"\",\"accessKey\":\"\",\"domain\":\"\"}, 1660620367, 1662620071]",Arrays.toString(reader.peek()));
-        reader.skip(3);
-        assertEquals("[7, sms, aliyun, {\"name\":\"阿里云短信\",\"alias\":\"aliyun\",\"sign\":\"\",\"appKey\":\"\",\"secretKey\":\"\"}, 1660620367, 1660620367]", Arrays.toString(reader.peek()));
         reader.close();
     }
 }

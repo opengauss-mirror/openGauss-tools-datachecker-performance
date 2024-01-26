@@ -2,12 +2,12 @@
   {
     "c_varchar0": "1",
     "id": "1",
-    "c_varchar1": "在此次事件中，腾讯被曝泄露的数据记录最多，达到15亿条，其中14亿条来自腾讯QQ。"
+    "c_varchar1": "In this incident, Tencent was exposed to have leaked the most data records, reaching 1.5 billion, of which 1.4 billion were from Tencent QQ."
   },
   {
     "c_varchar0": "a",
     "id": "2",
-    "c_varchar1": "1月23日，据媒体报道，有安全研究人员于发出警告，发现了一个包含至少260亿条泄露数据记录的数据库蜗"
+    "c_varchar1": "On January 23rd, according to media reports, security researchers issued a warning and discovered a database containing at least 26 billion leaked data records"
   },
   {
     "id": "3"

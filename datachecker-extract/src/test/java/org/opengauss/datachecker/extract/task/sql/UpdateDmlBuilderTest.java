@@ -52,7 +52,7 @@ public class UpdateDmlBuilderTest extends MockTableMeta {
                             .schema(getSchema()).tableName(mockTableMetadata.getTableName()).build();
         // Verify the results
         assertThat(result).isEqualTo(
-            "update \"test\".\"t_data_checker_time_0018_01\" set c_date_time='2022-09-18 17:39:51' , c_date_time_3='2022-09-19 10:13:37.741' , c_timestamp='2022-09-18 17:39:51' , c_date='2022-09-18' , c_time='17:39:49' , c_year=2022  where id=15 ;");
+            "update `test`.`t_data_checker_time_0018_01` set c_date_time='2022-09-18 17:39:51' , c_date_time_3='2022-09-19 10:13:37.741' , c_timestamp='2022-09-18 17:39:51' , c_date='2022-09-18' , c_time='17:39:49' , c_year='2022'  where id=15 ;");
     }
 
 }

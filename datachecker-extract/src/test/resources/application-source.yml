@@ -1,0 +1,56 @@
+server:
+  port: 9001
+
+spring:
+  check:
+    server-uri: http://127.0.0.1:9000
+    core-pool-size: 1
+    maximum-pool-size: 4
+    maximum-topic-size: 4
+    maximum-table-slice-size: 100000
+    extend-maximum-pool-size: 2
+  extract:
+    schema: test
+    databaseType: MS # For MySQL
+    object-size-expansion-factor: 1
+    # databaseType: OG # For openGauss
+    # databaseType: O # For Oracle
+    query-dop: 8 # jdbc Parallel Query  config
+    dataLoadMode: jdbc # jdbc or csv
+    endpoint: SOURCE
+    debezium-enable: false
+    debezium-topic: data_check_avro_inc_topic_w1 # debezium topic
+    debezium-serializer: AvroSerializer # StringSerializer or AvroSerializer
+    debezium-avro-registry: http://localhost:8081 # avro schema registry
+    debezium-groupId: debezium-extract-group # debezium topic groupId
+    debezium-time-period: 1 # Debezium incremental migration verification time period: 24 * 60 unit: Min
+    # debezium-num-period: Debezium incremental migration verification is the threshold value of the number
+    # of incremental change records. The default value is 1000. The threshold value should be greater than 100
+    debezium-num-period: 1000
+
+  kafka:
+    bootstrap-servers: 127.0.0.1:9092
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3306/test?useSSL=false&useUnicode=true&characterEncoding=utf-8&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    # driver-class-name: org.opengauss.Driver # For openGauss
+    # url: # jdbc:opengauss://127.0.0.1:5432/postgres?useSSL=false&useUnicode=true&characterEncoding=utf-8&serverTimezone=UTC # For openGauss
+    # driver-class-name: oracle.jdbc.OracleDriver
+    # url: jdbc:oracle:thin:@127.0.0.1:1521/TEST
+    username: xxxxx
+    password: 'xxxxxx' # The password text may contain special characters, which need to be enclosed in quotation marks
+    # Configure initialization connection pool size, minimum number of connections, and maximum number of connections
+    # Users can make appropriate adjustments according to the number of current database tables
+    druid:
+      initial-size: 5 # initialization connection pool size
+      min-idle: 5 # minimum number of connections
+      max-active: 20 # maximum number of connections
+      test-while-idle: true
+      test-on-borrow: true
+      validation-query: "SELECT 1 FROM DUAL"
+      validation-query-timeout: 10000
+      connection-error-retry-attempts: 0
+      break-after-acquire-failure: true
+      max-wait: 6000
+      keep-alive: true
+      min-evictable-idle-time-millis: 600000

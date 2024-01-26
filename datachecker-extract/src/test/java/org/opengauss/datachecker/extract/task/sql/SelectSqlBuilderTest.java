@@ -40,7 +40,6 @@ class SelectSqlBuilderTest extends MockTableMeta {
     @BeforeEach
     void setUp() {
         mockTableMetadata = mockSingleTablePrimaryMetadata();
-        selectSqlBuilder = new SelectSqlBuilder(mockTableMetadata);
     }
 
     /**
@@ -49,6 +48,8 @@ class SelectSqlBuilderTest extends MockTableMeta {
     @DisplayName("openGauss no divisions single primary select SQL build")
     @Test
     void testSelectNoDivisionsSqlBuilder() {
+        mockTableMetadata.setDataBaseType(DataBaseType.OG);
+        selectSqlBuilder = new SelectSqlBuilder(mockTableMetadata);
         String result = selectSqlBuilder.isDivisions(false).builder();
         // Verify the results
         assertThat(result).isEqualTo(
@@ -57,6 +58,8 @@ class SelectSqlBuilderTest extends MockTableMeta {
     @DisplayName("mysql no divisions single primary select SQL build")
     @Test
     void testMysqlSelectNoDivisionsSqlBuilder() {
+        mockTableMetadata.setDataBaseType(DataBaseType.MS);
+        selectSqlBuilder = new SelectSqlBuilder(mockTableMetadata);
         String result = selectSqlBuilder.isDivisions(false).builder();
         // Verify the results
         assertThat(result).isEqualTo(
@@ -65,6 +68,8 @@ class SelectSqlBuilderTest extends MockTableMeta {
     @DisplayName("openGauss divisions single primary select SQL build")
     @Test
     void testSelectDivisionsSqlBuilder() {
+        mockTableMetadata.setDataBaseType(DataBaseType.OG);
+        selectSqlBuilder = new SelectSqlBuilder(mockTableMetadata);
         String result = selectSqlBuilder.isDivisions(false)
                                         .buildSelectSqlOffset(mockTableMetadata, 0, 12);
         // Verify the results
@@ -74,6 +79,8 @@ class SelectSqlBuilderTest extends MockTableMeta {
     @DisplayName("mysql divisions single primary select SQL build")
     @Test
     void testMysqlSelectDivisionsSqlBuilder() {
+        mockTableMetadata.setDataBaseType(DataBaseType.MS);
+        selectSqlBuilder = new SelectSqlBuilder(mockTableMetadata);
         String result = selectSqlBuilder.isDivisions(false)
                                         .buildSelectSqlOffset(mockTableMetadata, 0, 12);
         // Verify the results
