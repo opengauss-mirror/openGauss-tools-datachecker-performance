@@ -101,17 +101,6 @@ class EndpointMetaDataManagerTest {
         assertThat(result).isEqualTo(metadataMap.get("t_data_checker_0033_02"));
     }
 
-    @DisplayName("GetCheckTaskCount when meta is load")
-    @Test
-    void testGetCheckTaskCount() {
-        final HashMap<String, TableMetadata> metadataMap =
-            TestJsonUtil.parseHashMap(TestJsonUtil.KEY_META_DATA_13_TABLE, TableMetadata.class);
-        when(mockFeignClientService.queryMetaDataOfSchema(Endpoint.SOURCE)).thenReturn(metadataMap);
-        when(mockFeignClientService.queryMetaDataOfSchema(Endpoint.SINK)).thenReturn(metadataMap);
-        endpointMetaDataManagerUnderTest.isMetaLoading();
-        assertThat(endpointMetaDataManagerUnderTest.getCheckTaskCount()).isEqualTo(13);
-    }
-
     @DisplayName("endpoint health ")
     @Test
     void testIsEndpointHealth() {

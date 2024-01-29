@@ -15,9 +15,14 @@
 
 package org.opengauss.datachecker.check.cache;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestInstance.Lifecycle;
+import org.opengauss.datachecker.common.config.ConfigCache;
+import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.extract.Topic;
 import org.opengauss.datachecker.common.util.TopicUtil;
@@ -31,12 +36,14 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @date 2022/5/12 19:17
  * @since 11
  **/
+@TestInstance(Lifecycle.PER_CLASS)
 class TopicRegisterTest {
     private TopicRegister topicRegisterUnderTest;
 
     @BeforeEach
     void setUp() {
         topicRegisterUnderTest = new TopicRegister();
+        ConfigCache.put(ConfigConstants.PROCESS_NO, "process");
     }
 
     @DisplayName("register source")
@@ -45,8 +52,10 @@ class TopicRegisterTest {
         // Setup
         final Topic expectedResult = new Topic();
         expectedResult.setTableName("tableName1");
-        expectedResult
-            .setSourceTopicName(TopicUtil.buildTopicName("process", Endpoint.SOURCE, expectedResult.getTableName()));
+        expectedResult.setSourceTopicName(
+            TopicUtil.buildTopicName("process", Endpoint.SOURCE, expectedResult.getTableName()));
+        expectedResult.setSinkTopicName(
+            TopicUtil.buildTopicName("process", Endpoint.SINK, expectedResult.getTableName()));
         expectedResult.setPartitions(0);
 
         // Run the test
@@ -62,8 +71,10 @@ class TopicRegisterTest {
         // Setup
         final Topic expectedResult = new Topic();
         expectedResult.setTableName("tableName2");
-        expectedResult
-            .setSinkTopicName(TopicUtil.buildTopicName("process", Endpoint.SINK, expectedResult.getTableName()));
+        expectedResult.setSinkTopicName(
+            TopicUtil.buildTopicName("process", Endpoint.SINK, expectedResult.getTableName()));
+        expectedResult.setSourceTopicName(
+            TopicUtil.buildTopicName("process", Endpoint.SOURCE, expectedResult.getTableName()));
         expectedResult.setPartitions(0);
 
         // Run the test
@@ -79,10 +90,10 @@ class TopicRegisterTest {
         // Setup
         final Topic expectedResult = new Topic();
         expectedResult.setTableName("tableName3");
-        expectedResult
-            .setSourceTopicName(TopicUtil.buildTopicName("process", Endpoint.SOURCE, expectedResult.getTableName()));
-        expectedResult
-            .setSinkTopicName(TopicUtil.buildTopicName("process", Endpoint.SINK, expectedResult.getTableName()));
+        expectedResult.setSourceTopicName(
+            TopicUtil.buildTopicName("process", Endpoint.SOURCE, expectedResult.getTableName()));
+        expectedResult.setSinkTopicName(
+            TopicUtil.buildTopicName("process", Endpoint.SINK, expectedResult.getTableName()));
         expectedResult.setPartitions(0);
 
         // Run the test
@@ -91,5 +102,10 @@ class TopicRegisterTest {
 
         // Verify the results
         assertThat(result).isEqualTo(expectedResult);
+    }
+
+    @AfterAll
+    void clean() {
+        ConfigCache.remove(ConfigConstants.PROCESS_NO);
     }
 }

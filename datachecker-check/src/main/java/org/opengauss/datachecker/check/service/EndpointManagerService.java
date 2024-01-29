@@ -18,6 +18,8 @@ package org.opengauss.datachecker.check.service;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.check.client.FeignClientService;
 import org.opengauss.datachecker.check.config.DataCheckProperties;
+import org.opengauss.datachecker.common.config.ConfigCache;
+import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.service.ShutdownService;
 import org.opengauss.datachecker.common.util.LogUtils;
@@ -62,14 +64,17 @@ public class EndpointManagerService {
     }
 
     public void heartBeat() {
-        executorService.submit(this::endpointHealthCheck);
+        if (ConfigCache.getBooleanValue(ConfigConstants.ENABLE_HEART_BEAT_HEATH)) {
+            executorService.submit(this::endpointHealthCheck);
+        }
     }
 
     /**
      * Endpoint health check
      */
     public void endpointHealthCheck() {
-        Thread.currentThread().setName("heart-beat-heath");
+        Thread.currentThread()
+              .setName("heart-beat-heath");
         shutdownService.addMonitor();
         try {
             while (!(shutdownService.isShutdown() || executorService.isShutdown())) {

@@ -210,4 +210,13 @@ public class ConfigCache {
         String columnsPath = getValue(ConfigConstants.CSV_SCHEMA_COLUMNS_PATH);
         return Path.of(columnsPath);
     }
+
+    /**
+     * remove config cache
+     *
+     * @param key
+     */
+    public static void remove(String key) {
+        CACHE.remove(key);
+    }
 }

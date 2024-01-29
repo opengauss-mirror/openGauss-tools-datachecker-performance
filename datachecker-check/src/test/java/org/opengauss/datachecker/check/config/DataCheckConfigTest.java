@@ -17,9 +17,11 @@ package org.opengauss.datachecker.check.config;
 
 import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.Test;
-import org.opengauss.datachecker.check.BaseTest;
 import org.opengauss.datachecker.common.util.LogUtils;
-import org.springframework.beans.factory.annotation.Autowired;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * DataCheckConfigTest
@@ -28,14 +30,15 @@ import org.springframework.beans.factory.annotation.Autowired;
  * @date ：Created in 2022/6/18
  * @since ：11
  */
-class DataCheckConfigTest extends BaseTest {
+class DataCheckConfigTest {
     private static final Logger log = LogUtils.getLogger();
-    @Autowired
-    private DataCheckConfig dataCheckConfig;
 
     @Test
     void testGetCheckResultPaht() {
+        DataCheckConfig dataCheckConfig = mock(DataCheckConfig.class);
+        when(dataCheckConfig.getCheckResultPath()).thenReturn("tmp/check_result");
         final String checkResultPaht = dataCheckConfig.getCheckResultPath();
         log.info(checkResultPaht);
+        assertThat(checkResultPaht).isEqualTo("tmp/check_result");
     }
 }

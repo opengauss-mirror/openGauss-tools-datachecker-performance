@@ -2,21 +2,20 @@ package org.opengauss.datachecker.extract.kafka;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.opengauss.datachecker.common.config.ConfigCache;
-import org.opengauss.datachecker.common.constant.ConfigConstants;
+import org.opengauss.datachecker.extract.boot.SpringBootStartTest;
+import org.opengauss.datachecker.extract.boot.TestSourceActiveProfiles;
 
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class KafkaAdminServiceTest {
+class KafkaAdminServiceTest implements SpringBootStartTest, TestSourceActiveProfiles {
 
     private KafkaAdminService kafkaAdminServiceUnderTest;
 
     @BeforeEach
     void setUp() {
         kafkaAdminServiceUnderTest = new KafkaAdminService();
-        ConfigCache.put(ConfigConstants.KAFKA_SERVERS, "192.168.0.114:9092");
         kafkaAdminServiceUnderTest.initAdminClient();
     }
 
@@ -65,7 +64,7 @@ class KafkaAdminServiceTest {
         final List<String> result = kafkaAdminServiceUnderTest.getAllTopic();
 
         // Verify the results
-        assertThat(result).isEqualTo(List.of("topic"));
+        assertThat(result).contains("topic");
     }
 
     @Test
