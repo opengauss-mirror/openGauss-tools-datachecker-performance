@@ -9,8 +9,14 @@ spring:
     name: datachecker-check
   lifecycle:
     timeout-per-shutdown-phase: 5
+  memory-monitor-enable: false
+  check:
+    core-pool-size: 1
+    maximum-pool-size: 4
+    floating-point-data-supply-zero: false
+    heart-beat-heath: false
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: 192.168.0.114:9092
     consumer:
       group-id: checkgroup
       enable-auto-commit: true
@@ -22,7 +28,11 @@ spring:
       max-poll-records: 20000
       request-timeout-ms: 300000
       fetch-max-bytes: 536870912  # 512M
-
+rules:
+  enable: false
+  table:
+  row:
+  column:
 feign:
   okhttp:
     enabled: true
@@ -39,6 +49,8 @@ data:
     check-with-sync-extracting: true
     retry-fetch-record-times: 5
     error-rate: 30
+    max-retry-times: 1000
+    retry-interval-times: 1000
     data-path: ./check_result
     source-uri: http://127.0.0.1:9001 #  server.port=9001
     sink-uri: http://127.0.0.1:9002 # server.port=9002
@@ -46,6 +58,7 @@ data:
     # [black starts the black list verification,white starts the white list verification]
     black-white-mode: BLACK
     black-list:  #   like table1,table2
+    sql_mode_pad_char_to_full_length: false # sql_mode : pad_char_to_full_length disabled
 
 
 

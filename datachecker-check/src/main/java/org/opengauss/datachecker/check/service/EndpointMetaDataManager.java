@@ -16,6 +16,7 @@
 package org.opengauss.datachecker.check.service;
 
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.check.client.FeignClientService;
@@ -60,12 +61,16 @@ public class EndpointMetaDataManager {
         if (MapUtils.isNotEmpty(SOURCE_METADATA) && MapUtils.isNotEmpty(SINK_METADATA)) {
             final List<String> sourceTables = getEndpointTableNamesSortByTableRows(SOURCE_METADATA);
             final List<String> sinkTables = getEndpointTableNamesSortByTableRows(SINK_METADATA);
-            REAL_TABLE_COUNT.put(Endpoint.SOURCE, sourceTables.size());
-            REAL_TABLE_COUNT.put(Endpoint.SINK, sinkTables.size());
+            REAL_TABLE_COUNT.put(Endpoint.SOURCE, CollectionUtils.isNotEmpty(sourceTables) ? sourceTables.size() : 0);
+            REAL_TABLE_COUNT.put(Endpoint.SINK, CollectionUtils.isNotEmpty(sinkTables) ? sinkTables.size() : 0);
             final List<String> checkTables = compareAndFilterEndpointTables(sourceTables, sinkTables);
             final List<String> missTables = compareAndFilterMissTables(sourceTables, sinkTables);
-            CHECK_TABLE_LIST.addAll(checkTables);
-            MISS_TABLE_LIST.addAll(missTables);
+            if (CollectionUtils.isNotEmpty(checkTables)) {
+                CHECK_TABLE_LIST.addAll(checkTables);
+            }
+            if (CollectionUtils.isNotEmpty(missTables)) {
+                MISS_TABLE_LIST.addAll(missTables);
+            }
         } else {
             log.error("the metadata information is empty, and the verification is terminated abnormally,"
                 + "sourceMetadata={},sinkMetadata={}", SOURCE_METADATA.size(), SINK_METADATA.size());
@@ -86,12 +91,18 @@ public class EndpointMetaDataManager {
     public boolean isMetaLoading() {
         if (MapUtils.isEmpty(SOURCE_METADATA)) {
             log.debug("loading {} metadata", Endpoint.SOURCE);
-            SOURCE_METADATA.putAll(feignClientService.queryMetaDataOfSchema(Endpoint.SOURCE));
+            Map<String, TableMetadata> tableMetadataMap = feignClientService.queryMetaDataOfSchema(Endpoint.SOURCE);
+            if (MapUtils.isNotEmpty(tableMetadataMap)) {
+                SOURCE_METADATA.putAll(tableMetadataMap);
+            }
             log.debug("loading {} metadata end ", Endpoint.SOURCE);
         }
         if (MapUtils.isEmpty(SINK_METADATA)) {
             log.debug("loading {} metadata", Endpoint.SINK);
-            SINK_METADATA.putAll(feignClientService.queryMetaDataOfSchema(Endpoint.SINK));
+            Map<String, TableMetadata> tableMetadataMap = feignClientService.queryMetaDataOfSchema(Endpoint.SINK);
+            if (MapUtils.isNotEmpty(tableMetadataMap)) {
+                SINK_METADATA.putAll(tableMetadataMap);
+            }
             log.debug("loading {} metadata end ", Endpoint.SINK);
         }
         return SOURCE_METADATA.isEmpty() || SINK_METADATA.isEmpty();

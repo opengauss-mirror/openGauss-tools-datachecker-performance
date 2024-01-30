@@ -13,6 +13,7 @@ spring:
     core-pool-size: 2
     maximum-pool-size: 10
     floating-point-data-supply-zero: false
+    heart-beat-heath: true
   application:
     name: gs_datacheck
   config:

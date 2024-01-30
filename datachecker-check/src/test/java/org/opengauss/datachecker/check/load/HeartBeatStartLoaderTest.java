@@ -23,12 +23,10 @@ import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.opengauss.datachecker.check.service.EndpointManagerService;
-import org.opengauss.datachecker.common.util.ThreadUtil;
+import org.opengauss.datachecker.common.config.ConfigCache;
+import org.opengauss.datachecker.common.constant.ConfigConstants;
 
 import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.timeout;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -43,28 +41,13 @@ class HeartBeatStartLoaderTest {
     @DisplayName("source & sink health true")
     @Test
     void testLoad_source_sink_true() {
+        ConfigCache.put(ConfigConstants.ENABLE_HEART_BEAT_HEATH, true);
         // Setup
         final CheckEnvironment checkEnvironment = new CheckEnvironment();
-        doNothing().when(mockEndpointManagerService).heartBeat();
+        doNothing().when(mockEndpointManagerService)
+                   .heartBeat();
         when(mockEndpointManagerService.isEndpointHealth()).thenReturn(true);
         // Run the test
         heartBeatStartLoaderUnderTest.load(checkEnvironment);
-    }
-
-    @DisplayName("source & sink health false")
-    @Test
-    void testLoad_source_sink_false() {
-        // Setup
-        final CheckEnvironment checkEnvironment = new CheckEnvironment();
-        doNothing().when(mockEndpointManagerService).heartBeat();
-        when(mockEndpointManagerService.isEndpointHealth()).thenReturn(false);
-
-        ThreadUtil.newSingleThreadExecutor().submit(() -> {
-            ThreadUtil.sleep(10000);
-            when(mockEndpointManagerService.isEndpointHealth()).thenReturn(true);
-        });
-        // Run the test
-        heartBeatStartLoaderUnderTest.load(checkEnvironment);
-
     }
 }

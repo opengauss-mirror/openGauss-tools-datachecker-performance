@@ -16,6 +16,8 @@
 package org.opengauss.datachecker.check.load;
 
 import org.opengauss.datachecker.check.service.EndpointManagerService;
+import org.opengauss.datachecker.common.config.ConfigCache;
+import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.springframework.core.annotation.Order;
@@ -39,14 +41,17 @@ public class HeartBeatStartLoader extends AbstractCheckLoader {
 
     @Override
     public void load(CheckEnvironment checkEnvironment) {
+        Boolean enabled = ConfigCache.getBooleanValue(ConfigConstants.ENABLE_HEART_BEAT_HEATH);
+        if (!enabled) {
+            return;
+        }
         endpointManagerService.heartBeat();
         boolean isSourceHealth;
         boolean isSinkHealth;
         while (!endpointManagerService.isEndpointHealth()) {
             isSourceHealth = endpointManagerService.checkEndpointHealth(Endpoint.SOURCE);
             isSinkHealth = endpointManagerService.checkEndpointHealth(Endpoint.SINK);
-            log.warn("endpoint source={},sink={} does not health, please wait a moment!", isSourceHealth,
-                isSinkHealth);
+            log.warn("endpoint source={},sink={} does not health, please wait a moment!", isSourceHealth, isSinkHealth);
             ThreadUtil.sleep(retryIntervalTimes);
             retryTimes++;
             if (retryTimes >= maxRetryTimes) {

@@ -174,6 +174,11 @@ public interface ConfigConstants {
     String SQL_MODE_FORCE_REFRESH = "data.check.sql_mode_force_refresh";
 
     /**
+     * spring.check.heart-beat-heath
+     */
+    String ENABLE_HEART_BEAT_HEATH = "spring.check.heart-beat-heath";
+
+    /**
      * spring.kafka.bootstrap-servers
      */
     String KAFKA_SERVERS = "spring.kafka.bootstrap-servers";
