@@ -35,10 +35,12 @@ import org.opengauss.datachecker.extract.client.CheckingFeignClient;
 import org.opengauss.datachecker.extract.constants.ExtConstants;
 
 import java.io.File;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutorService;
@@ -57,7 +59,8 @@ public class CsvWriterListener implements CsvListener {
     private static final String TABLE_INDEX_COMPLETED_FEEDBACK = "table-index-completed-feedback";
 
     private final Map<String, List<SliceVo>> writerSliceMap = new ConcurrentSkipListMap<>();
-    private final BlockingQueue<String> tableIndexCompletedList = new LinkedBlockingQueue<>();
+    private volatile BlockingQueue<String> tableIndexCompletedList = new LinkedBlockingQueue<>();
+    private volatile Set<Long> logDuplicateCheck = new HashSet<>();
 
     private Tailer tailer;
     private boolean isTailEnd = false;
@@ -80,9 +83,16 @@ public class CsvWriterListener implements CsvListener {
                         tailer.stop();
                         return;
                     }
+                    long contentHash = lineContentHash(line);
+                    if (logDuplicateCheck.contains(contentHash)) {
+                        log.warn("writer log duplicate : {}", line);
+                        return;
+                    }
+                    logDuplicateCheck.add(contentHash);
+
                     JSONObject writeLog = JSONObject.parseObject(line);
                     if (skipNoInvalidSlice(writeLog)) {
-                        log.warn("writer skip no invalid slice log ：{}", line);
+                        log.warn("writer skip no invalid slice log : {}", line);
                         return;
                     }
                     String schema = writeLog.getString(SCHEMA);
@@ -158,6 +168,7 @@ public class CsvWriterListener implements CsvListener {
             tailer.stop();
         }
         writerSliceMap.clear();
+        logDuplicateCheck.clear();
         isFeedbackRunning = false;
         if (Objects.nonNull(feedbackExecutor)) {
             feedbackExecutor.shutdown();
