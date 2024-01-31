@@ -120,6 +120,7 @@ public class SliceDispatcher implements Runnable {
                     SliceVo vo = tableSliceList.get(0);
                     canRegister(table, vo.getPtnNum());
                     sliceRegister.batchRegister(tableSliceList);
+                    listener.releaseSliceCache(table);
                     if (tableSliceList.size() <= 20) {
                         log.debug("table [{}] get main executor success", table);
                         tableSliceList.forEach(sliceVo -> doTableSlice(executor, sliceVo));

@@ -28,9 +28,11 @@ import org.opengauss.datachecker.extract.client.CheckingFeignClient;
 import org.opengauss.datachecker.extract.constants.ExtConstants;
 
 import java.io.File;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -43,6 +45,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class CsvReaderListener implements CsvListener {
     private static final Logger log = LogUtils.getLogger();
     private final Map<String, List<SliceVo>> readerSliceMap = new ConcurrentHashMap<>();
+    private volatile Set<Long> logDuplicateCheck = new HashSet<>();
     private Tailer tailer;
     private boolean isTailEnd = false;
 
@@ -56,24 +59,31 @@ public class CsvReaderListener implements CsvListener {
                 try {
                     isTailEnd = StringUtils.equalsIgnoreCase(line, ExtConstants.CSV_LISTENER_END);
                     if (isTailEnd) {
-                        log.info("reader tail end log ：{}", line);
+                        log.info("reader tail end log : {}", line);
                         stop();
                         return;
                     }
+                    long contentHash = lineContentHash(line);
+                    if (logDuplicateCheck.contains(contentHash)) {
+                        log.warn("writer log duplicate : {}", line);
+                        return;
+                    }
+                    logDuplicateCheck.add(contentHash);
+
                     SliceVo slice = JSONObject.parseObject(line, SliceVo.class);
                     if (skipNoInvalidSlice(slice)) {
-                        log.warn("reader skip no invalid slice log ：{}", line);
+                        log.warn("reader skip no invalid slice log : {}", line);
                         return;
                     }
                     if (skipNoMatchSchema(ConfigCache.getSchema(), slice.getSchema())) {
-                        log.warn("reader skip no match schema log ：{}", line);
+                        log.warn("reader skip no match schema log : {}", line);
                         return;
                     }
                     checkSlicePtnNum(slice);
                     MapUtils.put(readerSliceMap, slice.getTable(), slice);
-                    log.debug("reader add log ：{}", line);
+                    log.debug("reader add log : {}", line);
                 } catch (Exception ex) {
-                    log.error("reader log listener error ：" + ex.getMessage());
+                    log.error("reader log listener error : " + ex.getMessage());
                 }
             }
         }, ConfigCache.getCsvLogMonitorInterval(), false);
@@ -100,6 +110,8 @@ public class CsvReaderListener implements CsvListener {
         if (Objects.nonNull(tailer)) {
             tailer.stop();
         }
+        logDuplicateCheck.clear();
+        readerSliceMap.clear();
     }
 
     private boolean skipNoMatchSchema(String schema, String logSchema) {
