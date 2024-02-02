@@ -20,6 +20,8 @@ import lombok.experimental.Accessors;
 import org.opengauss.datachecker.common.entry.enums.DataBaseType;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 
+import java.util.Objects;
+
 /**
  * Database
  *
@@ -30,7 +32,26 @@ import org.opengauss.datachecker.common.entry.enums.Endpoint;
 @Data
 @Accessors(chain = true)
 public class Database {
+    private static final String CSV_SCHEMA_START = "_";
+    private static final String CSV_SCHEMA_END = "_tmp";
+
     String schema;
     DataBaseType databaseType;
     Endpoint endpoint;
+
+    /**
+     * get schema
+     *
+     * @return schema
+     */
+    public String getSchema() {
+        if (Objects.isNull(schema)) {
+            return schema;
+        }
+        if (schema.startsWith(CSV_SCHEMA_START) && schema.endsWith(CSV_SCHEMA_END)) {
+            return schema.replaceFirst(CSV_SCHEMA_START, "")
+                         .substring(0, schema.length() - 5);
+        }
+        return schema;
+    }
 }

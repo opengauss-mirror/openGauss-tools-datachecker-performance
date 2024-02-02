@@ -272,4 +272,14 @@ public interface ConfigConstants {
      * openGauss.Compatibility.B
      */
     String OG_COMPATIBILITY_B = "openGauss.Compatibility.B";
+
+    /**
+     * data check sink database info
+     */
+    String DATA_CHECK_SINK_DATABASE = "data.check.sink.database";
+
+    /**
+     * data check source database info
+     */
+    String DATA_CHECK_SOURCE_DATABASE = "data.check.source.database";
 }
