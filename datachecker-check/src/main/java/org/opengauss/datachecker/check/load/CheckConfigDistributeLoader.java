@@ -28,6 +28,7 @@ import org.opengauss.datachecker.common.entry.common.Rule;
 import org.opengauss.datachecker.common.entry.csv.CsvPathConfig;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.entry.enums.RuleType;
+import org.opengauss.datachecker.common.entry.extract.Database;
 import org.opengauss.datachecker.common.exception.CheckingException;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
@@ -99,6 +100,10 @@ public class CheckConfigDistributeLoader extends AbstractCheckLoader {
             ConfigCache.getBooleanValue(ConfigConstants.FLOATING_POINT_DATA_SUPPLY_ZERO));
         globalConfig.addCommonConfig(ConfigConstants.SQL_MODE_PAD_CHAR_TO_FULL_LENGTH,
             ConfigCache.getBooleanValue(ConfigConstants.SQL_MODE_PAD_CHAR_TO_FULL_LENGTH));
+        globalConfig.addCommonConfig(ConfigConstants.DATA_CHECK_SINK_DATABASE,
+            ConfigCache.getValue(ConfigConstants.DATA_CHECK_SINK_DATABASE, Database.class));
+        globalConfig.addCommonConfig(ConfigConstants.DATA_CHECK_SOURCE_DATABASE,
+            ConfigCache.getValue(ConfigConstants.DATA_CHECK_SOURCE_DATABASE, Database.class));
         return globalConfig;
     }
 }

@@ -30,6 +30,7 @@ import org.opengauss.datachecker.common.entry.common.RepairEntry;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.entry.enums.DML;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
+import org.opengauss.datachecker.common.entry.extract.Database;
 import org.opengauss.datachecker.common.entry.extract.SliceVo;
 import org.opengauss.datachecker.common.entry.report.CheckCsvFailed;
 import org.opengauss.datachecker.common.entry.report.CheckFailed;
@@ -399,6 +400,10 @@ public class SliceCheckResultManager {
         List<Difference> keyDifference) {
         RepairEntry repairEntry = new RepairEntry();
         BeanUtils.copyProperties(tableFailed, repairEntry);
+        Database sinkDatabase = ConfigCache.getValue(ConfigConstants.DATA_CHECK_SINK_DATABASE, Database.class);
+        if (Objects.nonNull(sinkDatabase)) {
+            repairEntry.setSchema(sinkDatabase.getSchema());
+        }
         repairEntry.setDiffSet(diffsSet)
                    .setOgCompatibility(ogCompatibility)
                    .setDiffList(keyDifference);
