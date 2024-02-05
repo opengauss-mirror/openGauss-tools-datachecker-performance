@@ -18,6 +18,7 @@ package org.opengauss.datachecker.extract.data.access;
 import com.alibaba.fastjson.JSONObject;
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.entry.check.Difference;
@@ -83,7 +84,6 @@ public class CsvDataAccessService implements DataAccessService {
                                .filter(CsvTableMeta::isContain_primary_key)
                                .map(CsvTableMeta::getTable)
                                .collect(Collectors.toList());
-
         } catch (IOException e) {
             log.error("load table name of csv exception : ", e);
             throw new ExtractDataAccessException("load table name of csv exception");
@@ -226,6 +226,12 @@ public class CsvDataAccessService implements DataAccessService {
     @Override
     public List<Object> queryPointList(DataAccessParam param) {
         return null;
+    }
+
+    @Override
+    public boolean dasCheckDatabaseNotEmpty() {
+        List<String> tableNameList = dasQueryTableNameList();
+        return CollectionUtils.isNotEmpty(tableNameList);
     }
 
     @Override

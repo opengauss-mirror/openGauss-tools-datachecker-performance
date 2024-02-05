@@ -90,4 +90,8 @@
              ) s
         where mod(s.rn, #{param.offset}) = 0
     </select>
+
+    <select id="checkDatabaseNotEmpty" resultType="boolean">
+        select exists (select info.table_name from  information_schema.tables info where  table_schema=#{schema} limit 1) exist_table
+    </select>
 </mapper>

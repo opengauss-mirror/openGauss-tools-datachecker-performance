@@ -211,12 +211,19 @@ public class MetaDataService {
         }
     }
 
-    public synchronized Boolean isCheckTableEmpty(boolean isForced) {
+    /**
+     * mdsIsCheckTableEmpty
+     *
+     * @param isForced isForced
+     * @return boolean
+     */
+    public synchronized Boolean mdsIsCheckTableEmpty(boolean isForced) {
         if (isForced) {
-            isCheckTableEmpty.set(CollectionUtils.isEmpty(queryAllTableNames()));
+            isCheckTableEmpty.set(!baseDataService.bdsCheckDatabaseNotEmpty());
             log.info("check database table (query) is {}", isCheckTableEmpty.get() ? "empty" : " not empty");
+        } else {
+            log.info("check database table is {}", isCheckTableEmpty.get() ? "empty" : " not empty");
         }
-        log.info("check database table is {}", isCheckTableEmpty.get() ? "empty" : " not empty");
         return isCheckTableEmpty.get();
     }
 }
