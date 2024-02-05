@@ -53,7 +53,7 @@ public class MysqlDataAccessService extends AbstractDataAccessService {
     }
 
     @Override
-    public List<String> queryTableNameList() {
+    public List<String> dasQueryTableNameList() {
         return mysqlMetaDataMapper.queryTableNameList(properties.getSchema());
     }
 
@@ -74,11 +74,11 @@ public class MysqlDataAccessService extends AbstractDataAccessService {
 
     @Override
     public List<PrimaryColumnBean> queryTablePrimaryColumns(String tableName) {
-        return mysqlMetaDataMapper.queryTablePrimaryColumnsByTableName(properties.getSchema(),tableName);
+        return mysqlMetaDataMapper.queryTablePrimaryColumnsByTableName(properties.getSchema(), tableName);
     }
 
     @Override
-    public List<TableMetadata> queryTableMetadataList() {
+    public List<TableMetadata> dasQueryTableMetadataList() {
         return wrapperTableMetadata(mysqlMetaDataMapper.queryTableMetadataList(properties.getSchema()));
     }
 

@@ -34,39 +34,17 @@
     </select>
 
     <select id="queryTableNameList" resultType="string">
-       SELECT info.table_name tableName
-       FROM
-             (SELECT distinct SHA2(TABLE_NAME,224) id, TABLE_NAME FROM information_schema.KEY_COLUMN_USAGE  WHERE
-             TABLE_SCHEMA=#{schema} AND CONSTRAINT_NAME='PRIMARY'
-             ) pk LEFT JOIN ( select SHA2(TABLE_NAME,224) id, TABLE_NAME,TABLE_ROWS,avg_row_length from
-             information_schema.tables
-             WHERE  table_schema=#{schema} ) info ON pk.id=info.id AND pk.TABLE_NAME=info.TABLE_NAME
-             ORDER BY info.table_rows ASC
+        SELECT info.table_name FROM  information_schema.tables info WHERE  table_schema=#{schema}
     </select>
 
     <select id="queryTableMetadataList" resultMap="tableMetadataMap">
-        SELECT info.tableSchema,info.table_name tableName,info.table_rows tableRows , info.avg_row_length avgRowLength,pk.id rowId
-        FROM
-             ( SELECT distinct SHA2(TABLE_NAME,224) id, TABLE_NAME
-               FROM information_schema.KEY_COLUMN_USAGE  WHERE TABLE_SCHEMA=#{schema} AND CONSTRAINT_NAME='PRIMARY'
-             ) pk
-              LEFT JOIN ( select SHA2(TABLE_NAME,224) id,table_schema tableSchema, TABLE_NAME,TABLE_ROWS,avg_row_length
-                          from information_schema.tables WHERE  table_schema=#{schema}
-                        ) info
-              ON pk.id=info.id AND pk.TABLE_NAME=info.TABLE_NAME
-        ORDER BY info.table_rows ASC
+        SELECT info.TABLE_SCHEMA tableSchema,info.table_name tableName,info.table_rows tableRows , info.avg_row_length avgRowLength
+        FROM information_schema.tables info WHERE TABLE_SCHEMA=#{schema}
     </select>
 
     <select id="queryTableMetadata" resultMap="tableMetadataMap">
-        SELECT info.tableSchema,info.table_name tableName,info.table_rows tableRows , info.avg_row_length avgRowLength,pk.id rowId
-        FROM
-             ( SELECT distinct SHA2(TABLE_NAME,224) id, TABLE_NAME
-               FROM information_schema.KEY_COLUMN_USAGE  WHERE TABLE_SCHEMA=#{schema} and TABLE_NAME=#{name} AND CONSTRAINT_NAME='PRIMARY'
-             ) pk
-              LEFT JOIN ( select SHA2(TABLE_NAME,224) id,table_schema tableSchema, TABLE_NAME,TABLE_ROWS,avg_row_length
-                          from information_schema.tables WHERE  table_schema=#{schema} and TABLE_NAME=#{name}
-                        ) info
-              ON pk.id=info.id AND pk.TABLE_NAME=info.TABLE_NAME
+        SELECT info.TABLE_SCHEMA tableSchema,info.table_name tableName,info.table_rows tableRows , info.avg_row_length avgRowLength
+        FROM information_schema.tables info WHERE TABLE_SCHEMA=#{schema} and TABLE_NAME=#{name}
     </select>
 
     <select id="queryTableColumnsMetaData" resultMap="columnMetadataMap">

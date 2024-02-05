@@ -40,7 +40,7 @@ public class MetaDataServiceTest implements SpringBootStartTest, TestSourceActiv
 
     @Test
     void queryMetadataOfSourceDBSchema() throws SQLException {
-        Map<String, TableMetadata> stringTableMetadataMap = metaDataService.queryMetaDataOfSchema();
+        Map<String, TableMetadata> stringTableMetadataMap = metaDataService.mdsQueryMetaDataOfSchema();
         for (TableMetadata metadata : stringTableMetadataMap.values()) {
             log.info(metadata.toString());
         }

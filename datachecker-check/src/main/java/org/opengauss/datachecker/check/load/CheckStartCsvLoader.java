@@ -62,9 +62,9 @@ public class CheckStartCsvLoader extends AbstractCheckLoader {
             log.info("enabled data check csv mode");
             kafkaTopicDeleteProvider.deleteTopicIfTableCheckedCompleted();
             kafkaTopicDeleteProvider.deleteTopicIfAllCheckedCompleted();
-            kafkaTopicDeleteProvider.waitDeleteTopicsEventCompleted();
             TaskRegisterCenter registerCenter = SpringUtil.getBean(TaskRegisterCenter.class);
-            while (!registerCenter.checkCompletedAll(count)) {
+            while (!registerCenter.checkCompletedAll(count)
+                && kafkaTopicDeleteProvider.waitDeleteTopicsEventCompleted()) {
                 ThreadUtil.sleepOneSecond();
             }
             csvProcessManagement.closeTaskDispatcher();

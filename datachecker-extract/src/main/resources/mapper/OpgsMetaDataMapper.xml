@@ -40,21 +40,19 @@
         select c.relname tableName from pg_class c
             LEFT JOIN pg_namespace n on n.oid = c.relnamespace
             left join pg_index b on c.oid=b.indrelid
-        where n.nspname=#{schema} and b.indisprimary='t' order by c.reltuples asc;
+        where n.nspname=#{schema} and b.indisprimary='t';
     </select>
 
     <select id="queryTableMetadataList" resultMap="tableMetadataMap">
         select n.nspname , c.relname tableName,c.reltuples tableRows, case when c.reltuples>0 then pg_table_size(c.oid)/c.reltuples else 0 end as avgRowLength
-        from pg_class c
-             LEFT JOIN pg_namespace n on n.oid = c.relnamespace left join pg_index b on c.oid=b.indrelid
-        where n.nspname=#{schema} and b.indisprimary='t' order by c.reltuples asc;
+        from pg_class c LEFT JOIN pg_namespace n on n.oid = c.relnamespace left join pg_index b on c.oid=b.indrelid
+        where n.nspname=#{schema} and b.indisprimary='t';
     </select>
 
     <select id="queryTableMetadata" resultMap="tableMetadataMap">
         select n.nspname , c.relname tableName,c.reltuples tableRows, case when c.reltuples>0 then pg_table_size(c.oid)/c.reltuples else 0 end as avgRowLength
-        from pg_class c
-             LEFT JOIN pg_namespace n on n.oid = c.relnamespace left join pg_index b on c.oid=b.indrelid
-        where n.nspname=#{schema} and c.relname=#{name} and b.indisprimary='t' order by c.reltuples asc;
+        from pg_class c LEFT JOIN pg_namespace n on n.oid = c.relnamespace left join pg_index b on c.oid=b.indrelid
+        where n.nspname=#{schema} and c.relname=#{name} and b.indisprimary='t';
     </select>
 
     <select id="queryTableColumnsMetaData" resultMap="columnMetadataMap">

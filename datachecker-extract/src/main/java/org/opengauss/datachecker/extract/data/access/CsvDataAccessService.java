@@ -70,7 +70,7 @@ public class CsvDataAccessService implements DataAccessService {
     }
 
     @Override
-    public List<String> queryTableNameList() {
+    public List<String> dasQueryTableNameList() {
         Path pathOfTables = ConfigCache.getCsvMetadataTablesPath();
         try {
             if (Files.notExists(pathOfTables)) {
@@ -91,7 +91,7 @@ public class CsvDataAccessService implements DataAccessService {
     }
 
     @Override
-    public List<TableMetadata> queryTableMetadataList() {
+    public List<TableMetadata> dasQueryTableMetadataList() {
         tableMetadataMap.clear();
         Path pathOfTables = ConfigCache.getCsvMetadataTablesPath();
         Path pathOfColumns = ConfigCache.getCsvMetadataColumnsPath();
@@ -151,7 +151,7 @@ public class CsvDataAccessService implements DataAccessService {
     @Override
     public TableMetadata queryTableMetadata(String tableName) {
         if (tableMetadataMap.isEmpty()) {
-            queryTableMetadataList();
+            dasQueryTableMetadataList();
         }
         if (tableMetadataMap.containsKey(tableName)) {
             return tableMetadataMap.get(tableName);

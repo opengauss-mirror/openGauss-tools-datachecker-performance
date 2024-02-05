@@ -60,6 +60,7 @@ public class CheckStartLoader extends AbstractCheckLoader {
     private SliceProgressService sliceProgressService;
     @Resource
     private CheckTableStructureService checkTableStructureService;
+
     @Override
     public void load(CheckEnvironment checkEnvironment) {
         if (!Objects.equals(CheckMode.FULL, checkEnvironment.getCheckMode())) {
@@ -69,15 +70,15 @@ public class CheckStartLoader extends AbstractCheckLoader {
             memoryManagerService.startMemoryManager(isEnableMemoryMonitor);
             final LocalDateTime startTime = LocalDateTime.now();
             String processNo = ConfigCache.getValue(ConfigConstants.PROCESS_NO);
-            CheckTableInfo checkTableInfo= checkTableStructureService.check(processNo);
+            CheckTableInfo checkTableInfo = checkTableStructureService.check(processNo);
             int checkedTableCount = checkTableInfo.fetchCheckedTableCount();
             sliceProgressService.startProgressing();
             sliceProgressService.updateTotalTableCount(checkedTableCount);
             checkService.start(CheckMode.FULL);
             kafkaTopicDeleteProvider.deleteTopicIfAllCheckedCompleted();
-            kafkaTopicDeleteProvider.waitDeleteTopicsEventCompleted();
             TaskRegisterCenter registerCenter = SpringUtil.getBean(TaskRegisterCenter.class);
-            while (!registerCenter.checkCompletedAll(checkedTableCount)) {
+            while (!registerCenter.checkCompletedAll(checkedTableCount)
+                && kafkaTopicDeleteProvider.waitDeleteTopicsEventCompleted()) {
                 ThreadUtil.sleepOneSecond();
             }
             log.info("check task execute success ,cost time ={}", Duration.between(startTime, LocalDateTime.now())

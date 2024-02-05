@@ -74,7 +74,7 @@ public class MetaDataService {
     }
 
     public List<String> queryAllTableNames() {
-        return baseDataService.queryTableNameList();
+        return baseDataService.bdsQueryTableNameList();
     }
 
     /**
@@ -82,7 +82,7 @@ public class MetaDataService {
      */
     public void loadMetaDataOfSchemaCache() {
         if (MetaDataCache.isEmpty()) {
-            Map<String, TableMetadata> metaDataMap = queryMetaDataOfSchema();
+            Map<String, TableMetadata> metaDataMap = mdsQueryMetaDataOfSchema();
             MetaDataCache.putMap(metaDataMap);
             log.info("put table metadata in cache [{}]", metaDataMap.size());
         }
@@ -97,9 +97,9 @@ public class MetaDataService {
         return metadataLoadProcess;
     }
 
-    public Map<String, TableMetadata> queryMetaDataOfSchema() {
+    public Map<String, TableMetadata> mdsQueryMetaDataOfSchema() {
         Map<String, TableMetadata> tableMetadataMap = new ConcurrentHashMap<>();
-        final List<TableMetadata> tableMetadataList = baseDataService.queryTableMetadataList();
+        final List<TableMetadata> tableMetadataList = baseDataService.bdsQueryTableMetadataList();
         log.info("query table metadata {}", tableMetadataList.size());
         if (CollectionUtils.isEmpty(tableMetadataList)) {
             return tableMetadataMap;

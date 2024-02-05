@@ -57,7 +57,9 @@ public class MetaDataLoader extends AbstractCheckLoader {
                     log.info("check service is loading metadata,place wait a moment.");
                 }
             }
-            if (!endpointMetaDataManager.isMetaLoading()) {
+            if (endpointMetaDataManager.isMetaLoading()) {
+                throw new CheckMetaDataException("check loading metadata is timeout");
+            } else {
                 log.info("start to load metadata from source and sink.");
                 endpointMetaDataManager.load();
             }
