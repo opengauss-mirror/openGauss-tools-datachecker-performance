@@ -40,9 +40,11 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * kafka Topic admin
@@ -126,12 +128,35 @@ public class KafkaServiceManager {
         Map<String, KafkaFuture<Void>> kafkaFutureMap = deleteTopicsResult.topicNameValues();
         kafkaFutureMap.forEach((topic, future) -> {
             try {
-                future.get();
-                log.info("topic={} is delete successfull", topic);
-            } catch (InterruptedException | ExecutionException e) {
-                log.error("topic={} is delete error : {}", topic, e);
+                future.get(1, TimeUnit.SECONDS);
+                log.info("topic={} is deleting", topic);
+            } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                log.warn("topic={} is delete : {}", topic, e.getMessage());
             }
         });
+        Set<String> topicList = getKafkaTopicList();
+        AtomicBoolean isNotDeleted = new AtomicBoolean(false);
+        topics.forEach(topic -> {
+            if (topicList.contains(topic)) {
+                log.warn("topic does not deleted kafka {}", topic);
+                isNotDeleted.set(true);
+            }
+        });
+        if (!isNotDeleted.get()) {
+            log.info("topic [{}] has deleted", topics);
+        }
+
+    }
+
+    private Set<String> getKafkaTopicList() {
+        KafkaFuture<Set<String>> names = adminClient.listTopics()
+                                                    .names();
+        Set<String> topicList = null;
+        try {
+            topicList = names.get();
+        } catch (InterruptedException | ExecutionException ignored) {
+        }
+        return topicList;
     }
 
     @PreDestroy

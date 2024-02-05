@@ -73,7 +73,7 @@ public class CsvManagementService {
         } else {
             listener = new CsvWriterListener();
         }
-        baseDataService.queryTableMetadataList();
+        baseDataService.bdsQueryTableMetadataList();
         listener.initCsvListener(checkingClient);
         // start slice dispatcher core thread
         sliceDispatcher = new SliceDispatcher(dynamicThreadPoolManager, sliceRegister, baseDataService, listener);
@@ -83,7 +83,7 @@ public class CsvManagementService {
 
     public void startCsvNoSliceLogProcess() {
         dynamicThreadPoolManager.dynamicThreadPoolMonitor();
-        baseDataService.queryTableMetadataList();
+        baseDataService.bdsQueryTableMetadataList();
         TableDispatcher tableDispatcher = new TableDispatcher(dynamicThreadPoolManager, sliceRegister, baseDataService);
         Thread thread = new Thread(tableDispatcher);
         thread.start();

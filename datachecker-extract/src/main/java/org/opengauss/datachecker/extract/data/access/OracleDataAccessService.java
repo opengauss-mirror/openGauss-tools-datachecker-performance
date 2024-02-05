@@ -53,7 +53,7 @@ public class OracleDataAccessService extends AbstractDataAccessService {
     }
 
     @Override
-    public List<String> queryTableNameList() {
+    public List<String> dasQueryTableNameList() {
         return oracleMetaDataMapper.queryTableNameList(properties.getSchema());
     }
 
@@ -78,7 +78,7 @@ public class OracleDataAccessService extends AbstractDataAccessService {
     }
 
     @Override
-    public List<TableMetadata> queryTableMetadataList() {
+    public List<TableMetadata> dasQueryTableMetadataList() {
         return wrapperTableMetadata(oracleMetaDataMapper.queryTableMetadataList(properties.getSchema()));
     }
 

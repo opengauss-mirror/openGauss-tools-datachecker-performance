@@ -56,14 +56,14 @@ public interface DataAccessService {
      *
      * @return table name list
      */
-    List<String> queryTableNameList();
+    List<String> dasQueryTableNameList();
 
     /**
      * query TableMetadata list
      *
      * @return TableMetadata list
      */
-    List<TableMetadata> queryTableMetadataList();
+    List<TableMetadata> dasQueryTableMetadataList();
 
     /**
      * queryTablePrimaryColumns

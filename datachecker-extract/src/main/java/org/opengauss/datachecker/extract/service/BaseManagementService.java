@@ -19,7 +19,7 @@ public class BaseManagementService {
     private BaseDataService baseDataService;
 
     public Integer fetchCheckTableCount() {
-        List<String> nameList = baseDataService.queryTableNameList();
+        List<String> nameList = baseDataService.bdsQueryTableNameList();
         return nameList.size();
     }
 }

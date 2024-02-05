@@ -75,22 +75,14 @@ public class BaseDataService {
     }
 
     /**
-     * load check table list
-     */
-    public void loadCheckingTables() {
-        tableNameList.clear();
-        tableNameList.addAll(filterByTableRules(dataAccessService.queryTableNameList()));
-    }
-
-    /**
      * query check table list , and use rule.table
      * filter no primary key tables,and filter table rule( black and write list)
      *
      * @return table name list
      */
-    public synchronized List<String> queryTableNameList() {
+    public synchronized List<String> bdsQueryTableNameList() {
         if (CollectionUtils.isEmpty(tableNameList)) {
-            tableNameList.addAll(filterByTableRules(dataAccessService.queryTableNameList()));
+            tableNameList.addAll(filterByTableRules(dataAccessService.dasQueryTableNameList()));
         }
         return tableNameList;
     }
@@ -100,9 +92,9 @@ public class BaseDataService {
      *
      * @return table name list
      */
-    public List<TableMetadata> queryTableMetadataList() {
-        List<TableMetadata> metadataList = dataAccessService.queryTableMetadataList();
-        List<String> tableList = queryTableNameList();
+    public List<TableMetadata> bdsQueryTableMetadataList() {
+        List<TableMetadata> metadataList = dataAccessService.dasQueryTableMetadataList();
+        List<String> tableList = bdsQueryTableNameList();
         return metadataList.stream()
                            .filter(meta -> tableList.contains(meta.getTableName()))
                            .collect(Collectors.toList());

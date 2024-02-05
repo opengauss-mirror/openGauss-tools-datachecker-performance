@@ -35,7 +35,11 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -77,15 +81,41 @@ public class DeleteTopicsEventListener implements ApplicationListener<DeleteTopi
     }
 
     private void deleteTopic(List<String> deleteTopicList) {
-        try {
-            log.debug("delete topic [{}] start", deleteTopicList);
-            DeleteTopicsResult deleteTopicsResult = adminClient.deleteTopics(deleteTopicList);
-            final KafkaFuture<Void> kafkaFuture = deleteTopicsResult.all();
-            kafkaFuture.get();
-            log.debug("delete topic [{}] finished", deleteTopicList);
-        } catch (InterruptedException | ExecutionException ignore) {
-            log.error("delete topic [{}] error :  ", deleteTopicList, ignore);
+        log.debug("delete topic [{}] start", deleteTopicList);
+        DeleteTopicsResult deleteTopicsResult = adminClient.deleteTopics(deleteTopicList);
+        Map<String, KafkaFuture<Void>> deleteKafkaFutureMap = deleteTopicsResult.topicNameValues();
+        if (!deleteKafkaFutureMap.isEmpty()) {
+            deleteKafkaFutureMap.forEach((k, feture) -> {
+                try {
+                    feture.get(1000, TimeUnit.MILLISECONDS);
+                    log.warn("topic [{}] is deleting by kafka", k);
+                } catch (TimeoutException | InterruptedException | ExecutionException ignore) {
+                    log.warn("delete topic [{}] [{}] :  ", k, ignore.getMessage());
+                }
+            });
         }
+        Set<String> allKafkaTopicList = getKafkaTopicList();
+        AtomicBoolean isNotDeleted = new AtomicBoolean(false);
+        deleteTopicList.forEach(deleteTopic -> {
+            if (allKafkaTopicList.contains(deleteTopic)) {
+                log.warn("deleteTopic does not deleted by kafka {}", deleteTopic);
+                isNotDeleted.set(true);
+            }
+        });
+        if (!isNotDeleted.get()) {
+            log.info("topic {} has deleted", deleteTopicList);
+        }
+    }
+
+    private Set<String> getKafkaTopicList() {
+        KafkaFuture<Set<String>> topicNames = adminClient.listTopics()
+                                                         .names();
+        Set<String> topicList = null;
+        try {
+            topicList = topicNames.get();
+        } catch (InterruptedException | ExecutionException ignored) {
+        }
+        return topicList;
     }
 
     private void initAdminClient() {

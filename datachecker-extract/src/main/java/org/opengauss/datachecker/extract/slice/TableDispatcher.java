@@ -23,8 +23,6 @@ import org.opengauss.datachecker.common.entry.extract.SliceVo;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.service.DynamicThreadPoolManager;
 import org.opengauss.datachecker.common.util.LogUtils;
-import org.opengauss.datachecker.common.util.TaskUtil;
-import org.opengauss.datachecker.common.util.TopicUtil;
 import org.opengauss.datachecker.extract.data.BaseDataService;
 import org.opengauss.datachecker.extract.slice.common.CsvDataFileScanner;
 import org.opengauss.datachecker.extract.slice.factory.SliceFactory;
@@ -78,7 +76,7 @@ public class TableDispatcher implements Runnable {
             log.info("table dispatcher is starting ...");
             synchronized (lock) {
                 final ThreadPoolExecutor executor = dynamicThreadPoolManager.getExecutor(EXTRACT_EXECUTOR);
-                List<String> tableNameList = baseDataService.queryTableNameList();
+                List<String> tableNameList = baseDataService.bdsQueryTableNameList();
                 if (CollectionUtils.isEmpty(tableNameList)) {
                     log.info("table dispatcher load tables empty , is ending ...");
                     return;

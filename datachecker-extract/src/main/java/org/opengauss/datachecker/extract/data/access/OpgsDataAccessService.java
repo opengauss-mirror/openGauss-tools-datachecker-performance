@@ -61,7 +61,7 @@ public class OpgsDataAccessService extends AbstractDataAccessService {
     }
 
     @Override
-    public List<String> queryTableNameList() {
+    public List<String> dasQueryTableNameList() {
         return opgsMetaDataMapper.queryTableNameList(properties.getSchema());
     }
 
@@ -86,7 +86,7 @@ public class OpgsDataAccessService extends AbstractDataAccessService {
     }
 
     @Override
-    public List<TableMetadata> queryTableMetadataList() {
+    public List<TableMetadata> dasQueryTableMetadataList() {
         return wrapperTableMetadata(opgsMetaDataMapper.queryTableMetadataList(properties.getSchema()));
     }
 

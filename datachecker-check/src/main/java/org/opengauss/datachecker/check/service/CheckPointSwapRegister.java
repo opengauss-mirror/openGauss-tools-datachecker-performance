@@ -56,7 +56,6 @@ public class CheckPointSwapRegister {
 
     private final KafkaServiceManager kafkaServiceManager;
     private final KafkaTemplate<String, String> kafkaTemplate;
-    private final KafkaConsumer<String, String> kafkaConsumer;
     private final ExecutorService checkPointConsumer;
     private final ExecutorService checkPointSender;
 
@@ -68,7 +67,6 @@ public class CheckPointSwapRegister {
     public CheckPointSwapRegister(KafkaServiceManager kafkaServiceManager) {
         this.kafkaServiceManager = kafkaServiceManager;
         this.kafkaTemplate = kafkaServiceManager.getKafkaTemplate();
-        this.kafkaConsumer = kafkaServiceManager.getKafkaConsumer(true);
         this.checkPointConsumer = ThreadUtil.newSingleThreadExecutor();
         this.checkPointSender = ThreadUtil.newSingleThreadExecutor();
     }
@@ -142,7 +140,8 @@ public class CheckPointSwapRegister {
 
     public void pollSwapPoint() {
         checkPointConsumer.submit(() -> {
-            trySubscribe();
+            KafkaConsumer<String, String> kafkaConsumer = kafkaServiceManager.getKafkaConsumer(true);
+            trySubscribe(kafkaConsumer);
             ConsumerRecords<String, String> records;
             while (!isCompletedSwapTablePoint) {
                 try {
@@ -170,6 +169,8 @@ public class CheckPointSwapRegister {
                     }
                 }
             }
+            kafkaConsumer.unsubscribe();
+            kafkaConsumer.close();
         });
     }
 
@@ -183,16 +184,16 @@ public class CheckPointSwapRegister {
         }
     }
 
-    private void trySubscribe() {
+    private void trySubscribe(KafkaConsumer<String, String> kafkaConsumer) {
         int subscribeTimes = 1;
         boolean isSubscribe = false;
         while (!isSubscribe && subscribeTimes < 5) {
-            isSubscribe = subscribe();
+            isSubscribe = subscribe(kafkaConsumer);
             subscribeTimes++;
         }
     }
 
-    private boolean subscribe() {
+    private boolean subscribe(KafkaConsumer<String, String> kafkaConsumer) {
         boolean isSubscribe = false;
         try {
             kafkaConsumer.subscribe(List.of(checkPointSwapTopicName));

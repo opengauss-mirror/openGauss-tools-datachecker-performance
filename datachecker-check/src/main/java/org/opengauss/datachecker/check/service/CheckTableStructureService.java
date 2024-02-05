@@ -15,6 +15,7 @@
 
 package org.opengauss.datachecker.check.service;
 
+import org.apache.commons.collections4.MapUtils;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.check.load.CheckEnvironment;
 import org.opengauss.datachecker.check.modules.check.AbstractCheckDiffResultBuilder.CheckDiffResultBuilder;
@@ -99,8 +100,10 @@ public class CheckTableStructureService {
         tableList.addAll(missTableList);
         taskManagerService.initTableExtractStatus(tableList);
         Map<Endpoint, Integer> realTableCount = endpointMetaDataManager.getRealTableCount();
-        checkTableInfo.setSinkTableTotalSize(realTableCount.get(Endpoint.SINK));
-        checkTableInfo.setSourceTableTotalSize(realTableCount.get(Endpoint.SOURCE));
+        if (MapUtils.isNotEmpty(realTableCount)) {
+            checkTableInfo.setSinkTableTotalSize(realTableCount.get(Endpoint.SINK));
+            checkTableInfo.setSourceTableTotalSize(realTableCount.get(Endpoint.SOURCE));
+        }
     }
 
     private void checkTableStructureChanged(String processNo) {

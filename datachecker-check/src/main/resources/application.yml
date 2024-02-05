@@ -57,7 +57,7 @@ data:
     retry-fetch-record-times: 5
     error-rate: 30
     max-retry-times: 1000
-    retry-interval-times: 1000
+    retry-interval-times: 2000
     # auto-delete-topic :  Configure whether to automatically delete topic.
     # 0 is not delete; 1 is delete when checked all completed ; 2 is deleted when checked a table
     auto-delete-topic: 2
