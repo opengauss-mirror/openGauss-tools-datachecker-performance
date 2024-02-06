@@ -106,4 +106,9 @@ public class MysqlDataAccessService extends AbstractDataAccessService {
     public List<Object> queryPointList(DataAccessParam param) {
         return mysqlMetaDataMapper.queryPointList(param);
     }
+
+    @Override
+    public boolean dasCheckDatabaseNotEmpty() {
+        return mysqlMetaDataMapper.checkDatabaseNotEmpty(properties.getSchema());
+    }
 }

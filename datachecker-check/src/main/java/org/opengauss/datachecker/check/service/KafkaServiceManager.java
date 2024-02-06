@@ -145,7 +145,6 @@ public class KafkaServiceManager {
         if (!isNotDeleted.get()) {
             log.info("topic [{}] has deleted", topics);
         }
-
     }
 
     private Set<String> getKafkaTopicList() {

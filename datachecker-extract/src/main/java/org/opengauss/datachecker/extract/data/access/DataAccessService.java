@@ -163,4 +163,11 @@ public interface DataAccessService {
      * @return point list
      */
     List<Object> queryPointList(DataAccessParam param);
+
+    /**
+     * check database weather has tables
+     *
+     * @return boolean
+     */
+    boolean dasCheckDatabaseNotEmpty();
 }

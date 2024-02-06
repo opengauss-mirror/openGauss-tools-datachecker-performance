@@ -84,4 +84,8 @@
              select rownum rn ,${param.colName} from ${param.schema}.${param.name}  order by ${param.colName} asc
         ) where mod(rn,#{param.offset})=0
     </select>
+
+    <select id="checkDatabaseNotEmpty" resultType="boolean">
+       select count(table_name) from (SELECT TABLE_NAME FROM ALL_TABLES WHERE OWNER = #{schema} and rownum=1);
+    </select>
 </mapper>

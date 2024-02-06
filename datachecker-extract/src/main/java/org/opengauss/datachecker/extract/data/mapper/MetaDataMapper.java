@@ -136,4 +136,12 @@ public interface MetaDataMapper {
      * @return point list
      */
     List<Object> queryPointList(@Param("param") DataAccessParam param);
+
+    /**
+     * checkDatabaseEmpty
+     *
+     * @param schema schema
+     * @return boolean
+     */
+    boolean checkDatabaseNotEmpty(@Param("schema") String schema);
 }

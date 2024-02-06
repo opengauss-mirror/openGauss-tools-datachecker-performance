@@ -290,4 +290,13 @@ public class BaseDataService {
             ConfigCache.put(ConfigConstants.SQL_MODE_FORCE_REFRESH, isForceRefreshConnectionSqlMode);
         }
     }
+
+    /**
+     * checkDatabaseEmpty
+     *
+     * @return boolean
+     */
+    public boolean bdsCheckDatabaseNotEmpty() {
+        return dataAccessService.dasCheckDatabaseNotEmpty();
+    }
 }

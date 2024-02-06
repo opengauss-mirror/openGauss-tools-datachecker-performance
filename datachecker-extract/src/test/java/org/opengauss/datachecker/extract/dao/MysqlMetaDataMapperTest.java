@@ -56,6 +56,12 @@ public class MysqlMetaDataMapperTest extends BaseMysqlMapper {
         assertThat(tableNameList, CoreMatchers.hasItem("t_double"));
     }
 
+    @Test
+    public void testCheckDatabaseEmpty() {
+        boolean isNotEmpty = mapper.checkDatabaseNotEmpty(schema);
+        assertThat(isNotEmpty, CoreMatchers.is(true));
+    }
+
     @AfterAll
     void dropTestDatabase() {
         super.dropTestDb(testDatabaseInitScript);

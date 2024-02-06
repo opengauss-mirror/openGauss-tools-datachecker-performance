@@ -114,4 +114,9 @@ public class OpgsDataAccessService extends AbstractDataAccessService {
     public List<Object> queryPointList(DataAccessParam param) {
         return opgsMetaDataMapper.queryPointList(param);
     }
+
+    @Override
+    public boolean dasCheckDatabaseNotEmpty() {
+        return opgsMetaDataMapper.checkDatabaseNotEmpty(properties.getSchema());
+    }
 }

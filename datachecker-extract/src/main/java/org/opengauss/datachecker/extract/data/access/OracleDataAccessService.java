@@ -106,4 +106,9 @@ public class OracleDataAccessService extends AbstractDataAccessService {
     public List<Object> queryPointList(DataAccessParam param) {
         return oracleMetaDataMapper.queryPointList(param);
     }
+
+    @Override
+    public boolean dasCheckDatabaseNotEmpty() {
+        return oracleMetaDataMapper.checkDatabaseNotEmpty(properties.getSchema());
+    }
 }

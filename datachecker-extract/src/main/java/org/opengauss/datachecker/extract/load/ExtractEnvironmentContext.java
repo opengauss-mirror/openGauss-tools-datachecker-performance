@@ -52,7 +52,7 @@ public class ExtractEnvironmentContext {
     @Async
     public void loadProgressChecking() {
         int retryTime = 0;
-        if (!metaDataService.isCheckTableEmpty(true)) {
+        if (!metaDataService.mdsIsCheckTableEmpty(true)) {
             while (metaDataService.queryMetaDataOfSchemaCache().isEmpty()) {
                 ThreadUtil.sleepHalfSecond();
                 retryTime++;

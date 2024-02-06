@@ -215,7 +215,7 @@ public class ExtractController {
      */
     @GetMapping("/check/table/empty")
     Result<Boolean> isCheckTableEmpty(@RequestParam(name = "isForced") boolean isForced) {
-        return Result.success(dataExtractService.isCheckTableEmpty(isForced));
+        return Result.success(metaDataService.mdsIsCheckTableEmpty(isForced));
     }
 
     /**
