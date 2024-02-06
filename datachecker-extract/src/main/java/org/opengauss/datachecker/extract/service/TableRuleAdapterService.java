@@ -40,12 +40,21 @@ public class TableRuleAdapterService {
     private static final Map<String, TableRuleExecutor> EXECUTORS = new HashMap<>();
 
     static {
-        EXECUTORS
-            .put(WHITE, (patterns, table) -> patterns.stream().anyMatch(pattern -> pattern.matcher(table).matches()));
-        EXECUTORS
-            .put(BLACK, (patterns, table) -> patterns.stream().noneMatch(pattern -> pattern.matcher(table).matches()));
+        EXECUTORS.put(WHITE, (patterns, table) -> patterns.stream()
+                                                          .anyMatch(pattern -> pattern.matcher(table)
+                                                                                      .matches()));
+        EXECUTORS.put(BLACK, (patterns, table) -> patterns.stream()
+                                                          .noneMatch(pattern -> pattern.matcher(table)
+                                                                                       .matches()));
     }
 
+    /**
+     * executeTableRule
+     *
+     * @param rules     rules
+     * @param tableList tableList
+     * @return filter list
+     */
     public List<String> executeTableRule(List<Rule> rules, List<String> tableList) {
         if (CollectionUtils.isEmpty(rules)) {
             return tableList;
@@ -53,12 +62,32 @@ public class TableRuleAdapterService {
         final Rule ruleOne = rules.get(0);
         final TableRuleExecutor tableRuleExecutor = EXECUTORS.get(ruleOne.getName());
         final List<Pattern> patterns = buildRulePatterns(rules);
-        return tableList.parallelStream().filter(table -> tableRuleExecutor.apply(patterns, table))
+        return tableList.parallelStream()
+                        .filter(table -> tableRuleExecutor.apply(patterns, table))
                         .collect(Collectors.toList());
     }
 
+    /**
+     * executeTableRule
+     *
+     * @param rules rules
+     * @param table table
+     * @return filter result
+     */
+    public boolean executeTableRule(List<Rule> rules, String table) {
+        if (CollectionUtils.isEmpty(rules)) {
+            return true;
+        }
+        final Rule ruleOne = rules.get(0);
+        final TableRuleExecutor tableRuleExecutor = EXECUTORS.get(ruleOne.getName());
+        final List<Pattern> patterns = buildRulePatterns(rules);
+        return tableRuleExecutor.apply(patterns, table);
+    }
+
     private List<Pattern> buildRulePatterns(List<Rule> rules) {
-        return rules.stream().map(rule -> Pattern.compile(rule.getText())).collect(Collectors.toList());
+        return rules.stream()
+                    .map(rule -> Pattern.compile(rule.getText()))
+                    .collect(Collectors.toList());
     }
 
     @FunctionalInterface

@@ -22,7 +22,13 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
+import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.LinkedList;
 import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -60,6 +66,28 @@ public class MysqlMetaDataMapperTest extends BaseMysqlMapper {
     public void testCheckDatabaseEmpty() {
         boolean isNotEmpty = mapper.checkDatabaseNotEmpty(schema);
         assertThat(isNotEmpty, CoreMatchers.is(true));
+    }
+
+    @Test
+    public void testQueryTableMeatdataByJdbc() {
+        Connection connection = getConnection();
+        String sql = "SELECT info.TABLE_SCHEMA tableSchema,info.table_name tableName,info.table_rows tableRows , "
+            + "info.avg_row_length avgRowLength FROM information_schema.tables info WHERE TABLE_SCHEMA='" + schema
+            + "'";
+        List<TableMetadata> list = new LinkedList<>();
+        try (PreparedStatement ps = connection.prepareStatement(sql); ResultSet resultSet = ps.executeQuery()) {
+            TableMetadata metadata;
+            while (resultSet.next()) {
+                metadata = new TableMetadata();
+                metadata.setSchema(resultSet.getString("tableSchema"));
+                metadata.setTableName(resultSet.getString("tableName"));
+                metadata.setTableRows(resultSet.getLong("tableRows"));
+                metadata.setAvgRowLength(resultSet.getLong("avgRowLength"));
+                list.add(metadata);
+            }
+        } catch (SQLException esql) {
+            log.error("", esql);
+        }
     }
 
     @AfterAll

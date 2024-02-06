@@ -54,7 +54,7 @@ public class ConnectionMgr {
             username = getPropertyValue(ConfigConstants.DS_USER_NAME);
             databasePassport = getPropertyValue(ConfigConstants.DS_PASSWORD);
             try {
-                log.info("connection class loader ,[{}],[{}]", driverClassName, url);
+                log.debug("connection class loader ,[{}],[{}]", driverClassName, url);
                 Class.forName(driverClassName);
                 isFirstLoad.set(false);
             } catch (ClassNotFoundException e) {
@@ -65,7 +65,7 @@ public class ConnectionMgr {
         try {
             conn = DriverManager.getConnection(url, username, databasePassport);
             conn.setAutoCommit(false);
-            log.debug("Connection succeed!");
+            log.info("Connection succeed!");
         } catch (SQLException exp) {
             log.error("create connection [{},{}]:[{}]", username, databasePassport, url, exp);
         }

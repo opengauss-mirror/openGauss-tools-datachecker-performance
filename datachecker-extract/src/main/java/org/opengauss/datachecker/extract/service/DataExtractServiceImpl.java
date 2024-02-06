@@ -457,6 +457,7 @@ public class DataExtractServiceImpl implements DataExtractService {
             KafkaConsumer<String, String> consumer = kafkaConsumerConfig.createConsumer(IdGenerator.nextId36());
             checkPointManager = new ExtractPointSwapManager(kafkaTemplate, consumer);
             checkPointManager.setCheckPointSwapTopicName(ConfigCache.getValue(ConfigConstants.PROCESS_NO));
+            log.info("tableRegisterCheckPoint start pollSwapPoint thread");
             checkPointManager.pollSwapPoint(tableCheckPointCache);
             taskList.forEach(this::registerCheckPoint);
             while (tableCheckPointCache.tableCount() != taskList.size()) {

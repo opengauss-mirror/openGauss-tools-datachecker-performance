@@ -54,7 +54,10 @@ public class MysqlDataAccessService extends AbstractDataAccessService {
 
     @Override
     public List<String> dasQueryTableNameList() {
-        return mysqlMetaDataMapper.queryTableNameList(properties.getSchema());
+        String schema = properties.getSchema();
+        String sql =
+            "SELECT info.table_name tableName FROM information_schema.tables info WHERE table_schema='" + schema + "'";
+        return adasQueryTableNameList(sql);
     }
 
     @Override
@@ -69,7 +72,9 @@ public class MysqlDataAccessService extends AbstractDataAccessService {
 
     @Override
     public List<PrimaryColumnBean> queryTablePrimaryColumns() {
-        return mysqlMetaDataMapper.queryTablePrimaryColumns(properties.getSchema());
+        String sql = "select table_name tableName ,lower(column_name) columnName from information_schema.columns "
+            + "where table_schema='" + properties.getSchema() + "' and column_key='PRI' order by ordinal_position asc ";
+        return adasQueryTablePrimaryColumns(sql);
     }
 
     @Override
@@ -79,7 +84,10 @@ public class MysqlDataAccessService extends AbstractDataAccessService {
 
     @Override
     public List<TableMetadata> dasQueryTableMetadataList() {
-        return wrapperTableMetadata(mysqlMetaDataMapper.queryTableMetadataList(properties.getSchema()));
+        String sql = " SELECT info.TABLE_SCHEMA tableSchema,info.table_name tableName,info.table_rows tableRows , "
+            + "info.avg_row_length avgRowLength FROM information_schema.tables info WHERE TABLE_SCHEMA='"
+            + properties.getSchema() + "'";
+        return wrapperTableMetadata(adasQueryTableMetadataList(sql));
     }
 
     @Override

@@ -18,19 +18,24 @@ package org.opengauss.datachecker.extract.data.access;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.entry.check.Difference;
 import org.opengauss.datachecker.common.entry.enums.DataBaseMeta;
+import org.opengauss.datachecker.common.entry.extract.PrimaryColumnBean;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.extract.config.ExtractProperties;
-import org.opengauss.datachecker.extract.task.ResultSetHandlerFactory;
-import org.opengauss.datachecker.extract.task.ResultSetHashHandler;
+import org.opengauss.datachecker.extract.resource.ConnectionMgr;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 import javax.annotation.Resource;
 import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -43,6 +48,13 @@ import java.util.Map;
  */
 public abstract class AbstractDataAccessService implements DataAccessService {
     protected static final Logger log = LogUtils.getLogger();
+
+    private static final String RS_COL_SCHEMA = "tableSchema";
+    private static final String RS_COL_TABLE_NAME = "tableName";
+    private static final String RS_COL_TABLE_ROWS = "tableRows";
+    private static final String RS_COL_COLUMN_NAME = "columnName";
+    private static final String RS_COL_AVG_ROW_LENGTH = "avgRowLength";
+
     protected boolean isOgCompatibilityB = false;
     @Resource
     protected JdbcTemplate jdbcTemplate;
@@ -58,6 +70,96 @@ public abstract class AbstractDataAccessService implements DataAccessService {
     @Override
     public DataSource getDataSource() {
         return jdbcTemplate.getDataSource();
+    }
+
+    /**
+     * adasQueryTableNameList
+     *
+     * @param executeQueryStatement executeQueryStatement
+     * @return table list
+     */
+    public List<String> adasQueryTableNameList(String executeQueryStatement) {
+        final LocalDateTime start = LocalDateTime.now();
+        Connection connection = ConnectionMgr.getConnection();
+        List<String> list = new LinkedList<>();
+        try (PreparedStatement ps = connection.prepareStatement(executeQueryStatement);
+            ResultSet resultSet = ps.executeQuery()) {
+            while (resultSet.next()) {
+                list.add(resultSet.getString(RS_COL_TABLE_NAME));
+            }
+        } catch (SQLException esql) {
+            log.error("", esql);
+        } finally {
+            ConnectionMgr.close(connection, null, null);
+        }
+        long betweenToMillis = durationBetweenToMillis(start, LocalDateTime.now());
+        log.info("adasQueryTableNameList cost [{}ms]", betweenToMillis);
+        return list;
+    }
+
+    /**
+     * adasQueryTablePrimaryColumns
+     *
+     * @param executeQueryStatement executeQueryStatement
+     * @return PrimaryColumnBean list
+     */
+    public List<PrimaryColumnBean> adasQueryTablePrimaryColumns(String executeQueryStatement) {
+        final LocalDateTime start = LocalDateTime.now();
+        Connection connection = ConnectionMgr.getConnection();
+        List<PrimaryColumnBean> list = new LinkedList<>();
+        try (PreparedStatement ps = connection.prepareStatement(executeQueryStatement);
+            ResultSet resultSet = ps.executeQuery()) {
+            PrimaryColumnBean metadata;
+            while (resultSet.next()) {
+                metadata = new PrimaryColumnBean();
+                metadata.setColumnName(resultSet.getString(RS_COL_COLUMN_NAME));
+                metadata.setTableName(resultSet.getString(RS_COL_TABLE_NAME));
+                list.add(metadata);
+            }
+        } catch (SQLException esql) {
+            log.error("", esql);
+        } finally {
+            ConnectionMgr.close(connection, null, null);
+        }
+        long betweenToMillis = durationBetweenToMillis(start, LocalDateTime.now());
+        log.info("adasQueryTablePrimaryColumns cost [{}ms]", betweenToMillis);
+        return list;
+    }
+
+    /**
+     * adasQueryTableMetadataList
+     *
+     * @param executeQueryStatement executeQueryStatement
+     * @return TableMetadata list
+     */
+    public List<TableMetadata> adasQueryTableMetadataList(String executeQueryStatement) {
+        final LocalDateTime start = LocalDateTime.now();
+        Connection connection = ConnectionMgr.getConnection();
+        List<TableMetadata> list = new LinkedList<>();
+        try (PreparedStatement ps = connection.prepareStatement(executeQueryStatement);
+            ResultSet resultSet = ps.executeQuery()) {
+            TableMetadata metadata;
+            while (resultSet.next()) {
+                metadata = new TableMetadata();
+                metadata.setSchema(resultSet.getString(RS_COL_SCHEMA));
+                metadata.setTableName(resultSet.getString(RS_COL_TABLE_NAME));
+                metadata.setTableRows(resultSet.getLong(RS_COL_TABLE_ROWS));
+                metadata.setAvgRowLength(resultSet.getLong(RS_COL_AVG_ROW_LENGTH));
+                list.add(metadata);
+            }
+        } catch (SQLException esql) {
+            log.error("", esql);
+        } finally {
+            ConnectionMgr.close(connection, null, null);
+        }
+        long betweenToMillis = durationBetweenToMillis(start, LocalDateTime.now());
+        log.info("dasQueryTableMetadataList cost [{}ms]", betweenToMillis);
+        return list;
+    }
+
+    private long durationBetweenToMillis(LocalDateTime start, LocalDateTime end) {
+        return Duration.between(start, end)
+                       .toMillis();
     }
 
     /**
@@ -81,7 +183,7 @@ public abstract class AbstractDataAccessService implements DataAccessService {
      * @param table          table
      * @param fileName       fileName
      * @param differenceList differenceList
-     * @return
+     * @return result
      */
     @Override
     public List<Map<String, String>> query(String table, String fileName, List<Difference> differenceList) {

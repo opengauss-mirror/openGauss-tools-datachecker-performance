@@ -54,7 +54,9 @@ public class OracleDataAccessService extends AbstractDataAccessService {
 
     @Override
     public List<String> dasQueryTableNameList() {
-        return oracleMetaDataMapper.queryTableNameList(properties.getSchema());
+        String schema = properties.getSchema();
+        String sql = "SELECT TABLE_NAME tableName FROM ALL_TABLES WHERE OWNER = '" + schema + "'";
+        return adasQueryTableNameList(sql);
     }
 
     @Override
@@ -69,17 +71,24 @@ public class OracleDataAccessService extends AbstractDataAccessService {
 
     @Override
     public List<PrimaryColumnBean> queryTablePrimaryColumns() {
-        return oracleMetaDataMapper.queryTablePrimaryColumns(properties.getSchema());
+        String sql = "SELECT A.TABLE_NAME tableName, A.COLUMN_NAME columnName FROM ALL_CONS_COLUMNS A,ALL_CONSTRAINTS B"
+            + " WHERE A.constraint_name = B.constraint_name AND  B.constraint_type = 'P' AND A.OWNER = '"
+            + properties.getSchema() + "'";
+        return adasQueryTablePrimaryColumns(sql);
     }
 
     @Override
     public List<PrimaryColumnBean> queryTablePrimaryColumns(String tableName) {
-        return oracleMetaDataMapper.queryTablePrimaryColumnsByTableName(properties.getSchema(),tableName);
+        return oracleMetaDataMapper.queryTablePrimaryColumnsByTableName(properties.getSchema(), tableName);
     }
 
     @Override
     public List<TableMetadata> dasQueryTableMetadataList() {
-        return wrapperTableMetadata(oracleMetaDataMapper.queryTableMetadataList(properties.getSchema()));
+        String schema = properties.getSchema();
+        String sql = "SELECT t.owner tableSchema,t.table_name tableName,t.num_rows tableRows,avg_row_len avgRowLength"
+            + " FROM ALL_TABLES t LEFT JOIN (SELECT DISTINCT table_name from ALL_CONSTRAINTS where OWNER = '" + schema
+            + "' AND constraint_type='P') pc on t.table_name=pc.table_name WHERE t.OWNER = '" + schema + "'";
+        return wrapperTableMetadata(adasQueryTableMetadataList(sql));
     }
 
     @Override

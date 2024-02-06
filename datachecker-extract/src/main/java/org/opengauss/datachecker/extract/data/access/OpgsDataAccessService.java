@@ -62,17 +62,32 @@ public class OpgsDataAccessService extends AbstractDataAccessService {
 
     @Override
     public List<String> dasQueryTableNameList() {
-        return opgsMetaDataMapper.queryTableNameList(properties.getSchema());
+        String schema = properties.getSchema();
+        String sql = "select c.relname tableName from pg_class c  LEFT JOIN pg_namespace n on n.oid = c.relnamespace "
+            + " where n.nspname='" + schema + "' and c.relkind ='r';";
+        return adasQueryTableNameList(sql);
     }
 
     @Override
     public List<PrimaryColumnBean> queryTablePrimaryColumns() {
-        return opgsMetaDataMapper.queryTablePrimaryColumns(properties.getSchema());
+        String schema = properties.getSchema();
+        String sql = "select c.relname tableName,ns.nspname,ns.oid,a.attname columnName from pg_class c "
+            + "left join pg_namespace ns on c.relnamespace=ns.oid "
+            + "left join pg_attribute a on c.oid=a.attrelid and a.attnum>0 and not a.attisdropped "
+            + "inner join pg_constraint cs on a.attrelid=cs.conrelid and a.attnum=any(cs.conkey) "
+            + "where ns.nspname='" + schema + "' and cs.contype='p';";
+        return adasQueryTablePrimaryColumns(sql);
     }
 
     @Override
     public List<PrimaryColumnBean> queryTablePrimaryColumns(String tableName) {
-        return opgsMetaDataMapper.queryTablePrimaryColumnsByTableName(properties.getSchema(), tableName);
+        String schema = properties.getSchema();
+        String sql = "select c.relname tableName,ns.nspname,ns.oid,a.attname columnName from pg_class c "
+            + "left join pg_namespace ns on c.relnamespace=ns.oid "
+            + "left join pg_attribute a on c.oid=a.attrelid and a.attnum>0 and not a.attisdropped "
+            + "inner join pg_constraint cs on a.attrelid=cs.conrelid and a.attnum=any(cs.conkey) "
+            + "where ns.nspname='" + schema + "' and c.relname='" + tableName + "' and cs.contype='p';";
+        return adasQueryTablePrimaryColumns(sql);
     }
 
     @Override
@@ -87,7 +102,11 @@ public class OpgsDataAccessService extends AbstractDataAccessService {
 
     @Override
     public List<TableMetadata> dasQueryTableMetadataList() {
-        return wrapperTableMetadata(opgsMetaDataMapper.queryTableMetadataList(properties.getSchema()));
+        String sql = " select n.nspname tableSchema, c.relname tableName,c.reltuples tableRows, "
+            + "case when c.reltuples>0 then pg_table_size(c.oid)/c.reltuples else 0 end as avgRowLength "
+            + "from pg_class c LEFT JOIN pg_namespace n on n.oid = c.relnamespace " + "where n.nspname='"
+            + properties.getSchema() + "' and c.relkind ='r';";
+        return wrapperTableMetadata(adasQueryTableMetadataList(sql));
     }
 
     @Override

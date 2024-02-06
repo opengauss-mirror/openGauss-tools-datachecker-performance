@@ -56,10 +56,12 @@
     </select>
 
     <select id="queryTableColumnsMetaData" resultMap="columnMetadataMap">
-       SELECT col.table_schema tableSchema, col.table_name tableName,col.column_name columnName,
-              col.ordinal_position ordinalPosition,col.data_type dataType,col.udt_name columnType
-        from information_schema.columns col
-        where col.table_schema=#{schema} and col.table_name =#{name} order by col.ordinal_position asc;
+        select c.relname tableName,ns.nspname tableSchema,ns.oid,a.attname columnName,pg_catalog.format_type(a.atttypid,null) as dataType ,
+        pg_catalog.format_type(a.atttypid,a.atttypmod) as columnType , a.attnum ordinalPosition
+        from pg_class c
+        left join pg_namespace ns on c.relnamespace=ns.oid
+        left join pg_attribute a on c.oid=a.attrelid and a.attnum>0 and not a.attisdropped
+        where ns.nspname=#{schema} and c.relname=#{name};
     </select>
 
     <select id="queryTablePrimaryColumns" resultMap="primaryColumnBeanMap">
