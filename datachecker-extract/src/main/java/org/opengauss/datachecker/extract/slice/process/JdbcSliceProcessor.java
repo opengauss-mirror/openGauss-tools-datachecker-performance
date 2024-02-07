@@ -19,6 +19,7 @@ import org.opengauss.datachecker.common.entry.extract.SliceExtend;
 import org.opengauss.datachecker.common.entry.extract.SliceVo;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.exception.ExtractDataAccessException;
+import org.opengauss.datachecker.extract.resource.ConnectionMgr;
 import org.opengauss.datachecker.extract.resource.JdbcDataOperations;
 import org.opengauss.datachecker.extract.slice.SliceProcessorContext;
 import org.opengauss.datachecker.extract.slice.common.SliceResultSetSender;
@@ -95,32 +96,36 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
 
     private void executeQueryStatement(QuerySqlEntry sqlEntry, TableMetadata tableMetadata, SliceExtend sliceExtend) {
         final LocalDateTime start = LocalDateTime.now();
-        Connection connection = null;
         long jdbcQueryCost = 0;
         long sendDataCost = 0;
         long sliceAllCost = 0;
-
+        SliceResultSetSender sliceSender = null;
+        Connection connection = null;
+        PreparedStatement ps = null;
+        ResultSet resultSet = null;
         try {
             long estimatedRowCount = slice.isSlice() ? slice.getFetchSize() : tableMetadata.getTableRows();
             long estimatedMemorySize = estimatedMemorySize(tableMetadata.getAvgRowLength(), estimatedRowCount);
             connection = jdbcOperation.tryConnectionAndClosedAutoCommit(estimatedMemorySize);
             log.debug("slice [{}] fetch jdbc connection.", slice.getName());
-            SliceResultSetSender sliceSender = createSliceResultSetSender(tableMetadata);
+            sliceSender = createSliceResultSetSender(tableMetadata);
             sliceExtend.setStartOffset(sliceSender.checkOffsetEnd());
-
-            try (PreparedStatement ps = connection.prepareStatement(sqlEntry.getSql());
-                ResultSet resultSet = ps.executeQuery()) {
-                log.debug("slice [{}] jdbc execute query complete.", slice.getName());
-                LocalDateTime jdbcQuery = LocalDateTime.now();
-                jdbcQueryCost = durationBetweenToMillis(start, jdbcQuery);
-                resultSet.setFetchSize(FETCH_SIZE);
-                List<long[]> offsetList = sliceQueryResultAndSendSync(sliceSender, resultSet);
-                updateExtendSliceOffsetAndCount(sliceExtend, rowCount.get(), offsetList);
-                sendDataCost = durationBetweenToMillis(jdbcQuery, LocalDateTime.now());
-            }
-        } catch (SQLException ex) {
-            throw new ExtractDataAccessException(ex);
+            ps = connection.prepareStatement(sqlEntry.getSql());
+            resultSet = ps.executeQuery();
+            log.debug("slice [{}] jdbc execute query complete.", slice.getName());
+            LocalDateTime jdbcQuery = LocalDateTime.now();
+            jdbcQueryCost = durationBetweenToMillis(start, jdbcQuery);
+            resultSet.setFetchSize(FETCH_SIZE);
+            List<long[]> offsetList = sliceQueryResultAndSendSync(sliceSender, resultSet);
+            updateExtendSliceOffsetAndCount(sliceExtend, rowCount.get(), offsetList);
+            sendDataCost = durationBetweenToMillis(jdbcQuery, LocalDateTime.now());
+        } catch (Exception ex) {
+            throw new ExtractDataAccessException(ex.getMessage());
         } finally {
+            ConnectionMgr.close(connection, ps, resultSet);
+            if (sliceSender != null) {
+                sliceSender.agentsClosed();
+            }
             jdbcOperation.releaseConnection(connection);
             log.debug("slice [{}] release jdbc connection.", slice.getName());
             sliceAllCost = durationBetweenToMillis(start, LocalDateTime.now());

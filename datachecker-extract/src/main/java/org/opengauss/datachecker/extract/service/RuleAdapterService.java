@@ -73,6 +73,16 @@ public class RuleAdapterService {
     }
 
     /**
+     * filterTableByRule
+     *
+     * @param tableName tableName
+     * @return filter result
+     */
+    public boolean filterTableByRule(String tableName) {
+        return tableRuleAdapterService.executeTableRule(RULES.get(RuleType.TABLE), tableName);
+    }
+
+    /**
      * Execute column-level rules
      *
      * @param columns columns

@@ -87,7 +87,6 @@ public class SliceKafkaAgents {
     public void agentsClosed() {
         kafkaConsumer.unsubscribe();
         kafkaConsumer.close();
-        kafkaTemplate.destroy();
     }
 
     /**

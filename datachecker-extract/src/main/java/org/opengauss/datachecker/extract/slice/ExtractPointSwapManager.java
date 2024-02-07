@@ -69,6 +69,7 @@ public class ExtractPointSwapManager {
             trySubscribe();
             ConsumerRecords<String, String> records;
             AtomicInteger deliveredCount = new AtomicInteger();
+            log.info("pollSwapPoint thread started");
             while (!isCompletedSwapTablePoint) {
                 try {
                     records = kafkaConsumer.poll(Duration.ofSeconds(1));

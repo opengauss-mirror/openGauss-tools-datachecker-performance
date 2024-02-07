@@ -94,9 +94,14 @@ public class BaseDataService {
      */
     public List<TableMetadata> bdsQueryTableMetadataList() {
         List<TableMetadata> metadataList = dataAccessService.dasQueryTableMetadataList();
-        List<String> tableList = bdsQueryTableNameList();
         return metadataList.stream()
-                           .filter(meta -> tableList.contains(meta.getTableName()))
+                           .filter(meta -> {
+                               boolean isChecking = ruleAdapterService.filterTableByRule(meta.getTableName());
+                               if (isChecking) {
+                                   tableNameList.add(meta.getTableName());
+                               }
+                               return isChecking;
+                           })
                            .collect(Collectors.toList());
     }
 

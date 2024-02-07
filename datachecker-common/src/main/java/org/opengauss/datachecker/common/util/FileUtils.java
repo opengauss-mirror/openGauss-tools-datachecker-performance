@@ -40,6 +40,7 @@ import java.util.stream.Collectors;
  */
 public class FileUtils {
     private static final Logger log = LogUtils.getLogger();
+
     /**
      * Creates a directory by creating all nonexistent parent directories first.
      *
@@ -63,7 +64,7 @@ public class FileUtils {
      * @param filename filename
      * @param content  content
      */
-    public static void writeAppendFile(String filename, List<String> content) {
+    public static synchronized void writeAppendFile(String filename, List<String> content) {
         try {
             Files.write(Paths.get(filename), content, StandardOpenOption.APPEND, StandardOpenOption.CREATE);
         } catch (IOException e) {
@@ -77,7 +78,7 @@ public class FileUtils {
      * @param filename filename
      * @param content  content
      */
-    public static void writeAppendFile(String filename, Set<String> content) {
+    public static synchronized void writeAppendFile(String filename, Set<String> content) {
         try {
             Files.write(Paths.get(filename), content, StandardOpenOption.APPEND, StandardOpenOption.CREATE);
         } catch (IOException e) {
@@ -91,7 +92,7 @@ public class FileUtils {
      * @param filename filename
      * @param content  content
      */
-    public static void writeAppendFile(String filename, String content) {
+    public static synchronized void writeAppendFile(String filename, String content) {
         try {
             Files.write(Paths.get(filename), content.getBytes(StandardCharsets.UTF_8), StandardOpenOption.APPEND,
                 StandardOpenOption.CREATE);
@@ -100,7 +101,13 @@ public class FileUtils {
         }
     }
 
-    public static void writeFile(String filename, String content) {
+    /**
+     * Write lines of text to a file. Characters are encoded into bytes using the UTF-8 charset.
+     *
+     * @param filename filename
+     * @param content  content
+     */
+    public static synchronized void writeFile(String filename, String content) {
         try {
             Files.write(Paths.get(filename), content.getBytes(StandardCharsets.UTF_8), StandardOpenOption.CREATE);
         } catch (IOException e) {
@@ -118,7 +125,8 @@ public class FileUtils {
         try {
             final Path pathDirectory = Path.of(fileDirectory);
             if (Files.isDirectory(pathDirectory)) {
-                return Files.list(pathDirectory).collect(Collectors.toList());
+                return Files.list(pathDirectory)
+                            .collect(Collectors.toList());
             } else {
                 throw new NotDirectoryException(fileDirectory);
             }
