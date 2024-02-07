@@ -33,7 +33,7 @@ import java.util.Objects;
 public class OpenGaussCsvResultSetHandler extends OpenGaussResultSetHandler {
 
     @Override
-    protected String floatNumberToString(@NonNull ResultSet resultSet, String columnLabel) throws SQLException {
+    protected String numericFloatNumberToString(@NonNull ResultSet resultSet, String columnLabel) throws SQLException {
         String floatValue = resultSet.getString(columnLabel);
         if (resultSet.wasNull()) {
             return NULL;

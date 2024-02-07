@@ -241,16 +241,14 @@ public class BaseDataService {
      * This is because the database itself determines the column case recognition pattern.
      *
      * @param columnsMetas columnsMetas
-     * @return cloumn hash
+     * @return column hash
      */
     private long calcTableHash(List<ColumnsMetaData> columnsMetas) {
-        StringBuffer buffer = new StringBuffer();
+        StringBuilder buffer = new StringBuilder();
         columnsMetas.sort(Comparator.comparing(ColumnsMetaData::getOrdinalPosition));
-        columnsMetas.forEach(column -> {
-            buffer.append(column.getColumnName()
-                                .toLowerCase(Locale.ENGLISH))
-                  .append(column.getOrdinalPosition());
-        });
+        columnsMetas.forEach(column -> buffer.append(column.getColumnName()
+                                                           .toLowerCase(Locale.ENGLISH))
+                                             .append(column.getOrdinalPosition()));
         return HASH_UTIL.hashBytes(buffer.toString());
     }
 
@@ -285,7 +283,8 @@ public class BaseDataService {
                                       .filter(mode -> !mode.equalsIgnoreCase(
                                           ConfigConstants.SQL_MODE_NAME_PAD_CHAR_TO_FULL_LENGTH))
                                       .collect(Collectors.joining(","));
-            if (ConfigCache.getBooleanValue(ConfigConstants.SQL_MODE_PAD_CHAR_TO_FULL_LENGTH)) {
+            boolean isPadCharFull = ConfigCache.getBooleanValue(ConfigConstants.SQL_MODE_PAD_CHAR_TO_FULL_LENGTH);
+            if (isPadCharFull) {
                 newSqlMode += ConfigConstants.SQL_MODE_NAME_PAD_CHAR_TO_FULL_LENGTH;
             }
             boolean isForceRefreshConnectionSqlMode = sqlMode.length() != newSqlMode.length();

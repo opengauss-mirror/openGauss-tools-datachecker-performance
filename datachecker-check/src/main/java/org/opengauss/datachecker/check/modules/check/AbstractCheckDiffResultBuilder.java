@@ -72,7 +72,7 @@ public abstract class AbstractCheckDiffResultBuilder<C extends CheckDiffResult, 
     /**
      * construct
      */
-    public AbstractCheckDiffResultBuilder() {
+    protected AbstractCheckDiffResultBuilder() {
     }
 
     /**
@@ -222,7 +222,7 @@ public abstract class AbstractCheckDiffResultBuilder<C extends CheckDiffResult, 
     }
 
     public B errorRate(int errorRate) {
-        this.errorRate = 100;
+        this.errorRate = errorRate;
         return self();
     }
 

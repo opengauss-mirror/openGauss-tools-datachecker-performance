@@ -38,22 +38,13 @@ public abstract class AbstractCheckLoader implements CheckLoader {
     protected int maxRetryTimes;
     @Value("${data.check.retry-interval-times}")
     protected int retryIntervalTimes;
-    @Resource
-    private CheckEnvironment checkEnvironment;
+
     @Resource
     private ShutdownService shutdownService;
     @Resource
     private FeignClientService feignClient;
     @Resource
     private CustomEventHistory customEventHistory;
-
-    /**
-     * Verification environment global information loader
-     *
-     * @param checkEnvironment checkEnvironment
-     */
-    @Override
-    public abstract void load(CheckEnvironment checkEnvironment);
 
     /**
      * shutdown app

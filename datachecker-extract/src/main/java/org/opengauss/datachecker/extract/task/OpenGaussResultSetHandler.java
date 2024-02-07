@@ -34,7 +34,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @since ：11
  */
 public class OpenGaussResultSetHandler extends ResultSetHandler {
-    protected final Map<String, TypeHandler> typeHandlers = new ConcurrentHashMap<>();
+    private static final Map<String, TypeHandler> typeHandlers = new ConcurrentHashMap<>();
 
     {
         // byte binary blob
@@ -105,8 +105,8 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
      */
     protected String binaryToString(ResultSet rs, String columnLabel) throws SQLException {
         String binary = rs.getString(columnLabel);
-        return rs.wasNull() ? NULL : Objects.isNull(binary) ? NULL : binary.substring(2)
-                                                                           .toUpperCase(Locale.ENGLISH);
+        return Objects.isNull(binary) ? NULL : binary.substring(2)
+                                                     .toUpperCase(Locale.ENGLISH);
     }
 
     /**
@@ -158,7 +158,7 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
             if (precision > scale && scale > 0) {
                 return floatingPointNumberToString(resultSet, columnLabel, scale);
             } else {
-                return floatNumberToString(resultSet, columnLabel);
+                return numericFloatNumberToString(resultSet, columnLabel);
             }
         } else if (OpenGaussType.isBigInteger(columnTypeName)) {
             return numeric0ToString(resultSet, columnLabel);
@@ -179,13 +179,13 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
         int scale = rsmd.getScale(columnIdx);
         String columnLabel = rsmd.getColumnLabel(columnIdx);
         if (isNumericDefault(precision, scale)) {
-            return floatNumberToString(resultSet, columnLabel);
+            return numericFloatNumberToString(resultSet, columnLabel);
         } else if (isNumeric0(precision, scale)) {
             return numeric0ToString(resultSet, columnLabel);
         } else if (isNumericFloat(precision, scale)) {
             return floatingPointNumberToString(resultSet, columnLabel, scale);
         } else {
-            return floatNumberToString(resultSet, columnLabel);
+            return numericFloatNumberToString(resultSet, columnLabel);
         }
     }
 

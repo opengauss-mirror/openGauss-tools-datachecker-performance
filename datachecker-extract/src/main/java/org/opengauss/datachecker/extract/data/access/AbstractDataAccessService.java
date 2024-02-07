@@ -197,25 +197,9 @@ public abstract class AbstractDataAccessService implements DataAccessService {
      * @return tableMetadata
      */
     protected List<TableMetadata> wrapperTableMetadata(List<TableMetadata> list) {
-        list.stream()
-            .forEach(meta -> {
-                meta.setDataBaseType(properties.getDatabaseType())
-                    .setEndpoint(properties.getEndpoint())
-                    .setOgCompatibilityB(isOgCompatibilityB);
-            });
+        list.forEach(meta -> meta.setDataBaseType(properties.getDatabaseType())
+                             .setEndpoint(properties.getEndpoint())
+                             .setOgCompatibilityB(isOgCompatibilityB));
         return list;
-    }
-
-    private <T> List<T> queryByCondition(String sql, Map<String, Object> paramMap, RowMapper<T> rowMapper) {
-        LocalDateTime start = LocalDateTime.now();
-        NamedParameterJdbcTemplate jdbc = new NamedParameterJdbcTemplate(jdbcTemplate);
-        List<T> results = jdbc.query(sql, paramMap, rowMapper);
-        log.debug("query sql:<{}> size:{} cost:{}", sql, results.size(), Duration.between(start, LocalDateTime.now())
-                                                                                 .toSeconds());
-        return results;
-    }
-
-    protected String getSql(DataBaseMeta type) {
-        return null;
     }
 }

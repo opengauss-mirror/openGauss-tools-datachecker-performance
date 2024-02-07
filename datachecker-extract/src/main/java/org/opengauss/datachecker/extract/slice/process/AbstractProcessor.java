@@ -33,7 +33,12 @@ public abstract class AbstractProcessor implements SliceProcessor {
     protected SliceProcessorContext context;
     protected int objectSizeExpansionFactor;
 
-    public AbstractProcessor(SliceProcessorContext context) {
+    /**
+     * AbstractProcessor
+     *
+     * @param context context
+     */
+    protected AbstractProcessor(SliceProcessorContext context) {
         this.context = context;
         this.objectSizeExpansionFactor = ConfigCache.getIntValue(ConfigConstants.OBJECT_SIZE_EXPANSION_FACTOR);
     }

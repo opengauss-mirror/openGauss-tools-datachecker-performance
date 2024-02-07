@@ -91,7 +91,7 @@ public class MysqlResultSetHandler extends ResultSetHandler {
             if (scale > 0 || (precision != 12 && scale == 0)) {
                 return floatingPointNumberToString(resultSet, columnLabel, scale);
             } else {
-                return floatNumberToString(resultSet, columnLabel);
+                return numericFloatNumberToString(resultSet, columnLabel);
             }
         } else if (doubleTypeList.contains(mysqlType)) {
             int precision = rsmd.getPrecision(columnIdx);
@@ -99,7 +99,7 @@ public class MysqlResultSetHandler extends ResultSetHandler {
             if (scale > 0 || (precision != 22 && scale == 0)) {
                 return floatingPointNumberToString(resultSet, columnLabel, scale);
             } else {
-                return floatNumberToString(resultSet, columnLabel);
+                return doubleNumberToString(resultSet, columnLabel);
             }
         } else if (isDecimal(mysqlType)) {
             int precision = rsmd.getPrecision(columnIdx);

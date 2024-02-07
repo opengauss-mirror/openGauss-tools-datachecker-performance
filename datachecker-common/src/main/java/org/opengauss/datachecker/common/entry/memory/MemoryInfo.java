@@ -28,7 +28,7 @@ import java.util.List;
  * @since ：11
  */
 @Setter
-public class MemoryInfo extends BaseMonitor implements MonitorFormatter {
+public class MemoryInfo implements MonitorFormatter {
     private long vmTotal;
     private long vmFree;
     private long vmMax;

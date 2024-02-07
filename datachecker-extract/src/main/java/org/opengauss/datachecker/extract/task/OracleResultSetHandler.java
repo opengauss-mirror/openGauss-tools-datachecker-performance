@@ -91,7 +91,7 @@ public class OracleResultSetHandler extends ResultSetHandler {
                 sb.append(line);
             }
         } catch (IOException io) {
-            log.error("read clobToString error");
+            LOG.error("read clobToString error");
         } finally {
             closeBufferedReader(bf);
             closeReader(reader);
@@ -159,7 +159,7 @@ public class OracleResultSetHandler extends ResultSetHandler {
                 bf.close();
             }
         } catch (IOException e) {
-            log.error("close BufferedReader error");
+            LOG.error("close BufferedReader error");
         }
     }
 
@@ -169,7 +169,7 @@ public class OracleResultSetHandler extends ResultSetHandler {
                 reader.close();
             }
         } catch (IOException e) {
-            log.error("close Reader error");
+            LOG.error("close Reader error");
         }
     }
 }

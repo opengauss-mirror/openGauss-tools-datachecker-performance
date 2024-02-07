@@ -101,9 +101,7 @@ public abstract class BaseRepairStatement implements RepairStatement {
         final List<ColumnsMetaData> primaryMetas = metadata.getPrimaryMetas();
         List<String> resultList = new ArrayList<>();
         if (primaryMetas.size() == 1) {
-            final ColumnsMetaData primaryMeta = primaryMetas.stream()
-                                                            .findFirst()
-                                                            .get();
+            final ColumnsMetaData primaryMeta = primaryMetas.get(0);
             iterator.forEachRemaining(compositeKey -> {
                 DeleteDmlBuilder deleteDmlBuilder =
                     new DeleteDmlBuilder(DataBaseType.OG, repairEntry.isOgCompatibility());
@@ -130,9 +128,7 @@ public abstract class BaseRepairStatement implements RepairStatement {
         List<ColumnsMetaData> primaryMetas) {
         final List<String> primaryKeys = getCompositeKeyColumns(primaryMetas);
         Map<String, Map<String, String>> map = new HashMap<>(InitialCapacity.CAPACITY_16);
-        columnValues.forEach(values -> {
-            map.put(getCompositeKey(values, primaryKeys), values);
-        });
+        columnValues.forEach(values -> map.put(getCompositeKey(values, primaryKeys), values));
         return map;
     }
 
@@ -144,7 +140,7 @@ public abstract class BaseRepairStatement implements RepairStatement {
 
     private String getCompositeKey(Map<String, String> columnValues, List<String> primaryKeys) {
         return primaryKeys.stream()
-                          .map(key -> columnValues.get(key))
+                          .map(columnValues::get)
                           .collect(Collectors.joining(ExtConstants.PRIMARY_DELIMITER));
     }
 
