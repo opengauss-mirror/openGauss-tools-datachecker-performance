@@ -28,7 +28,7 @@ import java.util.List;
  * @since ：11
  */
 @Setter
-public class ThreadInfo extends BaseMonitor implements MonitorFormatter {
+public class ThreadInfo implements MonitorFormatter {
     private int threadCount;
     private int peakThreadCount;
     private int daemonThreadCount;

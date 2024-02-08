@@ -31,7 +31,7 @@ import java.util.List;
  * @since ：11
  */
 @Setter
-public class JvmInfo extends BaseMonitor implements MonitorFormatter {
+public class JvmInfo implements MonitorFormatter {
     private long total;
     private long max;
     private long free;

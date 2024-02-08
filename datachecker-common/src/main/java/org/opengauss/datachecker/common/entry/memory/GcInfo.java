@@ -25,7 +25,7 @@ import java.util.List;
  * @date ：Created in 2023/3/29
  * @since ：11
  */
-public class GcInfo extends BaseMonitor implements MonitorFormatter {
+public class GcInfo implements MonitorFormatter {
     private String name;
     private long collectionTime;
     private long collectionCount;

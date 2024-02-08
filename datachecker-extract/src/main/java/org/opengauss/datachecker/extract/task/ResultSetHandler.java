@@ -20,9 +20,7 @@ import org.opengauss.datachecker.common.util.HexUtil;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.lang.NonNull;
 
-import java.io.IOException;
 import java.math.BigDecimal;
-import java.sql.Blob;
 import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -48,10 +46,10 @@ import java.util.stream.IntStream;
  **/
 public abstract class ResultSetHandler {
     private static Map<Integer, DecimalFormat> decimalFormatCache = new HashMap<>();
-    private static final String decimal_format_pattern_start = "0.";
-    private static final String decimal_append_zero = "0";
+    private static final String DECIMAL_FORMAT_PATTERN_START = "0.";
+    private static final String DECIMAL_APPEND_ZERO = "0";
 
-    protected static final Logger log = LogUtils.getLogger();
+    protected static final Logger LOG = LogUtils.getLogger();
     protected static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     protected static final DateTimeFormatter YEAR = DateTimeFormatter.ofPattern("yyyy");
     protected static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm:ss");
@@ -66,11 +64,11 @@ public abstract class ResultSetHandler {
     protected static final int NUMERIC_PRECISION_0 = 0;
     protected final boolean supplyZero;
 
-    public ResultSetHandler() {
+    protected ResultSetHandler() {
         this.supplyZero = false;
     }
 
-    public ResultSetHandler(Boolean supplyZero) {
+    protected ResultSetHandler(Boolean supplyZero) {
         this.supplyZero = supplyZero;
     }
 
@@ -93,15 +91,23 @@ public abstract class ResultSetHandler {
                              columnLabel = rsmd.getColumnLabel(columnIdx);
                              values.put(columnLabel, convert(resultSet, columnIdx, rsmd));
                          } catch (SQLException ex) {
-                             log.error(" Convert data [{}:{}] {} error ", tableName, columnLabel, ex.getMessage(), ex);
+                             LOG.error(" Convert data [{}:{}] {} error ", tableName, columnLabel, ex.getMessage(), ex);
                          }
                      });
         } catch (SQLException ex) {
-            log.error(" parse data metadata information exception", ex);
+            LOG.error(" parse data metadata information exception", ex);
         }
         return values;
     }
 
+    /**
+     * fixedLenCharToString
+     *
+     * @param rs          rs
+     * @param columnLabel columnLabel
+     * @return result
+     * @throws SQLException SQLException
+     */
     protected String fixedLenCharToString(ResultSet rs, String columnLabel) throws SQLException {
         return rs.getString(columnLabel);
     }
@@ -118,6 +124,15 @@ public abstract class ResultSetHandler {
         return putOneResultSetToMap(tableName, rsmd, resultSet, new TreeMap<>());
     }
 
+    /**
+     * convert
+     *
+     * @param resultSet resultSet
+     * @param columnIdx columnIdx
+     * @param rsmd      rsmd
+     * @return result
+     * @throws SQLException SQLException
+     */
     protected abstract String convert(ResultSet resultSet, int columnIdx, ResultSetMetaData rsmd) throws SQLException;
 
     /**
@@ -127,7 +142,7 @@ public abstract class ResultSetHandler {
      * @param columnLabel columnLabel
      * @param scale       scale
      * @return data of string
-     * @throws SQLException
+     * @throws SQLException SQLException
      */
     protected String floatingPointNumberToString(@NonNull ResultSet resultSet, String columnLabel, Integer scale)
         throws SQLException {
@@ -145,9 +160,9 @@ public abstract class ResultSetHandler {
         } else {
             String pattern;
             if (scale == 0) {
-                pattern = decimal_append_zero;
+                pattern = DECIMAL_APPEND_ZERO;
             } else {
-                pattern = decimal_format_pattern_start + decimal_append_zero.repeat(Math.max(0, scale));
+                pattern = DECIMAL_FORMAT_PATTERN_START + DECIMAL_APPEND_ZERO.repeat(Math.max(0, scale));
             }
             scaleFormatter = new DecimalFormat(pattern);
             decimalFormatCache.put(scale, scaleFormatter);
@@ -162,7 +177,7 @@ public abstract class ResultSetHandler {
      * @param resultSet   rs
      * @param columnLabel columnLabel
      * @return format
-     * @throws SQLException
+     * @throws SQLException SQLException
      */
     protected String floatingPointNumberToString(@NonNull ResultSet resultSet, String columnLabel) throws SQLException {
         BigDecimal bigDecimal = resultSet.getBigDecimal(columnLabel);
@@ -176,8 +191,36 @@ public abstract class ResultSetHandler {
         return value;
     }
 
-    protected String floatNumberToString(@NonNull ResultSet resultSet, String columnLabel) throws SQLException {
-        float floatValue = resultSet.getFloat(columnLabel);
+    /**
+     * numericFloatNumberToString
+     *
+     * @param resultSet   resultSet
+     * @param columnLabel columnLabel
+     * @return result
+     * @throws SQLException SQLException
+     */
+    protected String numericFloatNumberToString(@NonNull ResultSet resultSet, String columnLabel) throws SQLException {
+        BigDecimal floatValue = resultSet.getBigDecimal(columnLabel);
+        if (resultSet.wasNull()) {
+            return NULL;
+        }
+        String value = String.valueOf(floatValue.doubleValue());
+        if (isScientificNotation(value)) {
+            return new BigDecimal(value).toPlainString();
+        }
+        return value;
+    }
+
+    /**
+     * doubleNumberToString
+     *
+     * @param resultSet   resultSet
+     * @param columnLabel columnLabel
+     * @return result
+     * @throws SQLException SQLException
+     */
+    protected String doubleNumberToString(@NonNull ResultSet resultSet, String columnLabel) throws SQLException {
+        double floatValue = resultSet.getDouble(columnLabel);
         if (resultSet.wasNull()) {
             return NULL;
         }
@@ -188,26 +231,64 @@ public abstract class ResultSetHandler {
         return value;
     }
 
+    /**
+     * isScientificNotation
+     *
+     * @param value value
+     * @return boolean
+     */
     protected boolean isScientificNotation(String value) {
         return value.contains("E") || value.contains("e");
     }
 
+    /**
+     * numeric0ToString
+     *
+     * @param rs          rs
+     * @param columnLabel columnLabel
+     * @return result
+     * @throws SQLException SQLException
+     */
     protected String numeric0ToString(ResultSet rs, String columnLabel) throws SQLException {
         BigDecimal bigDecimal = rs.getBigDecimal(columnLabel);
         return Objects.isNull(bigDecimal) ? NULL : bigDecimal.toBigInteger()
                                                              .toString();
     }
 
+    /**
+     * getDateFormat
+     *
+     * @param resultSet   resultSet
+     * @param columnLabel columnLabel
+     * @return result
+     * @throws SQLException SQLException
+     */
     protected String getDateFormat(@NonNull ResultSet resultSet, String columnLabel) throws SQLException {
         final Date date = resultSet.getDate(columnLabel);
         return Objects.nonNull(date) ? DATE.format(date.toLocalDate()) : NULL;
     }
 
+    /**
+     * getTimeFormat
+     *
+     * @param resultSet   resultSet
+     * @param columnLabel columnLabel
+     * @return result
+     * @throws SQLException SQLException
+     */
     protected String getTimeFormat(@NonNull ResultSet resultSet, String columnLabel) throws SQLException {
         final Time time = resultSet.getTime(columnLabel);
         return Objects.nonNull(time) ? TIME.format(time.toLocalTime()) : NULL;
     }
 
+    /**
+     * getTimestampFormat
+     *
+     * @param resultSet   resultSet
+     * @param columnLabel columnLabel
+     * @return result
+     * @throws SQLException SQLException
+     */
     protected String getTimestampFormat(@NonNull ResultSet resultSet, String columnLabel) throws SQLException {
         final Timestamp timestamp =
             resultSet.getTimestamp(columnLabel, Calendar.getInstance(TimeZone.getTimeZone("GMT+8")));
@@ -219,31 +300,47 @@ public abstract class ResultSetHandler {
             TIMESTAMP.format(timestamp.toLocalDateTime());
     }
 
+    /**
+     * getYearFormat
+     *
+     * @param resultSet   resultSet
+     * @param columnLabel columnLabel
+     * @return result
+     * @throws SQLException SQLException
+     */
     protected String getYearFormat(@NonNull ResultSet resultSet, String columnLabel) throws SQLException {
         final Date date = resultSet.getDate(columnLabel);
         return Objects.nonNull(date) ? YEAR.format(date.toLocalDate()) : NULL;
     }
 
-    protected String blobToString(Blob blob) throws SQLException, IOException {
-        if (Objects.isNull(blob)) {
-            return NULL;
-        }
-        return new String(blob.getBytes(1, (int) blob.length()));
-    }
-
+    /**
+     * bytesToString
+     *
+     * @param bytes bytes
+     * @return result
+     */
     protected String bytesToString(byte[] bytes) {
         return HexUtil.byteToHex(bytes);
     }
 
-    protected String trim(@NonNull ResultSet resultSet, String columnLabel) throws SQLException {
-        final String string = resultSet.getString(columnLabel);
-        return string == null ? NULL : string.stripTrailing();
-    }
-
+    /**
+     * isNumericFloat
+     *
+     * @param precision precision
+     * @param scale     scale
+     * @return boolean
+     */
     public static boolean isNumericFloat(int precision, int scale) {
         return precision > NUMERIC_PRECISION_0 && scale > NUMERIC_SCALE_0;
     }
 
+    /**
+     * isNumeric0
+     *
+     * @param precision precision
+     * @param scale     scale
+     * @return boolean
+     */
     public static boolean isNumeric0(int precision, int scale) {
         return precision > NUMERIC_PRECISION_0 && scale == NUMERIC_SCALE_0;
     }

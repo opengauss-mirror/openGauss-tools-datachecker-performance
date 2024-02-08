@@ -38,12 +38,23 @@ public abstract class AbstractTableProcessor extends AbstractProcessor {
     protected String table;
     protected TableMetadata tableMetadata;
 
-    public AbstractTableProcessor(String table, SliceProcessorContext context) {
+    /**
+     * AbstractTableProcessor
+     *
+     * @param table   table
+     * @param context context
+     */
+    protected AbstractTableProcessor(String table, SliceProcessorContext context) {
         super(context);
         this.table = table;
         this.tableMetadata = context.getTableMetaData(table);
     }
 
+    /**
+     * createTableSliceExtend
+     *
+     * @return SliceExtend
+     */
     protected SliceExtend createTableSliceExtend() {
         SliceExtend tableSliceExtend = new SliceExtend();
         tableSliceExtend.setName(table);
@@ -52,23 +63,47 @@ public abstract class AbstractTableProcessor extends AbstractProcessor {
         tableSliceExtend.setStatus(SliceStatus.codeOf(ConfigCache.getEndPoint()));
         return tableSliceExtend;
     }
+
+    /**
+     * initTableMetadata
+     */
     protected void initTableMetadata() {
         this.tableMetadata = context.getTableMetaData(table);
         Objects.requireNonNull(tableMetadata, "table metadata " + table + " must not be null");
     }
 
+    /**
+     * getFetchSize
+     *
+     * @return fetch size
+     */
     protected int getFetchSize() {
         return ConfigCache.getIntValue(ConfigConstants.FETCH_SIZE);
     }
 
+    /**
+     * getMaximumTableSliceSize
+     *
+     * @return MaximumTableSliceSize
+     */
     protected int getMaximumTableSliceSize() {
         return ConfigCache.getIntValue(ConfigConstants.MAXIMUM_TABLE_SLICE_SIZE);
     }
 
+    /**
+     * getQueryDop
+     *
+     * @return QueryDop
+     */
     protected int getQueryDop() {
         return ConfigCache.getIntValue(ConfigConstants.QUERY_DOP);
     }
 
+    /**
+     * noTableSlice
+     *
+     * @return boolean
+     */
     public boolean noTableSlice() {
         return tableMetadata.getTableRows() < getMaximumTableSliceSize() || getQueryDop() == 1;
     }

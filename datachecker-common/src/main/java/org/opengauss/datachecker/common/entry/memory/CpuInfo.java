@@ -29,7 +29,7 @@ import java.util.List;
  * @since ：11
  */
 @Setter
-public class CpuInfo extends BaseMonitor implements MonitorFormatter {
+public class CpuInfo implements MonitorFormatter {
     private int cpuNum;
     private double total;
     private double sys;

@@ -25,7 +25,7 @@ import java.util.List;
  * @date ：Created in 2023/3/29
  * @since ：11
  */
-public class OsInfo extends BaseMonitor implements MonitorFormatter {
+public class OsInfo implements MonitorFormatter {
     private String name;
     private String version;
     private int processors;

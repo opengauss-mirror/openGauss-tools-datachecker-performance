@@ -43,7 +43,13 @@ public abstract class AbstractSliceProcessor extends AbstractProcessor {
     protected static final Logger log = LogUtils.getBusinessLogger();
     protected SliceVo slice;
 
-    public AbstractSliceProcessor(SliceVo slice, SliceProcessorContext context) {
+    /**
+     * AbstractSliceProcessor
+     *
+     * @param slice   slice
+     * @param context context
+     */
+    protected AbstractSliceProcessor(SliceVo slice, SliceProcessorContext context) {
         super(context);
         this.slice = slice;
     }
@@ -133,7 +139,7 @@ public abstract class AbstractSliceProcessor extends AbstractProcessor {
             return sendResult.getRecordMetadata()
                              .offset();
         } catch (InterruptedException | ExecutionException e) {
-            e.printStackTrace();
+            log.warn("get record offset InterruptedException  or ExecutionException");
         }
         return 0;
     }
