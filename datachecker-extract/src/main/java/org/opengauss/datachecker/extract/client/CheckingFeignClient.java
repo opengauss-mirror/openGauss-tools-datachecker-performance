@@ -137,4 +137,12 @@ public interface CheckingFeignClient {
      */
     @PostMapping("/notify/check/table/index/completed")
     void notifyTableIndexCompleted(@RequestBody List<String> completedTableList);
+
+    /**
+     * refreshLoadMetadataCompleted
+     *
+     * @param endpoint endpoint
+     */
+    @PostMapping("/load/metadata/completed")
+    void refreshLoadMetadataCompleted(@RequestParam("endpoint") Endpoint endpoint);
 }

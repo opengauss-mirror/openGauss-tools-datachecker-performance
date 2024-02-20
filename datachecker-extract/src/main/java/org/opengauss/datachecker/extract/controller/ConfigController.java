@@ -77,7 +77,6 @@ public class ConfigController {
         log.info("init filter rule config ");
         if (Objects.equals(config.getCheckMode(), CheckMode.FULL)) {
             context.loadDatabaseMetaData();
-            context.loadProgressChecking();
         }
 
     }

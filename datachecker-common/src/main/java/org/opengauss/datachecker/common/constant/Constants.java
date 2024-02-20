@@ -32,8 +32,30 @@ public interface Constants {
      * DELIMITER
      */
     String DELIMITER = ",";
+
+    /**
+     * SWAP_POINT_TOPIC_TEMP
+     */
     String SWAP_POINT_TOPIC_TEMP = "CHECK_%s_SWAP_REGISTER_SUMMARIZED_POINT";
 
+    /**
+     * process status start =1
+     */
+    short PROCESS_STATUS_START = 1;
+
+    /**
+     * process status running =2
+     */
+    short PROCESS_STATUS_RUNNING = 2;
+
+    /**
+     * process status end =3
+     */
+    short PROCESS_STATUS_END = 3;
+
+    /**
+     * InitialCapacity
+     */
     interface InitialCapacity {
         /**
          * map initial capacity

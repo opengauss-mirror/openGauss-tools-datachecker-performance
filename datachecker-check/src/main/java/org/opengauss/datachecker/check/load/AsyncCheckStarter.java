@@ -104,7 +104,9 @@ public class AsyncCheckStarter {
         emptyDatabase.load(environment);
         MetaDataLoader metadata = SpringUtil.getBean(MetaDataLoader.class);
         metadata.load(environment);
-        CheckStartLoader checkStart = SpringUtil.getBean(CheckStartLoader.class);
-        checkStart.load(environment);
+        if (environment.isLoadMetaSuccess()) {
+            CheckStartLoader checkStart = SpringUtil.getBean(CheckStartLoader.class);
+            checkStart.load(environment);
+        }
     }
 }

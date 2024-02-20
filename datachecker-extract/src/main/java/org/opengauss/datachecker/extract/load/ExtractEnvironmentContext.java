@@ -16,10 +16,13 @@
 package org.opengauss.datachecker.extract.load;
 
 import org.apache.logging.log4j.Logger;
+import org.opengauss.datachecker.common.config.ConfigCache;
+import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.extract.MetadataLoadProcess;
 import org.opengauss.datachecker.common.service.ShutdownService;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.ThreadUtil;
+import org.opengauss.datachecker.extract.client.CheckingFeignClient;
 import org.opengauss.datachecker.extract.service.MetaDataService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
@@ -45,23 +48,8 @@ public class ExtractEnvironmentContext {
     private int maxRetryTimes;
     @Resource
     private ShutdownService shutdownService;
-
-    /**
-     * Initialize the verification result environment
-     */
-    @Async
-    public void loadProgressChecking() {
-        int retryTime = 0;
-        if (!metaDataService.mdsIsCheckTableEmpty(true)) {
-            while (metaDataService.queryMetaDataOfSchemaCache().isEmpty()) {
-                ThreadUtil.sleepHalfSecond();
-                retryTime++;
-                if (retryTime > maxRetryTimes) {
-                    shutdownService.shutdown("load table metadata cache is empty!");
-                }
-            }
-        }
-    }
+    @Resource
+    private CheckingFeignClient checkingFeignClient;
 
     /**
      * Initialize the verification result environment
@@ -76,6 +64,11 @@ public class ExtractEnvironmentContext {
             log.info("extract service load  table meta ={}", metadataLoadProcess.getLoadCount());
             ThreadUtil.sleepOneSecond();
             metadataLoadProcess = metaDataService.getMetadataLoadProcess();
+        }
+        Endpoint endPoint = ConfigCache.getEndPoint();
+        checkingFeignClient.refreshLoadMetadataCompleted(endPoint);
+        if (metaDataService.mdsIsCheckTableEmpty(false)) {
+            shutdownService.shutdown("load table metadata cache is empty!");
         }
         log.info("extract service load table meta ={} , success", metadataLoadProcess.getLoadCount());
     }

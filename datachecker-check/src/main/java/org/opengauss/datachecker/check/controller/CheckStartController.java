@@ -19,15 +19,18 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.opengauss.datachecker.check.service.CheckService;
+import org.opengauss.datachecker.check.service.EndpointMetaDataManager;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
+import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.web.Result;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import javax.annotation.Resource;
 
 /**
  * @author ：wangchao
@@ -39,8 +42,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping
 public class CheckStartController {
-    @Autowired
+    @Resource
     private CheckService checkService;
+    @Resource
+    private EndpointMetaDataManager endpointMetaDataManager;
 
     /**
      * Turn on verification
@@ -55,7 +60,7 @@ public class CheckStartController {
             CheckMode checkMode) {
         return Result.success(checkService.start(checkMode));
     }
-    
+
     /**
      * <pre>
      * Stop the verification service and clean up the verification service.
@@ -80,5 +85,15 @@ public class CheckStartController {
     @GetMapping("/get/check/process")
     public Result<String> getCurrentCheckProcess() {
         return Result.success(checkService.getCurrentCheckProcess());
+    }
+
+    /**
+     * refreshLoadMetadataStatus
+     *
+     * @param endpoint endpoint
+     */
+    @PostMapping("/load/metadata/completed")
+    public void refreshLoadMetadataCompleted(@RequestParam("endpoint") Endpoint endpoint) {
+        endpointMetaDataManager.refreshLoadMetadataStatus(endpoint);
     }
 }

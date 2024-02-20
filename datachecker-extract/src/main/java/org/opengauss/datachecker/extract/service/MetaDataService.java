@@ -19,7 +19,6 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
-import org.opengauss.datachecker.common.entry.enums.ColumnKey;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.MetadataLoadProcess;
 import org.opengauss.datachecker.common.entry.extract.PrimaryColumnBean;
@@ -32,7 +31,6 @@ import org.opengauss.datachecker.extract.resource.ResourceManager;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
-import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -60,8 +58,8 @@ public class MetaDataService {
     private BaseDataService baseDataService;
     @Resource
     private ResourceManager resourceManager;
-    private volatile AtomicBoolean isCheckTableEmpty = new AtomicBoolean(false);
-    private volatile MetadataLoadProcess metadataLoadProcess = new MetadataLoadProcess();
+    private AtomicBoolean isCheckTableEmpty = new AtomicBoolean(false);
+    private MetadataLoadProcess metadataLoadProcess = new MetadataLoadProcess();
 
     /**
      * Return database metadata information through cache
@@ -130,7 +128,7 @@ public class MetaDataService {
                 future.get();
                 metadataLoadProcess.setLoadCount(metadataLoadProcess.getLoadCount() + 1);
             } catch (InterruptedException | ExecutionException exp) {
-                log.warn("extract table column failed with exp: {}", exp);
+                log.warn("extract table column failed with exp:", exp);
             }
         });
         executor.shutdown();
@@ -180,13 +178,6 @@ public class MetaDataService {
         return baseDataService.queryTableColumnsMetaData(tableName);
     }
 
-    private List<ColumnsMetaData> getTablePrimaryColumn(List<ColumnsMetaData> columnsMetaData) {
-        return columnsMetaData.stream()
-                              .filter(meta -> ColumnKey.PRI.equals(meta.getColumnKey()))
-                              .sorted(Comparator.comparing(ColumnsMetaData::getOrdinalPosition))
-                              .collect(Collectors.toList());
-    }
-
     /**
      * queryIncrementMetaData
      *
@@ -217,7 +208,7 @@ public class MetaDataService {
      * @param isForced isForced
      * @return boolean
      */
-    public synchronized Boolean mdsIsCheckTableEmpty(boolean isForced) {
+    public synchronized boolean mdsIsCheckTableEmpty(boolean isForced) {
         if (isForced) {
             isCheckTableEmpty.set(!baseDataService.bdsCheckDatabaseNotEmpty());
             log.info("check database table (query) is {}", isCheckTableEmpty.get() ? "empty" : " not empty");
