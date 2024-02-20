@@ -18,6 +18,7 @@ package org.opengauss.datachecker.check.modules.report;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
+import org.opengauss.datachecker.common.constant.Constants;
 import org.opengauss.datachecker.common.entry.report.CheckProgress;
 import org.opengauss.datachecker.common.util.FileUtils;
 import org.opengauss.datachecker.common.util.JsonObjectUtil;
@@ -33,10 +34,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import static org.opengauss.datachecker.check.modules.report.SliceProgressService.CheckProgressStatus.END;
-import static org.opengauss.datachecker.check.modules.report.SliceProgressService.CheckProgressStatus.PROGRESS;
-import static org.opengauss.datachecker.check.modules.report.SliceProgressService.CheckProgressStatus.START;
-
 /**
  * SliceProgressService
  *
@@ -47,13 +44,14 @@ import static org.opengauss.datachecker.check.modules.report.SliceProgressServic
 @Service
 public class SliceProgressService {
     private static final Logger log = LogUtils.getBusinessLogger();
+
     private static final Map<String, Set<Integer>> TABLE_SLICE = new ConcurrentHashMap<>();
     private static final Map<String, Long> TABLE_ROW_COUNT = new ConcurrentHashMap<>();
     private static final String PROCESS_LOG_NAME = "progress.log";
     private final Lock lock = new ReentrantLock();
 
-    private static int completedTableCount = 0;
-    private static int totalTable = 0;
+    private int completedTableCount = 0;
+    private int totalTable = 0;
 
     private final CheckProgress checkProgress = new CheckProgress();
     private String logFileFullPath;
@@ -65,7 +63,7 @@ public class SliceProgressService {
         lock.lock();
         try {
             checkProgress.setMode(ConfigCache.getCheckMode())
-                         .setStatus(START)
+                         .setStatus(Constants.PROCESS_STATUS_START)
                          .setStartTime(LocalDateTime.now());
             checkProgress.setCurrentTime(checkProgress.getStartTime());
             createProgressLog();
@@ -94,12 +92,17 @@ public class SliceProgressService {
             refreshCheckProgress(count);
             refreshProgressLog();
         } catch (Exception exception) {
-            log.error("start progressing error ", exception);
+            log.error("update progressing error ", exception);
         } finally {
             lock.unlock();
         }
     }
 
+    /**
+     * getCheckProgress
+     *
+     * @return CheckProgress
+     */
     public CheckProgress getCheckProgress() {
         return checkProgress;
     }
@@ -116,9 +119,20 @@ public class SliceProgressService {
         checkProgress.setAvgSpeed((int) (checkProgress.getTotal() / (cost == 0 ? 1 : cost)));
         if (completedTableCount == totalTable) {
             checkProgress.setEndTime(checkProgress.getCurrentTime());
-            checkProgress.setStatus(END);
+            checkProgress.setStatus(Constants.PROCESS_STATUS_END);
         } else {
-            checkProgress.setStatus(PROGRESS);
+            checkProgress.setStatus(Constants.PROCESS_STATUS_RUNNING);
+        }
+    }
+
+    /**
+     * refreshCheckCompletedProgress
+     */
+    public void refreshCheckCompletedProgress() {
+        if (completedTableCount == totalTable) {
+            checkProgress.setEndTime(LocalDateTime.now());
+            checkProgress.setStatus(Constants.PROCESS_STATUS_END);
+            refreshProgressLog();
         }
     }
 
@@ -126,12 +140,17 @@ public class SliceProgressService {
         TABLE_ROW_COUNT.compute(table, (key, value) -> value == null ? count : value + count);
     }
 
+    /**
+     * updateTotalTableCount
+     *
+     * @param totalTableCount totalTableCount
+     */
     public void updateTotalTableCount(int totalTableCount) {
         lock.lock();
         try {
             totalTable = totalTableCount;
         } catch (Exception exception) {
-            log.error("start progressing error ", exception);
+            log.error("updateTotalTableCount progressing error ", exception);
         } finally {
             lock.unlock();
         }
@@ -163,14 +182,5 @@ public class SliceProgressService {
         logFileFullPath = ConfigCache.getCheckResult() + PROCESS_LOG_NAME;
         String content = JsonObjectUtil.formatSec(checkProgress) + System.lineSeparator();
         FileUtils.writeFile(logFileFullPath, content);
-    }
-
-    /**
-     * Verify progress status constant
-     */
-    interface CheckProgressStatus {
-        short START = 1;
-        short PROGRESS = 2;
-        short END = 3;
     }
 }

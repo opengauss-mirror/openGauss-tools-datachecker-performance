@@ -20,6 +20,7 @@ import org.opengauss.datachecker.check.cache.CheckRateCache;
 import org.opengauss.datachecker.check.cache.TableStatusRegister;
 import org.opengauss.datachecker.check.load.CheckEnvironment;
 import org.opengauss.datachecker.check.service.EndpointMetaDataManager;
+import org.opengauss.datachecker.common.constant.Constants;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.entry.report.CheckProgress;
 import org.opengauss.datachecker.common.service.ShutdownService;
@@ -48,7 +49,8 @@ import java.util.function.UnaryOperator;
 @ConditionalOnBean({CheckEnvironment.class, EndpointMetaDataManager.class, TableStatusRegister.class})
 public class ProgressService {
     private static final String PROCESS_LOG_NAME = "progress.log";
-    private static final String PROGRESS = "progress";
+    private static final String PROGRESS_SCHEDULE_THREAD = "progress";
+
     private AtomicReference<CheckProgress> progressRef = new AtomicReference<>();
     private String logFileFullPath;
     @Resource
@@ -71,14 +73,14 @@ public class ProgressService {
     public void progressing(CheckEnvironment checkEnvironment, LocalDateTime startTime) {
         progressRef.set(new CheckProgress().setStartTime(startTime).setMode(checkEnvironment.getCheckMode())
                                            .setTableCount(endpointMetaDataManager.getCheckTaskCount())
-                                           .setStatus(CheckProgressStatus.START));
+                                           .setStatus(Constants.PROCESS_STATUS_START));
         shutdownService.addExecutorService(executorService);
         createProgressLog();
         if (isFullMode()) {
             executorService.scheduleWithFixedDelay(() -> {
-                Thread.currentThread().setName(PROGRESS);
+                Thread.currentThread().setName(PROGRESS_SCHEDULE_THREAD);
                 refreshCompleteProgress(tableStatusRegister.getCheckedCount());
-                if (progressRef.get().getStatus() == CheckProgressStatus.END) {
+                if (progressRef.get().getStatus() == Constants.PROCESS_STATUS_END) {
                     ThreadUtil.sleepHalfSecond();
                     executorService.shutdownNow();
                 }
@@ -109,7 +111,7 @@ public class ProgressService {
     }
 
     private boolean isComplete() {
-        return progressRef.get().getStatus() == CheckProgressStatus.END && progressRef.get().getEndTime() != null;
+        return progressRef.get().getStatus() == Constants.PROCESS_STATUS_END && progressRef.get().getEndTime() != null;
     }
 
     /**
@@ -126,7 +128,7 @@ public class ProgressService {
         return (v) -> {
             final LocalDateTime now = LocalDateTime.now();
             return v.setTableCount(tableCount).setMode(checkEnvironment.getCheckMode()).setStartTime(now)
-                    .setCurrentTime(now).setStatus(CheckProgressStatus.START);
+                    .setCurrentTime(now).setStatus(Constants.PROCESS_STATUS_START);
         };
     }
 
@@ -141,9 +143,9 @@ public class ProgressService {
             process.setCurrentTime(now);
             if (completeCount == process.getTableCount()) {
                 process.setEndTime(now);
-                process.setStatus(CheckProgressStatus.END);
+                process.setStatus(Constants.PROCESS_STATUS_END);
             } else {
-                process.setStatus(CheckProgressStatus.PROGRESS);
+                process.setStatus(Constants.PROCESS_STATUS_RUNNING);
             }
             return process;
         };
@@ -172,14 +174,5 @@ public class ProgressService {
 
     public void resetProgress(int tableCount) {
         initProgress(tableCount);
-    }
-
-    /**
-     * Verify progress status constant
-     */
-    interface CheckProgressStatus {
-        short START = 1;
-        short PROGRESS = 2;
-        short END = 3;
     }
 }

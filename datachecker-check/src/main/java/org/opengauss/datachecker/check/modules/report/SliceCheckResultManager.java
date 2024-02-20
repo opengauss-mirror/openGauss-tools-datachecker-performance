@@ -190,8 +190,11 @@ public class SliceCheckResultManager {
         if (isCsvMode && immediately) {
             String csvDataPath = ConfigCache.getCsvData();
             File file = new File(csvDataPath, checkDiffResult.getFileName());
-            file.renameTo(new File(csvDataPath, checkDiffResult.getFileName() + ".check"));
-            log.debug("rename csv sharding completed [{}]", checkDiffResult.getFileName());
+            if (file.renameTo(new File(csvDataPath, checkDiffResult.getFileName() + ".check"))) {
+                log.info("rename csv sharding completed [{}]", checkDiffResult.getFileName());
+            } else {
+                log.warn("rename csv sharding false [{}]", checkDiffResult.getFileName());
+            }
         }
     }
 
@@ -203,7 +206,10 @@ public class SliceCheckResultManager {
                       .collect(Collectors.toList());
     }
 
-    private void refreshSummary() {
+    /**
+     * refresg summary log
+     */
+    public void refreshSummary() {
         CheckSummary checkSummary = new CheckSummary();
         int completeCount = successTableCount + failedTableCount;
         checkSummary.setMode(ConfigCache.getCheckMode());
@@ -223,7 +229,7 @@ public class SliceCheckResultManager {
         CheckFailed failed = new CheckFailed();
         CheckDiffResult resultCommon = tableFiledList.get(0);
         BeanUtils.copyProperties(resultCommon, failed);
-        StringBuffer hasMore = new StringBuffer();
+        StringBuilder hasMore = new StringBuilder();
         Set<String> insertKeySet = fetchInsertDiffKeys.fetchKey(tableFiledList);
         Set<String> deleteKeySet = fetchDeleteDiffKeys.fetchKey(tableFiledList);
         Set<String> updateKeySet = fetchUpdateDiffKeys.fetchKey(tableFiledList);
@@ -315,7 +321,7 @@ public class SliceCheckResultManager {
                          .sum();
     }
 
-    private Set<String> getKeyList(Set<String> keySet, StringBuffer hasMore, String message) {
+    private Set<String> getKeyList(Set<String> keySet, StringBuilder hasMore, String message) {
         if (Objects.isNull(keySet) || keySet.size() <= MAX_DISPLAY_SIZE) {
             return keySet;
         }

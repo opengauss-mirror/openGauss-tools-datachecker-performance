@@ -15,6 +15,7 @@
 
 package org.opengauss.datachecker.check.load;
 
+import org.opengauss.datachecker.check.modules.report.SliceCheckResultManager;
 import org.opengauss.datachecker.check.modules.report.SliceProgressService;
 import org.opengauss.datachecker.check.service.CheckService;
 import org.opengauss.datachecker.check.event.KafkaTopicDeleteProvider;
@@ -60,6 +61,8 @@ public class CheckStartLoader extends AbstractCheckLoader {
     private SliceProgressService sliceProgressService;
     @Resource
     private CheckTableStructureService checkTableStructureService;
+    @Resource
+    private SliceCheckResultManager sliceCheckResultManager;
 
     @Override
     public void load(CheckEnvironment checkEnvironment) {
@@ -86,6 +89,8 @@ public class CheckStartLoader extends AbstractCheckLoader {
         } else {
             log.info("check task execute success ,cost time =0");
         }
+        sliceProgressService.refreshCheckCompletedProgress();
+        sliceCheckResultManager.refreshSummary();
         shutdown(FULL_CHECK_COMPLETED);
     }
 }

@@ -311,48 +311,50 @@ public class DataExtractServiceImpl implements DataExtractService {
                 }
             }
             ConfigCache.put(ConfigConstants.PROCESS_NO, processNo);
-            dynamicThreadPoolManager.dynamicThreadPoolMonitor();
-            sliceRegister.startCheckPointMonitor();
             List<ExtractTask> taskList = taskReference.get();
             if (CollectionUtils.isEmpty(taskList)) {
                 return;
             }
+            dynamicThreadPoolManager.dynamicThreadPoolMonitor();
+            sliceRegister.startCheckPointMonitor();
             Map<String, Integer> tableCheckStatus = checkingFeignClient.queryTableCheckStatus();
             int maximumTopicSize = ConfigCache.getIntValue(ConfigConstants.MAXIMUM_TOPIC_SIZE);
             tableRegisterCheckPoint(taskList);
-            taskList.forEach(task -> {
-                try {
-                    log.info("Perform data extraction tasks {}", task.getTaskName());
-                    final String tableName = task.getTableName();
-                    if (!tableCheckStatus.containsKey(tableName) || tableCheckStatus.get(tableName) == -1) {
-                        log.warn("Abnormal table[{}] status, ignoring the current table data extraction task",
-                            tableName);
-                        return;
-                    }
-                    ThreadUtil.requestConflictingSleeping();
-                    registerTopic(task);
-                    while (!TopicCache.canCreateTopic(maximumTopicSize)) {
-                        ThreadUtil.sleep(1000);
-                    }
-                    Topic topic = task.getTopic();
-                    Endpoint endpoint = extractProperties.getEndpoint();
-                    log.info("try to create [{}] [{}]", topic.getTopicName(endpoint), topic.getPtnNum());
-                    kafkaAdminService.createTopic(topic.getTopicName(endpoint), topic.getPtnNum());
-                    TopicCache.add(topic);
-                    while (!tableCheckPointCache.getAll()
-                                                .containsKey(tableName)) {
-                        ThreadUtil.sleepHalfSecond();
-                    }
-                    List<Object> summarizedCheckPoint = tableCheckPointCache.get(tableName);
-                    log.debug("table [{}] summarized check-point-list : {}", tableName, summarizedCheckPoint);
-                    List<SliceVo> sliceVoList =
-                        buildSliceByTask(summarizedCheckPoint, task.getTableMetadata(), topic, endpoint);
-                    log.info("table [{}] have {} slice to check", tableName, sliceVoList.size());
-                    addSliceProcessor(sliceVoList);
-                } catch (Exception ex) {
-                    log.error("async exec extract tables error {}:{} ", task.getTableName(), ex.getMessage(), ex);
-                }
-            });
+            taskList.forEach(task -> execExtractTableTask(tableCheckStatus, maximumTopicSize, task));
+        }
+    }
+
+    private void execExtractTableTask(Map<String, Integer> tableCheckStatus, int maximumTopicSize, ExtractTask task) {
+        try {
+            log.info("Perform data extraction tasks {}", task.getTaskName());
+            final String tableName = task.getTableName();
+            if (!tableCheckStatus.containsKey(tableName) || tableCheckStatus.get(tableName) == -1) {
+                log.warn("Abnormal table[{}] status, ignoring the current table data extraction task",
+                    tableName);
+                return;
+            }
+            ThreadUtil.requestConflictingSleeping();
+            registerTopic(task);
+            while (!TopicCache.canCreateTopic(maximumTopicSize)) {
+                ThreadUtil.sleep(1000);
+            }
+            Topic topic = task.getTopic();
+            Endpoint endpoint = extractProperties.getEndpoint();
+            log.info("try to create [{}] [{}]", topic.getTopicName(endpoint), topic.getPtnNum());
+            kafkaAdminService.createTopic(topic.getTopicName(endpoint), topic.getPtnNum());
+            TopicCache.add(topic);
+            while (!tableCheckPointCache.getAll()
+                                        .containsKey(tableName)) {
+                ThreadUtil.sleepHalfSecond();
+            }
+            List<Object> summarizedCheckPoint = tableCheckPointCache.get(tableName);
+            log.debug("table [{}] summarized check-point-list : {}", tableName, summarizedCheckPoint);
+            List<SliceVo> sliceVoList =
+                buildSliceByTask(summarizedCheckPoint, task.getTableMetadata(), topic, endpoint);
+            log.info("table [{}] have {} slice to check", tableName, sliceVoList.size());
+            addSliceProcessor(sliceVoList);
+        } catch (Exception ex) {
+            log.error("async exec extract tables error {}:{} ", task.getTableName(), ex.getMessage(), ex);
         }
     }
 
@@ -402,10 +404,6 @@ public class DataExtractServiceImpl implements DataExtractService {
         return summarizedCheckPoint.size() <= 2 || getQueryDop() == 1 || tableMetadata.getConditionLimit() != null;
     }
 
-    private int getMaximumTableSliceSize() {
-        return ConfigCache.getIntValue(ConfigConstants.MAXIMUM_TABLE_SLICE_SIZE);
-    }
-
     private int getQueryDop() {
         return ConfigCache.getIntValue(ConfigConstants.QUERY_DOP);
     }
@@ -435,11 +433,6 @@ public class DataExtractServiceImpl implements DataExtractService {
             preOffset = offset;
         }
         return sliceTaskList;
-    }
-
-    private Object[][] getTaskOffset(CheckPoint checkPoint, TableMetadata metadata) {
-        AutoSliceQueryStatement sliceStatement = factory.createSliceQueryStatement(checkPoint, metadata);
-        return sliceStatement.builderSlice(metadata, ConfigCache.getIntValue(ConfigConstants.MAXIMUM_TABLE_SLICE_SIZE));
     }
 
     private List<Object> getCheckPoint(CheckPoint checkPoint, TableMetadata metadata) {

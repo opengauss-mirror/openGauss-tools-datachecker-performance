@@ -22,12 +22,12 @@ import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.check.client.FeignClientService;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
-import org.opengauss.datachecker.common.exception.CheckMetaDataException;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,8 +49,9 @@ public class EndpointMetaDataManager {
     private static final List<String> MISS_TABLE_LIST = new ArrayList<>();
     private static final Map<String, TableMetadata> SOURCE_METADATA = new HashMap<>();
     private static final Map<String, TableMetadata> SINK_METADATA = new HashMap<>();
-    private static final Map<Endpoint, Integer> REAL_TABLE_COUNT = new HashMap<>();
+    private static final Map<Endpoint, Integer> REAL_TABLE_COUNT = new EnumMap<>(Endpoint.class);
 
+    private Map<Endpoint, Integer> loadMetadataCompleted = new EnumMap<>(Endpoint.class);
     private final EndpointStatusManager endpointStatusManager;
     private final FeignClientService feignClientService;
 
@@ -72,10 +73,8 @@ public class EndpointMetaDataManager {
                 MISS_TABLE_LIST.addAll(missTables);
             }
         } else {
-            log.error("the metadata information is empty, and the verification is terminated abnormally,"
+            log.warn("the metadata information is empty, and the verification is terminated abnormally,"
                 + "sourceMetadata={},sinkMetadata={}", SOURCE_METADATA.size(), SINK_METADATA.size());
-            throw new CheckMetaDataException(
-                "the metadata information is empty, and the verification is terminated abnormally");
         }
     }
 
@@ -89,7 +88,7 @@ public class EndpointMetaDataManager {
      * @return metadata query status
      */
     public boolean isMetaLoading() {
-        if (MapUtils.isEmpty(SOURCE_METADATA)) {
+        if (loadMetadataCompleted.containsKey(Endpoint.SOURCE) && MapUtils.isEmpty(SOURCE_METADATA)) {
             log.debug("loading {} metadata", Endpoint.SOURCE);
             Map<String, TableMetadata> tableMetadataMap = feignClientService.queryMetaDataOfSchema(Endpoint.SOURCE);
             if (MapUtils.isNotEmpty(tableMetadataMap)) {
@@ -97,7 +96,7 @@ public class EndpointMetaDataManager {
             }
             log.debug("loading {} metadata end ", Endpoint.SOURCE);
         }
-        if (MapUtils.isEmpty(SINK_METADATA)) {
+        if (loadMetadataCompleted.containsKey(Endpoint.SINK) && MapUtils.isEmpty(SINK_METADATA)) {
             log.debug("loading {} metadata", Endpoint.SINK);
             Map<String, TableMetadata> tableMetadataMap = feignClientService.queryMetaDataOfSchema(Endpoint.SINK);
             if (MapUtils.isNotEmpty(tableMetadataMap)) {
@@ -105,7 +104,8 @@ public class EndpointMetaDataManager {
             }
             log.debug("loading {} metadata end ", Endpoint.SINK);
         }
-        return SOURCE_METADATA.isEmpty() || SINK_METADATA.isEmpty();
+        return !(loadMetadataCompleted.containsKey(Endpoint.SOURCE) && loadMetadataCompleted.containsKey(
+            Endpoint.SINK));
     }
 
     private List<String> compareAndFilterMissTables(List<String> sourceTables, List<String> sinkTables) {
@@ -210,7 +210,23 @@ public class EndpointMetaDataManager {
         return feignClientService.queryIncrementMetaData(endpoint, tableName);
     }
 
+    /**
+     * set endpoint is no table
+     *
+     * @param endpoint endpoint
+     * @return boolean
+     */
     public boolean isCheckTableEmpty(Endpoint endpoint) {
         return feignClientService.isCheckTableEmpty(endpoint, true);
+    }
+
+    /**
+     * refresh endpoint load metadata completed
+     *
+     * @param endpoint endpoint
+     */
+    public void refreshLoadMetadataStatus(Endpoint endpoint) {
+        log.info("refresh {} load metadata completed", endpoint);
+        loadMetadataCompleted.put(endpoint, 1);
     }
 }

@@ -15,7 +15,6 @@
 
 package org.opengauss.datachecker.check.service.impl;
 
-import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.check.cache.TableStatusRegister;
@@ -23,14 +22,11 @@ import org.opengauss.datachecker.check.cache.TopicRegister;
 import org.opengauss.datachecker.check.client.FeignClientService;
 import org.opengauss.datachecker.check.load.CheckEnvironment;
 import org.opengauss.datachecker.check.modules.check.DataCheckService;
-import org.opengauss.datachecker.check.modules.check.ExportCheckResult;
 import org.opengauss.datachecker.check.service.CheckService;
-import org.opengauss.datachecker.check.service.CheckTableStructureService;
 import org.opengauss.datachecker.check.service.EndpointMetaDataManager;
 import org.opengauss.datachecker.check.event.KafkaTopicDeleteProvider;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
-import org.opengauss.datachecker.common.entry.check.CheckProgress;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.extract.ExtractTask;
@@ -42,7 +38,6 @@ import org.opengauss.datachecker.common.util.JsonObjectUtil;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
@@ -50,10 +45,8 @@ import javax.annotation.Resource;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.IntStream;
 
 /**
  * @author ：wangchao
@@ -81,12 +74,7 @@ public class CheckServiceImpl implements CheckService {
      * Process signature
      */
     private static final AtomicReference<String> PROCESS_SIGNATURE = new AtomicReference<>();
-    private static final AtomicReference<CheckProgress> CHECK_PROGRESS_REFERENCE = new AtomicReference<>();
 
-    /**
-     * Verify polling thread name
-     */
-    private static final String SELF_CHECK_POLL_THREAD_NAME = "check-polling-thread";
     private static final String START_MESSAGE = "the execution time of %s process is %s";
 
     @Autowired
@@ -99,12 +87,8 @@ public class CheckServiceImpl implements CheckService {
     private DataCheckService dataCheckService;
     @Autowired
     private EndpointMetaDataManager endpointMetaDataManager;
-    @Autowired
-    private CheckTableStructureService checkTableStructureService;
     @Resource
     private CheckEnvironment checkEnvironment;
-    @Value("${data.check.auto-clean-environment}")
-    private boolean isAutoCleanEnvironment = true;
     @Resource
     private KafkaTopicDeleteProvider kafkaTopicDeleteProvider;
 
@@ -123,7 +107,7 @@ public class CheckServiceImpl implements CheckService {
             try {
                 startCheckFullMode();
                 // Wait for the task construction to complete, and start the task polling thread
-                startCheckPollingThread();
+                checkTableWithSyncExtracting();
             } catch (CheckingException ex) {
                 cleanCheck();
                 throw new CheckingException(ex.getMessage());
@@ -169,30 +153,7 @@ public class CheckServiceImpl implements CheckService {
         PROCESS_SIGNATURE.set(processNo);
     }
 
-    /**
-     * Data verification polling thread
-     * It is used to monitor the completion status of data extraction tasks in real time.
-     * When the status of a data extraction task changes to complete, start a data verification independent thread.
-     * And start the current task to verify the data.
-     */
-    public void startCheckPollingThread() {
-        checkTableWithSyncExtracting();
-    }
-
-    private void checkTableWithExtractEnd() {
-        if (tableStatusRegister.isExtractCompleted() && CHECKING.get()) {
-            log.info("check polling processNo={}, extract task complete. start checking....", PROCESS_SIGNATURE.get());
-            CHECKING.set(false);
-            final List<String> checkTableList = endpointMetaDataManager.getCheckTableList();
-            if (CollectionUtils.isEmpty(checkTableList)) {
-                log.info("");
-            }
-            checkTableList.forEach(this::startCheckTableThread);
-        }
-    }
-
     private void checkTableWithSyncExtracting() {
-
         if (!tableStatusRegister.isCheckCompleted()) {
             String tableName = tableStatusRegister.completedTablePoll();
             if (StringUtils.isNotEmpty(tableName)) {
@@ -215,33 +176,12 @@ public class CheckServiceImpl implements CheckService {
         }
         String process = getCurrentCheckProcess();
         tableStatusRegister.initPartitionsStatus(tableName, topic.getPtnNum());
-        IntStream.range(0, topic.getPtnNum()).forEach(idxPartition -> {
-            // Verify the data according to the table name and Kafka partition
+        // Verify the data according to the table name and Kafka partition
+        int topicPtnNum = topic.getPtnNum();
+        for (int idxPartition = 0; idxPartition < topicPtnNum; idxPartition++) {
             dataCheckService.checkTableData(process, tableName, idxPartition, topic.getPtnNum());
-        });
+        }
         kafkaTopicDeleteProvider.addTableToDropTopic(tableName);
-    }
-
-    private void completeProgressBar(ScheduledExecutorService scheduledExecutor) {
-        CheckProgress process = CHECK_PROGRESS_REFERENCE.get();
-        final CheckProgress newProcess = tableStatusRegister.extractProgress();
-        if (!Objects.equals(process, newProcess)) {
-            CHECK_PROGRESS_REFERENCE.set(newProcess);
-            log.info("The verification status :{}", CHECK_PROGRESS_REFERENCE.get());
-        }
-        // The current task completes the verification and resets the task status
-        if (tableStatusRegister.isCheckCompleted()) {
-            log.info("The verification is completed, reset status :{}", tableStatusRegister.get());
-            log.debug("The verification is completed, reset check partitions status: {}",
-                tableStatusRegister.getTablePartitionsStatusCache());
-            if (isAutoCleanEnvironment) {
-                log.info("completes the verification and resets the check environment");
-                cleanCheck();
-                feignClientService.cleanTask(Endpoint.SOURCE);
-                feignClientService.cleanTask(Endpoint.SINK);
-            }
-            scheduledExecutor.shutdownNow();
-        }
     }
 
     /**
