@@ -164,4 +164,16 @@ public class FileUtils {
         }
         return StringUtils.EMPTY;
     }
+
+    /**
+     * rename csv data file to filename.csv.check
+     *
+     * @param csvDataPath csv data path
+     * @param oldFileName csv file name
+     * @return rename result boolean
+     */
+    public static boolean renameTo(String csvDataPath, String oldFileName) {
+        File file = new File(csvDataPath, oldFileName);
+        return file.exists() && file.renameTo(new File(csvDataPath, oldFileName + ".check"));
+    }
 }

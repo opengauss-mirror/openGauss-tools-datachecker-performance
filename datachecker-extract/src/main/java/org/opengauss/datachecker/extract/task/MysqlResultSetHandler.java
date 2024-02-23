@@ -21,10 +21,18 @@ import org.opengauss.datachecker.common.util.HexUtil;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.time.format.DateTimeFormatter;
+import java.util.Calendar;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.TimeZone;
 import java.util.concurrent.ConcurrentHashMap;
+
+import com.mysql.cj.result.Field;
+import org.opengauss.datachecker.extract.task.functional.MysqlTypeHandler;
+import org.springframework.lang.NonNull;
 
 /**
  * MysqlResultSetHandler
@@ -41,6 +49,7 @@ public class MysqlResultSetHandler extends ResultSetHandler {
     private static final List<MysqlType> doubleTypeList = List.of(MysqlType.DOUBLE, MysqlType.DOUBLE_UNSIGNED);
     private static final List<MysqlType> decimalTypeList = List.of(MysqlType.DECIMAL, MysqlType.DECIMAL_UNSIGNED);
     private final Map<MysqlType, TypeHandler> typeHandlers = new ConcurrentHashMap<>();
+    private final Map<MysqlType, MysqlTypeHandler> mysqlTypeHandlers = new ConcurrentHashMap<>();
 
     {
         TypeHandler binaryToString = (rs, columnLabel) -> bytesToString(rs.getBytes(columnLabel));
@@ -60,10 +69,11 @@ public class MysqlResultSetHandler extends ResultSetHandler {
 
         // date time timestamp
         typeHandlers.put(MysqlType.DATE, this::getDateFormat);
-        typeHandlers.put(MysqlType.DATETIME, this::getTimestampFormat);
         typeHandlers.put(MysqlType.TIME, this::getTimeFormat);
-        typeHandlers.put(MysqlType.TIMESTAMP, this::getTimestampFormat);
         typeHandlers.put(MysqlType.YEAR, this::getYearFormat);
+
+        mysqlTypeHandlers.put(MysqlType.TIMESTAMP, this::getMysqlTimestampFormat);
+        mysqlTypeHandlers.put(MysqlType.DATETIME, this::getMysqlTimestampFormat);
     }
 
     private String bitToString(ResultSet resultSet, String columnLabel, int precision) throws SQLException {
@@ -82,6 +92,7 @@ public class MysqlResultSetHandler extends ResultSetHandler {
         String columnLabel = rsmd.getColumnLabel(columnIdx);
         String columnTypeName = rsmd.getColumnTypeName(columnIdx);
         final MysqlType mysqlType = MysqlType.getByName(columnTypeName);
+        Field[] fields = getResultSetFields(rsmd);
         if (MysqlType.BIT.equals(mysqlType)) {
             int precision = rsmd.getPrecision(columnIdx);
             return bitToString(resultSet, columnLabel, precision);
@@ -112,10 +123,28 @@ public class MysqlResultSetHandler extends ResultSetHandler {
         } else if (typeHandlers.containsKey(mysqlType)) {
             return typeHandlers.get(mysqlType)
                                .convert(resultSet, columnLabel);
+        } else if (mysqlTypeHandlers.containsKey(mysqlType)) {
+            return mysqlTypeHandlers.get(mysqlType)
+                                    .convert(resultSet, columnLabel, fields[columnIdx - 1]);
         } else {
             Object object = resultSet.getObject(columnLabel);
             return Objects.isNull(object) ? NULL : object.toString();
         }
+    }
+
+    private Field[] getResultSetFields(ResultSetMetaData rsmd) {
+        if (rsmd instanceof com.mysql.cj.jdbc.result.ResultSetMetaData) {
+            return ((com.mysql.cj.jdbc.result.ResultSetMetaData) rsmd).getFields();
+        }
+        return new Field[0];
+    }
+
+    private String getMysqlTimestampFormat(@NonNull ResultSet resultSet, String columnLabel,
+        com.mysql.cj.result.Field field) throws SQLException {
+        final Timestamp timestamp =
+            resultSet.getTimestamp(columnLabel, Calendar.getInstance(TimeZone.getTimeZone("GMT+8")));
+        DateTimeFormatter dateTimeFormatter = TIMESTAMP_MAPPER.get(field.getDecimals());
+        return Objects.nonNull(timestamp) ? dateTimeFormatter.format(timestamp.toLocalDateTime()) : NULL;
     }
 
     /**

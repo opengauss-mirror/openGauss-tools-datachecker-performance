@@ -349,15 +349,16 @@ public class FeignClientService {
         getClient(Endpoint.SINK).enableCsvExtractService();
     }
 
-    public int fetchCheckTableCount() {
-        int source = fetchCheckTableCount(Endpoint.SOURCE);
-        int sink = fetchCheckTableCount(Endpoint.SINK);
-        return Math.max(source, sink);
-    }
-
-    public int fetchCheckTableCount(Endpoint endpoint) {
+    /**
+     * fetchCsvCheckTableCount
+     * source table count
+     *
+     * @param endpoint endpoint
+     * @return table count
+     */
+    public int fetchCsvCheckTableCount(Endpoint endpoint) {
         try {
-            Result<Integer> result = getClient(endpoint).fetchCheckTableCount();
+            Result<Integer> result = getClient(endpoint).fetchCsvCheckTableCount();
             if (result.isSuccess()) {
                 return result.getData();
             } else {

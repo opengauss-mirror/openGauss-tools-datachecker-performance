@@ -21,15 +21,15 @@ import org.opengauss.datachecker.check.modules.check.CheckDiffResult;
 import org.opengauss.datachecker.check.service.TaskRegisterCenter;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
+import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.extract.SliceExtend;
 import org.opengauss.datachecker.common.entry.extract.SliceVo;
 import org.opengauss.datachecker.common.service.DynamicThreadPoolManager;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.Resource;
-
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.concurrent.ThreadPoolExecutor;
 
 import static org.opengauss.datachecker.common.constant.DynamicTpConstant.CHECK_EXECUTOR;
@@ -67,7 +67,8 @@ public class SliceCheckEventHandler {
      */
     public void handle(SliceCheckEvent checkEvent) {
         if (checkTableStructure(checkEvent)) {
-            log.info("slice check event {} is dispatched, and checked level=[isTableLevel={}]", checkEvent.getCheckName(),checkEvent.isTableLevel());
+            log.info("slice check event {} is dispatched, and checked level=[isTableLevel={}]",
+                checkEvent.getCheckName(), checkEvent.isTableLevel());
             if (checkEvent.isTableLevel()) {
                 executor.submit(new TableCheckWorker(checkEvent, sliceCheckContext));
             } else {
@@ -79,7 +80,8 @@ public class SliceCheckEventHandler {
                           .getTableHash(), checkEvent.getSink()
                                                      .getTableHash());
             handleTableStructureDiff(checkEvent);
-            registerCenter.refreshCheckedTableCompleted(checkEvent.getSlice().getTable());
+            registerCenter.refreshCheckedTableCompleted(checkEvent.getSlice()
+                                                                  .getTable());
         }
     }
 
@@ -112,5 +114,32 @@ public class SliceCheckEventHandler {
         SliceExtend source = checkEvent.getSource();
         SliceExtend sink = checkEvent.getSink();
         return source.getTableHash() == sink.getTableHash();
+    }
+
+    /**
+     * handleIgnoreTable
+     *
+     * @param slice  slice
+     * @param source source
+     * @param sink   sink
+     */
+    public void handleIgnoreTable(SliceVo slice, SliceExtend source, SliceExtend sink) {
+        sliceCheckContext.refreshSliceCheckProgress(slice, 0);
+        CheckDiffResultBuilder builder = CheckDiffResultBuilder.builder();
+        Endpoint existEndpoint = Objects.nonNull(source) && Objects.isNull(sink) ? Endpoint.SOURCE : Endpoint.SINK;
+        builder.checkMode(ConfigCache.getCheckMode())
+               .process(ConfigCache.getValue(ConfigConstants.PROCESS_NO))
+               .schema(slice.getSchema())
+               .table(slice.getTable())
+               .sno(slice.getNo())
+               .startTime(LocalDateTime.now())
+               .endTime(LocalDateTime.now())
+               .isTableStructureEquals(false)
+               .isExistTableMiss(true, existEndpoint)
+               .rowCount(0)
+               .error("table miss");
+        CheckDiffResult result = builder.build();
+        sliceCheckContext.addTableStructureDiffResult(slice, result);
+        registerCenter.refreshCheckedTableCompleted(slice.getTable());
     }
 }

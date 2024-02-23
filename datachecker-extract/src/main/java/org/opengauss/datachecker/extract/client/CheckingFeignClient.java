@@ -145,4 +145,15 @@ public interface CheckingFeignClient {
      */
     @PostMapping("/load/metadata/completed")
     void refreshLoadMetadataCompleted(@RequestParam("endpoint") Endpoint endpoint);
+
+    /**
+     * notifyCheckIgnoreTable
+     *
+     * @param endpoint endpoint
+     * @param table    table
+     * @param reason   reason
+     */
+    @PostMapping("/notify/check/csv/ignore")
+    void notifyCheckIgnoreTable(@RequestParam("endpoint") Endpoint endpoint, @RequestParam("table") String table,
+        @RequestParam("reason") String reason);
 }

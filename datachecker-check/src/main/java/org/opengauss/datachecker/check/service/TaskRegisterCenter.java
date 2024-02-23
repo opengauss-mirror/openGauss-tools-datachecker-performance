@@ -18,18 +18,26 @@ package org.opengauss.datachecker.check.service;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.check.slice.SliceCheckEvent;
 import org.opengauss.datachecker.check.slice.SliceCheckEventHandler;
+import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.extract.SliceExtend;
 import org.opengauss.datachecker.common.entry.extract.SliceVo;
+import org.opengauss.datachecker.common.util.FileUtils;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.MapUtils;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
 
 /**
  * TaskRegisterCenter
@@ -41,17 +49,20 @@ import java.util.concurrent.locks.ReentrantLock;
 @SuppressWarnings("AlibabaConstantFieldShouldBeUpperCase")
 @Component
 public class TaskRegisterCenter {
-    private static final Logger log = LogUtils.getLogger();
     protected static final AtomicInteger sliceTotalCount = new AtomicInteger();
     protected static final AtomicInteger tableCount = new AtomicInteger();
-
     protected static final Map<String, SliceVo> center = new ConcurrentHashMap<>();
     protected static final Map<String, Integer> sliceTableCounter = new ConcurrentHashMap<>();
     protected static final Map<String, Map<Endpoint, SliceExtend>> sliceExtendMap = new ConcurrentHashMap<>();
-    private static final int status_updated_all = 3;
+
+    private static final Logger log = LogUtils.getLogger();
+    private static final int STATUS_UPDATED_ALL = 3;
+
     private final ReentrantLock lock = new ReentrantLock();
     @Resource
     private SliceCheckEventHandler sliceCheckEventHandler;
+    private Map<String, String> sourceIgnoreMap = new HashMap<>();
+    private Map<String, String> sinkIgnoreMap = new HashMap<>();
 
     /**
      * register slice info to register center
@@ -105,7 +116,7 @@ public class TaskRegisterCenter {
                 Endpoint endpoint = sliceExt.getEndpoint();
                 MapUtils.put(sliceExtendMap, sliceName, endpoint, sliceExt);
                 log.info("{} update slice [{}] status [{}->{}]", endpoint, sliceName, oldStatus, curStatus);
-                if (curStatus == status_updated_all) {
+                if (curStatus == STATUS_UPDATED_ALL) {
                     notifySliceCheckHandle(slice);
                 }
             }
@@ -122,12 +133,47 @@ public class TaskRegisterCenter {
         remove(slice);
     }
 
+    private void notifyIgnoreSliceCheckHandle(String table) {
+        removeIgnoreTables(table);
+        List<Entry<String, SliceVo>> tableSliceList = center.entrySet()
+                                                            .stream()
+                                                            .filter(entry -> entry.getValue()
+                                                                                  .getTable()
+                                                                                  .equals(table))
+                                                            .collect(Collectors.toList());
+        Optional.of(tableSliceList)
+                .ifPresent(list -> {
+                    Entry<String, SliceVo> firstSlice = list.get(0);
+                    String sliceName = firstSlice.getValue()
+                                                 .getName();
+                    SliceExtend source = MapUtils.get(sliceExtendMap, sliceName, Endpoint.SOURCE);
+                    SliceExtend sink = MapUtils.get(sliceExtendMap, sliceName, Endpoint.SINK);
+                    sliceCheckEventHandler.handleIgnoreTable(firstSlice.getValue(), source, sink);
+                    String csvDataPath = ConfigCache.getCsvData();
+                    list.forEach(entry -> {
+                        if (FileUtils.renameTo(csvDataPath, entry.getKey())) {
+                            log.debug("rename csv sharding completed [{}] by {}", entry.getKey(), "table miss");
+                        }
+                        remove(entry.getKey());
+                    });
+                });
+    }
+
+    /**
+     * remove center and sliceExtend cache
+     *
+     * @param sliceVo sliceVo
+     */
     public void remove(SliceVo sliceVo) {
+        remove(sliceVo.getName());
+    }
+
+    private void remove(String sliceName) {
         lock.lock();
         try {
-            center.remove(sliceVo.getName());
-            sliceExtendMap.remove(sliceVo.getName());
-            log.info("drop slice [{}] due to had notified , release [{}]", sliceVo.getName(), center.size());
+            center.remove(sliceName);
+            sliceExtendMap.remove(sliceName);
+            log.info("drop slice [{}] due to had notified , release [{}]", sliceName, center.size());
         } finally {
             lock.unlock();
         }
@@ -149,6 +195,18 @@ public class TaskRegisterCenter {
      * @return boolean true | false
      */
     public boolean checkCompletedAll(int tableCount) {
+        // 处理csv场景已经忽略的表
+        if (!(sourceIgnoreMap.isEmpty() && sinkIgnoreMap.isEmpty())) {
+            sliceTableCounter.entrySet()
+                             .stream()
+                             .filter(tableEntry -> tableEntry.getValue() > 0 && (
+                                 sourceIgnoreMap.containsKey(tableEntry.getKey()) || sinkIgnoreMap.containsKey(
+                                     tableEntry.getKey())))
+                             .forEach(ignoreTable -> {
+                                 notifyIgnoreSliceCheckHandle(ignoreTable.getKey());
+                                 log.warn("ignore table {} ===add ignore table to result===", ignoreTable.getKey());
+                             });
+        }
         return sliceTableCounter.values()
                                 .stream()
                                 .allMatch(count -> count == 0) && sliceTableCounter.size() == tableCount;
@@ -175,6 +233,38 @@ public class TaskRegisterCenter {
             return tableReleaseSize == 0;
         } finally {
             lock.unlock();
+        }
+    }
+
+    /**
+     * addCheckIgnoreTable
+     *
+     * @param endpoint endpoint
+     * @param table    table
+     * @param reason   reason
+     */
+    public void addCheckIgnoreTable(Endpoint endpoint, String table, String reason) {
+        if (Objects.equals(endpoint, Endpoint.SOURCE)) {
+            sourceIgnoreMap.put(table, reason);
+        } else {
+            sinkIgnoreMap.put(table, reason);
+        }
+        refreshIgnoreTables(table);
+    }
+
+    private void refreshIgnoreTables(String table) {
+        if (sourceIgnoreMap.containsKey(table) && sinkIgnoreMap.containsKey(table)) {
+            sourceIgnoreMap.remove(table);
+            sinkIgnoreMap.remove(table);
+        }
+    }
+
+    private void removeIgnoreTables(String table) {
+        if (sourceIgnoreMap.containsKey(table)) {
+            sourceIgnoreMap.remove(table);
+        }
+        if (sinkIgnoreMap.containsKey(table)) {
+            sinkIgnoreMap.remove(table);
         }
     }
 }

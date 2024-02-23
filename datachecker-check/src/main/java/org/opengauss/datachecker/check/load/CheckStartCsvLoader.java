@@ -22,6 +22,7 @@ import org.opengauss.datachecker.check.service.CsvProcessManagement;
 import org.opengauss.datachecker.check.service.TaskRegisterCenter;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
+import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.util.SpringUtil;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.springframework.core.annotation.Order;
@@ -55,7 +56,7 @@ public class CheckStartCsvLoader extends AbstractCheckLoader {
         if (Objects.equals(CheckMode.CSV, ConfigCache.getCheckMode())) {
             log.info("start data check csv");
             sliceProgressService.startProgressing();
-            int count = feignClient.fetchCheckTableCount();
+            int count = feignClient.fetchCsvCheckTableCount(Endpoint.SOURCE);
             sliceProgressService.updateTotalTableCount(count);
             csvProcessManagement.startTaskDispatcher();
             feignClient.enableCsvExtractService();

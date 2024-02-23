@@ -16,6 +16,7 @@
 package org.opengauss.datachecker.extract.task;
 
 import org.apache.logging.log4j.Logger;
+import org.opengauss.datachecker.common.util.DateTimeFormatterMap;
 import org.opengauss.datachecker.common.util.HexUtil;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.lang.NonNull;
@@ -56,6 +57,11 @@ public abstract class ResultSetHandler {
     protected static final DateTimeFormatter TIMESTAMP_NANOS =
         DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS");
     protected static final DateTimeFormatter TIMESTAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+    /**
+     * TIMESTAMP_MAPPER {@link DateTimeFormatterMap}
+     */
+    protected static final DateTimeFormatterMap TIMESTAMP_MAPPER = new DateTimeFormatterMap();
     protected static final String EMPTY = "";
     protected static final String NULL = null;
 
@@ -363,7 +369,7 @@ public abstract class ResultSetHandler {
          *
          * @param resultSet   resultSet
          * @param columnLabel columnLabel
-         * @return result
+         * @return result result
          * @throws SQLException SQLException
          */
         String convert(ResultSet resultSet, String columnLabel) throws SQLException;

@@ -196,13 +196,12 @@ public class ExtractFallbackFactory implements FallbackFactory<ExtractFeignClien
         }
 
         @Override
-        public Result<Integer> fetchCheckTableCount() {
+        public Result<Integer> fetchCsvCheckTableCount() {
             return null;
         }
 
         @Override
         public void dispatcherTables(List<String> list) {
-
         }
     }
 }

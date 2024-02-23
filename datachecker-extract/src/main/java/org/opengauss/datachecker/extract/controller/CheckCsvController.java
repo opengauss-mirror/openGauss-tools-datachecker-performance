@@ -19,6 +19,7 @@ import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.web.Result;
 import org.opengauss.datachecker.extract.service.CsvManagementService;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -64,5 +65,15 @@ public class CheckCsvController {
     @PostMapping("/csv/dispatcher/tables")
     public void dispatcherTables(@RequestBody List<String> list) {
         csvManagementService.dispatcherTables(list);
+    }
+
+    /**
+     * fetch table count
+     *
+     * @return table count
+     */
+    @GetMapping("/fetch/csv/check/table/count")
+    public Result<Integer> fetchCheckTableCount() {
+        return Result.success(csvManagementService.fetchCheckTableCount());
     }
 }
