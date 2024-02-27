@@ -23,6 +23,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.util.LogUtils;
+import org.opengauss.datachecker.common.util.LongHashFunctionWrapper;
 import org.opengauss.datachecker.extract.service.MetaDataService;
 import org.opengauss.datachecker.extract.util.MetaDataUtil;
 
@@ -52,7 +53,9 @@ import static org.opengauss.datachecker.extract.debezium.DebeziumAvroHandler.Mes
 public class DebeziumAvroHandler implements DebeziumDataHandler<GenericData.Record> {
     private static final Logger log = LogUtils.getLogger();
     private String destSchema;
+    private boolean isDisplayRow;
     private MetaDataService metaDataService;
+    private LongHashFunctionWrapper hashWrapper = new LongHashFunctionWrapper();
 
     /**
      * Debezium message parsing and adding the parsing result to the {@code DebeziumDataLogs.class} result set
@@ -68,26 +71,31 @@ public class DebeziumAvroHandler implements DebeziumDataHandler<GenericData.Reco
             if (Objects.isNull(message)) {
                 return;
             }
+            String messageStr = message.toString();
+            long messageHashId = hashWrapper.hashChars(messageStr);
+            if (isDisplayRow) {
+                log.warn("Message : {},{}", messageHashId, messageStr);
+            }
             if (isTransactionMessage(message)) {
-                log.warn("transaction Message is ignored :  {}", message.toString());
+                log.warn("transaction Message is ignored :  {}", messageHashId);
                 return;
             }
             final Map<String, String> source = parseRecordData(message, AVRO_FIELD_SOURCE);
             final String table = source.get(AVRO_FIELD_TABLE);
             if (isDdlMessage(message)) {
-                log.warn("ddl Message is ignored :  {}", message.toString());
+                log.warn("ddl Message is ignored :  {}", messageHashId);
                 if (StringUtils.isNotEmpty(table)) {
                     refreshMetadataCache(table);
                 }
                 return;
             }
             if (StringUtils.isEmpty(table)) {
-                log.warn("table is empty, Message is ignored :  {}", message.toString());
+                log.warn("table is empty, Message is ignored :  {}", messageHashId);
                 return;
             }
             TableMetadata tableMetadata = metaDataService.getMetaDataOfSchemaByCache(table);
             if (tableHasNoPrimary(tableMetadata)) {
-                log.warn("table no primary ,Message is ignored :  {}", message.toString());
+                log.warn("table no primary ,Message is ignored :  {}", messageHashId);
                 return;
             }
             final Map<String, String> before = parseRecordData(message, AVRO_FIELD_BEFORE);
@@ -98,7 +106,7 @@ public class DebeziumAvroHandler implements DebeziumDataHandler<GenericData.Reco
                 queue.put(dataBean);
                 log.debug(dataBean.toString());
             } else {
-                log.trace("message schema=[{}] is not match , ignored :  {}", schema, message.toString());
+                log.trace("message schema=[{}] is not match , ignored :  {}", schema, messageHashId);
             }
         } catch (InterruptedException ex) {
             log.error("put message at the tail of this queue, waiting if necessary for space to become available.");
@@ -123,6 +131,11 @@ public class DebeziumAvroHandler implements DebeziumDataHandler<GenericData.Reco
     @Override
     public void setSchema(String schema) {
         this.destSchema = schema;
+    }
+
+    @Override
+    public void setDebeziumRowDisplay(boolean isDisplayRow) {
+        this.isDisplayRow = isDisplayRow;
     }
 
     @Override

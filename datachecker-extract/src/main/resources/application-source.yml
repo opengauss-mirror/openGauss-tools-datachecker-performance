@@ -21,6 +21,7 @@ spring:
     debezium-tables:
     debezium-serializer: AvroSerializer # StringSerializer or AvroSerializer
     debezium-avro-registry: http://localhost:8081 # avro schema registry
+    debezium-row-display: false
     debezium-time-period: 1 # Debezium incremental migration verification time period: 24 * 60 unit: Min
     # debezium-num-period: Debezium incremental migration verification is the threshold value of the number
     # of incremental change records. The default value is 1000. The threshold value should be greater than 100

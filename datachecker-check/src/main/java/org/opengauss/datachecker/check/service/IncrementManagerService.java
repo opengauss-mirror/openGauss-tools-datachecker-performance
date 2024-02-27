@@ -17,7 +17,6 @@ package org.opengauss.datachecker.check.service;
 
 import com.alibaba.fastjson.JSONException;
 import com.alibaba.fastjson.JSONObject;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Logger;
@@ -26,6 +25,7 @@ import org.opengauss.datachecker.check.config.IncrementCheckProperties;
 import org.opengauss.datachecker.check.modules.check.DataCheckService;
 import org.opengauss.datachecker.check.modules.check.ExportCheckResult;
 import org.opengauss.datachecker.check.modules.report.CheckResultManagerService;
+import org.opengauss.datachecker.check.modules.report.SliceProgressService;
 import org.opengauss.datachecker.common.entry.extract.SourceDataLog;
 import org.opengauss.datachecker.common.entry.report.CheckFailed;
 import org.opengauss.datachecker.common.exception.CheckingException;
@@ -75,6 +75,8 @@ public class IncrementManagerService {
     private static final BlockingQueue<List<SourceDataLog>> INC_LOG_QUEUE = new LinkedBlockingQueue<>();
     @Resource
     private DataCheckService dataCheckService;
+    @Resource
+    private SliceProgressService sliceProgressService;
     @Resource
     private FeignClientService feignClientService;
     @Resource
@@ -148,9 +150,10 @@ public class IncrementManagerService {
             // Collect the last verification results and build an incremental verification log
             mergeDataLogList(dataLogList, lastResults);
             if (CollectionUtils.isNotEmpty(dataLogList)) {
+                ExportCheckResult.backCheckResultDirectory();
+                sliceProgressService.startProgressing();
                 PROCESS_SIGNATURE.set(IdGenerator.nextId36());
                 checkResultManagerService.progressing(dataLogList.size());
-                ExportCheckResult.backCheckResultDirectory();
                 incrementDataLogsChecking(dataLogList);
             }
         } catch (Exception ex) {
@@ -197,6 +200,7 @@ public class IncrementManagerService {
         String processNo = PROCESS_SIGNATURE.get();
         List<Runnable> taskList = new ArrayList<>();
         log.info("check increment {} data log", processNo);
+
         ThreadPoolExecutor asyncCheckExecutor = dynamicThreadPoolManager.getExecutor(CHECK_EXECUTOR);
         dataLogList.forEach(dataLog -> {
             log.debug("increment process=[{}] , tableName=[{}], begin offset =[{}], diffSize=[{}]", processNo,

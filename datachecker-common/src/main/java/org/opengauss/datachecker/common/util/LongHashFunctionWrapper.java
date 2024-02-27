@@ -54,4 +54,14 @@ public class LongHashFunctionWrapper {
     public long hashBytes(@NonNull String input) {
         return XX_3_HASH.hashBytes(input.getBytes(Charset.defaultCharset()));
     }
+
+    /**
+     * Hash the string using the XX3 hash algorithm
+     *
+     * @param input string
+     * @return Hash value
+     */
+    public long hashChars(@NonNull String input) {
+        return XX_3_HASH.hashChars(input);
+    }
 }

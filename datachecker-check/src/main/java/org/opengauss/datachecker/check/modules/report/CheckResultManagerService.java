@@ -40,6 +40,7 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import java.io.File;
+import java.time.LocalDateTime;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -129,9 +130,11 @@ public class CheckResultManagerService implements ApplicationContextAware {
         final Set<String> updateDiffs = tableFailed.getKeyUpdateSet();
         if (CollectionUtils.isNotEmpty(updateDiffs)) {
             RepairEntry update = new RepairEntry();
-            update.setTable(tableFailed.getTable()).setSchema(tableFailed.getSchema())
+            update.setTable(tableFailed.getTable())
+                  .setSchema(tableFailed.getSchema())
                   .setFileName(tableFailed.getFileName())
-                  .setOgCompatibility(ogCompatibility).setDiffSet(updateDiffs);
+                  .setOgCompatibility(ogCompatibility)
+                  .setDiffSet(updateDiffs);
             final List<String> updateRepairs = feignClient.buildRepairStatementUpdateDml(Endpoint.SOURCE, update);
             appendLogFile(repairFile, updateRepairs);
         }
@@ -141,9 +144,11 @@ public class CheckResultManagerService implements ApplicationContextAware {
         final Set<String> insertDiffs = tableFailed.getKeyInsertSet();
         if (CollectionUtils.isNotEmpty(insertDiffs)) {
             RepairEntry insert = new RepairEntry();
-            insert.setTable(tableFailed.getTable()).setSchema(tableFailed.getSchema())
+            insert.setTable(tableFailed.getTable())
+                  .setSchema(tableFailed.getSchema())
                   .setFileName(tableFailed.getFileName())
-                  .setOgCompatibility(ogCompatibility).setDiffSet(insertDiffs);
+                  .setOgCompatibility(ogCompatibility)
+                  .setDiffSet(insertDiffs);
             final List<String> insertRepairs = feignClient.buildRepairStatementInsertDml(Endpoint.SOURCE, insert);
             appendLogFile(repairFile, insertRepairs);
         }
@@ -153,9 +158,11 @@ public class CheckResultManagerService implements ApplicationContextAware {
         final Set<String> deleteDiffs = tableFailed.getKeyDeleteSet();
         if (CollectionUtils.isNotEmpty(deleteDiffs)) {
             RepairEntry delete = new RepairEntry();
-            delete.setTable(tableFailed.getTable()).setSchema(tableFailed.getSchema())
+            delete.setTable(tableFailed.getTable())
+                  .setSchema(tableFailed.getSchema())
                   .setFileName(tableFailed.getFileName())
-                  .setOgCompatibility(ogCompatibility).setDiffSet(deleteDiffs);
+                  .setOgCompatibility(ogCompatibility)
+                  .setDiffSet(deleteDiffs);
             final List<String> deleteRepairs = feignClient.buildRepairStatementDeleteDml(Endpoint.SOURCE, delete);
             appendLogFile(repairFile, deleteRepairs);
         }
@@ -182,6 +189,7 @@ public class CheckResultManagerService implements ApplicationContextAware {
         int successTableCount = calcTableCount(successList);
         int failedTableCount = calcTableCount(failedList);
         CheckSummary checkSummary = buildCheckSummaryResult(successTableCount, failedTableCount);
+        checkSummary.setRowCount(calcRowCount(successList) + calcRowCount(failedList));
         String summaryPath = logFilePath + SUMMARY_LOG_NAME;
         FileUtils.writeFile(summaryPath, JsonObjectUtil.prettyFormatMillis(checkSummary));
     }
@@ -193,7 +201,7 @@ public class CheckResultManagerService implements ApplicationContextAware {
         checkSummary.setMode(checkEnvironment.getCheckMode());
         checkSummary.setTableCount(completeCount);
         checkSummary.setStartTime(checkProgress.getStartTime());
-        checkSummary.setEndTime(checkProgress.getEndTime());
+        checkSummary.setEndTime(LocalDateTime.now());
         checkSummary.setCost(checkProgress.getCost());
         checkSummary.setSuccessCount(successTableCount);
         checkSummary.setFailedCount(failedTableCount);
@@ -201,9 +209,11 @@ public class CheckResultManagerService implements ApplicationContextAware {
     }
 
     private List<CheckDiffResult> filterResultByResult(String resultType) {
-        List<CheckDiffResult> resultList = new LinkedList<>(
-            checkResultCache.values().stream().filter(result -> result.getResult().equals(resultType))
-                            .collect(Collectors.toList()));
+        List<CheckDiffResult> resultList = new LinkedList<>(checkResultCache.values()
+                                                                            .stream()
+                                                                            .filter(result -> result.getResult()
+                                                                                                    .equals(resultType))
+                                                                            .collect(Collectors.toList()));
         if (CheckResultConstants.RESULT_FAILED.equals(resultType)) {
             resultList.addAll(noCheckedCache.values());
         }
@@ -211,7 +221,16 @@ public class CheckResultManagerService implements ApplicationContextAware {
     }
 
     private int calcTableCount(List<CheckDiffResult> resultList) {
-        return (int) resultList.stream().map(CheckDiffResult::getTable).distinct().count();
+        return (int) resultList.stream()
+                               .map(CheckDiffResult::getTable)
+                               .distinct()
+                               .count();
+    }
+
+    private long calcRowCount(List<CheckDiffResult> resultList) {
+        return resultList.stream()
+                         .mapToLong(CheckDiffResult::getRowCount)
+                         .sum();
     }
 
     @Override

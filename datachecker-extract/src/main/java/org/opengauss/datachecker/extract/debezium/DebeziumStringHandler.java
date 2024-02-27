@@ -16,8 +16,9 @@
 package org.opengauss.datachecker.extract.debezium;
 
 import com.alibaba.fastjson.JSONObject;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.Logger;
+import org.opengauss.datachecker.common.config.ConfigCache;
+import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.debezium.DebeziumData;
 import org.opengauss.datachecker.common.entry.debezium.DebeziumPayload;
 import org.opengauss.datachecker.common.entry.debezium.PayloadSource;
@@ -40,6 +41,7 @@ public class DebeziumStringHandler implements DebeziumDataHandler<String> {
     private static final Logger log = LogUtils.getLogger();
     private String destSchema;
     private MetaDataService metaDataService;
+    private boolean isDisplayRow;
 
     /**
      * Debezium message parsing and adding the parsing result to the {@code DebeziumDataLogs.class} result set
@@ -65,6 +67,11 @@ public class DebeziumStringHandler implements DebeziumDataHandler<String> {
     @Override
     public void setSchema(String schema) {
         this.destSchema = schema;
+    }
+
+    @Override
+    public void setDebeziumRowDisplay(boolean isDisplayRow) {
+        this.isDisplayRow = isDisplayRow;
     }
 
     @Override

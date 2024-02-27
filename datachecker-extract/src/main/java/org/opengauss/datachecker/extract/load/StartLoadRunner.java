@@ -52,14 +52,12 @@ public class StartLoadRunner implements ApplicationRunner {
     @Resource
     private SliceProcessorContext sliceProcessorContext;
 
-
     @Override
     public void run(ApplicationArguments args) {
         // if extract boot start finished,then running.
         configManagement.loadExtractProperties();
         memoryManagerService.startMemoryManager(ConfigCache.getBooleanValue(ConfigConstants.MEMORY_MONITOR));
         resourceManager.initMaxConnectionCount();
-
         initExtractContextDataSource();
         sliceProcessorContext.startSliceStatusFeedbackService();
     }

@@ -50,6 +50,7 @@ public class DebeziumConsumerListener {
     public void initDebeziumDataHandler() {
         debeziumDataHandler = adapter.getHandler(extractProperties.getDebeziumSerializer());
         debeziumDataHandler.setSchema(extractProperties.getSchema());
+        debeziumDataHandler.setDebeziumRowDisplay(extractProperties.isDebeziumRowDisplay());
         debeziumDataHandler.injectMetaDataServiceInstanceToHandler(metaDataService);
     }
 
