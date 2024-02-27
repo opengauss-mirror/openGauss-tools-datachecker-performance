@@ -21,6 +21,7 @@ import org.apache.commons.io.input.TailerListenerAdapter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.config.ConfigCache;
+import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.extract.SliceVo;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.MapUtils;
@@ -48,10 +49,12 @@ public class CsvReaderListener implements CsvListener {
     private volatile Set<Long> logDuplicateCheck = new HashSet<>();
     private Tailer tailer;
     private boolean isTailEnd = false;
+    private CheckingFeignClient checkingClient;
 
     @Override
     public void initCsvListener(CheckingFeignClient checkingClient) {
         log.info("csv reader listener is starting .");
+        this.checkingClient = checkingClient;
         // creates and starts a Tailer for read writer logs in real time
         tailer = Tailer.create(new File(ConfigCache.getReader()), new TailerListenerAdapter() {
             @Override
@@ -98,6 +101,11 @@ public class CsvReaderListener implements CsvListener {
     @Override
     public void releaseSliceCache(String table) {
         readerSliceMap.remove(table);
+    }
+
+    @Override
+    public void notifyCheckIgnoreTable(String tableName, String reason) {
+        checkingClient.notifyCheckIgnoreTable(Endpoint.SOURCE, tableName, reason);
     }
 
     @Override

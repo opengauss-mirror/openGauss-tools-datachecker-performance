@@ -25,6 +25,7 @@ import org.opengauss.datachecker.common.entry.extract.SliceVo;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.entry.extract.Topic;
 import org.opengauss.datachecker.common.service.DynamicThreadPoolManager;
+import org.opengauss.datachecker.common.util.FileUtils;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.opengauss.datachecker.extract.cache.TopicCache;
@@ -32,9 +33,9 @@ import org.opengauss.datachecker.extract.data.BaseDataService;
 import org.opengauss.datachecker.extract.data.csv.CsvListener;
 import org.opengauss.datachecker.extract.slice.factory.SliceFactory;
 
-import java.io.File;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -97,14 +98,14 @@ public class SliceDispatcher implements Runnable {
                     // check table by rule of table
                     if (!baseDataService.checkTableContains(table)) {
                         log.info("distributors ignore [{}] table shards based on table rules", table);
-                        notifyIgnoreCsvName(endPoint, table, "table rules");
+                        notifyIgnoreCsvName(endPoint, table, "tableNoMatch");
                         listener.releaseSliceCache(table);
                         continue;
                     }
                     TableMetadata tableMetadata = baseDataService.queryTableMetadata(table);
                     if (!tableMetadata.hasPrimary()) {
                         log.info("distributors ignore [{}] table because of it's no primary", table);
-                        notifyIgnoreCsvName(endPoint, table, "table no primary");
+                        notifyIgnoreCsvName(endPoint, table, "tableNoPrimary");
                         listener.releaseSliceCache(table);
                         continue;
                     }
@@ -147,16 +148,17 @@ public class SliceDispatcher implements Runnable {
     }
 
     private void notifyIgnoreCsvName(Endpoint endPoint, String ignoreCsvTableName, String reason) {
+        listener.notifyCheckIgnoreTable(ignoreCsvTableName, reason);
         if (Objects.equals(Endpoint.SOURCE, endPoint)) {
             String csvDataPath = ConfigCache.getCsvData();
             List<SliceVo> tableSliceList = listener.fetchTableSliceList(ignoreCsvTableName);
-            tableSliceList.forEach(slice -> {
-                String ignoreCsvName = slice.getName();
-                File file = new File(csvDataPath, ignoreCsvName);
-                if (file.exists() && file.renameTo(new File(csvDataPath, ignoreCsvName + ".check"))) {
-                    log.debug("rename csv sharding completed [{}] by {}", ignoreCsvName, reason);
-                }
-            });
+            Optional.ofNullable(tableSliceList)
+                    .ifPresent(list -> list.forEach(slice -> {
+                        String ignoreCsvName = slice.getName();
+                        if (FileUtils.renameTo(csvDataPath, ignoreCsvName)) {
+                            log.debug("rename csv sharding completed [{}] by {}", ignoreCsvName, reason);
+                        }
+                    }));
         }
     }
 

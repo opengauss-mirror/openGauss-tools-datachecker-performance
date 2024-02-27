@@ -94,4 +94,12 @@ public interface CsvListener {
      * @param table table
      */
     void releaseSliceCache(String table);
+
+    /**
+     * notifyCheckIgnoreTable
+     *
+     * @param tableName tableName
+     * @param reason    reason
+     */
+    void notifyCheckIgnoreTable(String tableName, String reason);
 }

@@ -46,7 +46,6 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import javax.validation.constraints.NotEmpty;
-import java.io.File;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.LinkedList;
@@ -189,8 +188,7 @@ public class SliceCheckResultManager {
     private void notifyCsvShardingCompleted(CheckDiffResult checkDiffResult, boolean immediately) {
         if (isCsvMode && immediately) {
             String csvDataPath = ConfigCache.getCsvData();
-            File file = new File(csvDataPath, checkDiffResult.getFileName());
-            if (file.renameTo(new File(csvDataPath, checkDiffResult.getFileName() + ".check"))) {
+            if (FileUtils.renameTo(csvDataPath, checkDiffResult.getFileName())) {
                 log.info("rename csv sharding completed [{}]", checkDiffResult.getFileName());
             } else {
                 log.warn("rename csv sharding false [{}]", checkDiffResult.getFileName());
@@ -207,7 +205,7 @@ public class SliceCheckResultManager {
     }
 
     /**
-     * refresg summary log
+     * refresh summary log
      */
     public void refreshSummary() {
         CheckSummary checkSummary = new CheckSummary();

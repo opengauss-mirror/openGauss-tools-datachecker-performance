@@ -15,15 +15,23 @@
 
 package org.opengauss.datachecker.extract.task;
 
+import org.opengauss.core.Field;
 import org.opengauss.datachecker.common.util.HexUtil;
+import org.opengauss.datachecker.extract.task.functional.OpgsTypeHandler;
+import org.opengauss.jdbc.PgResultSetMetaData;
+import org.springframework.lang.NonNull;
 
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.time.format.DateTimeFormatter;
+import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.TimeZone;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -35,6 +43,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class OpenGaussResultSetHandler extends ResultSetHandler {
     private static final Map<String, TypeHandler> typeHandlers = new ConcurrentHashMap<>();
+    private static final Map<String, OpgsTypeHandler> opgsTypeHandlers = new ConcurrentHashMap<>();
 
     {
         // byte binary blob
@@ -75,8 +84,9 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
         // date time timestamp
         typeHandlers.put(OpenGaussType.DATE, this::getDateFormat);
         typeHandlers.put(OpenGaussType.TIME, this::getTimeFormat);
-        typeHandlers.put(OpenGaussType.TIMESTAMP, this::getTimestampFormat);
-        typeHandlers.put(OpenGaussType.TIMESTAMPTZ, this::getTimestampFormat);
+
+        opgsTypeHandlers.put(OpenGaussType.TIMESTAMP, this::getOpgsTimestampFormat);
+        opgsTypeHandlers.put(OpenGaussType.TIMESTAMPTZ, this::getOpgsTimestampFormat);
     }
 
     /**
@@ -93,6 +103,14 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
      */
     public OpenGaussResultSetHandler(Boolean supplyZero) {
         super(supplyZero);
+    }
+
+    private String getOpgsTimestampFormat(@NonNull ResultSet resultSet, String columnLabel, Field field)
+        throws SQLException {
+        final Timestamp timestamp =
+            resultSet.getTimestamp(columnLabel, Calendar.getInstance(TimeZone.getTimeZone("GMT+8")));
+        DateTimeFormatter dateTimeFormatter = TIMESTAMP_MAPPER.get(field.getMod());
+        return Objects.nonNull(timestamp) ? dateTimeFormatter.format(timestamp.toLocalDateTime()) : NULL;
     }
 
     /**
@@ -167,9 +185,20 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
         } else if (typeHandlers.containsKey(columnTypeName)) {
             return typeHandlers.get(columnTypeName)
                                .convert(resultSet, columnLabel);
+        } else if (opgsTypeHandlers.containsKey(columnTypeName)) {
+            return opgsTypeHandlers.get(columnTypeName)
+                                   .convert(resultSet, columnLabel, getResultSetField(columnIdx, rsmd));
         } else {
             Object object = resultSet.getObject(columnLabel);
             return Objects.isNull(object) ? NULL : object.toString();
+        }
+    }
+
+    private Field getResultSetField(int columnIdx, ResultSetMetaData rsmd) throws SQLException {
+        if (rsmd instanceof PgResultSetMetaData) {
+            return ((PgResultSetMetaData) rsmd).getField(columnIdx);
+        } else {
+            return null;
         }
     }
 
@@ -345,6 +374,11 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
          * opengauss data type : time
          */
         String TIME = "time";
+
+        /**
+         * year
+         */
+        String YEAR = "year";
 
         /**
          * opengauss data type : timestamp

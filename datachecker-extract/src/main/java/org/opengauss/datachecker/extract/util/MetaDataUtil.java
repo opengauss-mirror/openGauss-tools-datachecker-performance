@@ -39,12 +39,16 @@ public class MetaDataUtil {
         List.of("integer", "int", "uint1", "uint2", "uint4", "uint8", "long", "decimal", "numeric", "smallint",
             "NUMBER", "tinyint", "mediumint", "bigint");
     private static final List<String> dataTypes =
-        List.of("integer", "int", "uint1", "uint2", "uint4", "uint8", "long", "decimal", "numeric", "NUMBER","VARCHAR2",
-            "smallint", "tinyint", "mediumint", "bigint", "character", "char", "varchar", "character varying", "CHAR");
+        List.of("integer", "int", "uint1", "uint2", "uint4", "uint8", "long", "decimal", "numeric", "NUMBER",
+            "VARCHAR2", "smallint", "tinyint", "mediumint", "bigint", "character", "char", "varchar",
+            "character varying", "CHAR");
 
     private static final List<String> digitalDataTypes =
         List.of("integer", "int", "uint1", "uint2", "uint4", "uint8", "long", "decimal", "numeric", "smallint",
             "number", "tinyint", "mediumint", "bigint", "double", "float");
+
+    private static final List<String> LARGE_DIGITAL_TYPES =
+        List.of("uint8", "long", "decimal", "numeric", "number", "bigint", "double", "float");
 
     /**
      * getTableColumns
@@ -114,6 +118,17 @@ public class MetaDataUtil {
     public static boolean isDigitKey(ColumnsMetaData primaryKey) {
         return digitalDataTypes.contains(primaryKey.getDataType()
                                                    .toLowerCase(Locale.getDefault()));
+    }
+
+    /**
+     * 大数字类型，结果可能为科学计数表示
+     *
+     * @param primaryKey primaryKey
+     * @return boolean
+     */
+    public static boolean isLargeDigitalTypeKey(ColumnsMetaData primaryKey) {
+        return LARGE_DIGITAL_TYPES.contains(primaryKey.getDataType()
+                                                      .toLowerCase(Locale.getDefault()));
     }
 
     public static boolean isInvalidPrimaryKey(ColumnsMetaData primaryKey) {

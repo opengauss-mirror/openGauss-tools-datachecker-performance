@@ -19,6 +19,7 @@ import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
+import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.service.DynamicThreadPoolManager;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.extract.client.CheckingFeignClient;
@@ -33,6 +34,7 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -49,6 +51,8 @@ public class CsvManagementService {
     @Resource
     private BaseDataService baseDataService;
     @Resource
+    private MetaDataService metaDataService;
+    @Resource
     private DynamicThreadPoolManager dynamicThreadPoolManager;
     @Resource
     private SliceRegister sliceRegister;
@@ -56,6 +60,7 @@ public class CsvManagementService {
     private CheckingFeignClient checkingClient;
     private CsvListener listener;
     private SliceDispatcher sliceDispatcher = null;
+    private Endpoint currentEndpoint;
 
     /**
      * start csv process.
@@ -65,15 +70,14 @@ public class CsvManagementService {
     public void startCsvProcess() {
         // init dynamic thread pool monitor
         dynamicThreadPoolManager.dynamicThreadPoolMonitor();
-
+        currentEndpoint = ConfigCache.getValue(ConfigConstants.ENDPOINT, Endpoint.class);
         // start listener of reader or writer logs
-        if (Objects.equals(Endpoint.SOURCE, ConfigCache.getValue(ConfigConstants.ENDPOINT, Endpoint.class))) {
+        if (Objects.equals(Endpoint.SOURCE, currentEndpoint)) {
             // load check table list
             listener = new CsvReaderListener();
         } else {
             listener = new CsvWriterListener();
         }
-        baseDataService.bdsQueryTableMetadataList();
         listener.initCsvListener(checkingClient);
         // start slice dispatcher core thread
         sliceDispatcher = new SliceDispatcher(dynamicThreadPoolManager, sliceRegister, baseDataService, listener);
@@ -83,7 +87,6 @@ public class CsvManagementService {
 
     public void startCsvNoSliceLogProcess() {
         dynamicThreadPoolManager.dynamicThreadPoolMonitor();
-        baseDataService.bdsQueryTableMetadataList();
         TableDispatcher tableDispatcher = new TableDispatcher(dynamicThreadPoolManager, sliceRegister, baseDataService);
         Thread thread = new Thread(tableDispatcher);
         thread.start();
@@ -101,5 +104,16 @@ public class CsvManagementService {
 
     public void dispatcherTables(List<String> list) {
         sliceDispatcher.addSliceTables(list);
+    }
+
+    /**
+     * fetchCheckTableCount
+     *
+     * @return table count
+     */
+    public int fetchCheckTableCount() {
+        Map<String, TableMetadata> tableMetadataMap = metaDataService.mdsQueryMetaDataOfSchema();
+        currentEndpoint = ConfigCache.getValue(ConfigConstants.ENDPOINT, Endpoint.class);
+        return Objects.equals(Endpoint.SOURCE, currentEndpoint) ? tableMetadataMap.size() : 0;
     }
 }

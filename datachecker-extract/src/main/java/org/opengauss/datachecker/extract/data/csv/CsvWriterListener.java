@@ -25,6 +25,7 @@ import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.csv.SliceIndexVo;
+import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.enums.SliceIndexStatus;
 import org.opengauss.datachecker.common.entry.enums.SliceLogType;
 import org.opengauss.datachecker.common.entry.extract.SliceVo;
@@ -173,6 +174,11 @@ public class CsvWriterListener implements CsvListener {
         if (Objects.nonNull(feedbackExecutor)) {
             feedbackExecutor.shutdown();
         }
+    }
+
+    @Override
+    public void notifyCheckIgnoreTable(String tableName, String reason) {
+        checkingClient.notifyCheckIgnoreTable(Endpoint.SINK, tableName, reason);
     }
 
     @Override

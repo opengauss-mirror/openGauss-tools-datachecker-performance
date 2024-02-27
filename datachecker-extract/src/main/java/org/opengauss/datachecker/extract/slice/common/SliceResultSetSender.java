@@ -26,6 +26,7 @@ import org.springframework.kafka.support.SendResult;
 import org.springframework.lang.NonNull;
 import org.springframework.util.concurrent.ListenableFuture;
 
+import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.util.List;
@@ -49,6 +50,20 @@ public class SliceResultSetSender {
     private final List<ColumnsMetaData> columnMetas;
     private final List<String> primary;
     private final String tableName;
+    private final ResultParseConsumer<String, Map<String, String>, ColumnsMetaData> largeDigitalType =
+        (value, result, column) -> {
+            if (isScientificNotation(value)) {
+                result.put(column.getColumnName(), new BigDecimal(value).toPlainString());
+            } else {
+                result.put(column.getColumnName(), value);
+            }
+        };
+    private final ResultParseConsumer<String, Map<String, String>, ColumnsMetaData> defaultConsumer =
+        (value, result, column) -> result.put(column.getColumnName(), value);
+    private final ResultParseConsumer<String, Map<String, String>, ColumnsMetaData> binaryAndBlobConsumer =
+        (value, result, column) -> result.put(column.getColumnName(), value.substring(1));
+    private final ResultParseConsumer<String, Map<String, String>, ColumnsMetaData> csvNullValueConsumer =
+        (value, result, column) -> result.put(column.getColumnName(), CSV_NULL_VALUE);
 
     /**
      * constructor
@@ -63,6 +78,25 @@ public class SliceResultSetSender {
         this.primary = MetaDataUtil.getTablePrimaryColumns(tableMetadata);
         this.tableName = tableMetadata.getTableName();
         this.kafkaOperate = kafkaOperate;
+    }
+
+    /**
+     * ResultParseConsumer
+     *
+     * @param <S> result row original text
+     * @param <M> parse result map
+     * @param <C> column metadata
+     */
+    @FunctionalInterface
+    private interface ResultParseConsumer<S, M, C> {
+        /**
+         * ResultParseConsumer
+         *
+         * @param value  result row original text
+         * @param result parse result map
+         * @param column column metadata
+         */
+        void accept(String value, Map<String, String> result, ColumnsMetaData column);
     }
 
     /**
@@ -199,18 +233,26 @@ public class SliceResultSetSender {
 
     private void parse(String[] nextLine, Map<String, String> result) {
         int idx;
+        String tmpValue;
         for (ColumnsMetaData column : columnMetas) {
             idx = column.getOrdinalPosition() - 1;
-            if (CSV_NULL_VALUE.equalsIgnoreCase(nextLine[idx])) {
-                result.put(column.getColumnName(), CSV_NULL_VALUE);
+            tmpValue = nextLine[idx];
+            if (CSV_NULL_VALUE.equalsIgnoreCase(tmpValue)) {
+                csvNullValueConsumer.accept(tmpValue, result, column);
             } else {
                 if (isBinaryOrBlob(column.getColumnType())) {
-                    result.put(column.getColumnName(), nextLine[idx].substring(1));
+                    binaryAndBlobConsumer.accept(tmpValue, result, column);
+                } else if (MetaDataUtil.isLargeDigitalTypeKey(column)) {
+                    largeDigitalType.accept(tmpValue, result, column);
                 } else {
-                    result.put(column.getColumnName(), nextLine[idx]);
+                    defaultConsumer.accept(tmpValue, result, column);
                 }
             }
         }
+    }
+
+    private boolean isScientificNotation(String value) {
+        return value.contains("E") || value.contains("e");
     }
 
     /**

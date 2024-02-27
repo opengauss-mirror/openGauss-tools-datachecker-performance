@@ -80,6 +80,12 @@ public class OpenGaussResultSetTest extends BaseOpenGaussMapper {
         dataResultSetHandler.testTable(schema, "t_text", "init_t_text_og.sql");
     }
 
+    @DisplayName("test openGauss t_time")
+    @Test
+    public void testTime() {
+        dataResultSetHandler.testTable(schema, "t_time", "init_t_time.sql");
+    }
+
     @AfterAll
     void dropTestDatabaseT() {
         super.dropTestDb(testDatabaseInitScript);

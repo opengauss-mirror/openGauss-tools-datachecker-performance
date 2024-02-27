@@ -89,6 +89,7 @@ public class BaseDataService {
 
     /**
      * query check table metadata list, and use rule.table
+     * it is not have any columns and primary columns
      *
      * @return table name list
      */

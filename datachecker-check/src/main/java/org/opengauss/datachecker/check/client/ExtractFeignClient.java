@@ -227,8 +227,13 @@ public interface ExtractFeignClient {
     @PostMapping("/start/csv/service")
     Result<Void> enableCsvExtractService();
 
-    @GetMapping("/fetch/check/table/count")
-    Result<Integer> fetchCheckTableCount();
+    /**
+     * fetchCsvCheckTableCount
+     *
+     * @return csv table count
+     */
+    @GetMapping("/fetch/csv/check/table/count")
+    Result<Integer> fetchCsvCheckTableCount();
 
     /**
      * csv dispatcher tables

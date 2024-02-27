@@ -16,12 +16,16 @@
 package org.opengauss.datachecker.check.controller;
 
 import org.opengauss.datachecker.check.service.CsvProcessManagement;
+import org.opengauss.datachecker.check.service.TaskRegisterCenter;
+import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.annotation.Resource;
 import java.util.List;
 
 /**
@@ -34,6 +38,8 @@ import java.util.List;
 public class CheckCsvController {
     @Autowired
     private CsvProcessManagement csvProcessManagement;
+    @Resource
+    private TaskRegisterCenter registerCenter;
 
     /**
      * csv task dispatcher
@@ -43,5 +49,18 @@ public class CheckCsvController {
     @PostMapping("/notify/check/table/index/completed")
     public void notifyTableIndexCompleted(@RequestBody List<String> completedTableList) {
         csvProcessManagement.taskDispatcher(completedTableList);
+    }
+
+    /**
+     * notifyCheckIgnoreTable
+     *
+     * @param endpoint endpoint
+     * @param table    table
+     * @param reason   reason
+     */
+    @PostMapping("/notify/check/csv/ignore")
+    void notifyCheckIgnoreTable(@RequestParam("endpoint") Endpoint endpoint, @RequestParam("table") String table,
+        @RequestParam("reason") String reason) {
+        registerCenter.addCheckIgnoreTable(endpoint, table, reason);
     }
 }

@@ -79,6 +79,12 @@ public class MysqlResultSetTest extends BaseMysqlMapper {
         dataResultSetHandler.testTable(schema, "t_text", "init_t_text.sql");
     }
 
+    @DisplayName("test mysql t_time")
+    @Test
+    public void testTime() {
+        dataResultSetHandler.testTable(schema, "t_time", "init_t_time.sql");
+    }
+
     @AfterAll
     void dropTestDatabaseT() {
         super.dropTestDb(testDatabaseInitScript);
