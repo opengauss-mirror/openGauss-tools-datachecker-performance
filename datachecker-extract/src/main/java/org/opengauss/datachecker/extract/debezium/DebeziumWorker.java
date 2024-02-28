@@ -39,7 +39,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class DebeziumWorker implements Runnable {
     private static final Logger log = LogUtils.getLogger();
     private static final AtomicBoolean PAUSE_OR_RESUME = new AtomicBoolean(WorkerSwitch.RESUME);
-    private static final AtomicBoolean RUNNING = new AtomicBoolean(false);
+    private static final AtomicBoolean RUNNING = new AtomicBoolean(true);
     private static final String NAME = "DebeziumWorker";
     private DebeziumConsumerListener debeziumConsumerListener;
     private KafkaConsumerConfig kafkaConsumerConfig;
@@ -52,26 +52,34 @@ public class DebeziumWorker implements Runnable {
 
     @Override
     public void run() {
-        Thread.currentThread().setName(NAME);
+        Thread.currentThread()
+              .setName(NAME);
         log.info("The Debezium message listener task has started");
         consumer = kafkaConsumerConfig.getDebeziumConsumer();
         while (RUNNING.get()) {
             if (Objects.equals(PAUSE_OR_RESUME.get(), WorkerSwitch.RESUME)) {
-                ConsumerRecords<String, Object> records = consumer.poll(Duration.ofMillis(50));
-                if (records.count() > 0) {
-                    log.info("consumer record count={}", records.count());
-                }
-                for (ConsumerRecord<String, Object> record : records) {
-                    try {
-                        debeziumConsumerListener.listen(record);
-                    } catch (Exception ex) {
-                        log.error("DebeziumWorker unknown error, message,{},{}", record.toString(), ex);
-                    }
-                }
+                doConsumerRecord(consumer.poll(Duration.ofMillis(50)));
             } else {
                 log.debug("Debezium message listener is paused");
                 ThreadUtil.sleep(WorkerSwitch.SLEEP_TIME);
             }
+        }
+        log.info("The Debezium message listener task has closed");
+    }
+
+    private void doConsumerRecord(ConsumerRecords<String, Object> records) {
+        if (records.count() > 0) {
+            log.info("consumer record count={}", records.count());
+            for (ConsumerRecord<String, Object> record : records) {
+                try {
+                    debeziumConsumerListener.listen(record);
+                } catch (Exception ex) {
+                    log.error("DebeziumWorker unknown error, message,{},{}", record.toString(), ex);
+                }
+            }
+        } else {
+            log.info("consumer record count=0");
+            ThreadUtil.sleepMax2Second();
         }
     }
 

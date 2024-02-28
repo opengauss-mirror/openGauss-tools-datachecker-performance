@@ -61,6 +61,7 @@ public class ExtractProperties {
 
     private String debeziumSerializer;
     private String debeziumAvroRegistry;
+    private boolean isDebeziumRowDisplay = false;
 
     /**
      * Indicates whether to enable incremental debezium configuration.

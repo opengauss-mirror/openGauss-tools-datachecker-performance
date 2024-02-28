@@ -17,12 +17,14 @@ package org.opengauss.datachecker.extract.debezium;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.entry.check.IncrementCheckConfig;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.SourceDataLog;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.exception.DebeziumConfigException;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.opengauss.datachecker.extract.cache.MetaDataCache;
 import org.opengauss.datachecker.extract.config.ExtractProperties;
@@ -58,6 +60,7 @@ public class DataConsolidationServiceImpl implements DataConsolidationService {
     private static final IncrementCheckConfig INCREMENT_CHECK_CONIFG = new IncrementCheckConfig();
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final String MYSQL_DATE_TYPE = "date";
+    private static final Logger LOG = LogUtils.getLogger();
 
     @Autowired
     private DebeziumConsumerListener debeziumListener;
@@ -129,9 +132,11 @@ public class DataConsolidationServiceImpl implements DataConsolidationService {
             return;
         }
         final List<ColumnsMetaData> columnsMetas = tableMetadata.getColumnsMetas();
-        final List<String> dateList = columnsMetas.stream().filter(
-            column -> StringUtils.equalsIgnoreCase(column.getColumnType(), MYSQL_DATE_TYPE))
-                                                  .map(ColumnsMetaData::getColumnName).collect(Collectors.toList());
+        final List<String> dateList = columnsMetas.stream()
+                                                  .filter(column -> StringUtils.equalsIgnoreCase(column.getColumnType(),
+                                                      MYSQL_DATE_TYPE))
+                                                  .map(ColumnsMetaData::getColumnName)
+                                                  .collect(Collectors.toList());
         final Map<String, String> valueMap = debeziumDataBean.getData();
         dateList.forEach(dateField -> {
             final String time = valueMap.get(dateField);
@@ -144,7 +149,8 @@ public class DataConsolidationServiceImpl implements DataConsolidationService {
     }
 
     private String decompressLocalDate(int compressDate) {
-        return LocalDate.ofEpochDay(compressDate).format(DATE_FORMATTER);
+        return LocalDate.ofEpochDay(compressDate)
+                        .format(DATE_FORMATTER);
     }
 
     /**
@@ -174,7 +180,8 @@ public class DataConsolidationServiceImpl implements DataConsolidationService {
      * Check the configuration of the debezium environment for incremental verification
      */
     private void checkIncrementCheckEnvironment() {
-        final Set<String> allKeys = metaDataService.queryMetaDataOfSchemaCache().keySet();
+        final Set<String> allKeys = metaDataService.queryMetaDataOfSchemaCache()
+                                                   .keySet();
         checkDebeziumEnvironment(extractProperties.getDebeziumTopic(), extractProperties.getDebeziumTables(), allKeys);
     }
 
@@ -187,8 +194,10 @@ public class DataConsolidationServiceImpl implements DataConsolidationService {
     public void configIncrementCheckEnvironment(@NotNull IncrementCheckConfig config) {
         final Set<String> allKeys = MetaDataCache.getAllKeys();
         checkDebeziumEnvironment(config.getDebeziumTopic(), config.getDebeziumTables(), allKeys);
-        INCREMENT_CHECK_CONIFG.setDebeziumTables(config.getDebeziumTables()).setDebeziumTopic(config.getDebeziumTopic())
-                              .setGroupId(config.getGroupId()).setPartitions(config.getPartitions());
+        INCREMENT_CHECK_CONIFG.setDebeziumTables(config.getDebeziumTables())
+                              .setDebeziumTopic(config.getDebeziumTopic())
+                              .setGroupId(config.getGroupId())
+                              .setPartitions(config.getPartitions());
     }
 
     /**
@@ -210,15 +219,22 @@ public class DataConsolidationServiceImpl implements DataConsolidationService {
             throw new DebeziumConfigException(
                 "The configuration item debezium topic " + debeziumTopic + " information does not exist");
         }
+
         if (CollectionUtils.isEmpty(debeziumTables)) {
+            LOG.warn("in current period , debezium table is empty");
             return;
         }
-        final List<String> allTableList = allTableSet.stream().map(String::toUpperCase).collect(Collectors.toList());
-        List<String> invalidTables =
-            debeziumTables.stream().map(String::toUpperCase).filter(table -> !allTableList.contains(table))
-                          .collect(Collectors.toList());
+        final List<String> allTableList = allTableSet.stream()
+                                                     .map(String::toUpperCase)
+                                                     .collect(Collectors.toList());
+        List<String> invalidTables = debeziumTables.stream()
+                                                   .map(String::toUpperCase)
+                                                   .filter(table -> !allTableList.contains(table))
+                                                   .collect(Collectors.toList());
+
         if (!CollectionUtils.isEmpty(invalidTables)) {
             // The configuration item debezium tables contains non-existent or black and white list tables
+            LOG.warn("in current period , debezium has no table to check");
             throw new DebeziumConfigException(
                 "The configuration item debezium-tables contains non-existent or black-and-white list tables:"
                     + invalidTables.toString());

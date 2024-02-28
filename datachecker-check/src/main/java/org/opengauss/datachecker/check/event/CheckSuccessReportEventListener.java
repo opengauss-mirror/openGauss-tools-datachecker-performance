@@ -40,8 +40,8 @@ public class CheckSuccessReportEventListener extends CheckReportEventAdapter
     @Override
     public void onApplicationEvent(CheckSuccessReportEvent event) {
         final CheckDiffResult source = (CheckDiffResult) event.getSource();
-        FileUtils
-            .writeAppendFile(getSuccessPath(), JsonObjectUtil.prettyFormatMillis(translateCheckSuccess(source)) + ",");
+        FileUtils.writeAppendFile(getSuccessPath(),
+            JsonObjectUtil.prettyFormatMillis(translateCheckSuccess(source)) + ",");
         log.debug("completed {} check success and export results of  ", source.getTable());
     }
 
@@ -51,9 +51,15 @@ public class CheckSuccessReportEventListener extends CheckReportEventAdapter
 
     private CheckSuccess translateCheckSuccess(CheckDiffResult result) {
         long cost = calcCheckTaskCost(result.getStartTime(), result.getEndTime());
-        return new CheckSuccess().setProcess(result.getProcess()).setSchema(result.getSchema())
-                                 .setTopic(new String[] {result.getTopic()}).setPartition(result.getPartitions())
-                                 .setTable(result.getTable()).setCost(cost).setEndTime(result.getEndTime())
-                                 .setStartTime(result.getStartTime()).setMessage(result.getMessage());
+        return new CheckSuccess().setProcess(result.getProcess())
+                                 .setSchema(result.getSchema())
+                                 .setRowCount(result.getRowCount())
+                                 .setTopic(new String[] {result.getTopic()})
+                                 .setPartition(result.getPartitions())
+                                 .setTable(result.getTable())
+                                 .setCost(cost)
+                                 .setEndTime(result.getEndTime())
+                                 .setStartTime(result.getStartTime())
+                                 .setMessage(result.getMessage());
     }
 }

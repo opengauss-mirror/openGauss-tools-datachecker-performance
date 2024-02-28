@@ -20,7 +20,7 @@ spring:
     debezium-serializer: AvroSerializer # StringSerializer or AvroSerializer
     debezium-avro-registry: http://localhost:8081 # avro schema registry
     sync-extract: true
-
+    debezium-row-display: false
   datasource:
     driver-class-name: org.opengauss.Driver
     url: jdbc:opengauss://xxxxx:xxx/xxxx?useSSL=false&useUnicode=true&characterEncoding=utf-8&serverTimezone=UTC

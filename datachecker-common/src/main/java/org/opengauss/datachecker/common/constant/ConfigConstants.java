@@ -282,4 +282,9 @@ public interface ConfigConstants {
      * data check source database info
      */
     String DATA_CHECK_SOURCE_DATABASE = "data.check.source.database";
+
+    /**
+     * spring.extract.debezium-row-display
+     */
+    String DEBEZIUM_ROW_DISPLAY = "spring.extract.debezium-row-display";
 }

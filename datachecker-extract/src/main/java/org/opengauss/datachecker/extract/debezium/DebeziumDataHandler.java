@@ -46,6 +46,13 @@ public interface DebeziumDataHandler<E> {
     void setSchema(String schema);
 
     /**
+     * setDebeziumRowDisplay
+     *
+     * @param isRowDisplay isRowDisplay
+     */
+    void setDebeziumRowDisplay(boolean isRowDisplay);
+
+    /**
      * inject MetaDataService Instance
      *
      * @param metaDataService metaDataService

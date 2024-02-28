@@ -49,6 +49,8 @@ public class ConfigManagement {
     private int maximumTopicSize = 3;
     @Value("${spring.memory-monitor-enable}")
     private boolean isEnableMemoryMonitor;
+    @Value("${spring.extract.debezium-row-display}")
+    private boolean isDebeziumRowDisplay;
     @Value("${spring.kafka.bootstrap-servers}")
     private String servers;
     @Value("${spring.extract.query-dop}")
@@ -157,5 +159,6 @@ public class ConfigManagement {
         ConfigCache.put(ConfigConstants.ENDPOINT, properties.getEndpoint());
         ConfigCache.put(ConfigConstants.DATA_BASE_TYPE, properties.getDatabaseType());
         ConfigCache.put(ConfigConstants.OBJECT_SIZE_EXPANSION_FACTOR, objectSizeExpansionFactor);
+        ConfigCache.put(ConfigConstants.DEBEZIUM_ROW_DISPLAY, isDebeziumRowDisplay);
     }
 }

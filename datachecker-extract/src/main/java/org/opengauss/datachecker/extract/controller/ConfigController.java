@@ -65,8 +65,9 @@ public class ConfigController {
      */
     @PostMapping("/extract/config/distribute")
     public void distributeConfig(@RequestBody GlobalConfig config) {
-        ConfigCache.setCheckMode(config.getCheckMode());
-        ConfigCache.put(ConfigConstants.CHECK_PATH,config.getProcessPath());
+        CheckMode checkMode = config.getCheckMode();
+        ConfigCache.setCheckMode(checkMode);
+        ConfigCache.put(ConfigConstants.CHECK_PATH, config.getProcessPath());
         Map<String, Object> commonConfig = config.getCommonConfig();
         if (MapUtils.isNotEmpty(commonConfig)) {
             commonConfig.forEach(ConfigCache::put);
@@ -75,10 +76,9 @@ public class ConfigController {
         processLogService.saveProcessLog();
         ruleAdapterService.init(config.getRules());
         log.info("init filter rule config ");
-        if (Objects.equals(config.getCheckMode(), CheckMode.FULL)) {
+        if (Objects.equals(checkMode, CheckMode.FULL) || Objects.equals(checkMode, CheckMode.INCREMENT)) {
             context.loadDatabaseMetaData();
         }
-
     }
 
     /**
