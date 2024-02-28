@@ -22,6 +22,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.stereotype.Indexed;
 
 import static org.opengauss.datachecker.extract.constants.ExtConstants.PROFILE_SINK;
 import static org.opengauss.datachecker.extract.constants.ExtConstants.PROFILE_SOURCE;
@@ -33,6 +34,7 @@ import static org.opengauss.datachecker.extract.constants.ExtConstants.PROFILE_S
  * @date 2022/5/8 19:27
  * @since 11
  **/
+@Indexed
 @EnableFeignClients(basePackages = {"org.opengauss.datachecker.extract.client"})
 @SpringBootApplication
 @ComponentScan(value = {"org.opengauss.datachecker.extract", "org.opengauss.datachecker.common"})

@@ -23,6 +23,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.stereotype.Indexed;
 
 /**
  * DatacheckerCheckApplication
@@ -31,6 +32,7 @@ import org.springframework.context.annotation.ComponentScan;
  * @date 2022/5/8 19:27
  * @since 11
  **/
+@Indexed
 @EnableFeignClients(basePackages = {"org.opengauss.datachecker.check.client"})
 @SpringBootApplication
 @ComponentScan(value = {"org.opengauss.datachecker.check", "org.opengauss.datachecker.common"})

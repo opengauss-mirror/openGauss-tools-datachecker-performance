@@ -8,6 +8,8 @@ logging:
   config: classpath:./config/log4j2.xml
 debug: false
 spring:
+  jmx:
+    enabled: false
   memory-monitor-enable: false
   check:
     core-pool-size: 2
