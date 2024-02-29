@@ -23,12 +23,15 @@ import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.extract.SliceVo;
+import org.opengauss.datachecker.common.exception.CsvDataAccessException;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.MapUtils;
 import org.opengauss.datachecker.extract.client.CheckingFeignClient;
 import org.opengauss.datachecker.extract.constants.ExtConstants;
+import org.opengauss.datachecker.extract.util.CsvUtil;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -55,6 +58,10 @@ public class CsvReaderListener implements CsvListener {
     public void initCsvListener(CheckingFeignClient checkingClient) {
         log.info("csv reader listener is starting .");
         this.checkingClient = checkingClient;
+        Path reader = Path.of(ConfigCache.getReader());
+        if (!CsvUtil.checkExistAndWait(reader)) {
+            throw new CsvDataAccessException("file " + reader.toString() + " is not exist");
+        }
         // creates and starts a Tailer for read writer logs in real time
         tailer = Tailer.create(new File(ConfigCache.getReader()), new TailerListenerAdapter() {
             @Override
