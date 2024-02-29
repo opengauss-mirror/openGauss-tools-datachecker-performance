@@ -287,4 +287,9 @@ public interface ConfigConstants {
      * spring.extract.debezium-row-display
      */
     String DEBEZIUM_ROW_DISPLAY = "spring.extract.debezium-row-display";
+
+    /**
+     * spring.check.max-retry-times
+     */
+    String MAX_RETRY_TIMES = "spring.check.max-retry-times";
 }

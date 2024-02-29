@@ -32,6 +32,7 @@ import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.exception.CsvDataAccessException;
 import org.opengauss.datachecker.common.exception.ExtractDataAccessException;
 import org.opengauss.datachecker.common.util.LogUtils;
+import org.opengauss.datachecker.extract.util.CsvUtil;
 import org.springframework.jdbc.core.RowMapper;
 
 import javax.sql.DataSource;
@@ -78,6 +79,10 @@ public class CsvDataAccessService implements DataAccessService {
                 log.error("csv metadata info does not exist {}", pathOfTables);
                 throw new CsvDataAccessException("csv metadata load failed");
             }
+            Path reader = Path.of(ConfigCache.getReader());
+            if (!CsvUtil.checkExistAndWait(reader)) {
+                throw new CsvDataAccessException("file " + reader.toString() + " is not exist");
+            }
             Stream<String> lineOfTables = Files.lines(pathOfTables);
             return lineOfTables.parallel()
                                .map(tableJson -> JSONObject.parseObject(tableJson, CsvTableMeta.class))
@@ -95,9 +100,13 @@ public class CsvDataAccessService implements DataAccessService {
         tableMetadataMap.clear();
         Path pathOfTables = ConfigCache.getCsvMetadataTablesPath();
         Path pathOfColumns = ConfigCache.getCsvMetadataColumnsPath();
-        if (Files.notExists(pathOfTables) || Files.notExists(pathOfColumns)) {
+        Path reader = Path.of(ConfigCache.getReader());
+        if (!CsvUtil.checkExistAndWait(reader)) {
+            throw new CsvDataAccessException("file " + reader.toString() + " is not exist");
+        }
+        if (!CsvUtil.checkExistAndWait(pathOfTables) || !CsvUtil.checkExistAndWait(pathOfColumns)) {
             log.error("csv metadata info does not exist {} or {}", pathOfTables, pathOfColumns);
-            throw new CsvDataAccessException("csv metadata load failed");
+            throw new CsvDataAccessException("file " + reader.toString() + " is not exist");
         }
         try {
             Stream<String> lineOfTables = Files.lines(pathOfTables);
@@ -105,7 +114,6 @@ public class CsvDataAccessService implements DataAccessService {
                 CsvTableMeta csvTableMeta = JSONObject.parseObject(tableJson, CsvTableMeta.class);
                 tableMetadataMap.put(csvTableMeta.getTable(), csvTableMeta.toTableMetadata());
             });
-
             Stream<String> lineOfColumns = Files.lines(pathOfColumns);
             List<ColumnsMetaData> columns = new LinkedList<>();
             lineOfColumns.forEach(columnJson -> {

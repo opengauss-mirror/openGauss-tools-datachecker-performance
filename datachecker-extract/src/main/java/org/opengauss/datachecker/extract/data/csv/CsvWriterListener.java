@@ -29,13 +29,16 @@ import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.enums.SliceIndexStatus;
 import org.opengauss.datachecker.common.entry.enums.SliceLogType;
 import org.opengauss.datachecker.common.entry.extract.SliceVo;
+import org.opengauss.datachecker.common.exception.CsvDataAccessException;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.MapUtils;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.opengauss.datachecker.extract.client.CheckingFeignClient;
 import org.opengauss.datachecker.extract.constants.ExtConstants;
+import org.opengauss.datachecker.extract.util.CsvUtil;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -73,6 +76,10 @@ public class CsvWriterListener implements CsvListener {
     public void initCsvListener(CheckingFeignClient checkingClient) {
         this.checkingClient = checkingClient;
         log.info("csv writer listener is starting .");
+        Path writer = Path.of(ConfigCache.getWriter());
+        if (!CsvUtil.checkExistAndWait(writer)) {
+            throw new CsvDataAccessException("file " + writer.toString() + " is not exist");
+        }
         // creates and starts a tailer for read writer logs in real time
         tailer = Tailer.create(new File(ConfigCache.getWriter()), new TailerListenerAdapter() {
             @Override
@@ -129,7 +136,8 @@ public class CsvWriterListener implements CsvListener {
         int interval = ConfigCache.getIntValue(ConfigConstants.CSV_TASK_DISPATCHER_INTERVAL) * 1000;
         int maxDispatcherSize = ConfigCache.getIntValue(ConfigConstants.CSV_MAX_DISPATCHER_SIZE);
         feedbackExecutor.submit(() -> {
-            Thread.currentThread().setName(TABLE_INDEX_COMPLETED_FEEDBACK);
+            Thread.currentThread()
+                  .setName(TABLE_INDEX_COMPLETED_FEEDBACK);
             List<String> completedTableList = new LinkedList<>();
             while (isFeedbackRunning) {
                 try {

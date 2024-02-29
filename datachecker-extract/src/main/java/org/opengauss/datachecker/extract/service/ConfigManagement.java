@@ -84,6 +84,8 @@ public class ConfigManagement {
     private int timeoutPerShutdownPhase;
     @Value("${spring.extract.object-size-expansion-factor}")
     private int objectSizeExpansionFactor;
+    @Value("${spring.check.max-retry-times}")
+    private int maxRetryTimes;
 
     /**
      * init csv config
@@ -128,6 +130,7 @@ public class ConfigManagement {
         ConfigCache.put(ConfigConstants.FETCH_SIZE, 1000);
         ConfigCache.put(ConfigConstants.TIMEOUT_PER_SHUTDOWN_PHASE, timeoutPerShutdownPhase);
         ConfigCache.put(ConfigConstants.EXTEND_MAXIMUM_POOL_SIZE, extendMaxPoolSize);
+        ConfigCache.put(ConfigConstants.MAX_RETRY_TIMES, maxRetryTimes);
 
         loadKafkaProperties();
     }
