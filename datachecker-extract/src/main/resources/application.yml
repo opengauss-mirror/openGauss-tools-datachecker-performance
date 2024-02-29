@@ -8,6 +8,8 @@ logging:
   config: classpath:log4j2.xml
 
 spring:
+  jmx:
+    enabled: false
   memory-monitor-enable: false
   check:
     server-uri: http://127.0.0.1:9000
