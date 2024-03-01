@@ -22,7 +22,6 @@ import org.opengauss.datachecker.check.service.TableKafkaService;
 import org.opengauss.datachecker.common.entry.check.TopicRecordInfo;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.extract.Topic;
-import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -62,14 +61,26 @@ public class TableKafkaController {
     /**
      * register topic
      *
-     * @param table    tableName
-     * @param ptnNum   ptnNum
-     * @param endpoint current endpoint
+     * @param table  tableName
+     * @param ptnNum ptnNum
      * @return topic
      */
-    @PostMapping("/register/topic")
-    public Topic registerTopic(@RequestParam(value = "tableName") @NotEmpty String table,
-        @RequestParam(value = "ptnNum") int ptnNum, @RequestParam(value = "endpoint") @NonNull Endpoint endpoint) {
-        return topicRegister.register(table, ptnNum, endpoint);
+    @PostMapping("/source/register/topic")
+    public Topic sourceRegisterTopic(@RequestParam(value = "tableName") @NotEmpty String table,
+        @RequestParam(value = "ptnNum") int ptnNum) {
+        return topicRegister.register(table, ptnNum, Endpoint.SOURCE);
+    }
+
+    /**
+     * register topic
+     *
+     * @param table  tableName
+     * @param ptnNum ptnNum
+     * @return topic
+     */
+    @PostMapping("/sink/register/topic")
+    public Topic sinkRegisterTopic(@RequestParam(value = "tableName") @NotEmpty String table,
+        @RequestParam(value = "ptnNum") int ptnNum) {
+        return topicRegister.register(table, ptnNum, Endpoint.SINK);
     }
 }

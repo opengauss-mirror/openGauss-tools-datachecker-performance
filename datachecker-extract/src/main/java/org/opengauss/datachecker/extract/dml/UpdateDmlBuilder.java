@@ -19,7 +19,6 @@ import org.opengauss.datachecker.common.entry.enums.ColumnKey;
 import org.opengauss.datachecker.common.entry.enums.DataBaseType;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
-import org.opengauss.datachecker.common.util.HexUtil;
 import org.opengauss.datachecker.extract.util.MetaDataUtil;
 
 import javax.validation.constraints.NotNull;
@@ -98,7 +97,8 @@ public class UpdateDmlBuilder extends DmlBuilder {
     }
 
     public String build() {
-        return Fragment.DML_UPDATE.replace(Fragment.SCHEMA, schema).replace(Fragment.TABLE_NAME, tableName)
+        return Fragment.DML_UPDATE.replace(Fragment.SCHEMA, schema)
+                                  .replace(Fragment.TABLE_NAME, tableName)
                                   .replace(Fragment.COLUMNS, buildColumnsValue())
                                   .replace(Fragment.CONDITION, buildConditionCompositePrimary());
     }
@@ -107,13 +107,12 @@ public class UpdateDmlBuilder extends DmlBuilder {
         StringBuilder builder = new StringBuilder();
         final List<ColumnsMetaData> primaryMetaDatas = metadata.getPrimaryMetas();
         for (ColumnsMetaData primaryMeta : primaryMetaDatas) {
-            builder.append(primaryMeta.getColumnName()).append(Fragment.EQUAL);
+            builder.append(primaryMeta.getColumnName())
+                   .append(Fragment.EQUAL);
             if (MetaDataUtil.isDigitKey(primaryMeta)) {
                 builder.append(columnsValues.get(primaryMeta.getColumnName()));
-            } else if (BLOB_LIST.contains(primaryMeta.getDataType())) {
-                builder.append(convertValue(HexUtil.toHex(columnsValues.get(primaryMeta.getColumnName()))));
-            } else if (BINARY.contains(primaryMeta.getDataType())) {
-                builder.append(convertValue(HexUtil.HEX_PREFIX + columnsValues.get(primaryMeta.getColumnName())));
+            } else if (BLOB_LIST.contains(primaryMeta.getDataType()) || BINARY.contains(primaryMeta.getDataType())) {
+                builder.append(convertValue(hexPrefix + columnsValues.get(primaryMeta.getColumnName())));
             } else {
                 builder.append(convertValue(columnsValues.get(primaryMeta.getColumnName())));
             }
@@ -128,8 +127,6 @@ public class UpdateDmlBuilder extends DmlBuilder {
         return Fragment.SINGLE_QUOTES + fieldValue + Fragment.SINGLE_QUOTES;
     }
 
-
-
     private String buildColumnsValue() {
         StringBuilder builder = new StringBuilder();
         final List<ColumnsMetaData> columnMetaDatas = metadata.getColumnsMetas();
@@ -138,14 +135,13 @@ public class UpdateDmlBuilder extends DmlBuilder {
                 continue;
             }
             final String columnName = columnMeta.getColumnName();
-            builder.append(columnName).append(Fragment.EQUAL);
+            builder.append(columnName)
+                   .append(Fragment.EQUAL);
             final String columnValue = columnsValues.get(columnName);
             if (MetaDataUtil.isDigitKey(columnMeta)) {
                 builder.append(columnValue);
-            } else if (BLOB_LIST.contains(columnMeta.getDataType())) {
-                builder.append(convertValue(HexUtil.toHex(columnValue)));
-            } else if (BINARY.contains(columnMeta.getDataType())) {
-                builder.append(convertValue(HexUtil.HEX_PREFIX + columnValue));
+            } else if (BLOB_LIST.contains(columnMeta.getDataType()) || BINARY.contains(columnMeta.getDataType())) {
+                builder.append(convertValue(hexPrefix + columnValue));
             } else {
                 builder.append(convertValue(columnValue));
             }

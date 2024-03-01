@@ -49,11 +49,19 @@ public class CsvProcessManagement {
     private ScheduledExecutorService scheduledExecutor;
     private final BlockingQueue<String> tableDispatcherQueue = new LinkedBlockingQueue<>();
 
+    /**
+     * add task to Dispatcher queue
+     *
+     * @param completedTableList completedTableList
+     */
     public void taskDispatcher(List<String> completedTableList) {
         tableDispatcherQueue.addAll(completedTableList);
         log.info("add tables to task dispatcher queue [{}]", completedTableList);
     }
 
+    /**
+     * startTaskDispatcher
+     */
     public void startTaskDispatcher() {
         scheduledExecutor = ThreadUtil.newSingleThreadScheduledExecutor("table-dispatcher");
         int delay = ConfigCache.getIntValue(ConfigConstants.CSV_TASK_DISPATCHER_INTERVAL);
@@ -71,8 +79,14 @@ public class CsvProcessManagement {
         log.info("create task dispatcher schedule period [{}] seconds", delay);
     }
 
+    /**
+     * closeTaskDispatcher
+     */
     public void closeTaskDispatcher() {
         if (Objects.nonNull(scheduledExecutor)) {
+            while (!tableDispatcherQueue.isEmpty()) {
+                ThreadUtil.sleepHalfSecond();
+            }
             scheduledExecutor.shutdownNow();
             log.info("shutdown task dispatcher schedule");
         }

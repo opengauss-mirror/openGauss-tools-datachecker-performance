@@ -100,11 +100,20 @@ public class ColumnsMetaData implements Comparable<ColumnsMetaData> {
     }
 
     /**
+     * get datatype
+     *
+     * @return datatype
+     */
+    public String getDataType() {
+        return dataType.split("\\(")[0];
+    }
+
+    /**
      * pase resultSet metadata to ColumnsMetaData
      *
      * @param rs rs
      * @return ColumnsMetaData
-     * @throws SQLException
+     * @throws SQLException SQLException
      */
     public static ColumnsMetaData parse(ResultSet rs) throws SQLException {
         ColumnsMetaData columnsMetaData = new ColumnsMetaData();

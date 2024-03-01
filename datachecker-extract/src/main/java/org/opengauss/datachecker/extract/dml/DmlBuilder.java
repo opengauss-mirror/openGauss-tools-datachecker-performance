@@ -105,6 +105,11 @@ public class DmlBuilder {
     protected DataBaseType dataBaseType;
     protected boolean isOgCompatibilityB;
 
+    /**
+     * hex prefix
+     */
+    protected String hexPrefix;
+
     public DmlBuilder() {
     }
 
@@ -112,6 +117,7 @@ public class DmlBuilder {
         this.dataBaseType = databaseType;
         this.isOgCompatibilityB = ogCompatibility;
         this.checkMode = ConfigCache.getCheckMode();
+        this.hexPrefix = Objects.equals(CheckMode.CSV, checkMode) ? HexUtil.HEX_OG_PREFIX : HexUtil.HEX_PREFIX;
     }
 
     /**
@@ -179,10 +185,8 @@ public class DmlBuilder {
             final String columnName = columnMeta.getColumnName();
             if (MetaDataUtil.isDigitKey(columnMeta)) {
                 valueList.add(columnsValue.get(columnName));
-            } else if (BLOB_LIST.contains(columnMeta.getDataType())) {
-                valueList.add(SINGLE_QUOTES + columnsValue.get(columnName) + SINGLE_QUOTES);
-            } else if (BINARY.contains(columnMeta.getDataType())) {
-                valueList.add(SINGLE_QUOTES + HexUtil.HEX_PREFIX + columnsValue.get(columnName) + SINGLE_QUOTES);
+            } else if (BLOB_LIST.contains(columnMeta.getDataType()) || BINARY.contains(columnMeta.getDataType())) {
+                valueList.add(SINGLE_QUOTES + hexPrefix + columnsValue.get(columnName) + SINGLE_QUOTES);
             } else {
                 String value = columnsValue.get(columnName);
                 if (Objects.isNull(value)) {

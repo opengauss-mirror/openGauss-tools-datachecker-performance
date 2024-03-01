@@ -78,13 +78,24 @@ public class SliceRegister {
         if (!TopicCache.canCreateTopic(ConfigCache.getIntValue(ConfigConstants.MAXIMUM_TOPIC_SIZE))) {
             return false;
         }
-        topic = checkingClient.registerTopic(tableName, ptnNum, ConfigCache.getEndPoint());
-        if (kafkaAdminService.createTopic(topic.getTopicName(ConfigCache.getEndPoint()), topic.getPtnNum())) {
+        Endpoint endPoint = ConfigCache.getEndPoint();
+        topic = endpointRegisterTopic(tableName, ptnNum, endPoint);
+        if (kafkaAdminService.createTopic(topic.getTopicName(endPoint), topic.getPtnNum())) {
             TopicCache.add(topic);
             return true;
         } else {
             return false;
         }
+    }
+
+    private Topic endpointRegisterTopic(String tableName, int ptnNum, Endpoint endPoint) {
+        Topic topic;
+        if (Objects.equals(Endpoint.SOURCE, endPoint)) {
+            topic = checkingClient.sourceRegisterTopic(tableName, ptnNum);
+        } else {
+            topic = checkingClient.sinkRegisterTopic(tableName, ptnNum);
+        }
+        return topic;
     }
 
     /**

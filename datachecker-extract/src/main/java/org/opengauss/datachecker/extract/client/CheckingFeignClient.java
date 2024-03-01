@@ -70,14 +70,24 @@ public interface CheckingFeignClient {
     /**
      * register topic
      *
-     * @param table    tableName
-     * @param ptnNum   ptnNum
-     * @param endpoint current endpoint
+     * @param table  tableName
+     * @param ptnNum ptnNum
      * @return topic
      */
-    @PostMapping("/register/topic")
-    Topic registerTopic(@RequestParam(value = "tableName") @NotEmpty String table,
-        @RequestParam(value = "ptnNum") int ptnNum, @RequestParam(value = "endpoint") @NonNull Endpoint endpoint);
+    @PostMapping("/source/register/topic")
+    Topic sourceRegisterTopic(@RequestParam(value = "tableName") @NotEmpty String table,
+        @RequestParam(value = "ptnNum") int ptnNum);
+
+    /**
+     * register topic
+     *
+     * @param table  tableName
+     * @param ptnNum ptnNum
+     * @return topic
+     */
+    @PostMapping("/sink/register/topic")
+    Topic sinkRegisterTopic(@RequestParam(value = "tableName") @NotEmpty String table,
+        @RequestParam(value = "ptnNum") int ptnNum);
 
     /**
      * health check
