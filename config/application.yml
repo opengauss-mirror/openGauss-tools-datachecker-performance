@@ -17,7 +17,7 @@ data:
     # 0 is not delete; 1 is delete when checked all completed ; 2 is delete when checked a table
     auto-delete-topic: 2
     increment-max-diff-count: 1000
-    max-retry-times: 20
+    max-retry-times: 200
 rules:
   # There are three types of filtering rules: table-level rules, row-level rules, and column-level rules.
   # Rules are configured in the form of List collection.

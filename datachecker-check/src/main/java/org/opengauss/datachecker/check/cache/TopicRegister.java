@@ -27,6 +27,8 @@ import org.springframework.stereotype.Service;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * TopicRegister
@@ -40,6 +42,8 @@ public class TopicRegister {
     private static final Logger log = LogUtils.getLogger();
     private static volatile Map<String, Topic> TOPIC_CACHE = new ConcurrentHashMap<>();
 
+    private final Lock lock = new ReentrantLock();
+
     /**
      * add table's topic
      *
@@ -49,7 +53,8 @@ public class TopicRegister {
      * @return topic
      */
     public Topic register(String table, int ptnNum, Endpoint endpoint) {
-        synchronized (table) {
+        lock.lock();
+        try {
             Topic topic = TOPIC_CACHE.get(table);
             if (Objects.isNull(topic)) {
                 topic = new Topic();
@@ -59,8 +64,10 @@ public class TopicRegister {
                 TOPIC_CACHE.put(table, topic);
             }
             log.debug("register topic {}-{}", endpoint, topic.toString());
+            return TOPIC_CACHE.get(table);
+        } finally {
+            lock.unlock();
         }
-        return TOPIC_CACHE.get(table);
     }
 
     private void setTopicName(String table, Topic topic) {

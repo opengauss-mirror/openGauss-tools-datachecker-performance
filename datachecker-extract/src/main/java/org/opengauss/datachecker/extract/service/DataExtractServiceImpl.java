@@ -329,14 +329,12 @@ public class DataExtractServiceImpl implements DataExtractService {
             log.info("Perform data extraction tasks {}", task.getTaskName());
             final String tableName = task.getTableName();
             if (!tableCheckStatus.containsKey(tableName) || tableCheckStatus.get(tableName) == -1) {
-                log.warn("Abnormal table[{}] status, ignoring the current table data extraction task",
-                    tableName);
+                log.warn("Abnormal table[{}] status, ignoring the current table data extraction task", tableName);
                 return;
             }
-            ThreadUtil.requestConflictingSleeping();
             registerTopic(task);
             while (!TopicCache.canCreateTopic(maximumTopicSize)) {
-                ThreadUtil.sleep(1000);
+                ThreadUtil.sleepHalfSecond();
             }
             Topic topic = task.getTopic();
             Endpoint endpoint = extractProperties.getEndpoint();
@@ -484,7 +482,12 @@ public class DataExtractServiceImpl implements DataExtractService {
     private void registerTopic(ExtractTask task) {
         int topicPartitions = TopicUtil.calcPartitions(task.getDivisionsTotalNumber());
         Endpoint currentEndpoint = extractProperties.getEndpoint();
-        Topic topic = checkingFeignClient.registerTopic(task.getTableName(), topicPartitions, currentEndpoint);
+        Topic topic;
+        if (Objects.equals(Endpoint.SOURCE, currentEndpoint)) {
+            topic = checkingFeignClient.sourceRegisterTopic(task.getTableName(), topicPartitions);
+        } else {
+            topic = checkingFeignClient.sinkRegisterTopic(task.getTableName(), topicPartitions);
+        }
         task.setTopic(topic);
     }
 

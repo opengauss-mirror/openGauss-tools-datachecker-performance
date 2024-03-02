@@ -26,13 +26,18 @@ public class HexUtil {
     private static final char[] CHARS = "0123456789ABCDEF".toCharArray();
     public static final String HEX_ZERO_PREFIX = "0x";
     public static final String HEX_PREFIX = "\\x";
+
+    /**
+     * hex openGauss prefix
+     */
+    public static final String HEX_OG_PREFIX = "\\";
     private static final String HEX_NO_PREFIX = "";
 
     /**
      * Convert text string to hexadecimal string
      *
      * @param str str
-     * @return
+     * @return str
      */
     public static String toHex(String str) {
         StringBuilder sb = new StringBuilder("");
@@ -52,7 +57,7 @@ public class HexUtil {
      * Convert byte array to hexadecimal string
      *
      * @param data data
-     * @return
+     * @return data
      */
     public static String byteToHex(byte[] data) {
         StringBuilder result = new StringBuilder();
@@ -69,7 +74,7 @@ public class HexUtil {
      * 02AA -> 0x02AA
      *
      * @param data data
-     * @return
+     * @return data
      */
     public static String byteToHexTrimBackslash(byte[] data) {
         return byteToHexTrim(data, HEX_PREFIX);
@@ -80,7 +85,7 @@ public class HexUtil {
      * 02AA -> 02AA
      *
      * @param data data
-     * @return
+     * @return data
      */
     public static String byteToHexTrim(byte[] data) {
         return byteToHexTrim(data, HEX_NO_PREFIX);
@@ -91,7 +96,7 @@ public class HexUtil {
      * 02AA -> 0x02AA
      *
      * @param data data
-     * @return
+     * @return data
      */
     public static String byteToHexTrimZero(byte[] data) {
         return byteToHexTrim(data, HEX_ZERO_PREFIX);
@@ -163,11 +168,23 @@ public class HexUtil {
         private final String name;
         private final char hexChar;
 
+        /**
+         * BinaryHex
+         *
+         * @param name    name
+         * @param hexChar hexChar
+         */
         BinaryHex(String name, char hexChar) {
             this.name = name;
             this.hexChar = hexChar;
         }
 
+        /**
+         * hexOf
+         *
+         * @param name name
+         * @return char
+         */
         public static char hexOf(String name) {
             return valueOf("B" + name).hexChar;
         }
