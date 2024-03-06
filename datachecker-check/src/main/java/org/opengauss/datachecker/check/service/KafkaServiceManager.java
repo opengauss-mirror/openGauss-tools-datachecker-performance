@@ -40,6 +40,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -55,7 +56,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 @Component
 public class KafkaServiceManager {
-    private static final Logger log = LogUtils.getKafkaLogger();
+    private static final Logger log = LogUtils.getLogger(KafkaServiceManager.class);
 
     private KafkaAdminClient adminClient;
     @Resource
@@ -90,7 +91,8 @@ public class KafkaServiceManager {
             adminClient.listTopics()
                        .listings()
                        .get();
-            log.info("init and listTopics  admin client [{}]", ConfigCache.getValue(ConfigConstants.KAFKA_SERVERS));
+            LogUtils.info(log, "init and listTopics  admin client [{}]",
+                ConfigCache.getValue(ConfigConstants.KAFKA_SERVERS));
         } catch (ExecutionException | InterruptedException ex) {
             log.error("kafka Client link exception: ", ex);
             throw new KafkaException("kafka Client link exception");
@@ -110,10 +112,10 @@ public class KafkaServiceManager {
             topicsResult.values()
                         .get(topic)
                         .get(5, TimeUnit.SECONDS);
-            log.info("create topic success , name= [{}] numPartitions = [{}]", topic, partitions);
+            LogUtils.info(log, "create topic success , name= [{}] numPartitions = [{}]", topic, partitions);
             return true;
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
-            log.error("create tioic error : ", e);
+            LogUtils.error(log, "create tioic error : ", e);
             return false;
         }
     }
@@ -129,21 +131,21 @@ public class KafkaServiceManager {
         kafkaFutureMap.forEach((topic, future) -> {
             try {
                 future.get(1, TimeUnit.SECONDS);
-                log.info("topic={} is deleting", topic);
+                LogUtils.info(log, "topic={} is deleting", topic);
             } catch (InterruptedException | ExecutionException | TimeoutException e) {
-                log.warn("topic={} is delete : {}", topic, e.getMessage());
+                LogUtils.warn(log, "topic={} is delete : {}", topic, e.getMessage());
             }
         });
         Set<String> topicList = getKafkaTopicList();
         AtomicBoolean isNotDeleted = new AtomicBoolean(false);
         topics.forEach(topic -> {
             if (topicList.contains(topic)) {
-                log.warn("topic does not deleted kafka {}", topic);
+                LogUtils.warn(log, "topic does not deleted kafka {}", topic);
                 isNotDeleted.set(true);
             }
         });
         if (!isNotDeleted.get()) {
-            log.info("topic [{}] has deleted", topics);
+            LogUtils.info(log, "topic [{}] has deleted", topics);
         }
     }
 
@@ -163,10 +165,22 @@ public class KafkaServiceManager {
         if (adminClient != null) {
             try {
                 adminClient.close(Duration.ZERO);
-                log.info("kafkaAdminClient close.");
+                LogUtils.info(log, "kafkaAdminClient close.");
             } catch (Exception e) {
-                log.error("check kafkaAdminClient close error: ", e);
+                LogUtils.error(log, "check kafkaAdminClient close error: ", e);
             }
+        }
+    }
+
+    /**
+     * 取消consumer订阅并关闭consumer
+     *
+     * @param kafkaConsumer kafkaConsumer
+     */
+    public void closeConsumer(KafkaConsumer<String, String> kafkaConsumer) {
+        if (Objects.nonNull(kafkaConsumer)) {
+            kafkaConsumer.unsubscribe();
+            kafkaConsumer.close();
         }
     }
 }

@@ -19,9 +19,7 @@ import org.opengauss.datachecker.common.constant.DynamicTpConstant;
 import org.opengauss.datachecker.common.exception.ExtractBootstrapException;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
-import org.springframework.util.CollectionUtils;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
@@ -67,10 +65,9 @@ public class DynamicThreadPoolManager {
     /**
      * start dynamicThreadPoolMonitor
      */
-    @Async
     public void dynamicThreadPoolMonitor() {
         monitor = new DynamicThreadPoolMonitor(EXECUTOR_SERVICE_CACHE, corePoolSize);
-        monitor.run();
+        new Thread(monitor).start();
     }
 
     /**
@@ -132,7 +129,7 @@ public class DynamicThreadPoolManager {
     }
 
     private ThreadPoolExecutor buildExtendDtpExecutor(String extendDtpName, int extendMaxPoolSize) {
-        dynamicThreadPool.buildExtendDtpExecutor(EXECUTOR_SERVICE_CACHE, extendDtpName, 1, extendMaxPoolSize);
+        dynamicThreadPool.buildExtendDtpExecutor(EXECUTOR_SERVICE_CACHE, extendDtpName, corePoolSize, extendMaxPoolSize);
         return EXECUTOR_SERVICE_CACHE.get(extendDtpName);
     }
 

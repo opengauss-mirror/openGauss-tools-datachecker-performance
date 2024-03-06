@@ -37,7 +37,7 @@ import java.util.Objects;
  * @since ：11
  */
 public class JdbcDataOperations {
-    private static final Logger log = LogUtils.getBusinessLogger();
+    private static final Logger log = LogUtils.getLogger(JdbcDataOperations.class);
     private static final String OPEN_GAUSS_PARALLEL_QUERY = "set query_dop to %s;";
     private static final String OPEN_GAUSS_EXTRA_FLOAT_DIGITS = "set extra_float_digits to 0;";
     private static final int LOG_WAIT_TIMES = 600;
@@ -108,6 +108,16 @@ public class JdbcDataOperations {
             throw new ExtractDataAccessException(message);
         }
         Connection connection = ConnectionMgr.getConnection();
+        int tryTime = 0;
+        while (Objects.isNull(connection) && tryTime < 30) {
+            ThreadUtil.sleepMaxHalfSecond();
+            connection = ConnectionMgr.getConnection();
+            tryTime++;
+            LogUtils.debug(log, "try to get jdbc connection! {}", tryTime);
+        }
+        if (Objects.isNull(connection)) {
+            throw new ExtractDataAccessException("can not get jdbc connection!");
+        }
         initJdbcConnectionEnvParameter(connection);
         return connection;
     }
@@ -129,7 +139,7 @@ public class JdbcDataOperations {
             PreparedStatement ps = connection.prepareStatement(statementSql);
             ps.execute();
         } catch (SQLException sql) {
-            sql.printStackTrace();
+            LogUtils.error(log, "exectue sql[{}] exception ", statementSql, sql);
         }
     }
 
@@ -158,25 +168,16 @@ public class JdbcDataOperations {
         }
     }
 
-    /**
-     * get parallel query dop
-     *
-     * @return query dop
-     */
-    public int getParallelQueryDop() {
-        return resourceManager.getParallelQueryDop();
-    }
-
     private void takeConnection(long free) {
         int waitTimes = 0;
         while (!canExecQuery(free)) {
             if (isShutdown()) {
                 break;
             }
-            ThreadUtil.sleepOneSecond();
+            ThreadUtil.sleepMaxHalfSecond();
             waitTimes++;
             if (waitTimes >= LOG_WAIT_TIMES) {
-                log.warn("wait times , try to take connection");
+                LogUtils.debug(log, "wait times , try to take connection");
                 waitTimes = 0;
             }
         }

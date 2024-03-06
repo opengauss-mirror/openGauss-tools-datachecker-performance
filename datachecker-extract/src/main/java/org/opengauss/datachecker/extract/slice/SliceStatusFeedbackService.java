@@ -36,7 +36,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * @since ：11
  */
 public class SliceStatusFeedbackService {
-    private static final Logger log = LogUtils.getLogger();
+    private static final Logger log = LogUtils.getLogger(SliceStatusFeedbackService.class);
     private static final Lock lock = new ReentrantLock();
     public static final String FEEDBACK_THREAD_NAME = "status-feedback-service";
     private final BlockingQueue<SliceExtend> feedbackQueue = new LinkedBlockingQueue<>();
@@ -87,9 +87,9 @@ public class SliceStatusFeedbackService {
                         continue;
                     }
                     checkingClient.refreshRegisterSlice(sliceExt);
-                    log.info("feedback slice status of table [{}]", sliceExt);
+                    LogUtils.debug(log,"feedback slice status of table [{}]", sliceExt);
                 } catch (Exception ex) {
-                    log.error("feedback slice status error {}", sliceExt, ex);
+                    LogUtils.error(log,"feedback slice status error {}", sliceExt, ex);
                 }
             }
         });

@@ -52,7 +52,7 @@ import java.util.stream.Collectors;
  */
 @Service
 public class BaseDataService {
-    private static final Logger log = LogUtils.getLogger();
+    private static final Logger log = LogUtils.getLogger(BaseDataService.class);
     private static final LongHashFunctionWrapper HASH_UTIL = new LongHashFunctionWrapper();
 
     @Resource
@@ -173,7 +173,7 @@ public class BaseDataService {
             return tableMetadata;
         }
         updateTableColumnMetaData(tableMetadata, null);
-        log.debug("query table metadata {} -- {} ", tableName, tableMetadata);
+        LogUtils.debug(log, "query table metadata {} -- {} ", tableName, tableMetadata);
         MetaDataCache.put(tableName, tableMetadata);
         return tableMetadata;
     }
@@ -188,7 +188,7 @@ public class BaseDataService {
         String tableName = tableMetadata.getTableName();
         final List<ColumnsMetaData> columns = dataAccessService.queryTableColumnsMetaData(tableName);
         if (Objects.isNull(columns)) {
-            log.error("table columns metadata is null ,{}", tableName);
+            LogUtils.error(log, "table columns metadata is null ,{}", tableName);
             return;
         }
         if (Objects.isNull(primaryColumnBeans)) {
@@ -264,12 +264,12 @@ public class BaseDataService {
         if (CollectionUtils.isNotEmpty(filterTableList)) {
             TableMetadata tableMetadata = queryTableMetadata(table);
             if (Objects.isNull(tableMetadata)) {
-                log.warn("table [{}] did not queried by queryTableMetadata", table);
+                LogUtils.warn(log, "table [{}] did not queried by queryTableMetadata", table);
                 return false;
             }
             return tableMetadata.hasPrimary();
         } else {
-            log.warn("table [{}] does not in checklist", table);
+            LogUtils.warn(log, "table [{}] does not in checklist", table);
             return false;
         }
     }

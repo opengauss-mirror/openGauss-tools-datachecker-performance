@@ -17,7 +17,6 @@ package org.opengauss.datachecker.extract.data.access;
 
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.entry.check.Difference;
-import org.opengauss.datachecker.common.entry.enums.DataBaseMeta;
 import org.opengauss.datachecker.common.entry.extract.PrimaryColumnBean;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.util.LogUtils;
@@ -47,7 +46,7 @@ import java.util.Map;
  * @since ：11
  */
 public abstract class AbstractDataAccessService implements DataAccessService {
-    protected static final Logger log = LogUtils.getLogger();
+    protected static final Logger log = LogUtils.getLogger(DataAccessService.class);
 
     private static final String RS_COL_SCHEMA = "tableSchema";
     private static final String RS_COL_TABLE_NAME = "tableName";
@@ -88,12 +87,12 @@ public abstract class AbstractDataAccessService implements DataAccessService {
                 list.add(resultSet.getString(RS_COL_TABLE_NAME));
             }
         } catch (SQLException esql) {
-            log.error("", esql);
+            LogUtils.error(log,"", esql);
         } finally {
             ConnectionMgr.close(connection, null, null);
         }
         long betweenToMillis = durationBetweenToMillis(start, LocalDateTime.now());
-        log.info("adasQueryTableNameList cost [{}ms]", betweenToMillis);
+        LogUtils.debug(log,"adasQueryTableNameList cost [{}ms]", betweenToMillis);
         return list;
     }
 
@@ -117,12 +116,12 @@ public abstract class AbstractDataAccessService implements DataAccessService {
                 list.add(metadata);
             }
         } catch (SQLException esql) {
-            log.error("", esql);
+            LogUtils.error(log,"", esql);
         } finally {
             ConnectionMgr.close(connection, null, null);
         }
         long betweenToMillis = durationBetweenToMillis(start, LocalDateTime.now());
-        log.info("adasQueryTablePrimaryColumns cost [{}ms]", betweenToMillis);
+        LogUtils.debug(log,"adasQueryTablePrimaryColumns cost [{}ms]", betweenToMillis);
         return list;
     }
 
@@ -148,12 +147,36 @@ public abstract class AbstractDataAccessService implements DataAccessService {
                 list.add(metadata);
             }
         } catch (SQLException esql) {
-            log.error("", esql);
+            LogUtils.error(log,"", esql);
         } finally {
             ConnectionMgr.close(connection, null, null);
         }
         long betweenToMillis = durationBetweenToMillis(start, LocalDateTime.now());
-        log.info("dasQueryTableMetadataList cost [{}ms]", betweenToMillis);
+        LogUtils.debug(log,"dasQueryTableMetadataList cost [{}ms]", betweenToMillis);
+        return list;
+    }
+
+    /**
+     * 查询表数据抽样检查点清单
+     *
+     * @param sql 检查点查询SQL
+     * @return 检查点列表
+     */
+    protected List<Object> adasQueryPointList(String sql) {
+        final LocalDateTime start = LocalDateTime.now();
+        Connection connection = ConnectionMgr.getConnection();
+        List<Object> list = new LinkedList<>();
+        try (PreparedStatement ps = connection.prepareStatement(sql); ResultSet resultSet = ps.executeQuery()) {
+            while (resultSet.next()) {
+                list.add(resultSet.getString(1));
+            }
+        } catch (SQLException esql) {
+            LogUtils.error(log,"", esql);
+        } finally {
+            ConnectionMgr.close(connection, null, null);
+        }
+        long betweenToMillis = durationBetweenToMillis(start, LocalDateTime.now());
+        LogUtils.debug(log,"adasQueryPointList [{}] cost [{}ms]", sql, betweenToMillis);
         return list;
     }
 
@@ -198,8 +221,8 @@ public abstract class AbstractDataAccessService implements DataAccessService {
      */
     protected List<TableMetadata> wrapperTableMetadata(List<TableMetadata> list) {
         list.forEach(meta -> meta.setDataBaseType(properties.getDatabaseType())
-                             .setEndpoint(properties.getEndpoint())
-                             .setOgCompatibilityB(isOgCompatibilityB));
+                                 .setEndpoint(properties.getEndpoint())
+                                 .setOgCompatibilityB(isOgCompatibilityB));
         return list;
     }
 }

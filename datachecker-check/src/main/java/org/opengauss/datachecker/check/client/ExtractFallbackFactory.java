@@ -181,11 +181,6 @@ public class ExtractFallbackFactory implements FallbackFactory<ExtractFeignClien
         }
 
         @Override
-        public Result<Void> notifyCheckTableFinished(String tableName) {
-            return Result.error("Remote call, notify Check Table Finished exception");
-        }
-
-        @Override
         public Result<Boolean> isCheckTableEmpty(boolean isForced) {
             return Result.error("Remote call, check table empty exception");
         }

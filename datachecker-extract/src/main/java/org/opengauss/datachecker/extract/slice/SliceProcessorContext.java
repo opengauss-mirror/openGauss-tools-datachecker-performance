@@ -15,13 +15,10 @@
 
 package org.opengauss.datachecker.extract.slice;
 
-import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.entry.extract.SliceExtend;
 import org.opengauss.datachecker.common.entry.extract.SliceVo;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
-import org.opengauss.datachecker.common.entry.extract.Topic;
 import org.opengauss.datachecker.common.service.ProcessLogService;
-import org.opengauss.datachecker.extract.cache.TopicCache;
 import org.opengauss.datachecker.extract.client.CheckingFeignClient;
 import org.opengauss.datachecker.extract.config.KafkaConsumerConfig;
 import org.opengauss.datachecker.extract.data.BaseDataService;
@@ -64,29 +61,19 @@ public class SliceProcessorContext {
     private CheckingFeignClient checkingFeignClient;
     private SliceStatusFeedbackService sliceStatusFeedbackService;
 
-    /**
-     * create slice kafka agents
-     *
-     * @param slice slice
-     * @return slice kafka agents
-     */
-    public SliceKafkaAgents createSliceKafkaAgents(SliceVo slice) {
-        return createSliceKafkaAgents(slice.getTable(), slice.getPtn());
-    }
-
     public void saveProcessing(SliceVo slice) {
         processLogService.saveProcessHistoryLogging(slice.getTable(), slice.getNo());
     }
 
-    public SliceKafkaAgents createSliceKafkaAgents(String table, int ptn) {
-        Topic topic = TopicCache.getTopic(table);
-        String topicName = topic.getTopicName(ConfigCache.getEndPoint());
-        return new SliceKafkaAgents(kafkaTemplate, kafkaConsumerConfig.createConsumer(), topicName, ptn);
-    }
-
-    public SliceKafkaAgents createSliceKafkaAgents(String table) {
-        Topic topic = TopicCache.getTopic(table);
-        return new SliceKafkaAgents(kafkaTemplate, kafkaConsumerConfig.createConsumer(), topic);
+    /**
+     * 创建分片kafka代理
+     *
+     * @param topicName topic 名称
+     * @param groupId   GroupID
+     * @return 分片kafka代理
+     */
+    public SliceKafkaAgents createSliceFixedKafkaAgents(String topicName, String groupId) {
+        return new SliceKafkaAgents(kafkaTemplate, kafkaConsumerConfig.createConsumer(groupId), topicName, 0);
     }
 
     /**

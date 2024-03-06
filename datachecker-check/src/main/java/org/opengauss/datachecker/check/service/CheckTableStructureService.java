@@ -47,7 +47,8 @@ import java.util.stream.Collectors;
  */
 @Service
 public class CheckTableStructureService {
-    private static final Logger log = LogUtils.getLogger();
+    private static final Logger log = LogUtils.getLogger(CheckTableStructureService.class);
+
     @Resource
     private CheckEnvironment checkEnvironment;
     @Resource
@@ -87,7 +88,7 @@ public class CheckTableStructureService {
         initCheckTableStatus();
         checkTableStructureChanged(processNo);
         checkMissTable(processNo);
-        log.info("check table structure {}", checkTableInfo);
+        LogUtils.info(log, "check table structure {}", checkTableInfo);
         sliceCheckResultManager.refreshTableStructureDiffResult(checkTableInfo);
         return checkTableInfo;
     }
@@ -149,7 +150,7 @@ public class CheckTableStructureService {
                                             .build();
             taskRegisterCenter.refreshCheckedTableCompleted(tableName);
             sliceCheckResultManager.addTableStructureDiffResult(tableName, result);
-            log.debug("compared  table[{}] field names not match source={},sink={}", tableName,
+            LogUtils.debug(log, "compared  table[{}] field names not match source={},sink={}", tableName,
                 getFieldNames(sourceMeta), getFieldNames(sinkMeta));
         }
     }
@@ -175,7 +176,8 @@ public class CheckTableStructureService {
                                         .build();
         taskManagerService.refreshTableExtractStatus(tableName, Endpoint.CHECK, -1);
         sliceCheckResultManager.addTableStructureDiffResult(tableName, result);
-        log.error("compared the field names in table[{}](case ignored) and the result is not match", tableName);
+        LogUtils.error(log, "compared the field names in table[{}](case ignored) and the result is not match",
+            tableName);
         return onlyExistEndpoint;
     }
 

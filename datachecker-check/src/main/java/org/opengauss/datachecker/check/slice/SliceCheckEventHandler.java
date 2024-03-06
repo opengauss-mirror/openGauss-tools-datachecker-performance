@@ -43,7 +43,8 @@ import static org.opengauss.datachecker.common.constant.DynamicTpConstant.CHECK_
  */
 @Component
 public class SliceCheckEventHandler {
-    private static final Logger log = LogUtils.getBusinessLogger();
+    private static final Logger log = LogUtils.getLogger(SliceCheckEventHandler.class);
+
     private SliceCheckContext sliceCheckContext;
     private TaskRegisterCenter registerCenter;
     private ThreadPoolExecutor executor;
@@ -67,7 +68,7 @@ public class SliceCheckEventHandler {
      */
     public void handle(SliceCheckEvent checkEvent) {
         if (checkTableStructure(checkEvent)) {
-            log.info("slice check event {} is dispatched, and checked level=[isTableLevel={}]",
+            LogUtils.debug(log, "slice check event {} is dispatched, and checked level=[isTableLevel={}]",
                 checkEvent.getCheckName(), checkEvent.isTableLevel());
             if (checkEvent.isTableLevel()) {
                 executor.submit(new TableCheckWorker(checkEvent, sliceCheckContext));
@@ -75,7 +76,7 @@ public class SliceCheckEventHandler {
                 executor.submit(new SliceCheckWorker(checkEvent, sliceCheckContext, registerCenter));
             }
         } else {
-            log.info("slice check event , table structure diff [{}][{} : {}]", checkEvent.getCheckName(),
+            LogUtils.info(log, "slice check event , table structure diff [{}][{} : {}]", checkEvent.getCheckName(),
                 checkEvent.getSource()
                           .getTableHash(), checkEvent.getSink()
                                                      .getTableHash());

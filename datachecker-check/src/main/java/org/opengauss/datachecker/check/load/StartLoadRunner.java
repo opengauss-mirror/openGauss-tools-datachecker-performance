@@ -17,6 +17,7 @@ package org.opengauss.datachecker.check.load;
 
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.check.service.ConfigManagement;
+import org.opengauss.datachecker.check.service.KafkaServiceManager;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -32,19 +33,23 @@ import java.util.Arrays;
  */
 @Component
 public class StartLoadRunner implements ApplicationRunner {
-    private static final Logger log = LogUtils.getLogger();
+    private static final Logger log = LogUtils.getLogger(StartLoadRunner.class);
+
     @Resource
     private CheckEnvironment checkEnvironment;
     @Resource
     private AsyncCheckStarter startRunner;
     @Resource
     private ConfigManagement configManagement;
+    @Resource
+    private KafkaServiceManager kafkaServiceManager;
 
     @Override
     public void run(ApplicationArguments args) {
-        log.info("start load runner :{}", Arrays.deepToString(args.getSourceArgs()));
+        LogUtils.info(log, "start load runner :{}", Arrays.deepToString(args.getSourceArgs()));
         configManagement.init();
         startRunner.initCheckEnvironment(checkEnvironment);
+        kafkaServiceManager.initAdminClient();
         startRunner.start();
     }
 }

@@ -32,7 +32,8 @@ import javax.annotation.PostConstruct;
  */
 @Component
 public class ExtractConfig {
-    private static final Logger log = LogUtils.getLogger();
+    private static final Logger log = LogUtils.getLogger(ExtractConfig.class);
+
     @Autowired
     private ExtractProperties extractProperties;
 
@@ -41,6 +42,6 @@ public class ExtractConfig {
      */
     @PostConstruct
     public void initLoad() {
-        log.info("check config properties [{}]", JsonObjectUtil.format(extractProperties));
+        LogUtils.info(log, "check config properties [{}]", JsonObjectUtil.format(extractProperties));
     }
 }

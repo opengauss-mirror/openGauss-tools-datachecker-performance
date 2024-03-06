@@ -30,6 +30,7 @@ import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.entry.enums.RuleType;
 import org.opengauss.datachecker.common.entry.extract.Database;
 import org.opengauss.datachecker.common.exception.CheckingException;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
@@ -67,7 +68,7 @@ public class CheckConfigDistributeLoader extends AbstractCheckLoader {
         try {
             RuleParser ruleParser = new RuleParser();
             CheckMode checkMode = checkEnvironment.getCheckMode();
-            log.info("check service distribute config. {}", checkMode.getDescription());
+            LogUtils.info(log, "check service distribute config. {}", checkMode.getDescription());
             if (Objects.equals(CheckMode.INCREMENT, checkMode)) {
                 config.tableRuleClear();
                 config.rowRuleClear();
@@ -75,18 +76,18 @@ public class CheckConfigDistributeLoader extends AbstractCheckLoader {
             final Map<RuleType, List<Rule>> rules = ruleParser.parser(config);
             GlobalConfig globalConfig = initDistributeGlobalConfig(checkMode, rules);
             feignClient.distributeConfig(checkMode, globalConfig);
-            log.info("check distribute rule config success.");
+            LogUtils.info(log, "check distribute rule config success.");
             // distribute csv config
             if (Objects.equals(CheckMode.CSV, checkEnvironment.getCheckMode())) {
                 CsvPathConfig csvPathConfig = csvProperties.translate();
                 configManagement.setCsvConfig(csvPathConfig);
                 feignClient.distributeConfig(csvPathConfig);
-                log.info("check distribute csv config success.");
+                LogUtils.info(log, "check distribute csv config success.");
             }
             checkEnvironment.addRules(rules);
-            log.info("check service distribute config success.");
+            LogUtils.info(log, "check service distribute config success.");
         } catch (Exception ignore) {
-            log.error("distribute config error: ", ignore);
+            LogUtils.error(log, "distribute config error: ", ignore);
             throw new CheckingException("distribute config error");
         }
     }
@@ -96,6 +97,10 @@ public class CheckConfigDistributeLoader extends AbstractCheckLoader {
         globalConfig.setRules(rules);
         globalConfig.setCheckMode(checkMode);
         globalConfig.setProcessPath(checkProperties.getDataPath());
+
+        globalConfig.addCommonConfig(ConfigConstants.PROCESS_NO, ConfigCache.getValue(ConfigConstants.PROCESS_NO));
+        globalConfig.addCommonConfig(ConfigConstants.MAXIMUM_TOPIC_SIZE,
+            ConfigCache.getIntValue(ConfigConstants.MAXIMUM_TOPIC_SIZE));
         globalConfig.addCommonConfig(ConfigConstants.FLOATING_POINT_DATA_SUPPLY_ZERO,
             ConfigCache.getBooleanValue(ConfigConstants.FLOATING_POINT_DATA_SUPPLY_ZERO));
         globalConfig.addCommonConfig(ConfigConstants.SQL_MODE_PAD_CHAR_TO_FULL_LENGTH,

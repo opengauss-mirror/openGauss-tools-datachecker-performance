@@ -67,6 +67,7 @@ public class AsyncCheckStarter {
         SliceCheckContext sliceCheckContext = SpringUtil.getBean(SliceCheckContext.class);
         TaskRegisterCenter registerCenter = SpringUtil.getBean(TaskRegisterCenter.class);
         DynamicThreadPoolManager dynamicThreadPoolManager = SpringUtil.getBean(DynamicThreadPoolManager.class);
+        dynamicThreadPoolManager.dynamicThreadPoolMonitor();
         sliceCheckEventHandler.initSliceCheckEventHandler(dynamicThreadPoolManager, sliceCheckContext, registerCenter);
     }
 

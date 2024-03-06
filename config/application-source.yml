@@ -6,11 +6,11 @@ logging:
 spring:
   check:
     server-uri: http://127.0.0.1:9000
-    core-pool-size: 1
-    maximum-pool-size: 4
+    core-pool-size: 2
+    maximum-pool-size: 10
     maximum-topic-size: 4
     maximum-table-slice-size: 100000
-    extend-maximum-pool-size: 2
+    extend-maximum-pool-size: 5
   extract:
     schema: test
     databaseType: MS # For MySQL

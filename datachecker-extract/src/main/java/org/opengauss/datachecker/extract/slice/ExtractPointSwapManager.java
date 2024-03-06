@@ -24,9 +24,11 @@ import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.Constants;
 import org.opengauss.datachecker.common.entry.common.CheckPointData;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
+import org.opengauss.datachecker.common.util.IdGenerator;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.opengauss.datachecker.extract.cache.TableCheckPointCache;
+import org.opengauss.datachecker.extract.config.KafkaConsumerConfig;
 import org.springframework.kafka.core.KafkaTemplate;
 
 import java.time.Duration;
@@ -43,25 +45,30 @@ import java.util.stream.Collectors;
  * @since ：11
  */
 public class ExtractPointSwapManager {
-    private static final Logger log = LogUtils.getBusinessLogger();
+    private static final Logger log = LogUtils.getLogger(ExtractPointSwapManager.class);
+
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final KafkaConsumer<String, String> kafkaConsumer;
     private String checkPointSwapTopicName = null;
     private Endpoint endpoint;
     private boolean isCompletedSwapTablePoint = false;
     private ExecutorService executorService;
+    private KafkaConsumerConfig kafkaConsumerConfig;
 
     public ExtractPointSwapManager(KafkaTemplate<String, String> kafkaTemplate,
-        KafkaConsumer<String, String> kafkaConsumer) {
+        KafkaConsumerConfig kafkaConsumerConfig) {
         this.kafkaTemplate = kafkaTemplate;
-        this.kafkaConsumer = kafkaConsumer;
+        this.endpoint = ConfigCache.getEndPoint();
         this.endpoint = ConfigCache.getEndPoint();
         this.executorService = ThreadUtil.newSingleThreadExecutor();
+        this.kafkaConsumerConfig = kafkaConsumerConfig;
+        this.kafkaConsumer = kafkaConsumerConfig.createConsumer(IdGenerator.nextId36());
     }
 
     public void send(CheckPointData checkPointData) {
         checkPointData.setEndpoint(endpoint);
         kafkaTemplate.send(checkPointSwapTopicName, endpoint.getDescription(), JSONObject.toJSONString(checkPointData));
+        LogUtils.info(log, "send check point [{}][{}]", checkPointSwapTopicName, checkPointData);
     }
 
     public void pollSwapPoint(TableCheckPointCache tableCheckPointCache) {
@@ -69,7 +76,7 @@ public class ExtractPointSwapManager {
             trySubscribe();
             ConsumerRecords<String, String> records;
             AtomicInteger deliveredCount = new AtomicInteger();
-            log.info("pollSwapPoint thread started");
+            LogUtils.info(log, "pollSwapPoint thread started");
             while (!isCompletedSwapTablePoint) {
                 try {
                     records = kafkaConsumer.poll(Duration.ofSeconds(1));
@@ -79,7 +86,8 @@ public class ExtractPointSwapManager {
                                 CheckPointData pointData = JSONObject.parseObject(record.value(), CheckPointData.class);
                                 tableCheckPointCache.put(pointData.getTableName(), translateDigitPoint(pointData));
                                 deliveredCount.getAndIncrement();
-                                log.info("swap summarized checkpoint of table [{}]:[{}] ", deliveredCount, pointData);
+                                LogUtils.info(log, "swap summarized checkpoint of table [{}]:[{}] ", deliveredCount,
+                                    pointData);
                             }
                         });
                     } else {
@@ -87,13 +95,16 @@ public class ExtractPointSwapManager {
                     }
                 } catch (Exception ex) {
                     if (Objects.equals("java.lang.InterruptedException", ex.getMessage())) {
-                        log.warn("kafka consumer stop by Interrupted");
+                        LogUtils.warn(log, "kafka consumer stop by Interrupted");
                     } else {
-                        log.error("pollSwapPoint ", ex);
+                        LogUtils.error(log, "pollSwapPoint ", ex);
                     }
                 }
             }
-            kafkaConsumer.unsubscribe();
+            LogUtils.warn(log, "close check point swap consumer {} :{}", checkPointSwapTopicName,
+                kafkaConsumer.groupMetadata()
+                             .groupId());
+            kafkaConsumerConfig.closeConsumer(kafkaConsumer);
         });
     }
 
@@ -120,18 +131,19 @@ public class ExtractPointSwapManager {
             Map<String, List<PartitionInfo>> listTopics = kafkaConsumer.listTopics();
             isSubscribe = listTopics.containsKey(checkPointSwapTopicName);
         } catch (Exception ex) {
-            log.warn("subscribe {} failed", checkPointSwapTopicName);
+            LogUtils.warn(log, "subscribe {} failed", checkPointSwapTopicName);
         }
         return isSubscribe;
     }
 
     public void setCheckPointSwapTopicName(String process) {
         this.checkPointSwapTopicName = String.format(Constants.SWAP_POINT_TOPIC_TEMP, process);
-        log.info("check point swap topic {}", checkPointSwapTopicName);
+        LogUtils.info(log, "check point swap topic {}", checkPointSwapTopicName);
     }
 
     public void close() {
         this.isCompletedSwapTablePoint = true;
+
         this.executorService.shutdownNow();
     }
 }

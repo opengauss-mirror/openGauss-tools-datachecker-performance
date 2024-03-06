@@ -26,7 +26,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 @Service
 public class ShutdownService {
-    private static final Logger log = LogUtils.getLogger();
+    private static final Logger log = LogUtils.getLogger(ShutdownService.class);
+
     private final AtomicBoolean isShutdown = new AtomicBoolean(false);
     private final AtomicInteger monitor = new AtomicInteger(0);
     private List<ExecutorService> executorServiceList = new LinkedList<>();
@@ -38,9 +39,9 @@ public class ShutdownService {
 
     @Async
     public void shutdown(String message) {
-        log.info("The check server will be shutdown , {} . check server exited .", message);
+        LogUtils.info(log, "The check server will be shutdown , {} . check server exited .", message);
         ThreadUtil.sleep(ConfigCache.getIntValue(ConfigConstants.TIMEOUT_PER_SHUTDOWN_PHASE));
-        log.info("The check server wait 5s and will be shutdown , {} . check server exited .", message);
+        LogUtils.info(log, "The check server wait 5s and will be shutdown , {} . check server exited .", message);
         isShutdown.set(true);
         ThreadUtil.killThreadByName("kafka-producer-network-thread");
 

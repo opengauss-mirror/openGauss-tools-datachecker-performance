@@ -35,7 +35,8 @@ import java.util.concurrent.atomic.AtomicLong;
  * @since ：11
  */
 public class ThreadPoolFactory {
-    private static final Logger log = LogUtils.getLogger();
+    private static final Logger log = LogUtils.getLogger(ThreadPoolFactory.class);
+
     private static final double TARGET_UTILIZATION = 0.5d;
     private static final double IO_WAIT_TIME = 1.0d;
     private static final double CPU_TIME = 1.0d;
@@ -104,7 +105,7 @@ public class ThreadPoolFactory {
             new ThreadPoolExecutor(corePoolSize, threadNum, 60L, TimeUnit.SECONDS, blockingQueue,
                 new CheckThreadFactory("check", threadName, false), new DiscardOldestPolicy(log, threadName));
         threadPoolExecutor.allowCoreThreadTimeOut(true);
-        log.debug("Thread name is {},cpu={} corePoolSize is : {}, size is {}, queueSize is {}", threadName,
+        LogUtils.debug(log, "Thread name is {},cpu={} corePoolSize is : {}, size is {}, queueSize is {}", threadName,
             getNumberOfCpu(), corePoolSize, threadNum, queueSize);
         return threadPoolExecutor;
     }
@@ -126,7 +127,8 @@ public class ThreadPoolFactory {
     }
 
     private static int getNumberOfCpu() {
-        return Runtime.getRuntime().availableProcessors();
+        return Runtime.getRuntime()
+                      .availableProcessors();
     }
 
     public static class CheckThreadFactory implements ThreadFactory {

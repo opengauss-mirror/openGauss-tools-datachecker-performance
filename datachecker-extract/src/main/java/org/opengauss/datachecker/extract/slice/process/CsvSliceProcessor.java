@@ -22,6 +22,7 @@ import org.opengauss.datachecker.common.entry.extract.SliceExtend;
 import org.opengauss.datachecker.common.entry.extract.SliceVo;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.exception.ExtractDataAccessException;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.extract.resource.MemoryOperations;
 import org.opengauss.datachecker.extract.slice.SliceProcessorContext;
 import org.opengauss.datachecker.extract.slice.common.SliceKafkaAgents;
@@ -58,16 +59,16 @@ public class CsvSliceProcessor extends AbstractSliceProcessor {
     public void run() {
         SliceExtend sliceExtend = null;
         try {
-            log.info("csv slice processor start , [{}]", slice.toSimpleString());
+            LogUtils.info(log,"csv slice processor start , [{}]", slice.toSimpleString());
             TableMetadata tableMetadata = context.getTableMetaData(slice.getTable());
             sliceExtend = createSliceExtend(tableMetadata.getTableHash());
             executeQueryStatement(tableMetadata, sliceExtend);
         } catch (Exception ex) {
-            log.error("csv slice processor , [{}] : ", slice.toSimpleString(), ex);
+            LogUtils.error(log,"csv slice processor , [{}] : ", slice.toSimpleString(), ex);
         } finally {
             feedbackStatus(sliceExtend);
             memoryOperations.release();
-            log.info("csv slice processor finally ,[{}]", slice.toSimpleString());
+            LogUtils.info(log,"csv slice processor finally ,[{}]", slice.toSimpleString());
         }
     }
 
@@ -80,11 +81,12 @@ public class CsvSliceProcessor extends AbstractSliceProcessor {
                                        .toString();
             long estimatedSize = estimatedMemorySize(tableMetadata.getAvgRowLength(), slice.getFetchSize());
             memoryOperations.takeMemory(estimatedSize);
-            SliceKafkaAgents kafkaAgents = context.createSliceKafkaAgents(slice);
+            SliceKafkaAgents kafkaAgents = context.createSliceFixedKafkaAgents(topic, slice.getName());
             SliceResultSetSender sliceSender = new SliceResultSetSender(tableMetadata, kafkaAgents);
+            sliceSender.setRecordSendKey(slice.getName());
             try (CSVReader reader = new CSVReader(new FileReader(sliceFilePath))) {
                 LocalDateTime parseCsv = LocalDateTime.now();
-                log.info("parse slice [{}] cost [{}] milliseconds", sliceExtend.toSimpleString(),
+                LogUtils.info(log,"parse slice [{}] cost [{}] milliseconds", sliceExtend.toSimpleString(),
                     durationBetweenToMillis(start, parseCsv));
                 String[] nextLine;
                 Map<String, String> result = new TreeMap<>();
@@ -104,15 +106,15 @@ public class CsvSliceProcessor extends AbstractSliceProcessor {
                 }
                 sliceExtend.setStartOffset(getMinOffset(offsetList));
                 sliceExtend.setEndOffset(getMaxOffset(offsetList));
-                log.info("send slice [{}] cost [{}] milliseconds", sliceExtend.toSimpleString(),
+                LogUtils.info(log,"send slice [{}] cost [{}] milliseconds", sliceExtend.toSimpleString(),
                     durationBetweenToMillis(parseCsv, LocalDateTime.now()));
             }
             sliceExtend.setCount(rowCount);
         } catch (FileNotFoundException | CsvValidationException ex) {
-            log.error("csv parse [{}] error : {}", sliceExtend, ex.getMessage());
+            LogUtils.error(log,"csv parse [{}] error : {}", sliceExtend, ex.getMessage());
             throw new ExtractDataAccessException();
         } finally {
-            log.info("query slice [{}] cost [{}] milliseconds", sliceExtend.toSimpleString(),
+            LogUtils.info(log,"query slice [{}] cost [{}] milliseconds", sliceExtend.toSimpleString(),
                 durationBetweenToMillis(start, LocalDateTime.now()));
         }
     }

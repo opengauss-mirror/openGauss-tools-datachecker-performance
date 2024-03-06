@@ -42,9 +42,11 @@ import org.opengauss.datachecker.common.entry.extract.ConditionLimit;
 import org.opengauss.datachecker.common.entry.extract.RowDataHash;
 import org.opengauss.datachecker.common.entry.extract.SliceExtend;
 import org.opengauss.datachecker.common.entry.extract.SliceVo;
+import org.opengauss.datachecker.common.entry.extract.Topic;
 import org.opengauss.datachecker.common.exception.BucketNumberInconsistentException;
 import org.opengauss.datachecker.common.exception.MerkleTreeDepthException;
 import org.opengauss.datachecker.common.util.LogUtils;
+import org.opengauss.datachecker.common.util.TopicUtil;
 import org.springframework.lang.NonNull;
 
 import java.time.LocalDateTime;
@@ -67,18 +69,21 @@ import java.util.concurrent.CountDownLatch;
  * @since ：11
  */
 public class SliceCheckWorker implements Runnable {
-    private static final Logger log = LogUtils.getBusinessLogger();
-    private static final Logger logKafka = LogUtils.getKafkaLogger();
+    private static final Logger LOGGER = LogUtils.getLogger(SliceCheckWorker.class);
     private static final int THRESHOLD_MIN_BUCKET_SIZE = 2;
 
     private final SliceVo slice;
-    private long sliceRowCount;
+
+    private final String processNo;
     private final SliceCheckEvent checkEvent;
     private final SliceCheckContext checkContext;
     private final TaskRegisterCenter registerCenter;
     private final DifferencePair<List<Difference>, List<Difference>, List<Difference>> difference =
         DifferencePair.of(new LinkedList<>(), new LinkedList<>(), new LinkedList<>());
     private final LocalDateTime startTime;
+
+    private long sliceRowCount;
+    private Topic topic = new Topic();
 
     /**
      * slice check worker construct
@@ -93,16 +98,18 @@ public class SliceCheckWorker implements Runnable {
         this.startTime = LocalDateTime.now();
         this.slice = checkEvent.getSlice();
         this.registerCenter = registerCenter;
+        this.processNo = ConfigCache.getValue(ConfigConstants.PROCESS_NO);
     }
 
     @Override
     public void run() {
         String errorMsg = "";
         try {
+            LogUtils.debug(LOGGER, "check slice of {}", slice.getName());
             SliceExtend source = checkEvent.getSource();
             SliceExtend sink = checkEvent.getSink();
             this.sliceRowCount = Math.max(source.getCount(), sink.getCount());
-            log.info("check slice of {}", slice.getName());
+            setTableFixedTopic();
             SliceTuple sourceTuple = SliceTuple.of(Endpoint.SOURCE, source, new LinkedList<>());
             SliceTuple sinkTuple = SliceTuple.of(Endpoint.SINK, sink, new LinkedList<>());
             // Initialize bucket list
@@ -125,22 +132,24 @@ public class SliceCheckWorker implements Runnable {
                 compareNoMerkleTree(sourceTuple, sinkTuple);
             }
         } catch (Exception ignore) {
-            log.error("check table has some error,", ignore);
+            LogUtils.error(LOGGER, "check table has some error,", ignore);
             errorMsg = ignore.getMessage();
         } finally {
-            refreshSliceCheckProgress();
-            checkResult(errorMsg);
-            cleanCheckThreadEnvironment();
-            finishedSliceCheck(slice);
-            log.info("check slice of {} end.", slice.getName());
+            try {
+                refreshSliceCheckProgress();
+                checkResult(errorMsg);
+                cleanCheckThreadEnvironment();
+                finishedSliceCheck(slice);
+            } catch (Exception exception) {
+                LogUtils.error(LOGGER, "refresh check {} error:", slice.getName(), exception);
+            }
+            LogUtils.info(LOGGER, "check slice of {} end.", slice.getName());
         }
     }
 
     public void finishedSliceCheck(SliceVo slice) {
         checkContext.saveProcessHistoryLogging(slice);
-        if (registerCenter.refreshAndCheckTableCompleted(slice)) {
-            checkContext.dropTableTopics(slice.getTable());
-        }
+        registerCenter.refreshAndCheckTableCompleted(slice);
     }
 
     private void cleanCheckThreadEnvironment() {
@@ -153,7 +162,7 @@ public class SliceCheckWorker implements Runnable {
             // sourceSize == 0, that is, all buckets are empty
             if (sourceTuple.getBucketSize() == 0) {
                 // Table is empty, verification succeeded!
-                log.info("slice {} fetch empty", slice.getName());
+                LogUtils.debug(LOGGER, "slice {} fetch empty", slice.getName());
             } else {
                 // sourceSize is less than thresholdMinBucketSize, that is, there is only one bucket. Compare
                 DifferencePair<List<Difference>, List<Difference>, List<Difference>> subDifference =
@@ -200,12 +209,12 @@ public class SliceCheckWorker implements Runnable {
                .checkMode(ConfigCache.getValue(ConfigConstants.CHECK_MODE, CheckMode.class))
                .keyDiff(difference.getOnlyOnLeft(), difference.getDiffering(), difference.getOnlyOnRight());
         CheckDiffResult result = builder.build();
-        log.info("result {}", result);
+        LogUtils.debug(LOGGER, "result {}", result);
         checkContext.addCheckResult(slice, result);
     }
 
     private String getConcatTableTopics() {
-        return checkContext.getTopicName(slice.getTable());
+        return topic.toTopicString();
     }
 
     private ConditionLimit getConditionLimit() {
@@ -246,9 +255,12 @@ public class SliceCheckWorker implements Runnable {
         List<Difference> entriesOnlyOnRight = collectorDeleteOrInsert(bucketDifference.entriesOnlyOnRight());
         List<Difference> differing = collectorUpdate(bucketDifference.entriesDiffering());
 
-        log.debug("diff slice {} insert {}", slice.getName(), bucketDifference.entriesOnlyOnLeft().size());
-        log.debug("diff slice {} delete {}", slice.getName(), bucketDifference.entriesOnlyOnRight().size());
-        log.debug("diff slice {} update {}", slice.getName(), bucketDifference.entriesDiffering().size());
+        LogUtils.debug(LOGGER, "diff slice {} insert {}", slice.getName(), bucketDifference.entriesOnlyOnLeft()
+                                                                                           .size());
+        LogUtils.debug(LOGGER, "diff slice {} delete {}", slice.getName(), bucketDifference.entriesOnlyOnRight()
+                                                                                           .size());
+        LogUtils.debug(LOGGER, "diff slice {} update {}", slice.getName(), bucketDifference.entriesDiffering()
+                                                                                           .size());
         return DifferencePair.of(entriesOnlyOnLeft, entriesOnlyOnRight, differing);
     }
 
@@ -298,13 +310,16 @@ public class SliceCheckWorker implements Runnable {
         // Initialize source bucket column list data
         long startFetch = System.currentTimeMillis();
         CountDownLatch countDownLatch = new CountDownLatch(checkTupleList.size());
-        int avgSliceCount = (int) (sourceTuple.getSlice().getCount() + sinkTuple.getSlice().getCount()) / 2;
+        int avgSliceCount = (int) (sourceTuple.getSlice()
+                                              .getCount() + sinkTuple.getSlice()
+                                                                     .getCount()) / 2;
         checkTupleList.forEach(check -> {
             initBucketList(check.getEndpoint(), check.getSlice(), check.getBuckets(), bucketDiff, avgSliceCount);
             countDownLatch.countDown();
         });
         countDownLatch.await();
-        logKafka.info("fetch slice {} data from topic, cost {} millis", slice.toSimpleString(), costMillis(startFetch));
+        LogUtils.debug(LOGGER, "fetch slice {} data from topic, cost {} millis", slice.toSimpleString(),
+            costMillis(startFetch));
         // Align the source and destination bucket list
         alignAllBuckets(sourceTuple, sinkTuple, bucketDiff);
         sortBuckets(sourceTuple.getBuckets());
@@ -319,9 +334,13 @@ public class SliceCheckWorker implements Runnable {
         Map<Integer, Pair<Integer, Integer>> bucketDiff, int avgSliceCount) {
         // Use feign client to pull Kafka data
         List<RowDataHash> dataList = new LinkedList<>();
-        TopicPartition topicPartition = checkContext.getTopic(slice.getTable(), endpoint, slice.getPtn());
+        TopicPartition topicPartition;
+        if (Objects.equals(Endpoint.SOURCE, endpoint)) {
+            topicPartition = new TopicPartition(topic.getSourceTopicName(), topic.getPtnNum());
+        } else {
+            topicPartition = new TopicPartition(topic.getSinkTopicName(), topic.getPtnNum());
+        }
         getSliceDataFromTopicPartition(topicPartition, sliceExtend, dataList);
-
         if (CollectionUtils.isEmpty(dataList)) {
             return;
         }
@@ -364,11 +383,11 @@ public class SliceCheckWorker implements Runnable {
 
     private void getSliceDataFromTopicPartition(TopicPartition topicPartition, SliceExtend sExtend,
         List<RowDataHash> dataList) {
-        KafkaConsumerHandler consumer = checkContext.buildKafkaHandler();
-        logKafka.debug("create consumer of topic, [{}] : [{}] ", slice.getTable(), topicPartition.toString());
+        KafkaConsumerHandler consumer = checkContext.buildKafkaHandler(sExtend.getName());
+        LogUtils.debug(LOGGER, "create consumer of topic, [{}] : [{}] ", slice.getTable(), topicPartition.toString());
         consumer.pollTpSliceData(topicPartition, sExtend, dataList);
         consumer.closeConsumer();
-        logKafka.debug("close consumer of topic, [{}] : [{}] ", slice.getTable(), topicPartition.toString());
+        LogUtils.debug(LOGGER, "close consumer of topic, [{}] : [{}] ", slice.getTable(), topicPartition.toString());
     }
 
     /**
@@ -391,5 +410,16 @@ public class SliceCheckWorker implements Runnable {
                 }
             });
         }
+    }
+
+    private void setTableFixedTopic() {
+        int maxTopicSize = ConfigCache.getIntValue(ConfigConstants.MAXIMUM_TOPIC_SIZE);
+        String table = slice.getTable();
+        String sourceTopicName = TopicUtil.getMoreFixedTopicName(processNo, Endpoint.SOURCE, table, maxTopicSize);
+        String sinkTopicName = TopicUtil.getMoreFixedTopicName(processNo, Endpoint.SINK, table, maxTopicSize);
+        topic.setSourceTopicName(sourceTopicName);
+        topic.setSinkTopicName(sinkTopicName);
+        topic.setPtnNum(0);
+        topic.setPartitions(1);
     }
 }

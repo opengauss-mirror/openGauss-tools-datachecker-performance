@@ -39,7 +39,8 @@ import javax.annotation.Resource;
  */
 @Component
 public class ExtractEnvironmentContext {
-    private static final Logger log = LogUtils.getLogger();
+    private static final Logger log = LogUtils.getLogger(ExtractEnvironmentContext.class);
+
     @Resource
     private MetaDataService metaDataService;
     @Value("${spring.check.core-pool-size}")
@@ -56,12 +57,12 @@ public class ExtractEnvironmentContext {
      */
     @Async
     public void loadDatabaseMetaData() {
-        log.info("extract database loader start");
+        LogUtils.info(log,"extract database loader start");
         metaDataService.loadMetaDataOfSchemaCache();
         ThreadUtil.sleepHalfSecond();
         MetadataLoadProcess metadataLoadProcess = metaDataService.getMetadataLoadProcess();
         while (!metadataLoadProcess.isLoadSuccess()) {
-            log.info("extract service load  table meta ={}", metadataLoadProcess.getLoadCount());
+            LogUtils.info(log,"extract service load  table meta ={}", metadataLoadProcess.getLoadCount());
             ThreadUtil.sleepOneSecond();
             metadataLoadProcess = metaDataService.getMetadataLoadProcess();
         }
@@ -70,6 +71,6 @@ public class ExtractEnvironmentContext {
         if (metaDataService.mdsIsCheckTableEmpty(false)) {
             shutdownService.shutdown("load table metadata cache is empty!");
         }
-        log.info("extract service load table meta ={} , success", metadataLoadProcess.getLoadCount());
+        LogUtils.info(log,"extract service load table meta ={} , success", metadataLoadProcess.getLoadCount());
     }
 }

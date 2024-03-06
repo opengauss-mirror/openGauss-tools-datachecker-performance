@@ -20,9 +20,7 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.logging.log4j.Logger;
-import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.entry.extract.RowDataHash;
-import org.opengauss.datachecker.common.entry.extract.Topic;
 import org.opengauss.datachecker.common.exception.SendTopicMessageException;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -31,6 +29,7 @@ import org.springframework.util.concurrent.ListenableFuture;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * SliceKafkaAgents
@@ -40,12 +39,12 @@ import java.util.Map;
  * @since ：11
  */
 public class SliceKafkaAgents {
-    private static final Logger logKafka = LogUtils.getKafkaLogger();
+    private static final Logger logger = LogUtils.getLogger(SliceKafkaAgents.class);
     private KafkaTemplate<String, String> kafkaTemplate;
     private KafkaConsumer<String, String> kafkaConsumer;
     private String topicName;
+    private String recordKey;
     private int ptn;
-    private int ptnNum;
 
     /**
      * construct slice kafka agents
@@ -64,13 +63,8 @@ public class SliceKafkaAgents {
         this.kafkaConsumer.subscribe(List.of(topicName));
     }
 
-    public SliceKafkaAgents(KafkaTemplate<String, String> kafkaTemplate, KafkaConsumer<String, String> kafkaConsumer,
-        Topic topic) {
-        this.ptnNum = topic.getPtnNum();
-        this.topicName = topic.getTopicName(ConfigCache.getEndPoint());
-        this.kafkaTemplate = kafkaTemplate;
-        this.kafkaConsumer = kafkaConsumer;
-        this.kafkaConsumer.subscribe(List.of(topicName));
+    public void setRecordSendKey(String key) {
+        this.recordKey = key;
     }
 
     /**
@@ -85,8 +79,13 @@ public class SliceKafkaAgents {
     }
 
     public void agentsClosed() {
-        kafkaConsumer.unsubscribe();
-        kafkaConsumer.close();
+        if (Objects.nonNull(kafkaConsumer)) {
+            String groupId = kafkaConsumer.groupMetadata()
+                                          .groupId();
+            kafkaConsumer.unsubscribe();
+            kafkaConsumer.close();
+            LogUtils.warn(logger, "close consumer of {}:{}", topicName, groupId);
+        }
     }
 
     /**
@@ -98,16 +97,11 @@ public class SliceKafkaAgents {
         send(dataHash.getKey(), JSON.toJSONString(dataHash));
     }
 
-    public void sendRowDataRandomPartition(RowDataHash dataHash) {
-        int ptn = (int) (Math.abs(dataHash.getKHash()) % ptnNum);
-        send(dataHash.getKey(), ptn, JSON.toJSONString(dataHash));
-    }
-
     private void send(String key, int ptn, String message) {
         try {
             kafkaTemplate.send(new ProducerRecord<>(topicName, ptn, key, message));
         } catch (Exception kafkaException) {
-            logKafka.error("send kafka [{} , {}] record error {}", topicName, key, kafkaException);
+            LogUtils.error(logger, "send kafka [{} , {}] record error {}", topicName, key, kafkaException);
             throw new SendTopicMessageException(
                 "send [" + topicName + " , " + key + "] record " + kafkaException.getMessage());
         }
@@ -117,14 +111,21 @@ public class SliceKafkaAgents {
         send(key, ptn, message);
     }
 
+    /**
+     * 发送表校验数据到kafka topic中
+     *
+     * @param dataHash dataHash
+     * @return 返回发送信息
+     */
     public ListenableFuture<SendResult<String, String>> sendRowDataSync(RowDataHash dataHash) {
-        return sendSync(dataHash.getKey(), JSON.toJSONString(dataHash));
+        return sendSync(recordKey, JSON.toJSONString(dataHash));
     }
+
     private ListenableFuture<SendResult<String, String>> sendSync(String key, String message) {
         try {
             return kafkaTemplate.send(new ProducerRecord<>(topicName, ptn, key, message));
         } catch (Exception kafkaException) {
-            logKafka.error("send kafka [{} , {}] record error {}", topicName, key, kafkaException);
+            LogUtils.error(logger, "send kafka [{} , {}] record error {}", topicName, key, kafkaException);
             throw new SendTopicMessageException(
                 "send [" + topicName + " , " + key + "] record " + kafkaException.getMessage());
         }

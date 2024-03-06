@@ -50,7 +50,7 @@ import java.util.stream.Collectors;
  */
 @Component
 public class KafkaAdminService {
-    private static final Logger log = LogUtils.getKafkaLogger();
+    private static final Logger log = LogUtils.getLogger(KafkaAdminService.class);
 
     private KafkaAdminClient adminClient;
 
@@ -62,10 +62,13 @@ public class KafkaAdminService {
         props.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, ConfigCache.getValue(ConfigConstants.KAFKA_SERVERS));
         adminClient = (KafkaAdminClient) KafkaAdminClient.create(props);
         try {
-            adminClient.listTopics().listings().get();
-            log.info("init and listTopics  admin client [{}]", ConfigCache.getValue(ConfigConstants.KAFKA_SERVERS));
+            adminClient.listTopics()
+                       .listings()
+                       .get();
+            LogUtils.info(log, "init and listTopics  admin client [{}]",
+                ConfigCache.getValue(ConfigConstants.KAFKA_SERVERS));
         } catch (ExecutionException | InterruptedException ex) {
-            log.error("kafka Client link exception: ", ex);
+            LogUtils.error(log, "kafka Client link exception: ", ex);
             throw new KafkaException("kafka Client link exception");
         }
     }
@@ -80,11 +83,13 @@ public class KafkaAdminService {
         try {
             CreateTopicsResult topicsResult =
                 adminClient.createTopics(List.of(new NewTopic(topic, partitions, (short) 1)));
-            topicsResult.values().get(topic).get(5, TimeUnit.SECONDS);
-            log.info("create topic success , name= [{}] numPartitions = [{}]", topic, partitions);
+            topicsResult.values()
+                        .get(topic)
+                        .get(5, TimeUnit.SECONDS);
+            LogUtils.info(log, "create topic success , name= [{}] numPartitions = [{}]", topic, partitions);
             return true;
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
-            log.error("create tioic error : ", e);
+            LogUtils.error(log, "create tioic error : ", e);
             return false;
         }
     }
@@ -100,9 +105,9 @@ public class KafkaAdminService {
         kafkaFutureMap.forEach((topic, future) -> {
             try {
                 future.get();
-                log.info("topic={} is delete successfull", topic);
+                LogUtils.info(log, "topic={} is delete successfull", topic);
             } catch (InterruptedException | ExecutionException e) {
-                log.error("topic={} is delete error : {}", topic, e);
+                LogUtils.error(log, "topic={} is delete error : {}", topic, e);
             }
         });
     }
@@ -115,11 +120,16 @@ public class KafkaAdminService {
      */
     public List<String> getAllTopic(String prefix) {
         try {
-            log.info("get topic from kafka list topics and  prefix [{}]", prefix);
-            return adminClient.listTopics().listings().get().stream().map(TopicListing::name)
-                              .filter(name -> name.startsWith(prefix)).collect(Collectors.toList());
+            LogUtils.info(log, "get topic from kafka list topics and  prefix [{}]", prefix);
+            return adminClient.listTopics()
+                              .listings()
+                              .get()
+                              .stream()
+                              .map(TopicListing::name)
+                              .filter(name -> name.startsWith(prefix))
+                              .collect(Collectors.toList());
         } catch (InterruptedException | ExecutionException e) {
-            log.error("admin client get topic error:", e);
+            LogUtils.error(log, "admin client get topic error:", e);
         }
         return new ArrayList<>();
     }
@@ -131,11 +141,15 @@ public class KafkaAdminService {
      */
     public List<String> getAllTopic() {
         try {
-            log.info("get topic from kafka list topics");
-            return adminClient.listTopics().listings().get().stream().map(TopicListing::name)
+            LogUtils.info(log, "get topic from kafka list topics");
+            return adminClient.listTopics()
+                              .listings()
+                              .get()
+                              .stream()
+                              .map(TopicListing::name)
                               .collect(Collectors.toList());
         } catch (InterruptedException | ExecutionException e) {
-            log.error("admin client get topic error:", e);
+            LogUtils.error(log, "admin client get topic error:", e);
         }
         return new ArrayList<>();
     }
@@ -148,11 +162,15 @@ public class KafkaAdminService {
      */
     public boolean isTopicExists(String topicName) {
         try {
-            log.debug("check topic [{} : group{}] has exists --> check kafka list topics", topicName);
-            return adminClient.listTopics().listings().get().stream().map(TopicListing::name)
+            LogUtils.debug(log, "check topic [{} : group{}] has exists --> check kafka list topics", topicName);
+            return adminClient.listTopics()
+                              .listings()
+                              .get()
+                              .stream()
+                              .map(TopicListing::name)
                               .anyMatch(name -> name.equalsIgnoreCase(topicName));
         } catch (InterruptedException | ExecutionException e) {
-            log.error("admin client get topic error:", e);
+            LogUtils.error(log, "admin client get topic error:", e);
         }
         return false;
     }
@@ -162,9 +180,9 @@ public class KafkaAdminService {
         if (adminClient != null) {
             try {
                 adminClient.close(Duration.ZERO);
-                log.info("kafkaAdminClient close.");
+                LogUtils.info(log, "kafkaAdminClient close.");
             } catch (Exception e) {
-                log.error("check kafkaAdminClient close error: ", e);
+                LogUtils.error(log, "check kafkaAdminClient close error: ", e);
             }
         }
     }

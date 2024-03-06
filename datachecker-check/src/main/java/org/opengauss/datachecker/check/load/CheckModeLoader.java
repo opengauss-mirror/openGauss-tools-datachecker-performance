@@ -22,6 +22,7 @@ import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.entry.enums.DataLoad;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.extract.ExtractConfig;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
@@ -59,6 +60,6 @@ public class CheckModeLoader extends AbstractCheckLoader {
             checkEnvironment.setCheckMode(checkMode);
         }
         ConfigCache.put(ConfigConstants.CHECK_MODE, checkEnvironment.getCheckMode());
-        log.info("check service load check mode success.");
+        LogUtils.info(log, "check service load check mode success.");
     }
 }

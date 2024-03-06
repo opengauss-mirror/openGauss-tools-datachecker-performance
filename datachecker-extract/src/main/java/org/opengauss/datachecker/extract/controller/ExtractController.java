@@ -27,7 +27,6 @@ import org.opengauss.datachecker.common.entry.extract.TableMetadataHash;
 import org.opengauss.datachecker.common.exception.ProcessMultipleException;
 import org.opengauss.datachecker.common.exception.TaskNotFoundException;
 import org.opengauss.datachecker.common.web.Result;
-import org.opengauss.datachecker.extract.cache.TopicCache;
 import org.opengauss.datachecker.extract.service.DataExtractService;
 import org.opengauss.datachecker.extract.service.MetaDataService;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -216,15 +215,5 @@ public class ExtractController {
     @GetMapping("/check/table/empty")
     Result<Boolean> isCheckTableEmpty(@RequestParam(name = "isForced") boolean isForced) {
         return Result.success(metaDataService.mdsIsCheckTableEmpty(isForced));
-    }
-
-    /**
-     * notify extract endpoint current table had checked finished
-     *
-     * @param tableName table
-     */
-    @PostMapping("/notify/check/finished")
-    public void notifyCheckTableFinished(@RequestParam(name = "tableName") String tableName) {
-        TopicCache.removeTopic(tableName);
     }
 }

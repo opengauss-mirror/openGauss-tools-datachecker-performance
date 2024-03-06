@@ -16,6 +16,7 @@
 package org.opengauss.datachecker.check.modules.check;
 
 import com.alibaba.fastjson.JSON;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
@@ -24,6 +25,7 @@ import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.entry.extract.RowDataHash;
 import org.opengauss.datachecker.common.entry.extract.SliceExtend;
 import org.opengauss.datachecker.common.util.LogUtils;
+import org.opengauss.datachecker.common.util.ThreadUtil;
 
 import java.time.Duration;
 import java.util.HashMap;
@@ -31,7 +33,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Stream;
 
 /**
  * KafkaConsumerHandler
@@ -41,7 +42,7 @@ import java.util.stream.Stream;
  * @since ：11
  */
 public class KafkaConsumerHandler {
-    private static final Logger log = LogUtils.getKafkaLogger();
+    private static final Logger log = LogUtils.getLogger(KafkaConsumerHandler.class);
     private static final int KAFKA_CONSUMER_POLL_DURATION = 20;
 
     private final KafkaConsumer<String, String> kafkaConsumer;
@@ -73,7 +74,7 @@ public class KafkaConsumerHandler {
         long endOfOffset = getEndOfOffset(topicPartition);
         long beginOfOffset = beginningOffsets(topicPartition);
         consumerTopicRecords(list, kafkaConsumer, endOfOffset);
-        log.debug("consumer topic=[{}] partitions=[{}] dataList=[{}] ,beginOfOffset={},endOfOffset={}", topic,
+        LogUtils.debug(log, "consumer topic=[{}] partitions=[{}] dataList=[{}] ,beginOfOffset={},endOfOffset={}", topic,
             partitions, list.size(), beginOfOffset, endOfOffset);
     }
 
@@ -92,11 +93,12 @@ public class KafkaConsumerHandler {
             ConsumerRecords<String, String> records =
                 kafkaConsumer.poll(Duration.ofMillis(KAFKA_CONSUMER_POLL_DURATION));
             if (records.count() <= 0) {
+                ThreadUtil.sleepHalfSecond();
                 continue;
             }
             records.forEach(record -> {
                 RowDataHash row = JSON.parseObject(record.value(), RowDataHash.class);
-                if (row.getSNo() == sExtend.getNo()) {
+                if (row.getSNo() == sExtend.getNo() && StringUtils.equals(record.key(), sExtend.getName())) {
                     dataList.add(row);
                     currentCount.incrementAndGet();
                 }

@@ -17,7 +17,7 @@ spring:
     maximum-pool-size: 20
     max-retry-times: 1000
     retry-interval-times: 10000
-    maximum-topic-size: 30
+    maximum-topic-size: 5
     maximum-table-slice-size: 100000
     extend-maximum-pool-size: 3
   lifecycle:

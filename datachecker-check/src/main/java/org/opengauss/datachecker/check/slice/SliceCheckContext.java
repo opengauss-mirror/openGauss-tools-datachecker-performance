@@ -15,19 +15,17 @@
 
 package org.opengauss.datachecker.check.slice;
 
-import org.apache.kafka.common.TopicPartition;
-import org.opengauss.datachecker.check.cache.TopicRegister;
-import org.opengauss.datachecker.check.event.KafkaTopicDeleteProvider;
 import org.opengauss.datachecker.check.modules.check.CheckDiffResult;
 import org.opengauss.datachecker.check.modules.check.KafkaConsumerHandler;
 import org.opengauss.datachecker.check.modules.check.KafkaConsumerService;
 import org.opengauss.datachecker.check.modules.report.SliceCheckResultManager;
 import org.opengauss.datachecker.check.modules.report.SliceProgressService;
+import org.opengauss.datachecker.common.config.ConfigCache;
+import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.extract.SliceVo;
-import org.opengauss.datachecker.common.entry.extract.TableMetadata;
-import org.opengauss.datachecker.common.entry.extract.Topic;
 import org.opengauss.datachecker.common.service.ProcessLogService;
+import org.opengauss.datachecker.common.util.TopicUtil;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
@@ -42,17 +40,24 @@ import javax.annotation.Resource;
 @Component
 public class SliceCheckContext {
     @Resource
-    private TopicRegister topicRegister;
-    @Resource
     private KafkaConsumerService kafkaConsumerService;
     @Resource
     private SliceProgressService sliceProgressService;
     @Resource
     private SliceCheckResultManager sliceCheckResultManager;
     @Resource
-    private KafkaTopicDeleteProvider kafkaTopicDeleteProvider;
-    @Resource
     private ProcessLogService processLogService;
+
+    /**
+     * create kafka consumer handler
+     *
+     * @param groupId groupId
+     * @return KafkaConsumerHandler
+     */
+    public KafkaConsumerHandler buildKafkaHandler(String groupId) {
+        return new KafkaConsumerHandler(kafkaConsumerService.buildKafkaConsumer(groupId),
+            kafkaConsumerService.getRetryFetchRecordTimes());
+    }
 
     /**
      * create kafka consumer handler
@@ -72,36 +77,9 @@ public class SliceCheckContext {
      * @return topic name
      */
     public String getTopicName(String table, Endpoint endpoint) {
-        Topic topic = topicRegister.getTopic(table);
-        return topic.getTopicName(endpoint);
-    }
-
-    /**
-     * get source and sink table topics
-     *
-     * @param table table
-     * @return topics
-     */
-    public String getTopicName(String table) {
-        Topic topic = topicRegister.getTopic(table);
-        return topic.toTopicString();
-    }
-
-    /**
-     * build topic partition of tables
-     *
-     * @param table    table
-     * @param endpoint endpoint
-     * @param ptn      partition no
-     * @return topic partition
-     */
-    public TopicPartition getTopic(String table, Endpoint endpoint, int ptn) {
-        Topic topic = topicRegister.getTopic(table);
-        return new TopicPartition(topic.getTopicName(endpoint), ptn);
-    }
-
-    public Topic getTopic(String table) {
-        return topicRegister.getTopic(table);
+        String process = ConfigCache.getValue(ConfigConstants.PROCESS_NO);
+        int maximumTopicSize = ConfigCache.getIntValue(ConfigConstants.MAXIMUM_TOPIC_SIZE);
+        return TopicUtil.getMoreFixedTopicName(process, endpoint, table, maximumTopicSize);
     }
 
     /**
@@ -124,22 +102,8 @@ public class SliceCheckContext {
         sliceCheckResultManager.addResult(slice, result);
     }
 
-    /**
-     * get table Metadata
-     *
-     * @param table table
-     * @return table metadata
-     */
-    public TableMetadata getTableMetaData(String table) {
-        return null;
-    }
-
     public void addTableStructureDiffResult(SliceVo slice, CheckDiffResult result) {
         sliceCheckResultManager.addTableStructureDiffResult(slice, result);
-    }
-
-    public void dropTableTopics(String table) {
-        kafkaTopicDeleteProvider.addTableToDropTopic(table, true);
     }
 
     public void saveProcessHistoryLogging(SliceVo slice) {

@@ -33,7 +33,8 @@ import java.util.concurrent.ThreadPoolExecutor;
  * @since ：11
  */
 public class DynamicThreadPoolMonitor implements Runnable {
-    private static final Logger log = LogUtils.getLogger();
+    private static final Logger log = LogUtils.getLogger(DynamicThreadPoolMonitor.class);
+
     private int initCorePoolSize;
     private Map<String, ThreadPoolExecutor> executors;
     private volatile boolean isChecked = true;
@@ -53,13 +54,13 @@ public class DynamicThreadPoolMonitor implements Runnable {
     @Override
     public void run() {
         while (isChecked) {
-            CpuInfo cpuInfo = MemoryManager.getCpuInfo();
-            JvmInfo jvmInfo = MemoryManager.getJvmInfo();
             executors.forEach((name, tpExecutor) -> {
+                CpuInfo cpuInfo = MemoryManager.getCpuInfo();
                 if (Double.compare(cpuInfo.getFree(), DynamicTpConstant.MIN_CPU_FREE) < 0) {
                     decrementCorePoolSize(tpExecutor);
                     return;
                 }
+                JvmInfo jvmInfo = MemoryManager.getJvmInfo();
                 if (Double.compare(jvmInfo.getFree(), DynamicTpConstant.MIN_MEMORY_FREE) < 0) {
                     decrementCorePoolSize(tpExecutor);
                     return;
@@ -87,7 +88,7 @@ public class DynamicThreadPoolMonitor implements Runnable {
 
     private void logInfo(String name, ThreadPoolExecutor tpExecutor) {
         if (tpExecutor.getActiveCount() > 0) {
-            log.info(
+            LogUtils.debug(log,
                 "DynamicThreadPoolMonitor {} coreSize={}, maxSize={}, taskCount={}, completedCount={}, activeCount={}",
                 name, tpExecutor.getCorePoolSize(), tpExecutor.getMaximumPoolSize(), tpExecutor.getTaskCount(),
                 tpExecutor.getCompletedTaskCount(), tpExecutor.getActiveCount());

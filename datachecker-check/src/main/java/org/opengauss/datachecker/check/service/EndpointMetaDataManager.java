@@ -44,7 +44,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class EndpointMetaDataManager {
-    private static final Logger log = LogUtils.getLogger();
+    private static final Logger log = LogUtils.getLogger(EndpointMetaDataManager.class);
     private static final List<String> CHECK_TABLE_LIST = new ArrayList<>();
     private static final List<String> MISS_TABLE_LIST = new ArrayList<>();
     private static final Map<String, TableMetadata> SOURCE_METADATA = new HashMap<>();
@@ -73,7 +73,7 @@ public class EndpointMetaDataManager {
                 MISS_TABLE_LIST.addAll(missTables);
             }
         } else {
-            log.warn("the metadata information is empty, and the verification is terminated abnormally,"
+            LogUtils.warn(log, "the metadata information is empty, and the verification is terminated abnormally,"
                 + "sourceMetadata={},sinkMetadata={}", SOURCE_METADATA.size(), SINK_METADATA.size());
         }
     }
@@ -89,20 +89,20 @@ public class EndpointMetaDataManager {
      */
     public boolean isMetaLoading() {
         if (loadMetadataCompleted.containsKey(Endpoint.SOURCE) && MapUtils.isEmpty(SOURCE_METADATA)) {
-            log.debug("loading {} metadata", Endpoint.SOURCE);
+            LogUtils.debug(log, "loading {} metadata", Endpoint.SOURCE);
             Map<String, TableMetadata> tableMetadataMap = feignClientService.queryMetaDataOfSchema(Endpoint.SOURCE);
             if (MapUtils.isNotEmpty(tableMetadataMap)) {
                 SOURCE_METADATA.putAll(tableMetadataMap);
             }
-            log.debug("loading {} metadata end ", Endpoint.SOURCE);
+            LogUtils.debug(log, "loading {} metadata end ", Endpoint.SOURCE);
         }
         if (loadMetadataCompleted.containsKey(Endpoint.SINK) && MapUtils.isEmpty(SINK_METADATA)) {
-            log.debug("loading {} metadata", Endpoint.SINK);
+            LogUtils.debug(log, "loading {} metadata", Endpoint.SINK);
             Map<String, TableMetadata> tableMetadataMap = feignClientService.queryMetaDataOfSchema(Endpoint.SINK);
             if (MapUtils.isNotEmpty(tableMetadataMap)) {
                 SINK_METADATA.putAll(tableMetadataMap);
             }
-            log.debug("loading {} metadata end ", Endpoint.SINK);
+            LogUtils.debug(log, "loading {} metadata end ", Endpoint.SINK);
         }
         return !(loadMetadataCompleted.containsKey(Endpoint.SOURCE) && loadMetadataCompleted.containsKey(
             Endpoint.SINK));
@@ -226,7 +226,7 @@ public class EndpointMetaDataManager {
      * @param endpoint endpoint
      */
     public void refreshLoadMetadataStatus(Endpoint endpoint) {
-        log.info("refresh {} load metadata completed", endpoint);
+        LogUtils.debug(log, "refresh {} load metadata completed", endpoint);
         loadMetadataCompleted.put(endpoint, 1);
     }
 }

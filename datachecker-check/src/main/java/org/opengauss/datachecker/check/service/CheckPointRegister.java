@@ -15,16 +15,14 @@
 
 package org.opengauss.datachecker.check.service;
 
-
 import org.apache.logging.log4j.Logger;
-import org.opengauss.datachecker.common.config.ConfigCache;
-import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 import java.util.Objects;
+
 /**
  * CheckPointRegister
  *
@@ -38,15 +36,16 @@ public class CheckPointRegister {
     private CheckPointSwapRegister checkPointSwapRegister;
     @Resource
     private KafkaServiceManager kafkaServiceManager;
+    @Resource
+    private TopicInitialize topicInitialize;
 
     /**
      * start table checkPoint monitor
      */
     public synchronized void startMonitor() {
         if (Objects.isNull(checkPointSwapRegister)) {
-            kafkaServiceManager.initAdminClient();
-            checkPointSwapRegister = new CheckPointSwapRegister(kafkaServiceManager);
-            checkPointSwapRegister.create(ConfigCache.getValue(ConfigConstants.PROCESS_NO));
+            String checkPointTopic = topicInitialize.getCheckPointSwapTopicName();
+            checkPointSwapRegister = new CheckPointSwapRegister(kafkaServiceManager, checkPointTopic);
             checkPointSwapRegister.pollSwapPoint();
             checkPointSwapRegister.registerCheckPoint();
         }

@@ -15,6 +15,7 @@
 
 package org.opengauss.datachecker.common.service;
 
+import cn.hutool.system.oshi.OshiUtil;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.entry.memory.CpuInfo;
 import org.opengauss.datachecker.common.entry.memory.GcInfo;
@@ -23,11 +24,8 @@ import org.opengauss.datachecker.common.entry.memory.MemoryInfo;
 import org.opengauss.datachecker.common.entry.memory.OsInfo;
 import org.opengauss.datachecker.common.entry.memory.ThreadInfo;
 import org.opengauss.datachecker.common.util.LogUtils;
-import oshi.hardware.CentralProcessor;
-import oshi.hardware.CentralProcessor.TickType;
+import org.springframework.beans.BeanUtils;
 import oshi.hardware.GlobalMemory;
-import oshi.hardware.HardwareAbstractionLayer;
-import oshi.util.Util;
 
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
@@ -45,20 +43,18 @@ import java.util.Properties;
  */
 public class MemoryManager {
     private static final Logger log = LogUtils.getLogger();
-    private static final int OSHI_WAIT_MILLIS = 500;
-    private static final OsInfo OS_INFO = getOsInfo();
-    private static final CpuInfo CPU = new CpuInfo();
-    private static final MemoryInfo MEM = new MemoryInfo();
-    private static final JvmInfo JVM = new JvmInfo();
-    private static final ThreadInfo THREAD = new ThreadInfo();
+    private static volatile OsInfo OS_INFO = getOsInfo();
+    private static volatile CpuInfo CPU = new CpuInfo();
+    private static volatile MemoryInfo MEM = new MemoryInfo();
+    private static volatile JvmInfo JVM = new JvmInfo();
+    private static volatile ThreadInfo THREAD = new ThreadInfo();
 
     /**
      * logging the runtimeInfo
-     *
-     * @param hardware hardware
      */
-    public static void getRuntimeInfo(HardwareAbstractionLayer hardware) {
-        setMemInfo(hardware.getMemory());
+    public static void getRuntimeInfo() {
+        GlobalMemory memory = OshiUtil.getMemory();
+        setMemInfo(memory);
         setJvmInfo();
         setThreadInfo();
         log.info("{}{}{}{}{}{}{}", System.lineSeparator(), OS_INFO, CPU.toString(), MEM.toString(), JVM.toString(),
@@ -67,9 +63,12 @@ public class MemoryManager {
 
     private static void setJvmInfo() {
         Properties props = System.getProperties();
-        JVM.setTotal(Runtime.getRuntime().totalMemory());
-        JVM.setMax(Runtime.getRuntime().maxMemory());
-        JVM.setFree(Runtime.getRuntime().freeMemory());
+        JVM.setTotal(Runtime.getRuntime()
+                            .totalMemory());
+        JVM.setMax(Runtime.getRuntime()
+                          .maxMemory());
+        JVM.setFree(Runtime.getRuntime()
+                           .freeMemory());
         JVM.setVersion(props.getProperty("java.version"));
         JVM.setHome(props.getProperty("java.home"));
     }
@@ -130,30 +129,8 @@ public class MemoryManager {
 
     /**
      * set cpu processor info
-     *
-     * @param processor processor
      */
-    public static void setCpuInfo(CentralProcessor processor) {
-        long[] prevTicks = processor.getSystemCpuLoadTicks();
-        // must wait {@value OSHI_WAIT_SECOND} millis
-        Util.sleep(OSHI_WAIT_MILLIS);
-        long[] ticks = processor.getSystemCpuLoadTicks();
-
-        long nice = ticks[TickType.NICE.getIndex()] - prevTicks[TickType.NICE.getIndex()];
-        long irq = ticks[TickType.IRQ.getIndex()] - prevTicks[TickType.IRQ.getIndex()];
-        long softirq = ticks[TickType.SOFTIRQ.getIndex()] - prevTicks[TickType.SOFTIRQ.getIndex()];
-        long steal = ticks[TickType.STEAL.getIndex()] - prevTicks[TickType.STEAL.getIndex()];
-        long cSys = ticks[TickType.SYSTEM.getIndex()] - prevTicks[TickType.SYSTEM.getIndex()];
-        long user = ticks[TickType.USER.getIndex()] - prevTicks[TickType.USER.getIndex()];
-        long iowait = ticks[TickType.IOWAIT.getIndex()] - prevTicks[TickType.IOWAIT.getIndex()];
-        long idle = ticks[TickType.IDLE.getIndex()] - prevTicks[TickType.IDLE.getIndex()];
-        long totalCpu = user + nice + cSys + idle + iowait + irq + softirq + steal;
-
-        CPU.setCpuNum(processor.getLogicalProcessorCount());
-        CPU.setTotal(totalCpu);
-        CPU.setSys(cSys);
-        CPU.setUsed(user);
-        CPU.setWait(iowait);
-        CPU.setFree(idle);
+    public static void setCpuInfo() {
+        BeanUtils.copyProperties(OshiUtil.getCpuInfo(), CPU);
     }
 }

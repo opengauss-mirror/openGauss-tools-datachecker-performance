@@ -53,7 +53,8 @@ import java.util.stream.Collectors;
  **/
 @Service
 public class MetaDataService {
-    private static final Logger log = LogUtils.getLogger();
+    private static final Logger log = LogUtils.getLogger(MetaDataService.class);
+
     @Resource
     private BaseDataService baseDataService;
     @Resource
@@ -67,7 +68,7 @@ public class MetaDataService {
      * @return metadata information
      */
     public Map<String, TableMetadata> queryMetaDataOfSchemaCache() {
-        log.debug("load table metadata from cache isEmpty=[{}]", MetaDataCache.isEmpty());
+        LogUtils.debug(log, "load table metadata from cache isEmpty=[{}]", MetaDataCache.isEmpty());
         return MetaDataCache.getAll();
     }
 
@@ -82,7 +83,7 @@ public class MetaDataService {
         if (MetaDataCache.isEmpty()) {
             Map<String, TableMetadata> metaDataMap = mdsQueryMetaDataOfSchema();
             MetaDataCache.putMap(metaDataMap);
-            log.info("put table metadata in cache [{}]", metaDataMap.size());
+            LogUtils.info(log, "put table metadata in cache [{}]", metaDataMap.size());
         }
     }
 
@@ -98,7 +99,7 @@ public class MetaDataService {
     public Map<String, TableMetadata> mdsQueryMetaDataOfSchema() {
         Map<String, TableMetadata> tableMetadataMap = new ConcurrentHashMap<>();
         final List<TableMetadata> tableMetadataList = baseDataService.bdsQueryTableMetadataList();
-        log.info("query table metadata {}", tableMetadataList.size());
+        LogUtils.info(log, "query table metadata {}", tableMetadataList.size());
         if (CollectionUtils.isEmpty(tableMetadataList)) {
             return tableMetadataMap;
         }
@@ -111,13 +112,13 @@ public class MetaDataService {
             Future<?> future = executor.submit(() -> {
                 takeConnection();
                 if (resourceManager.isShutdown()) {
-                    log.warn("extract service is shutdown ,task set table metadata of table is canceled!");
+                    LogUtils.warn(log, "extract service is shutdown ,task set table metadata of table is canceled!");
                 } else {
                     List<PrimaryColumnBean> primaryColumnList = tablePrimaryColumns.get(tableMetadata.getTableName());
                     baseDataService.updateTableColumnMetaData(tableMetadata, primaryColumnList);
                     tableMetadataMap.put(tableMetadata.getTableName(), tableMetadata);
                 }
-                log.debug("load table and its columns {}  hasPrimary={}", tableMetadata.getTableName(),
+                LogUtils.debug(log, "load table and its columns {}  hasPrimary={}", tableMetadata.getTableName(),
                     tableMetadata.hasPrimary());
                 resourceManager.release();
             });
@@ -128,23 +129,23 @@ public class MetaDataService {
                 future.get();
                 metadataLoadProcess.setLoadCount(metadataLoadProcess.getLoadCount() + 1);
             } catch (InterruptedException | ExecutionException exp) {
-                log.warn("extract table column failed with exp:", exp);
+                LogUtils.warn(log, "extract table column failed with exp:", exp);
             }
         });
         executor.shutdown();
         metadataLoadProcess.setLoadCount(metadataLoadProcess.getTotal());
-        log.info("query table column metadata {}", tableMetadataList.size());
+        LogUtils.debug(log, "query table column metadata {}", tableMetadataList.size());
         Map<String, TableMetadata> filterNoPrimary;
         filterNoPrimary = tableMetadataMap.entrySet()
                                           .stream()
                                           .filter(entry -> CollectionUtils.isNotEmpty(entry.getValue()
                                                                                            .getPrimaryMetas()))
                                           .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
-        log.info("filter table which does not have primary metadata {}", filterNoPrimary.size());
+        LogUtils.debug(log, "filter table which does not have primary metadata {}", filterNoPrimary.size());
         tableMetadataMap.clear();
         tableMetadataMap.putAll(filterNoPrimary);
         baseDataService.matchRowRules(tableMetadataMap);
-        log.info("build table metadata [{}]", tableMetadataMap.size());
+        LogUtils.info(log, "build table metadata [{}]", tableMetadataMap.size());
         return tableMetadataMap;
     }
 
@@ -153,7 +154,7 @@ public class MetaDataService {
             if (resourceManager.isShutdown()) {
                 break;
             }
-            log.info("jdbc connection resource is not enough");
+            LogUtils.warn(log, "jdbc connection resource is not enough");
             ThreadUtil.sleep(50);
         }
     }
@@ -211,9 +212,9 @@ public class MetaDataService {
     public synchronized boolean mdsIsCheckTableEmpty(boolean isForced) {
         if (isForced) {
             isCheckTableEmpty.set(!baseDataService.bdsCheckDatabaseNotEmpty());
-            log.info("check database table (query) is {}", isCheckTableEmpty.get() ? "empty" : " not empty");
+            LogUtils.info(log,"check database table (query) is {}", isCheckTableEmpty.get() ? "empty" : " not empty");
         } else {
-            log.info("check database table is {}", isCheckTableEmpty.get() ? "empty" : " not empty");
+            LogUtils.info(log,"check database table is {}", isCheckTableEmpty.get() ? "empty" : " not empty");
         }
         return isCheckTableEmpty.get();
     }

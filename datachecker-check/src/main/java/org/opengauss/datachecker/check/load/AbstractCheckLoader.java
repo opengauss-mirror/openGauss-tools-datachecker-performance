@@ -33,7 +33,8 @@ import javax.annotation.Resource;
  * @since ：11
  */
 public abstract class AbstractCheckLoader implements CheckLoader {
-    protected static final Logger log = LogUtils.getLogger();
+    protected static final Logger log = LogUtils.getLogger(CheckLoader.class);
+
     @Value("${data.check.max-retry-times}")
     protected int maxRetryTimes;
     @Value("${data.check.retry-interval-times}")

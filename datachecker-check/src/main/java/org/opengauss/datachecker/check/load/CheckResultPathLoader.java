@@ -17,6 +17,7 @@ package org.opengauss.datachecker.check.load;
 
 import org.opengauss.datachecker.check.config.DataCheckProperties;
 import org.opengauss.datachecker.check.modules.check.ExportCheckResult;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
@@ -43,6 +44,6 @@ public class CheckResultPathLoader extends AbstractCheckLoader {
         ExportCheckResult.initEnvironment(properties.getDataPath());
         checkEnvironment.setExportCheckPath(properties.getDataPath());
         ExportCheckResult.backCheckResultDirectory();
-        log.info("check service load export environment success.");
+        LogUtils.info(log, "check service load export environment success.");
     }
 }

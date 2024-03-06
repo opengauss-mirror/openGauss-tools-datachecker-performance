@@ -38,7 +38,7 @@
         <snakeyaml.version>2.0</snakeyaml.version>
         <powermock.version>2.0.0</powermock.version>
         <commons.cli.version>1.4</commons.cli.version>
-        <oshi.version>5.3.6</oshi.version>
+        <oshi.version>6.5.0</oshi.version>
         <opencsv.version>5.7.1</opencsv.version>
         <disruptor.version>3.4.4</disruptor.version>
     </properties>
@@ -70,6 +70,11 @@
                 <groupId>com.github.oshi</groupId>
                 <artifactId>oshi-core</artifactId>
                 <version>${oshi.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>cn.hutool</groupId>
+                <artifactId>hutool-all</artifactId>
+                <version>5.7.8</version>
             </dependency>
             <dependency>
                 <groupId>com.opencsv</groupId>

@@ -29,8 +29,8 @@ import java.time.LocalDateTime;
  */
 @Data
 @Accessors(chain = true)
-@JSONType(orders = {"mode", "status", "tableCount", "completeCount", "total", "rows", "avgSpeed", "cost",
-    "startTime", "currentTime", "endTime"})
+@JSONType(orders = {"mode", "status", "tableCount", "completeCount", "total", "rows", "avgSpeed", "cost", "startTime",
+    "currentTime", "endTime"})
 public class CheckProgress {
     private short status;
     private int tableCount;
@@ -43,4 +43,9 @@ public class CheckProgress {
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private LocalDateTime currentTime;
+
+    public String toSimpleString() {
+        return "[mode:" + mode + " , tableCount:" + tableCount + " , completeCount:" + completeCount + " , total:"
+            + total + " , rows:" + rows + " , avgSpeed:" + avgSpeed + " , cost:" + cost + "s]";
+    }
 }

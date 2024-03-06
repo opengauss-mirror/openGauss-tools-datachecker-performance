@@ -43,17 +43,15 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 @Service
 public class SliceProgressService {
-    private static final Logger log = LogUtils.getBusinessLogger();
-
+    private static final Logger log = LogUtils.getLogger(SliceProgressService.class);
     private static final Map<String, Set<Integer>> TABLE_SLICE = new ConcurrentHashMap<>();
     private static final Map<String, Long> TABLE_ROW_COUNT = new ConcurrentHashMap<>();
     private static final String PROCESS_LOG_NAME = "progress.log";
-    private final Lock lock = new ReentrantLock();
 
+    private final Lock lock = new ReentrantLock();
+    private final CheckProgress checkProgress = new CheckProgress();
     private int completedTableCount = 0;
     private int totalTable = 0;
-
-    private final CheckProgress checkProgress = new CheckProgress();
     private String logFileFullPath;
 
     /**
@@ -69,7 +67,7 @@ public class SliceProgressService {
             createProgressLog();
             ConfigCache.put(ConfigConstants.START_LOCAL_TIME, checkProgress.getStartTime());
         } catch (Exception exception) {
-            log.error("start progressing error ", exception);
+            LogUtils.error(log, "start progressing error ", exception);
         } finally {
             lock.unlock();
         }
@@ -92,7 +90,7 @@ public class SliceProgressService {
             refreshCheckProgress(count);
             refreshProgressLog();
         } catch (Exception exception) {
-            log.error("update progressing error ", exception);
+            LogUtils.error(log, "update progressing error ", exception);
         } finally {
             lock.unlock();
         }
@@ -150,7 +148,7 @@ public class SliceProgressService {
         try {
             totalTable = totalTableCount;
         } catch (Exception exception) {
-            log.error("updateTotalTableCount progressing error ", exception);
+            LogUtils.error(log, "updateTotalTableCount progressing error ", exception);
         } finally {
             lock.unlock();
         }
@@ -174,8 +172,9 @@ public class SliceProgressService {
     }
 
     private void refreshProgressLog() {
-        String content = JsonObjectUtil.formatSec(checkProgress) + System.lineSeparator();
-        FileUtils.writeAppendFile(logFileFullPath, content);
+        String content = JsonObjectUtil.formatSec(checkProgress);
+        LogUtils.info(log, checkProgress.toSimpleString());
+        FileUtils.writeAppendFile(logFileFullPath, content + System.lineSeparator());
     }
 
     private void createProgressLog() {

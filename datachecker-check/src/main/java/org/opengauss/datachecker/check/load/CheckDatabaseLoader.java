@@ -20,6 +20,7 @@ import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.extract.ExtractConfig;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
@@ -50,7 +51,7 @@ public class CheckDatabaseLoader extends AbstractCheckLoader {
         while (retry <= maxRetryTimes && (sourceConfig == null || sinkConfig == null)) {
             sourceConfig = feignClient.getEndpointConfig(Endpoint.SOURCE);
             sinkConfig = feignClient.getEndpointConfig(Endpoint.SINK);
-            log.error("load database configuration ,retry={}", retry);
+            LogUtils.error(log, "load database configuration ,retry={}", retry);
             ThreadUtil.sleepOneSecond();
             retry++;
         }
@@ -66,6 +67,6 @@ public class CheckDatabaseLoader extends AbstractCheckLoader {
         checkEnvironment.addExtractDatabase(Endpoint.SINK, sinkConfig.getDatabase());
         ConfigCache.put(ConfigConstants.DATA_CHECK_SOURCE_DATABASE, sourceConfig.getDatabase());
         ConfigCache.put(ConfigConstants.DATA_CHECK_SINK_DATABASE, sinkConfig.getDatabase());
-        log.info("check service load database configuration success.");
+        LogUtils.info(log, "check service load database configuration success.");
     }
 }

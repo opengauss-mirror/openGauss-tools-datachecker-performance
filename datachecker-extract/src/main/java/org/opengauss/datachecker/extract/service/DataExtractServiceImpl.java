@@ -16,7 +16,6 @@
 package org.opengauss.datachecker.extract.service;
 
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
@@ -36,27 +35,23 @@ import org.opengauss.datachecker.common.exception.ProcessMultipleException;
 import org.opengauss.datachecker.common.exception.TableNotExistException;
 import org.opengauss.datachecker.common.exception.TaskNotFoundException;
 import org.opengauss.datachecker.common.service.DynamicThreadPoolManager;
-import org.opengauss.datachecker.common.util.IdGenerator;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.opengauss.datachecker.common.util.TopicUtil;
 import org.opengauss.datachecker.extract.cache.MetaDataCache;
 import org.opengauss.datachecker.extract.cache.TableCheckPointCache;
 import org.opengauss.datachecker.extract.cache.TableExtractStatusCache;
-import org.opengauss.datachecker.extract.cache.TopicCache;
 import org.opengauss.datachecker.extract.client.CheckingFeignClient;
 import org.opengauss.datachecker.extract.config.ExtractProperties;
 import org.opengauss.datachecker.extract.config.KafkaConsumerConfig;
 import org.opengauss.datachecker.extract.data.BaseDataService;
 import org.opengauss.datachecker.extract.data.access.DataAccessService;
-import org.opengauss.datachecker.extract.kafka.KafkaAdminService;
 import org.opengauss.datachecker.extract.slice.ExtractPointSwapManager;
 import org.opengauss.datachecker.extract.slice.SliceRegister;
 import org.opengauss.datachecker.extract.slice.factory.SliceFactory;
 import org.opengauss.datachecker.extract.task.CheckPoint;
 import org.opengauss.datachecker.extract.task.DataManipulationService;
 import org.opengauss.datachecker.extract.task.ExtractTaskBuilder;
-import org.opengauss.datachecker.extract.task.ExtractThreadSupport;
 import org.opengauss.datachecker.extract.task.sql.AutoSliceQueryStatement;
 import org.opengauss.datachecker.extract.task.sql.QueryStatementFactory;
 import org.springframework.beans.BeanUtils;
@@ -90,7 +85,8 @@ import static org.opengauss.datachecker.common.constant.DynamicTpConstant.EXTRAC
  */
 @Service
 public class DataExtractServiceImpl implements DataExtractService {
-    private static final Logger log = LogUtils.getLogger();
+    private static final Logger log = LogUtils.getLogger(DataExtractService.class);
+
     /**
      * Maximum number of sleeps of threads executing data extraction tasks
      */
@@ -116,8 +112,6 @@ public class DataExtractServiceImpl implements DataExtractService {
     @Autowired
     private ExtractTaskBuilder extractTaskBuilder;
     @Autowired
-    private ExtractThreadSupport extractThreadSupport;
-    @Autowired
     private CheckingFeignClient checkingFeignClient;
     @Autowired
     private ExtractProperties extractProperties;
@@ -134,15 +128,12 @@ public class DataExtractServiceImpl implements DataExtractService {
     @Resource
     private DynamicThreadPoolManager dynamicThreadPoolManager;
     @Resource
-    private KafkaAdminService kafkaAdminService;
-    @Resource
     private SliceRegister sliceRegister;
     @Resource
     private KafkaTemplate<String, String> kafkaTemplate;
     @Resource
     private KafkaConsumerConfig kafkaConsumerConfig;
     private ExtractPointSwapManager checkPointManager = null;
-
     /**
      * Data extraction service
      * <p>
@@ -164,10 +155,9 @@ public class DataExtractServiceImpl implements DataExtractService {
     public List<ExtractTask> buildExtractTaskAllTables(String processNo) throws ProcessMultipleException {
         // If the calling end point is not the source end, it directly returns null
         if (!Objects.equals(extractProperties.getEndpoint(), Endpoint.SOURCE)) {
-            log.info("The current endpoint is not the source endpoint, and the task cannot be built");
+            LogUtils.info(log, "The current endpoint is not the source endpoint, and the task cannot be built");
             return new ArrayList<>(0);
         }
-        TopicCache.initEndpoint(extractProperties.getEndpoint());
         if (atomicProcessNo.compareAndSet(PROCESS_NO_RESET, processNo)) {
             Set<String> tableNames = MetaDataCache.getAllKeys();
             List<ExtractTask> taskList = extractTaskBuilder.builder(tableNames);
@@ -175,11 +165,12 @@ public class DataExtractServiceImpl implements DataExtractService {
                 return taskList;
             }
             taskReference.set(taskList);
-            log.info("build extract task process={} count={}", processNo, taskList.size());
+            LogUtils.info(log, "build extract task process={} count={}", processNo, taskList.size());
             atomicProcessNo.set(processNo);
             return taskList;
         } else {
-            log.error("process={} is running extract task , {} please wait ... ", atomicProcessNo.get(), processNo);
+            LogUtils.error(log, "process={} is running extract task , {} please wait ... ", atomicProcessNo.get(),
+                processNo);
             throw new ProcessMultipleException("process {" + atomicProcessNo.get() + "} is running extract task");
         }
     }
@@ -207,7 +198,7 @@ public class DataExtractServiceImpl implements DataExtractService {
         final Set<String> tableNames = MetaDataCache.getAllKeys();
         if (atomicProcessNo.compareAndSet(PROCESS_NO_RESET, processNo)) {
             if (CollectionUtils.isEmpty(taskList) || CollectionUtils.isEmpty(tableNames)) {
-                log.info("build extract task process={} taskList={} ,MetaCache tableNames={}", processNo,
+                LogUtils.info(log, "build extract task process={} taskList={} ,MetaCache tableNames={}", processNo,
                     taskList.size(), tableNames);
                 return;
             }
@@ -216,7 +207,7 @@ public class DataExtractServiceImpl implements DataExtractService {
                                                            .collect(Collectors.toList());
             extractTasks.forEach(this::updateSinkMetadata);
             taskReference.set(extractTasks);
-            log.info("build extract task process={} count={},", processNo, extractTasks.size());
+            LogUtils.info(log, "build extract task process={} count={},", processNo, extractTasks.size());
             atomicProcessNo.set(processNo);
 
             // taskCountMap is used to count the number of tasks in table fragment query
@@ -229,7 +220,8 @@ public class DataExtractServiceImpl implements DataExtractService {
             // Initialization data extraction task execution status
             TableExtractStatusCache.init(taskCountMap);
         } else {
-            log.error("process={} is running extract task , {} please wait ... ", atomicProcessNo.get(), processNo);
+            LogUtils.error(log, "process={} is running extract task , {} please wait ... ", atomicProcessNo.get(),
+                processNo);
             throw new ProcessMultipleException("process {" + atomicProcessNo.get() + "} is running extract task");
         }
     }
@@ -250,8 +242,7 @@ public class DataExtractServiceImpl implements DataExtractService {
         }
         TableExtractStatusCache.removeAll();
         atomicProcessNo.set(PROCESS_NO_RESET);
-        log.info("clear the current build task cache!");
-        log.info("clear extraction service status flag!");
+        LogUtils.info(log, "clear the current build task cache and status!");
     }
 
     /**
@@ -304,8 +295,8 @@ public class DataExtractServiceImpl implements DataExtractService {
             while (CollectionUtils.isEmpty(taskReference.get())) {
                 ThreadUtil.sleep(MAX_SLEEP_MILLIS_TIME);
                 if (sleepCount++ > MAX_SLEEP_COUNT) {
-                    log.info("endpoint [{}] and process[{}}] task is empty!", extractProperties.getEndpoint()
-                                                                                               .getDescription(),
+                    LogUtils.info(log, "endpoint [{}] and process[{}}] task is empty!", extractProperties.getEndpoint()
+                                                                                                         .getDescription(),
                         processNo);
                     break;
                 }
@@ -315,54 +306,44 @@ public class DataExtractServiceImpl implements DataExtractService {
             if (CollectionUtils.isEmpty(taskList)) {
                 return;
             }
-            dynamicThreadPoolManager.dynamicThreadPoolMonitor();
             sliceRegister.startCheckPointMonitor();
             Map<String, Integer> tableCheckStatus = checkingFeignClient.queryTableCheckStatus();
-            int maximumTopicSize = ConfigCache.getIntValue(ConfigConstants.MAXIMUM_TOPIC_SIZE);
             tableRegisterCheckPoint(taskList);
-            taskList.forEach(task -> execExtractTableTask(tableCheckStatus, maximumTopicSize, task));
+            taskList.forEach(task -> execExtractTableTask(tableCheckStatus, task));
         }
     }
 
-    private void execExtractTableTask(Map<String, Integer> tableCheckStatus, int maximumTopicSize, ExtractTask task) {
+    private void execExtractTableTask(Map<String, Integer> tableCheckStatus, ExtractTask task) {
         try {
-            log.info("Perform data extraction tasks {}", task.getTaskName());
+            LogUtils.info(log, "Perform data extraction tasks {}", task.getTaskName());
             final String tableName = task.getTableName();
             if (!tableCheckStatus.containsKey(tableName) || tableCheckStatus.get(tableName) == -1) {
-                log.warn("Abnormal table[{}] status, ignoring the current table data extraction task", tableName);
+                LogUtils.warn(log, "Abnormal table[{}] status, ignoring the current table data extraction task",
+                    tableName);
                 return;
             }
-            registerTopic(task);
-            while (!TopicCache.canCreateTopic(maximumTopicSize)) {
-                ThreadUtil.sleepHalfSecond();
-            }
-            Topic topic = task.getTopic();
             Endpoint endpoint = extractProperties.getEndpoint();
-            log.info("try to create [{}] [{}]", topic.getTopicName(endpoint), topic.getPtnNum());
-            kafkaAdminService.createTopic(topic.getTopicName(endpoint), topic.getPtnNum());
-            TopicCache.add(topic);
             while (!tableCheckPointCache.getAll()
                                         .containsKey(tableName)) {
                 ThreadUtil.sleepHalfSecond();
             }
             List<Object> summarizedCheckPoint = tableCheckPointCache.get(tableName);
-            log.debug("table [{}] summarized check-point-list : {}", tableName, summarizedCheckPoint);
-            List<SliceVo> sliceVoList =
-                buildSliceByTask(summarizedCheckPoint, task.getTableMetadata(), topic, endpoint);
-            log.info("table [{}] have {} slice to check", tableName, sliceVoList.size());
+            LogUtils.debug(log, "table [{}] summarized check-point-list : {}", tableName, summarizedCheckPoint);
+            List<SliceVo> sliceVoList = buildSliceByTask(summarizedCheckPoint, task.getTableMetadata(), endpoint);
+            LogUtils.info(log, "table [{}] have {} slice to check", tableName, sliceVoList.size());
             addSliceProcessor(sliceVoList);
         } catch (Exception ex) {
-            log.error("async exec extract tables error {}:{} ", task.getTableName(), ex.getMessage(), ex);
+            LogUtils.error(log, "async exec extract tables error {}:{} ", task.getTableName(), ex.getMessage(), ex);
         }
     }
 
-    private List<SliceVo> buildSliceByTask(List<Object> summarizedCheckPoint, TableMetadata tableMetadata, Topic topic,
+    private List<SliceVo> buildSliceByTask(List<Object> summarizedCheckPoint, TableMetadata tableMetadata,
         Endpoint endpoint) {
         List<SliceVo> sliceVoList;
         if (noTableSlice(tableMetadata, summarizedCheckPoint)) {
-            sliceVoList = buildSingleSlice(tableMetadata, topic, endpoint);
+            sliceVoList = buildSingleSlice(tableMetadata, endpoint);
         } else {
-            sliceVoList = buildSlice(summarizedCheckPoint, tableMetadata, topic, endpoint);
+            sliceVoList = buildSlice(summarizedCheckPoint, tableMetadata, endpoint);
         }
         return sliceVoList;
     }
@@ -372,26 +353,27 @@ public class DataExtractServiceImpl implements DataExtractService {
         sliceRegister.batchRegister(sliceVoList);
         if (sliceVoList.size() <= 20) {
             ExecutorService executorService = dynamicThreadPoolManager.getExecutor(EXTRACT_EXECUTOR);
-            log.debug("table [{}] get executorService success", sliceVoList.get(0)
-                                                                           .getTable());
+            LogUtils.debug(log, "table [{}] get executorService success", sliceVoList.get(0)
+                                                                                     .getTable());
             sliceVoList.forEach(sliceVo -> executorService.submit(sliceFactory.createSliceProcessor(sliceVo)));
         } else {
             int topicSize = ConfigCache.getIntValue(ConfigConstants.MAXIMUM_TOPIC_SIZE);
             int extendMaxPoolSize = ConfigCache.getIntValue(ConfigConstants.EXTEND_MAXIMUM_POOL_SIZE);
             ExecutorService extendExecutor = dynamicThreadPoolManager.getFreeExecutor(topicSize, extendMaxPoolSize);
-            log.debug("table [{}] get extendExecutor success", sliceVoList.get(0)
-                                                                          .getTable());
+            LogUtils.debug(log, "table [{}] get extendExecutor success", sliceVoList.get(0)
+                                                                                    .getTable());
             sliceVoList.forEach(sliceVo -> extendExecutor.submit(sliceFactory.createSliceProcessor(sliceVo)));
         }
     }
 
-    private List<SliceVo> buildSingleSlice(TableMetadata metadata, Topic topic, Endpoint endpoint) {
+    private List<SliceVo> buildSingleSlice(TableMetadata metadata, Endpoint endpoint) {
         SliceVo sliceVo = new SliceVo();
         sliceVo.setNo(SINGLE_SLICE_NUM);
         sliceVo.setTable(metadata.getTableName());
         sliceVo.setSchema(metadata.getSchema());
         sliceVo.setName(sliceTaskNameBuilder(metadata.getTableName(), 0));
-        sliceVo.setPtnNum(topic.getPtnNum());
+        sliceVo.setPtnNum(1);
+        sliceVo.setPtn(0);
         sliceVo.setTotal(SINGLE_SLICE_NUM);
         sliceVo.setEndpoint(endpoint);
         sliceVo.setFetchSize(ConfigCache.getIntValue(ConfigConstants.MAXIMUM_TABLE_SLICE_SIZE));
@@ -406,9 +388,7 @@ public class DataExtractServiceImpl implements DataExtractService {
         return ConfigCache.getIntValue(ConfigConstants.QUERY_DOP);
     }
 
-    private List<SliceVo> buildSlice(List<Object> summarizedCheckPoint, TableMetadata metadata, Topic topic,
-        Endpoint endpoint) {
-        int topicPartitions = topic.getPtnNum();
+    private List<SliceVo> buildSlice(List<Object> summarizedCheckPoint, TableMetadata metadata, Endpoint endpoint) {
         ArrayList<SliceVo> sliceTaskList = new ArrayList<>();
         Iterator<Object> iterator = summarizedCheckPoint.iterator();
         Object preOffset = iterator.next();
@@ -422,8 +402,8 @@ public class DataExtractServiceImpl implements DataExtractService {
             sliceVo.setName(sliceTaskNameBuilder(metadata.getTableName(), index));
             sliceVo.setBeginIdx(String.valueOf(preOffset));
             sliceVo.setEndIdx(String.valueOf(offset));
-            sliceVo.setPtnNum(topic.getPtnNum());
-            sliceVo.setPtn(index % topicPartitions);
+            sliceVo.setPtnNum(1);
+            sliceVo.setPtn(0);
             sliceVo.setTotal(summarizedCheckPoint.size() - 1);
             sliceVo.setEndpoint(endpoint);
             sliceVo.setNo(++index);
@@ -435,8 +415,14 @@ public class DataExtractServiceImpl implements DataExtractService {
 
     private List<Object> getCheckPoint(CheckPoint checkPoint, TableMetadata metadata) {
         AutoSliceQueryStatement sliceStatement = factory.createSliceQueryStatement(checkPoint, metadata);
-        List<Object> checkPointList =
-            sliceStatement.getCheckPoint(metadata, ConfigCache.getIntValue(ConfigConstants.MAXIMUM_TABLE_SLICE_SIZE));
+        List<Object> checkPointList;
+        try {
+            checkPointList = sliceStatement.getCheckPoint(metadata,
+                ConfigCache.getIntValue(ConfigConstants.MAXIMUM_TABLE_SLICE_SIZE));
+        } catch (Exception ex) {
+            LogUtils.error(log, "getCheckPoint error:", ex);
+            return new ArrayList<>();
+        }
         if (CollectionUtils.isEmpty(checkPointList)) {
             return new ArrayList<>();
         }
@@ -445,12 +431,12 @@ public class DataExtractServiceImpl implements DataExtractService {
 
     private void tableRegisterCheckPoint(List<ExtractTask> taskList) {
         new Thread(() -> {
-            KafkaConsumer<String, String> consumer = kafkaConsumerConfig.createConsumer(IdGenerator.nextId36());
-            checkPointManager = new ExtractPointSwapManager(kafkaTemplate, consumer);
+            checkPointManager = new ExtractPointSwapManager(kafkaTemplate, kafkaConsumerConfig);
             checkPointManager.setCheckPointSwapTopicName(ConfigCache.getValue(ConfigConstants.PROCESS_NO));
-            log.info("tableRegisterCheckPoint start pollSwapPoint thread");
+            LogUtils.info(log, "tableRegisterCheckPoint start pollSwapPoint thread");
             checkPointManager.pollSwapPoint(tableCheckPointCache);
-            taskList.forEach(this::registerCheckPoint);
+            Endpoint endpoint = ConfigCache.getEndPoint();
+            taskList.forEach(task -> registerCheckPoint(task, endpoint));
             while (tableCheckPointCache.tableCount() != taskList.size()) {
                 ThreadUtil.sleepHalfSecond();
             }
@@ -459,9 +445,9 @@ public class DataExtractServiceImpl implements DataExtractService {
         }).start();
     }
 
-    private void registerCheckPoint(ExtractTask task) {
+    private void registerCheckPoint(ExtractTask task, Endpoint endpoint) {
         String tableName = task.getTableName();
-        log.debug("register check point [{}]", tableName);
+        LogUtils.debug(log, "register check point [{}][{}]", endpoint, tableName);
         CheckPoint checkPoint = new CheckPoint(dataAccessService);
         List<Object> checkPointList = getCheckPoint(checkPoint, task.getTableMetadata());
         if (checkPointList == null || checkPointList.size() <= 2) {

@@ -69,7 +69,7 @@ import static org.opengauss.datachecker.check.modules.check.CheckResultConstants
  */
 @Service
 public class SliceCheckResultManager {
-    private static final Logger log = LogUtils.getLogger();
+    private static final Logger log = LogUtils.getLogger(SliceCheckResultManager.class);
     private static final String SUMMARY_LOG_NAME = "summary.log";
     private static final String SUCCESS_LOG_NAME = "success.log";
     private static final String REPAIR_LOG_TEMPLATE = "repair_%s_%s_%s.txt";
@@ -103,7 +103,7 @@ public class SliceCheckResultManager {
             isCsvMode = Objects.equals(ConfigCache.getCheckMode(), CheckMode.CSV);
             ogCompatibility = feignClient.checkTargetOgCompatibility();
             hasInitSliceResultEnvironment = false;
-            log.info("my gold ,i want to set property hasInitSliceResultEnvironment, and execute once");
+            LogUtils.info(log, "my gold ,i want to set property hasInitSliceResultEnvironment, and execute once");
         }
         addResult(slice.getTable(), result);
     }
@@ -189,9 +189,9 @@ public class SliceCheckResultManager {
         if (isCsvMode && immediately) {
             String csvDataPath = ConfigCache.getCsvData();
             if (FileUtils.renameTo(csvDataPath, checkDiffResult.getFileName())) {
-                log.info("rename csv sharding completed [{}]", checkDiffResult.getFileName());
+                LogUtils.info(log, "rename csv sharding completed [{}]", checkDiffResult.getFileName());
             } else {
-                log.warn("rename csv sharding false [{}]", checkDiffResult.getFileName());
+                LogUtils.warn(log, "rename csv sharding false [{}]", checkDiffResult.getFileName());
             }
         }
     }

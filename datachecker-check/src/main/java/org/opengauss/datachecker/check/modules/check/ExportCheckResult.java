@@ -42,7 +42,7 @@ import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
  * @since ：11
  */
 public class ExportCheckResult {
-    private static final Logger log = LogUtils.getLogger();
+    private static final Logger log = LogUtils.getLogger(ExportCheckResult.class);
     private static final DateTimeFormatter FORMATTER_DIR = DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS");
     private static final String CHECK_RESULT_BAK_DIR = File.separator + "result_bak" + File.separator;
     private static final String CHECK_RESULT_PATH = File.separator + "result" + File.separator;
@@ -90,12 +90,13 @@ public class ExportCheckResult {
         FileUtils.createDirectories(backDir);
         resultPaths.forEach(file -> {
             try {
-                Files.move(file, Path.of(concat(backDir, file.getFileName().toString())), ATOMIC_MOVE);
+                Files.move(file, Path.of(concat(backDir, file.getFileName()
+                                                             .toString())), ATOMIC_MOVE);
             } catch (IOException e) {
-                log.error("back the verification result environment error");
+                LogUtils.error(log, "back the verification result environment error");
             }
         });
-        log.info("back the verification result.");
+        LogUtils.info(log, "back the verification result.");
     }
 
     public static String getResultPath() {
@@ -107,7 +108,8 @@ public class ExportCheckResult {
     }
 
     private static String concat(String dir, String fileName) {
-        return dir.concat(File.separator).concat(fileName);
+        return dir.concat(File.separator)
+                  .concat(fileName);
     }
 
     private static String getResultBakDir() {

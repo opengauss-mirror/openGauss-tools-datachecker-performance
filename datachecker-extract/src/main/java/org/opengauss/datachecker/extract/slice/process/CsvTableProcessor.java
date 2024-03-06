@@ -16,7 +16,6 @@
 package org.opengauss.datachecker.extract.slice.process;
 
 import com.opencsv.CSVReader;
-import com.opencsv.exceptions.CsvValidationException;
 import org.apache.commons.collections4.CollectionUtils;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.entry.extract.SliceExtend;
@@ -27,10 +26,8 @@ import org.opengauss.datachecker.extract.slice.SliceProcessorContext;
 import org.opengauss.datachecker.extract.slice.common.SliceKafkaAgents;
 import org.opengauss.datachecker.extract.slice.common.SliceResultSetSender;
 
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -92,7 +89,7 @@ public class CsvTableProcessor extends AbstractTableProcessor {
     private long executeQueryStatement(TableMetadata tableMetadata, List<Path> tablePaths) throws IOException {
         final LocalDateTime start = LocalDateTime.now();
         long tableRowCount = 0;
-        SliceKafkaAgents kafkaAgents = context.createSliceKafkaAgents(table);
+        SliceKafkaAgents kafkaAgents = context.createSliceFixedKafkaAgents(topic, table);
         SliceResultSetSender sliceSender = new SliceResultSetSender(tableMetadata, kafkaAgents);
         try {
             String csvDataRootPath = ConfigCache.getCsvData();
@@ -112,7 +109,7 @@ public class CsvTableProcessor extends AbstractTableProcessor {
                     try {
                         while ((nextLine = reader.readNext()) != null) {
                             rowCount++;
-                            sliceSender.csvTranslateAndSendRandom(nextLine, result, rowCount, i);
+                            sliceSender.csvTranslateAndSendSync(nextLine, result, rowCount,i);
                         }
                     } catch (Exception ex) {
                         log.error("csvTranslateAndSend error: ", ex);

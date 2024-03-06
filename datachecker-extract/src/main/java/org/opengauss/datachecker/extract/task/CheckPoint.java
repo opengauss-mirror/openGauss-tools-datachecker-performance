@@ -40,14 +40,14 @@ import java.util.stream.Collectors;
  * @since ：11
  */
 public class CheckPoint {
-    private static final Logger log = LogUtils.getLogger();
+    private static final Logger log = LogUtils.getLogger(CheckPoint.class);
 
     private final DataAccessService dataAccessService;
 
     /**
      * check point depends on JDBC DataSource
      *
-     * @param dataAccessService
+     * @param dataAccessService dataAccessService
      */
     public CheckPoint(DataAccessService dataAccessService) {
         this.dataAccessService = dataAccessService;
@@ -58,7 +58,7 @@ public class CheckPoint {
      *
      * @param tableMetadata tableMetadata
      * @param slice         slice
-     * @return
+     * @return check point
      */
     public List<Object> initCheckPointList(TableMetadata tableMetadata, int slice) {
         if (slice <= 0) {
@@ -80,7 +80,7 @@ public class CheckPoint {
         checkPointList = checkPointList.stream()
                                        .distinct()
                                        .collect(Collectors.toList());
-        log.debug("table [{}] check-point-list : {} ", tableName, checkPointList);
+        LogUtils.debug(log,"init check-point-list table [{}]:[{}] ", tableName, checkPointList);
         return checkPointList;
     }
 

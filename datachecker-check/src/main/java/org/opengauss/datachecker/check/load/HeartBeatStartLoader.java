@@ -19,6 +19,7 @@ import org.opengauss.datachecker.check.service.EndpointManagerService;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
@@ -51,7 +52,8 @@ public class HeartBeatStartLoader extends AbstractCheckLoader {
         while (!endpointManagerService.isEndpointHealth()) {
             isSourceHealth = endpointManagerService.checkEndpointHealth(Endpoint.SOURCE);
             isSinkHealth = endpointManagerService.checkEndpointHealth(Endpoint.SINK);
-            log.warn("endpoint source={},sink={} does not health, please wait a moment!", isSourceHealth, isSinkHealth);
+            LogUtils.warn(log, "endpoint source={},sink={} does not health, please wait a moment!", isSourceHealth,
+                isSinkHealth);
             ThreadUtil.sleep(retryIntervalTimes);
             retryTimes++;
             if (retryTimes >= maxRetryTimes) {
@@ -60,7 +62,7 @@ public class HeartBeatStartLoader extends AbstractCheckLoader {
         }
         isSourceHealth = endpointManagerService.checkEndpointHealth(Endpoint.SOURCE);
         isSinkHealth = endpointManagerService.checkEndpointHealth(Endpoint.SINK);
-        log.info("endpoint source={},sink={} health ", isSourceHealth, isSinkHealth);
+        LogUtils.info(log, "endpoint source={},sink={} health ", isSourceHealth, isSinkHealth);
         endpointManagerService.stopHeartBeat();
     }
 }

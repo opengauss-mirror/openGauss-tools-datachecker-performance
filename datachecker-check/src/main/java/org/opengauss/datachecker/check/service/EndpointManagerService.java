@@ -41,7 +41,7 @@ import java.util.concurrent.ExecutorService;
  */
 @Service
 public class EndpointManagerService {
-    private static final Logger log = LogUtils.getLogger();
+    private static final Logger log = LogUtils.getLogger(EndpointManagerService.class);
     private static final ExecutorService executorService = ThreadUtil.newSingleThreadExecutor();
     @Value("${data.check.retry-interval-times}")
     protected int retryIntervalTimes;
@@ -98,13 +98,13 @@ public class EndpointManagerService {
             Result healthStatus = feignClientService.health(endpoint);
             if (healthStatus.isSuccess()) {
                 endpointStatusManager.resetStatus(endpoint, Boolean.TRUE);
-                log.info("{} ：{} current state health", message, requestUri);
+                LogUtils.info(log, "{} ：{} current state health", message, requestUri);
             } else {
                 endpointStatusManager.resetStatus(endpoint, Boolean.FALSE);
-                log.warn("{} : {} current service status is abnormal", message, requestUri);
+                LogUtils.warn(log, "{} : {} current service status is abnormal", message, requestUri);
             }
         } catch (Exception ce) {
-            log.warn("{} : {} service unreachable", message, ce.getMessage());
+            LogUtils.warn(log, "{} : {} service unreachable", message, ce.getMessage());
             endpointStatusManager.resetStatus(endpoint, Boolean.FALSE);
         }
     }
