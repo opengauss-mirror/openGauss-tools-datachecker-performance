@@ -44,7 +44,7 @@ import java.util.stream.IntStream;
  * @since ：11
  */
 public class TableExtractStatusCache {
-    private static final Logger log = LogUtils.getLogger();
+    private static final Logger log = LogUtils.getLogger(TableExtractStatusCache.class);
     /**
      * data extraction task completion status
      */
@@ -73,12 +73,13 @@ public class TableExtractStatusCache {
         Assert.isTrue(Objects.nonNull(map), Message.INIT_STATUS_PARAM_EMPTY);
         map.forEach((table, taskCount) -> {
             Map<Integer, Byte> tableStatus = new ConcurrentHashMap<>(InitialCapacity.CAPACITY_16);
-            IntStream.rangeClosed(TASK_ORDINAL_START_INDEX, taskCount).forEach(ordinal -> {
-                tableStatus.put(ordinal, STATUS_INIT);
-            });
+            IntStream.rangeClosed(TASK_ORDINAL_START_INDEX, taskCount)
+                     .forEach(ordinal -> {
+                         tableStatus.put(ordinal, STATUS_INIT);
+                     });
             TABLE_EXTRACT_STATUS_MAP.put(table, tableStatus);
         });
-        log.info(Message.INIT_STATUS);
+        LogUtils.info(log, Message.INIT_STATUS);
     }
 
     /**
@@ -101,7 +102,7 @@ public class TableExtractStatusCache {
 
             // update status
             tableStatus.put(ordinal, STATUS_COMPLATE);
-            log.info("update tableName : {}, ordinal : {} extract completed-status {}", tableName, ordinal,
+            LogUtils.info(log, "update tableName : {}, ordinal : {} extract completed-status {}", tableName, ordinal,
                 STATUS_COMPLATE);
         } catch (Exception exception) {
             log.error(Message.UPDATE_STATUS_EXCEPTION, exception);
@@ -167,7 +168,8 @@ public class TableExtractStatusCache {
         // check whether the table name exists.
         Assert.isTrue(TABLE_EXTRACT_STATUS_MAP.containsKey(tableName),
             String.format(Message.TABLE_STATUS_NOT_EXIST, tableName));
-        return !TABLE_EXTRACT_STATUS_MAP.get(tableName).containsValue(STATUS_INIT);
+        return !TABLE_EXTRACT_STATUS_MAP.get(tableName)
+                                        .containsValue(STATUS_INIT);
     }
 
     /**
@@ -190,8 +192,9 @@ public class TableExtractStatusCache {
             String.format(Message.TABLE_STATUS_NOT_EXIST, tableName));
         Map<Integer, Byte> tableStatus = TABLE_EXTRACT_STATUS_MAP.get(tableName);
         long noCompleted = IntStream.range(TASK_ORDINAL_START_INDEX, ordinal)
-                                    .filter(idx -> Objects.equals(tableStatus.get(idx), STATUS_INIT)).count();
-        log.info("tableName : {}, ordinal : {} check noCompleted=[{}]", tableName, ordinal, noCompleted);
+                                    .filter(idx -> Objects.equals(tableStatus.get(idx), STATUS_INIT))
+                                    .count();
+        LogUtils.info(log, "tableName : {}, ordinal : {} check noCompleted=[{}]", tableName, ordinal, noCompleted);
         return noCompleted == 0;
     }
 
@@ -204,7 +207,7 @@ public class TableExtractStatusCache {
         try {
             TABLE_EXTRACT_STATUS_MAP.remove(key);
         } catch (Exception exception) {
-            log.error("failed to delete the cache,", exception);
+            LogUtils.error(log, "failed to delete the cache,", exception);
         }
     }
 
@@ -215,7 +218,7 @@ public class TableExtractStatusCache {
         try {
             TABLE_EXTRACT_STATUS_MAP.clear();
         } catch (Exception exception) {
-            log.error("failed to delete the cache,", exception);
+            LogUtils.error(log, "failed to delete the cache,", exception);
         }
     }
 
@@ -228,7 +231,7 @@ public class TableExtractStatusCache {
         try {
             return TABLE_EXTRACT_STATUS_MAP.keySet();
         } catch (Exception exception) {
-            log.error("failed to obtain the cache,", exception);
+            LogUtils.error(log, "failed to obtain the cache,", exception);
             return null;
         }
     }

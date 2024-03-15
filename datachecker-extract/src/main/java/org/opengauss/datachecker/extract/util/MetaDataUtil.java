@@ -115,9 +115,19 @@ public class MetaDataUtil {
         return numberDataTypes.contains(primaryKey.getDataType());
     }
 
-    public static boolean isDigitKey(ColumnsMetaData primaryKey) {
-        return digitalDataTypes.contains(primaryKey.getDataType()
-                                                   .toLowerCase(Locale.getDefault()));
+    /**
+     * 判断当前列类型是否是数字类型
+     *
+     * @param columnKey 列元数据
+     * @return boolean
+     */
+    public static boolean isDigitKey(ColumnsMetaData columnKey) {
+        return digitalDataTypes.contains(columnKey.getDataType()
+                                                  .toLowerCase(Locale.getDefault()));
+    }
+
+    public static boolean isDigitKey(String dataType) {
+        return digitalDataTypes.contains(dataType.toLowerCase(Locale.getDefault()));
     }
 
     /**

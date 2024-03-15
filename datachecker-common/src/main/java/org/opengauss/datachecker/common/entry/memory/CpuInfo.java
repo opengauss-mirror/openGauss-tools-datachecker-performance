@@ -31,7 +31,7 @@ import java.util.List;
 @Setter
 public class CpuInfo implements MonitorFormatter {
     private int cpuNum;
-    private double total;
+    private double toTal;
     private double sys;
     private double used;
     private double wait;
@@ -51,8 +51,8 @@ public class CpuInfo implements MonitorFormatter {
      *
      * @return Total CPU usage
      */
-    public double getTotal() {
-        return MathUtils.round100(total);
+    public double getToTal() {
+        return MathUtils.round100(toTal);
     }
 
     /**
@@ -61,7 +61,7 @@ public class CpuInfo implements MonitorFormatter {
      * @return CPU system usage rate
      */
     public double getSys() {
-        return MathUtils.mul(MathUtils.divRound(sys, total), MathUtils.CONVERT_PERCENTAGE);
+        return MathUtils.mul(MathUtils.divRound(sys, toTal), MathUtils.CONVERT_PERCENTAGE);
     }
 
     /**
@@ -70,7 +70,7 @@ public class CpuInfo implements MonitorFormatter {
      * @return CPU user usage rate
      */
     public double getUsed() {
-        return MathUtils.mul(MathUtils.divRound(used, total), MathUtils.CONVERT_PERCENTAGE);
+        return MathUtils.mul(MathUtils.divRound(used, toTal), MathUtils.CONVERT_PERCENTAGE);
     }
 
     /**
@@ -79,7 +79,7 @@ public class CpuInfo implements MonitorFormatter {
      * @return CPU current wait rate
      */
     public double getWait() {
-        return MathUtils.mul(MathUtils.divRound(wait, total), MathUtils.CONVERT_PERCENTAGE);
+        return MathUtils.mul(MathUtils.divRound(wait, toTal), MathUtils.CONVERT_PERCENTAGE);
     }
 
     /**
@@ -88,7 +88,7 @@ public class CpuInfo implements MonitorFormatter {
      * @return CPU current idle rate
      */
     public double getFree() {
-        return MathUtils.mul(MathUtils.divRound(free, total), MathUtils.CONVERT_PERCENTAGE);
+        return MathUtils.mul(MathUtils.divRound(free, toTal), MathUtils.CONVERT_PERCENTAGE);
     }
 
     @Override
@@ -105,7 +105,7 @@ public class CpuInfo implements MonitorFormatter {
     public List<Field> getFormatFields() {
         List<Field> cpu = new LinkedList<>();
         cpu.add(Field.of("cpuNum", getCpuNum()));
-        cpu.add(Field.of("total", getTotal()));
+        cpu.add(Field.of("total", getToTal()));
         cpu.add(Field.of("sys", getSys()));
         cpu.add(Field.of("used", getUsed()));
         cpu.add(Field.of("wait", getWait()));

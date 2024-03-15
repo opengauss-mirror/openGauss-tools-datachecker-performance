@@ -21,7 +21,6 @@ import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.logging.log4j.Logger;
-import org.opengauss.datachecker.common.constant.Constants;
 import org.opengauss.datachecker.common.entry.common.CheckPointData;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.util.LogUtils;
@@ -48,33 +47,27 @@ import java.util.stream.Collectors;
  * @since ：11
  */
 public class CheckPointSwapRegister {
-    private static final BlockingQueue<String> CHECK_POINT_QUEUE = new LinkedBlockingQueue<>();
-    private static final Logger log = LogUtils.getBusinessLogger();
-
     protected static final Map<String, CheckPointData> sourcePointCounter = new ConcurrentHashMap<>();
     protected static final Map<String, CheckPointData> sinkPointCounter = new ConcurrentHashMap<>();
+
+    private static final BlockingQueue<String> CHECK_POINT_QUEUE = new LinkedBlockingQueue<>();
+    private static final Logger log = LogUtils.getLogger(CheckPointSwapRegister.class);
 
     private final KafkaServiceManager kafkaServiceManager;
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final ExecutorService checkPointConsumer;
     private final ExecutorService checkPointSender;
-
-    private String checkPointSwapTopicName = null;
+    private String checkPointSwapTopicName;
     private boolean isCompletedSwapTablePoint = false;
     private boolean isSinkStop;
     private boolean isSourceStop;
 
-    public CheckPointSwapRegister(KafkaServiceManager kafkaServiceManager) {
+    public CheckPointSwapRegister(KafkaServiceManager kafkaServiceManager, String checkPointTopic) {
+        this.checkPointSwapTopicName = checkPointTopic;
         this.kafkaServiceManager = kafkaServiceManager;
         this.kafkaTemplate = kafkaServiceManager.getKafkaTemplate();
         this.checkPointConsumer = ThreadUtil.newSingleThreadExecutor();
         this.checkPointSender = ThreadUtil.newSingleThreadExecutor();
-    }
-
-    public void create(String process) {
-        checkPointSwapTopicName = getCheckPointSwapTopicName(process);
-        kafkaServiceManager.createTopic(checkPointSwapTopicName, 1);
-        log.info("create check point swap topic {}", checkPointSwapTopicName);
     }
 
     public void stopMonitor(Endpoint endpoint) {
@@ -86,48 +79,45 @@ public class CheckPointSwapRegister {
         }
         if (isSourceStop && isSinkStop) {
             this.isCompletedSwapTablePoint = true;
-            this.kafkaServiceManager.deleteTopic(List.of(checkPointSwapTopicName));
             this.checkPointConsumer.shutdownNow();
             this.checkPointSender.shutdownNow();
         }
     }
 
-    private String getCheckPointSwapTopicName(String process) {
-        return String.format(Constants.SWAP_POINT_TOPIC_TEMP, process);
-    }
-
     public void registerCheckPoint() {
         checkPointSender.submit(() -> {
             int deliveredCount = 0;
+            String table = null;
+            CheckPointData calculateCheckPoint = null;
+            List<Object> sourcePoints;
+            List<Object> sinkPoints;
             while (!isCompletedSwapTablePoint) {
                 try {
-                    String table = CHECK_POINT_QUEUE.poll();
+                    table = CHECK_POINT_QUEUE.poll();
                     if (StringUtils.isEmpty(table) && !isCompletedSwapTablePoint) {
                         ThreadUtil.sleepHalfSecond();
                         continue;
                     }
-                    if (table == null) {
-                        break;
-                    }
+                    LogUtils.info(log, "start calculate checkpoint [{}]", table);
                     if (sourcePointCounter.containsKey(table) && sinkPointCounter.containsKey(table)) {
-                        boolean digit = isCheckPointDigit(table);
-                        List<Object> sourcePoints = sourcePointCounter.get(table)
-                                                                      .getCheckPointList();
-                        List<Object> sinkPoints = sinkPointCounter.get(table)
-                                                                  .getCheckPointList();
-                        CheckPointData calculateCheckPoint =
-                            calculateCheckPoint(table, digit, sourcePoints, sinkPoints);
+                        sourcePoints = sourcePointCounter.get(table)
+                                                         .getCheckPointList();
+                        sinkPoints = sinkPointCounter.get(table)
+                                                     .getCheckPointList();
+                        calculateCheckPoint =
+                            calculateCheckPoint(table, isCheckPointDigit(table), sourcePoints, sinkPoints);
                         calculateCheckPoint.setEndpoint(Endpoint.CHECK);
                         kafkaTemplate.send(checkPointSwapTopicName, Endpoint.CHECK.getDescription(),
                             JSONObject.toJSONString(calculateCheckPoint));
                         deliveredCount++;
-                        log.info("send summarized checkpoint of table [{}]:[{}]:[{}]",
-                            calculateCheckPoint.getTableName(), deliveredCount, calculateCheckPoint.getCheckPointList()
-                                                                                                   .size());
-                        log.info("send summarized checkpoint of table [{}]", calculateCheckPoint);
+                        LogUtils.info(log,
+                            "send summarized checkpoint topic[{}]:table[{}]:deliverNum[{}]:checkpoint_size[{}]",
+                            checkPointSwapTopicName, calculateCheckPoint.getTableName(), deliveredCount,
+                            calculateCheckPoint.getCheckPointList()
+                                               .size());
                     }
                 } catch (Exception ex) {
-                    log.error("checkPointSender error ", ex);
+                    log.error("checkPointSender error {}", table, ex);
                 }
             }
         });
@@ -163,14 +153,16 @@ public class CheckPointSwapRegister {
                     }
                 } catch (Exception ex) {
                     if (Objects.equals("java.lang.InterruptedException", ex.getMessage())) {
-                        log.warn("kafka consumer stop by Interrupted");
+                        LogUtils.warn(log, "kafka consumer stop by Interrupted");
                     } else {
-                        log.error("pollSwapPoint ", ex);
+                        LogUtils.error(log, "pollSwapPoint ", ex);
                     }
                 }
             }
-            kafkaConsumer.unsubscribe();
-            kafkaConsumer.close();
+            LogUtils.warn(log, "close check point swap consumer {} :{}", checkPointSwapTopicName,
+                kafkaConsumer.groupMetadata()
+                             .groupId());
+            kafkaServiceManager.closeConsumer(kafkaConsumer);
         });
     }
 
@@ -179,7 +171,7 @@ public class CheckPointSwapRegister {
             try {
                 CHECK_POINT_QUEUE.put(tableName);
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                LogUtils.warn(log, "tryAddCheckQueue occur  InterruptedException ");
             }
         }
     }
@@ -200,7 +192,7 @@ public class CheckPointSwapRegister {
             Map<String, List<PartitionInfo>> listTopics = kafkaConsumer.listTopics();
             isSubscribe = listTopics.containsKey(checkPointSwapTopicName);
         } catch (Exception ex) {
-            log.warn("subscribe {} failed", checkPointSwapTopicName);
+            LogUtils.warn(log, "subscribe {} failed", checkPointSwapTopicName);
         }
         return isSubscribe;
     }

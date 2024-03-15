@@ -38,7 +38,6 @@ import org.springframework.stereotype.Service;
 @ConditionalOnBean({KafkaConsumerConfig.class})
 public class KafkaConsumerService {
     private static final Logger log = LogUtils.getLogger();
-    private static final String CLIENT_ID_SUFFIX = "Random";
 
     private final KafkaConsumerConfig kafkaConsumerConfig;
 
@@ -63,10 +62,23 @@ public class KafkaConsumerService {
     public KafkaConsumer<String, String> buildKafkaConsumer(boolean isNewGroup) {
         Consumer<String, String> consumer;
         if (isNewGroup) {
-            consumer = kafkaConsumerConfig.consumerFactory(IdGenerator.nextId36()).createConsumer();
+            consumer = kafkaConsumerConfig.consumerFactory(IdGenerator.nextId36())
+                                          .createConsumer();
         } else {
-            consumer = kafkaConsumerConfig.consumerFactory().createConsumer();
+            consumer = kafkaConsumerConfig.consumerFactory()
+                                          .createConsumer();
         }
         return (KafkaConsumer<String, String>) consumer;
+    }
+
+    /**
+     * 创建一个kafka消费者，并指定对应的GroupID
+     *
+     * @param group kafka消费者Group ID
+     * @return kafka消费者
+     */
+    public KafkaConsumer<String, String> buildKafkaConsumer(String group) {
+        return (KafkaConsumer<String, String>) kafkaConsumerConfig.consumerFactory(group)
+                                                                  .createConsumer();
     }
 }

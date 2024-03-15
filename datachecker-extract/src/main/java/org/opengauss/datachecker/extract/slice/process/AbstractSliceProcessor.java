@@ -17,10 +17,12 @@ package org.opengauss.datachecker.extract.slice.process;
 
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.config.ConfigCache;
+import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.enums.SliceStatus;
 import org.opengauss.datachecker.common.entry.extract.SliceExtend;
 import org.opengauss.datachecker.common.entry.extract.SliceVo;
 import org.opengauss.datachecker.common.util.LogUtils;
+import org.opengauss.datachecker.common.util.TopicUtil;
 import org.opengauss.datachecker.extract.slice.SliceProcessorContext;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.util.concurrent.ListenableFuture;
@@ -40,9 +42,11 @@ import java.util.concurrent.ExecutionException;
  */
 public abstract class AbstractSliceProcessor extends AbstractProcessor {
     protected static final int FETCH_SIZE = 10000;
-    protected static final Logger log = LogUtils.getBusinessLogger();
-    protected SliceVo slice;
+    protected static final Logger log = LogUtils.getLogger(AbstractSliceProcessor.class);
 
+    protected SliceVo slice;
+    protected final String topic;
+    protected final String table;
     /**
      * AbstractSliceProcessor
      *
@@ -52,6 +56,10 @@ public abstract class AbstractSliceProcessor extends AbstractProcessor {
     protected AbstractSliceProcessor(SliceVo slice, SliceProcessorContext context) {
         super(context);
         this.slice = slice;
+        this.table = slice.getTable();
+        String process = ConfigCache.getValue(ConfigConstants.PROCESS_NO);
+        int maximumTopicSize = ConfigCache.getIntValue(ConfigConstants.MAXIMUM_TOPIC_SIZE);
+        this.topic = TopicUtil.getMoreFixedTopicName(process, ConfigCache.getEndPoint(), slice.getTable(), maximumTopicSize);
     }
 
     /**
@@ -139,7 +147,7 @@ public abstract class AbstractSliceProcessor extends AbstractProcessor {
             return sendResult.getRecordMetadata()
                              .offset();
         } catch (InterruptedException | ExecutionException e) {
-            log.warn("get record offset InterruptedException  or ExecutionException");
+            LogUtils.warn(log,"get record offset InterruptedException  or ExecutionException");
         }
         return 0;
     }

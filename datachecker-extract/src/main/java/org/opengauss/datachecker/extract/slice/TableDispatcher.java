@@ -142,9 +142,7 @@ public class TableDispatcher implements Runnable {
      * @param tableFilePaths tableFilePaths
      */
     private void doTableSlice(ThreadPoolExecutor executor, String table, List<Path> tableFilePaths) {
-        if (checkTopicRegistered(table)) {
-            executor.submit(sliceFactory.createTableProcessor(table, tableFilePaths));
-        }
+        executor.submit(sliceFactory.createTableProcessor(table, tableFilePaths));
     }
 
     private void doTableSlice(ThreadPoolExecutor executor, String table) {
@@ -168,28 +166,13 @@ public class TableDispatcher implements Runnable {
         }
     }
 
-    private boolean checkTopicRegistered(String table) {
-        return sliceRegister.checkTopicRegistered(table);
-    }
-
     /**
      * register slice to check server;
-     * we use the slice table ,try to register kafka topic.
-     * if register topic success, return and add current slice in executor queue.
-     * if register not, add current slice in unprocessedTableSlices queue.
      *
      * @param sliceVo sliceVo
      */
     private void register(SliceVo sliceVo) {
         sliceRegister.batchRegister(List.of(sliceVo));
-        while (sliceVo.getPtnNum() > 0 && !sliceRegister.registerTopic(sliceVo.getTable(), sliceVo.getPtnNum())) {
-            synchronized (lockIdle) {
-                try {
-                    lock.wait(WAIT_ONE_SECOND);
-                } catch (InterruptedException ignored) {
-                }
-            }
-        }
     }
 
     /**

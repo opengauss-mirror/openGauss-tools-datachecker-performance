@@ -37,7 +37,7 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 @Service
 public class ResourceManager {
-    private static final Logger log = LogUtils.getLogger();
+    private static final Logger log = LogUtils.getLogger(ResourceManager.class);
     private static final int MAX_AVAILABLE_TIMES = 30;
 
     private volatile AtomicInteger connectionCount = new AtomicInteger(0);
@@ -51,9 +51,9 @@ public class ResourceManager {
      * initMaxConnectionCount
      */
     public void initMaxConnectionCount() {
-        connectionCount.set(ConfigCache.getIntValue(ConfigConstants.DRUID_MAX_ACTIVE));
+        connectionCount.set(1000);
         final JvmInfo memory = MemoryManager.getJvmInfo();
-        log.info("max active connection {} ,max memory {}", connectionCount.get(), memory.getMax());
+        LogUtils.info(log,"max active connection {} ,max memory {}", connectionCount.get(), memory.getMax());
     }
 
     /**

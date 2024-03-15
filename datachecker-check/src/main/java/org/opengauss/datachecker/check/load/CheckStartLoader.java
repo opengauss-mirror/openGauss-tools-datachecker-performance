@@ -21,11 +21,14 @@ import org.opengauss.datachecker.check.service.CheckService;
 import org.opengauss.datachecker.check.event.KafkaTopicDeleteProvider;
 import org.opengauss.datachecker.check.service.CheckTableStructureService;
 import org.opengauss.datachecker.check.service.TaskRegisterCenter;
+import org.opengauss.datachecker.check.service.TopicInitialize;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.check.CheckTableInfo;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.service.MemoryManagerService;
+import org.opengauss.datachecker.common.util.DurationUtils;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.SpringUtil;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,7 +36,6 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
@@ -63,6 +65,8 @@ public class CheckStartLoader extends AbstractCheckLoader {
     private CheckTableStructureService checkTableStructureService;
     @Resource
     private SliceCheckResultManager sliceCheckResultManager;
+    @Resource
+    private TopicInitialize topicInitialize;
 
     @Override
     public void load(CheckEnvironment checkEnvironment) {
@@ -73,6 +77,7 @@ public class CheckStartLoader extends AbstractCheckLoader {
             memoryManagerService.startMemoryManager(isEnableMemoryMonitor);
             final LocalDateTime startTime = LocalDateTime.now();
             String processNo = ConfigCache.getValue(ConfigConstants.PROCESS_NO);
+            topicInitialize.initialize(processNo);
             CheckTableInfo checkTableInfo = checkTableStructureService.check(processNo);
             int checkedTableCount = checkTableInfo.fetchCheckedTableCount();
             sliceProgressService.startProgressing();
@@ -80,14 +85,13 @@ public class CheckStartLoader extends AbstractCheckLoader {
             checkService.start(CheckMode.FULL);
             kafkaTopicDeleteProvider.deleteTopicIfAllCheckedCompleted();
             TaskRegisterCenter registerCenter = SpringUtil.getBean(TaskRegisterCenter.class);
-            while (!registerCenter.checkCompletedAll(checkedTableCount)
-                && kafkaTopicDeleteProvider.waitDeleteTopicsEventCompleted()) {
+            while (!registerCenter.checkCompletedAll(checkedTableCount)) {
                 ThreadUtil.sleepOneSecond();
             }
-            log.info("check task execute success ,cost time ={}", Duration.between(startTime, LocalDateTime.now())
-                                                                          .toSeconds());
+            LogUtils.info(log, "check task execute success ,cost time ={}", DurationUtils.betweenSeconds(startTime));
+            topicInitialize.drop();
         } else {
-            log.info("check task execute success ,cost time =0");
+            LogUtils.info(log, "check task execute success ,cost time =0");
         }
         sliceProgressService.refreshCheckCompletedProgress();
         sliceCheckResultManager.refreshSummary();

@@ -20,12 +20,9 @@ import org.apache.kafka.clients.admin.DeleteTopicsResult;
 import org.apache.kafka.clients.admin.KafkaAdminClient;
 import org.apache.kafka.common.KafkaFuture;
 import org.apache.logging.log4j.Logger;
-import org.opengauss.datachecker.check.client.FeignClientService;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
-import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.util.LogUtils;
-import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
 
@@ -53,8 +50,6 @@ public class DeleteTopicsEventListener implements ApplicationListener<DeleteTopi
     private static final Logger log = LogUtils.getKafkaLogger();
     @Resource
     private CustomEventHistory customEventHistory;
-    @Resource
-    private FeignClientService feignClient;
     private KafkaAdminClient adminClient = null;
     private final Lock lock = new ReentrantLock();
 
@@ -67,11 +62,6 @@ public class DeleteTopicsEventListener implements ApplicationListener<DeleteTopi
             initAdminClient();
             final DeleteTopics deleteOption = (DeleteTopics) source;
             deleteTopic(deleteOption.getTopicList());
-            feignClient.notifyCheckTableFinished(Endpoint.SOURCE, deleteOption.getTableName());
-            log.info("notified delete table[{}] topic: {}.", deleteOption.getTableName(), Endpoint.SOURCE);
-            ThreadUtil.sleep(100);
-            feignClient.notifyCheckTableFinished(Endpoint.SINK, deleteOption.getTableName());
-            log.info("notified delete table[{}] topic: {}.", deleteOption.getTableName(), Endpoint.SINK);
         } catch (Exception exception) {
             log.error("delete topic has error ", exception);
         } finally {

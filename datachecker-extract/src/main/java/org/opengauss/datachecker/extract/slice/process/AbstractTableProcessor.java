@@ -22,9 +22,8 @@ import org.opengauss.datachecker.common.entry.enums.SliceStatus;
 import org.opengauss.datachecker.common.entry.extract.SliceExtend;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.util.LogUtils;
+import org.opengauss.datachecker.common.util.TopicUtil;
 import org.opengauss.datachecker.extract.slice.SliceProcessorContext;
-
-import java.util.Objects;
 
 /**
  * AbstractTableProcessor
@@ -35,8 +34,9 @@ import java.util.Objects;
  */
 public abstract class AbstractTableProcessor extends AbstractProcessor {
     protected static final Logger log = LogUtils.getBusinessLogger();
-    protected String table;
-    protected TableMetadata tableMetadata;
+    protected final String table;
+    protected final TableMetadata tableMetadata;
+    protected final String topic;
 
     /**
      * AbstractTableProcessor
@@ -48,6 +48,9 @@ public abstract class AbstractTableProcessor extends AbstractProcessor {
         super(context);
         this.table = table;
         this.tableMetadata = context.getTableMetaData(table);
+        String process = ConfigCache.getValue(ConfigConstants.PROCESS_NO);
+        int maximumTopicSize = ConfigCache.getIntValue(ConfigConstants.MAXIMUM_TOPIC_SIZE);
+        this.topic = TopicUtil.getMoreFixedTopicName(process, ConfigCache.getEndPoint(), table, maximumTopicSize);
     }
 
     /**
@@ -62,14 +65,6 @@ public abstract class AbstractTableProcessor extends AbstractProcessor {
         tableSliceExtend.setTableHash(tableMetadata.getTableHash());
         tableSliceExtend.setStatus(SliceStatus.codeOf(ConfigCache.getEndPoint()));
         return tableSliceExtend;
-    }
-
-    /**
-     * initTableMetadata
-     */
-    protected void initTableMetadata() {
-        this.tableMetadata = context.getTableMetaData(table);
-        Objects.requireNonNull(tableMetadata, "table metadata " + table + " must not be null");
     }
 
     /**

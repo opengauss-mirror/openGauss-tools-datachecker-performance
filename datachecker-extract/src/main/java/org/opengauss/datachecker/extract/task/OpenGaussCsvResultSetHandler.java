@@ -15,14 +15,6 @@
 
 package org.opengauss.datachecker.extract.task;
 
-import org.springframework.lang.NonNull;
-
-import java.math.BigDecimal;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.Locale;
-import java.util.Objects;
-
 /**
  * OpenGaussCsvResultSetHandler
  *
@@ -31,28 +23,18 @@ import java.util.Objects;
  * @since ：11
  */
 public class OpenGaussCsvResultSetHandler extends OpenGaussResultSetHandler {
-
-    @Override
-    protected String numericFloatNumberToString(@NonNull ResultSet resultSet, String columnLabel) throws SQLException {
-        String floatValue = resultSet.getString(columnLabel);
-        if (resultSet.wasNull()) {
-            return NULL;
-        }
-        if (isScientificNotation(floatValue)) {
-            return new BigDecimal(floatValue).toPlainString();
-        }
-        return floatValue;
-    }
-
-    @Override
-    protected String bitToString(ResultSet rs, String columnLabel) throws SQLException {
-        return rs.getString(columnLabel);
-    }
-
-    @Override
-    protected String binaryToString(ResultSet rs, String columnLabel) throws SQLException {
-        String binary = rs.getString(columnLabel);
-        return rs.wasNull() ? NULL : Objects.isNull(binary) ? NULL : binary.substring(2)
-                                                                           .toUpperCase(Locale.ENGLISH);
+    {
+        simpleTypeHandlers.put(OpenGaussType.BIT, typeHandlerFactory.createCsvBitHandler());
+        // csv 文件解析浮点类型数据结果为gsql 原值
+        simpleTypeHandlers.put(OpenGaussType.FLOAT1, typeHandlerFactory.createCsvFloatHandler());
+        simpleTypeHandlers.put(OpenGaussType.FLOAT2, typeHandlerFactory.createCsvFloatHandler());
+        simpleTypeHandlers.put(OpenGaussType.FLOAT4, typeHandlerFactory.createCsvFloatHandler());
+        simpleTypeHandlers.put(OpenGaussType.FLOAT8, typeHandlerFactory.createCsvFloatHandler());
+        simpleTypeHandlers.put(OpenGaussType.NUMERIC, typeHandlerFactory.createCsvFloatHandler());
+        openGaussTypeHandlers.remove(OpenGaussType.FLOAT1);
+        openGaussTypeHandlers.remove(OpenGaussType.FLOAT2);
+        openGaussTypeHandlers.remove(OpenGaussType.FLOAT4);
+        openGaussTypeHandlers.remove(OpenGaussType.FLOAT8);
+        commonTypeHandlers.remove(OpenGaussType.NUMERIC);
     }
 }

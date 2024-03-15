@@ -23,12 +23,10 @@ import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.extract.SliceVo;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
-import org.opengauss.datachecker.common.entry.extract.Topic;
 import org.opengauss.datachecker.common.service.DynamicThreadPoolManager;
 import org.opengauss.datachecker.common.util.FileUtils;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.ThreadUtil;
-import org.opengauss.datachecker.extract.cache.TopicCache;
 import org.opengauss.datachecker.extract.data.BaseDataService;
 import org.opengauss.datachecker.extract.data.csv.CsvListener;
 import org.opengauss.datachecker.extract.slice.factory.SliceFactory;
@@ -50,7 +48,7 @@ import static org.opengauss.datachecker.common.constant.DynamicTpConstant.EXTRAC
  * @since ：11
  */
 public class SliceDispatcher implements Runnable {
-    private static final Logger log = LogUtils.getLogger();
+    private static final Logger log = LogUtils.getLogger(SliceDispatcher.class);
     private static final int MAX_DISPATCHER_QUEUE_SIZE = 100;
     private static final int WAIT_ONE_SECOND = 1000;
     private final BlockingQueue<String> tableQueue = new LinkedBlockingQueue<>();
@@ -83,7 +81,7 @@ public class SliceDispatcher implements Runnable {
     @Override
     public void run() {
         try {
-            log.info("slice dispatcher is starting ...");
+            LogUtils.info(log, "slice dispatcher is starting ...");
             synchronized (SliceDispatcher.class) {
                 final ThreadPoolExecutor executor = dynamicThreadPoolManager.getExecutor(EXTRACT_EXECUTOR);
                 int topicSize = ConfigCache.getIntValue(ConfigConstants.MAXIMUM_TOPIC_SIZE);
@@ -97,43 +95,41 @@ public class SliceDispatcher implements Runnable {
                     }
                     // check table by rule of table
                     if (!baseDataService.checkTableContains(table)) {
-                        log.info("distributors ignore [{}] table shards based on table rules", table);
+                        LogUtils.info(log, "distributors ignore [{}] table shards based on table rules", table);
                         notifyIgnoreCsvName(endPoint, table, "tableNoMatch");
                         listener.releaseSliceCache(table);
                         continue;
                     }
                     TableMetadata tableMetadata = baseDataService.queryTableMetadata(table);
                     if (!tableMetadata.hasPrimary()) {
-                        log.info("distributors ignore [{}] table because of it's no primary", table);
+                        LogUtils.info(log, "distributors ignore [{}] table because of it's no primary", table);
                         notifyIgnoreCsvName(endPoint, table, "tableNoPrimary");
                         listener.releaseSliceCache(table);
                         continue;
                     }
                     List<SliceVo> tableSliceList = listener.fetchTableSliceList(table);
                     if (CollectionUtils.isEmpty(tableSliceList)) {
-                        log.warn("table slice is empty, retry to: [{}]", table);
+                        LogUtils.warn(log, "table slice is empty, retry to: [{}]", table);
                         tableSliceList = listener.fetchTableSliceList(table);
                         if (CollectionUtils.isEmpty(tableSliceList)) {
-                            log.warn("table slice is empty, ignore: [{}]", table);
+                            LogUtils.warn(log, "table slice is empty, ignore: [{}]", table);
                             continue;
                         }
                     }
-                    SliceVo vo = tableSliceList.get(0);
-                    canRegister(table, vo.getPtnNum());
                     sliceRegister.batchRegister(tableSliceList);
                     listener.releaseSliceCache(table);
                     if (tableSliceList.size() <= 20) {
-                        log.debug("table [{}] get main executor success", table);
+                        LogUtils.debug(log, "table [{}] get main executor success", table);
                         tableSliceList.forEach(sliceVo -> doTableSlice(executor, sliceVo));
                     } else {
                         ThreadPoolExecutor extendExecutor =
                             (ThreadPoolExecutor) dynamicThreadPoolManager.getFreeExecutor(topicSize, extendMaxPoolSize);
-                        log.debug("table [{}] get extend executor success", table);
+                        LogUtils.debug(log, "table [{}] get extend executor success", table);
                         tableSliceList.forEach(sliceVo -> doTableSlice(extendExecutor, sliceVo));
                     }
                 }
                 if (listener.isFinished()) {
-                    log.info("listener is finished , and will be closed");
+                    LogUtils.info(log, "listener is finished , and will be closed");
                     listener.stop();
                     while (!dynamicThreadPoolManager.allExecutorFree()) {
                         ThreadUtil.sleepHalfSecond();
@@ -143,7 +139,7 @@ public class SliceDispatcher implements Runnable {
                 }
             }
         } catch (Exception exception) {
-            log.error("ex", exception);
+            LogUtils.error(log, "ex", exception);
         }
     }
 
@@ -156,7 +152,7 @@ public class SliceDispatcher implements Runnable {
                     .ifPresent(list -> list.forEach(slice -> {
                         String ignoreCsvName = slice.getName();
                         if (FileUtils.renameTo(csvDataPath, ignoreCsvName)) {
-                            log.debug("rename csv sharding completed [{}] by {}", ignoreCsvName, reason);
+                            LogUtils.debug(log, "rename csv sharding completed [{}] by {}", ignoreCsvName, reason);
                         }
                     }));
         }
@@ -172,19 +168,8 @@ public class SliceDispatcher implements Runnable {
      * @param sliceVo  sliceVo
      */
     private void doTableSlice(ThreadPoolExecutor executor, SliceVo sliceVo) {
-        String table = sliceVo.getTable();
-        if (checkTopicRegistered(table)) {
-            executor.submit(sliceFactory.createSliceProcessor(sliceVo));
-            log.info("process slice from current queue {}", sliceVo.getName());
-        }
-    }
-
-    private void updateSliceFetchSize(int maxFetchSize, SliceVo slice) {
-        TableMetadata tableMetadata = baseDataService.queryTableMetadata(slice.getTable());
-        slice.setWholeTable(slice.getTotal() <= 1);
-        slice.setFetchSize(Math.min((int) tableMetadata.getTableRows(), maxFetchSize));
-        Topic topic = TopicCache.getTopic(slice.getTable());
-        slice.setPtnNum(topic.getPtnNum());
+        executor.submit(sliceFactory.createSliceProcessor(sliceVo));
+        LogUtils.info(log, "process slice from current queue {}", sliceVo.getName());
     }
 
     /**
@@ -199,27 +184,6 @@ public class SliceDispatcher implements Runnable {
         while (executorQueue.size() > MAX_DISPATCHER_QUEUE_SIZE) {
             currentThread.wait(WAIT_ONE_SECOND);
         }
-    }
-
-    private boolean checkTopicRegistered(String table) {
-        return sliceRegister.checkTopicRegistered(table);
-    }
-
-    /**
-     * register slice to check server;
-     * we use the slice table ,try to register kafka topic.
-     * if register topic success, return and add current slice in executor queue.
-     * if register not, add current slice in unprocessedTableSlices queue.
-     *
-     * @param table  table
-     * @param pthNum pthNum
-     * @return boolean
-     */
-    private boolean canRegister(String table, int pthNum) {
-        while (pthNum > 0 && !sliceRegister.registerTopic(table, pthNum)) {
-            ThreadUtil.sleepMax2Second();
-        }
-        return true;
     }
 
     /**

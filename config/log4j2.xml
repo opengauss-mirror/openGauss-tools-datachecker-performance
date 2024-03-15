@@ -26,36 +26,15 @@
         <property name="LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%c{1.}] - %msg%n"/>
     </Properties>
     <Appenders>
-<!--        <Console name="console_out_appender" target="SYSTEM_OUT">-->
-<!--            <Filters>-->
-<!--                <ThresholdFilter level="${LOG_LEVEL}" onMatch="ACCEPT" onMismatch="DENY"/>-->
-<!--            </Filters>-->
-<!--            <PatternLayout pattern="${LOG_PATTERN}"/>-->
-<!--        </Console>-->
+        <Console name="console_out_appender" target="SYSTEM_OUT">
+            <Filters>
+                <ThresholdFilter level="${LOG_LEVEL}" onMatch="ACCEPT" onMismatch="DENY"/>
+            </Filters>
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+        </Console>
 
         <RollingRandomAccessFile name="progress" immediateFlush="true" fileName="${LOG_HOME}/${LOG_NAME}.log"
                                  filePattern="${LOG_HOME}/history/${LOG_NAME} - %d{yyyy-MM-dd}.log.gz">
-            <PatternLayout pattern="${LOG_PATTERN}"/>
-            <Policies>
-                <SizeBasedTriggeringPolicy size="20MB"/>
-            </Policies>
-            <Filters>
-                <ThresholdFilter level="${LOG_LEVEL}" onMatch="ACCEPT" onMismatch="DENY"/>
-            </Filters>
-        </RollingRandomAccessFile>
-        <RollingRandomAccessFile name="business" immediateFlush="true"
-                                 fileName="${LOG_HOME}/${LOG_BUSINESS}-${LOG_NAME}.log"
-                                 filePattern="${LOG_HOME}/history/${LOG_BUSINESS}-${LOG_NAME} - %d{yyyy-MM-dd}.log.gz">
-            <PatternLayout pattern="${LOG_PATTERN}"/>
-            <Policies>
-                <SizeBasedTriggeringPolicy size="20MB"/>
-            </Policies>
-            <Filters>
-                <ThresholdFilter level="${LOG_LEVEL}" onMatch="ACCEPT" onMismatch="DENY"/>
-            </Filters>
-        </RollingRandomAccessFile>
-        <RollingRandomAccessFile name="kafka" immediateFlush="true" fileName="${LOG_HOME}/${LOG_KAFKA}-${LOG_NAME}.log"
-                                 filePattern="${LOG_HOME}/history/${LOG_KAFKA}-${LOG_NAME} - %d{yyyy-MM-dd}.log.gz">
             <PatternLayout pattern="${LOG_PATTERN}"/>
             <Policies>
                 <SizeBasedTriggeringPolicy size="20MB"/>
@@ -68,27 +47,18 @@
 
     <Loggers>
         <Root level="${LOG_LEVEL}">
-<!--            <AppenderRef ref="console_out_appender"/>-->
-        </Root>
-        <AsyncLogger name="progress" level="${LOG_LEVEL}">
+            <AppenderRef ref="console_out_appender"/>
             <AppenderRef ref="progress"/>
-        </AsyncLogger>
-        <AsyncLogger name="business" level="${LOG_LEVEL}">
-            <AppenderRef ref="business"/>
-        </AsyncLogger>
-        <AsyncLogger name="kafka" level="${LOG_LEVEL}">
-            <AppenderRef ref="kafka"/>
-        </AsyncLogger>
+        </Root>
         <logger name="org.apache.kafka" level="off" />
-        <logger name="org.apache.catalina.loader" level="off" />
-        <logger name="com.alibaba.druid.pool" level="off" />
-        <logger name="org.springframework" level="off" />
-        <logger name="oshi.util.platform.windows" level="off" />
-        <logger name="org.apache.ibatis" level="off" />
-        <logger name="org.mybatis.spring" level="off" />
+        <logger name="oshi.util" level="off" />
         <logger name="org.hibernate.validator" level="off" />
-        <logger name="_org.springframework.web" level="off" />
-        <logger name="org.opengauss.core.v3.ConnectionFactoryImpl" level="off" />
+        <logger name="org.springframework" level="error" />
+        <logger name="_org.springframework.web" level="error" />
+        <logger name="org.mybatis.spring" level="error" />
+        <logger name="org.apache.ibatis" level="error" />
+        <logger name="com.alibaba.druid.pool" level="off" />
+        <logger name="org.apache.catalina" level="off" />
     </Loggers>
 
 </Configuration>

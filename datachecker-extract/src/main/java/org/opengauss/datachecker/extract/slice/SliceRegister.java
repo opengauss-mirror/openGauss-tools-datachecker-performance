@@ -16,19 +16,14 @@
 package org.opengauss.datachecker.extract.slice;
 
 import org.opengauss.datachecker.common.config.ConfigCache;
-import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.extract.SliceVo;
-import org.opengauss.datachecker.common.entry.extract.Topic;
-import org.opengauss.datachecker.extract.cache.TopicCache;
 import org.opengauss.datachecker.extract.client.CheckingFeignClient;
-import org.opengauss.datachecker.extract.kafka.KafkaAdminService;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 /**
  * SliceRegister
@@ -41,8 +36,6 @@ import java.util.Objects;
 public class SliceRegister {
     @Resource
     private CheckingFeignClient checkingClient;
-    @Resource
-    private KafkaAdminService kafkaAdminService;
 
     /**
      * register slice to check service
@@ -52,6 +45,7 @@ public class SliceRegister {
     public void batchRegister(List<SliceVo> sliceList) {
         List<SliceVo> tableSliceTmpList = new ArrayList<>();
         sliceList.forEach(sliceVo -> {
+            sliceVo.setEndpoint(ConfigCache.getEndPoint());
             tableSliceTmpList.add(sliceVo);
             if (tableSliceTmpList.size() >= 10) {
                 checkingClient.batchRegisterSlice(tableSliceTmpList);
@@ -61,51 +55,6 @@ public class SliceRegister {
         if (tableSliceTmpList.size() > 0) {
             checkingClient.batchRegisterSlice(tableSliceTmpList);
         }
-    }
-
-    /**
-     * register table topic to check service
-     *
-     * @param tableName table
-     * @param ptnNum    ptnNum
-     * @return true | false
-     */
-    public boolean registerTopic(String tableName, int ptnNum) {
-        Topic topic = TopicCache.getTopic(tableName);
-        if (Objects.nonNull(topic)) {
-            return true;
-        }
-        if (!TopicCache.canCreateTopic(ConfigCache.getIntValue(ConfigConstants.MAXIMUM_TOPIC_SIZE))) {
-            return false;
-        }
-        Endpoint endPoint = ConfigCache.getEndPoint();
-        topic = endpointRegisterTopic(tableName, ptnNum, endPoint);
-        if (kafkaAdminService.createTopic(topic.getTopicName(endPoint), topic.getPtnNum())) {
-            TopicCache.add(topic);
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    private Topic endpointRegisterTopic(String tableName, int ptnNum, Endpoint endPoint) {
-        Topic topic;
-        if (Objects.equals(Endpoint.SOURCE, endPoint)) {
-            topic = checkingClient.sourceRegisterTopic(tableName, ptnNum);
-        } else {
-            topic = checkingClient.sinkRegisterTopic(tableName, ptnNum);
-        }
-        return topic;
-    }
-
-    /**
-     * check table has registered topic
-     *
-     * @param table table
-     * @return true | false
-     */
-    public boolean checkTopicRegistered(String table) {
-        return Objects.nonNull(TopicCache.getTopic(table));
     }
 
     /**

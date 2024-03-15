@@ -15,6 +15,7 @@
 
 package org.opengauss.datachecker.common.util;
 
+import net.openhft.hashing.LongHashFunction;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 
 /**
@@ -28,9 +29,11 @@ public class TopicUtil {
     public static final int TOPIC_MAX_PARTITIONS = 16;
     public static final int TOPIC_MIN_PARTITIONS = 1;
 
+    private static final String TOPIC_NAME_TEMPLATE = "CHECK_%s_%s_NUM_%s_TABLE_DATA";
     private static final String TOPIC_TEMPLATE = "CHECK_%s_%s_%s_%s";
     private static final String UPPER_CODE = "1";
     private static final String LOWER_CODE = "0";
+    private static final LongHashFunction XX_3_HASH = LongHashFunction.xx3(199972221018L);
 
     /**
      * buildTopicName
@@ -114,5 +117,32 @@ public class TopicUtil {
 
     public static String getTableWithLetter(String tableName) {
         return tableName + "_" + letterCaseEncoding(tableName);
+    }
+
+    /**
+     * 根据表名称的Hash值动态获取当前表对应的Topic名称
+     *
+     * @param processNo    processNo
+     * @param endpoint     endpoint
+     * @param tableName    tableName
+     * @param maxTopicSize maxTopicSize
+     * @return topic
+     */
+    public static String getMoreFixedTopicName(String processNo, Endpoint endpoint, String tableName,
+        int maxTopicSize) {
+        int no = (int) (XX_3_HASH.hashChars(tableName) % maxTopicSize);
+        return String.format(TopicUtil.TOPIC_NAME_TEMPLATE, processNo, endpoint, Math.abs(no));
+    }
+
+    /**
+     * 动态构建固定Topic名称
+     *
+     * @param processNo processNo
+     * @param endpoint  endpoint
+     * @param num       num
+     * @return topic
+     */
+    public static String createMoreFixedTopicName(String processNo, Endpoint endpoint, int num) {
+        return String.format(TopicUtil.TOPIC_NAME_TEMPLATE, processNo, endpoint, num);
     }
 }

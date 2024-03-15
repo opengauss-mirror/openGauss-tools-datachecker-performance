@@ -58,7 +58,7 @@ import java.util.concurrent.LinkedBlockingQueue;
  * @since ：11
  */
 public class CsvWriterListener implements CsvListener {
-    private static final Logger log = LogUtils.getLogger();
+    private static final Logger log = LogUtils.getLogger(CsvWriterListener.class);
     private static final String SCHEMA = "schema";
     private static final String TABLE_INDEX_COMPLETED_FEEDBACK = "table-index-completed-feedback";
 
@@ -75,7 +75,7 @@ public class CsvWriterListener implements CsvListener {
     @Override
     public void initCsvListener(CheckingFeignClient checkingClient) {
         this.checkingClient = checkingClient;
-        log.info("csv writer listener is starting .");
+        LogUtils.info(log, "csv writer listener is starting .");
         Path writer = Path.of(ConfigCache.getWriter());
         if (!CsvUtil.checkExistAndWait(writer)) {
             throw new CsvDataAccessException("file " + writer.toString() + " is not exist");
@@ -87,25 +87,25 @@ public class CsvWriterListener implements CsvListener {
                 try {
                     isTailEnd = StringUtils.equalsIgnoreCase(line, ExtConstants.CSV_LISTENER_END);
                     if (isTailEnd) {
-                        log.info("the writer is end, stopped the tailer listener : {}", line);
+                        LogUtils.info(log, "the writer is end, stopped the tailer listener : {}", line);
                         tailer.stop();
                         return;
                     }
                     long contentHash = lineContentHash(line);
                     if (logDuplicateCheck.contains(contentHash)) {
-                        log.warn("writer log duplicate : {}", line);
+                        LogUtils.warn(log, "writer log duplicate : {}", line);
                         return;
                     }
                     logDuplicateCheck.add(contentHash);
 
                     JSONObject writeLog = JSONObject.parseObject(line);
                     if (skipNoInvalidSlice(writeLog)) {
-                        log.warn("writer skip no invalid slice log : {}", line);
+                        LogUtils.warn(log, "writer skip no invalid slice log : {}", line);
                         return;
                     }
                     String schema = writeLog.getString(SCHEMA);
                     if (skipNoMatchSchema(ConfigCache.getSchema(), schema)) {
-                        log.warn("writer skip no match schema log : {}", line);
+                        LogUtils.warn(log, "writer skip no match schema log : {}", line);
                         return;
                     }
                     SliceLogType sliceLogType = SliceLogType.valueOf(writeLog.getString("type"));
@@ -121,14 +121,14 @@ public class CsvWriterListener implements CsvListener {
                             tableIndexCompletedList.add(sliceIndex.getTable());
                         }
                     }
-                    log.debug("writer add log : {}", line);
+                    LogUtils.debug(log, "writer add log : {}", line);
                 } catch (Exception ex) {
-                    log.error("writer log listener error : {}", line, ex);
+                    LogUtils.error(log, "writer log listener error : {}", line, ex);
                 }
             }
         }, ConfigCache.getCsvLogMonitorInterval(), false);
         startNotifyExecutor();
-        log.info("csv writer listener is started.");
+        LogUtils.info(log, "csv writer listener is started.");
     }
 
     private void startNotifyExecutor() {
@@ -147,11 +147,11 @@ public class CsvWriterListener implements CsvListener {
                         }
                         if (CollectionUtils.isNotEmpty(completedTableList)) {
                             checkingClient.notifyTableIndexCompleted(completedTableList);
-                            log.info("notify table can start checking [{}]", completedTableList);
+                            LogUtils.info(log, "notify table can start checking [{}]", completedTableList);
                         }
                     }
                 } catch (Exception ignore) {
-                    log.warn(" retry notifyTableIndexCompleted {}", completedTableList);
+                    LogUtils.warn(log, " retry notifyTableIndexCompleted {}", completedTableList);
                     tableIndexCompletedList.addAll(completedTableList);
                 } finally {
                     completedTableList.clear();

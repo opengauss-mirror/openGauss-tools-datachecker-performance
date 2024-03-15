@@ -46,7 +46,7 @@ import java.util.Objects;
  */
 @RestController
 public class ConfigController {
-    private static final Logger log = LogUtils.getLogger();
+    private static final Logger log = LogUtils.getLogger(ConfigController.class);
 
     @Resource
     private ExtractEnvironmentContext context;
@@ -75,7 +75,7 @@ public class ConfigController {
         baseDataService.initDataSourceSqlMode2ConfigCache();
         processLogService.saveProcessLog();
         ruleAdapterService.init(config.getRules());
-        log.info("init filter rule config ");
+        LogUtils.info(log,"init filter rule config ");
         if (Objects.equals(checkMode, CheckMode.FULL) || Objects.equals(checkMode, CheckMode.INCREMENT)) {
             context.loadDatabaseMetaData();
         }
@@ -89,7 +89,7 @@ public class ConfigController {
     @PostMapping("/csv/config/distribute")
     public Result<Void> distributeConfig(@RequestBody CsvPathConfig csvPathConfig) {
         configManagement.initCsvConfig(csvPathConfig);
-        log.info("init csv config ");
+        LogUtils.info(log,"init csv config ");
         return Result.success();
     }
 }

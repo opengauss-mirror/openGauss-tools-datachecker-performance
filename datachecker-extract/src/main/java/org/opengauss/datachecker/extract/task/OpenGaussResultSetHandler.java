@@ -16,22 +16,16 @@
 package org.opengauss.datachecker.extract.task;
 
 import org.opengauss.core.Field;
-import org.opengauss.datachecker.common.util.HexUtil;
+import org.opengauss.datachecker.extract.task.functional.CommonTypeHandler;
 import org.opengauss.datachecker.extract.task.functional.OpgsTypeHandler;
+import org.opengauss.datachecker.extract.task.functional.SimpleTypeHandler;
 import org.opengauss.jdbc.PgResultSetMetaData;
-import org.springframework.lang.NonNull;
 
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.sql.Timestamp;
-import java.time.format.DateTimeFormatter;
-import java.util.Calendar;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
-import java.util.TimeZone;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -42,51 +36,55 @@ import java.util.concurrent.ConcurrentHashMap;
  * @since ：11
  */
 public class OpenGaussResultSetHandler extends ResultSetHandler {
-    private static final Map<String, TypeHandler> typeHandlers = new ConcurrentHashMap<>();
-    private static final Map<String, OpgsTypeHandler> opgsTypeHandlers = new ConcurrentHashMap<>();
+    /**
+     * common type handler
+     */
+    protected final Map<String, CommonTypeHandler> commonTypeHandlers = new ConcurrentHashMap<>();
+
+    /**
+     * openGauss type handler
+     */
+    protected final Map<String, OpgsTypeHandler> openGaussTypeHandlers = new ConcurrentHashMap<>();
+
+    /**
+     * simple type handler
+     */
+    protected final Map<String, SimpleTypeHandler> simpleTypeHandlers = new ConcurrentHashMap<>();
 
     {
-        // byte binary blob
-        TypeHandler byteaToString = (rs, columnLabel) -> bytesToString(rs.getBytes(columnLabel));
-        typeHandlers.put(OpenGaussType.BYTEA, byteaToString);
+        simpleTypeHandlers.put(OpenGaussType.BYTEA, typeHandlerFactory.createBytesHandler());
+        simpleTypeHandlers.put(OpenGaussType.BLOB, typeHandlerFactory.createBlobHandler());
+        simpleTypeHandlers.put(OpenGaussType.MEDIUMBLOB, typeHandlerFactory.createBlobHandler());
+        simpleTypeHandlers.put(OpenGaussType.TINYBLOB, typeHandlerFactory.createBlobHandler());
+        simpleTypeHandlers.put(OpenGaussType.LONGBLOB, typeHandlerFactory.createBlobHandler());
+        simpleTypeHandlers.put(OpenGaussType.CLOB, typeHandlerFactory.createClobHandler());
+        simpleTypeHandlers.put(OpenGaussType.XML, typeHandlerFactory.createXmlHandler());
+        simpleTypeHandlers.put(OpenGaussType.BIT, typeHandlerFactory.createOgBitHandler());
+        simpleTypeHandlers.put(OpenGaussType.binary, typeHandlerFactory.createOgBinaryHandler());
+        simpleTypeHandlers.put(OpenGaussType.varbinary, typeHandlerFactory.createOgBinaryHandler());
+        simpleTypeHandlers.put(OpenGaussType.BOOLEAN, typeHandlerFactory.createBooleanHandler());
+        simpleTypeHandlers.put(OpenGaussType.BPCHAR, typeHandlerFactory.createOgBpCharHandler());
+        simpleTypeHandlers.put(OpenGaussType.INT1, typeHandlerFactory.createSmallIntHandler());
+        simpleTypeHandlers.put(OpenGaussType.UINT1, typeHandlerFactory.createSmallIntHandler());
+        simpleTypeHandlers.put(OpenGaussType.INT2, typeHandlerFactory.createSmallIntHandler());
+        simpleTypeHandlers.put(OpenGaussType.UINT2, typeHandlerFactory.createSmallIntHandler());
+        simpleTypeHandlers.put(OpenGaussType.INT4, typeHandlerFactory.createIntHandler());
+        simpleTypeHandlers.put(OpenGaussType.UINT4, typeHandlerFactory.createUnsignedLongHandler());
+        simpleTypeHandlers.put(OpenGaussType.INT8, typeHandlerFactory.createLongHandler());
+        simpleTypeHandlers.put(OpenGaussType.UINT8, typeHandlerFactory.createUnsignedLongHandler());
+        simpleTypeHandlers.put(OpenGaussType.INTEGER, typeHandlerFactory.createIntHandler());
+        simpleTypeHandlers.put(OpenGaussType.DATE, typeHandlerFactory.createDateHandler());
+        simpleTypeHandlers.put(OpenGaussType.TIME, typeHandlerFactory.createTimeHandler());
 
-        TypeHandler blobToString = (rs, columnLabel) -> rs.getString(columnLabel);
-        typeHandlers.put(OpenGaussType.BLOB, blobToString);
-        typeHandlers.put(OpenGaussType.TINYBLOB, blobToString);
-        typeHandlers.put(OpenGaussType.MEDIUMBLOB, blobToString);
-        typeHandlers.put(OpenGaussType.LONGBLOB, blobToString);
+        commonTypeHandlers.put(OpenGaussType.TIMESTAMP, typeHandlerFactory.createDateTimeHandler());
+        commonTypeHandlers.put(OpenGaussType.TIMESTAMPTZ, typeHandlerFactory.createDateTimeHandler());
+        commonTypeHandlers.put(OpenGaussType.NUMERIC, typeHandlerFactory.createBigDecimalHandler());
 
-        TypeHandler clobToString = (rs, columnLabel) -> rs.getString(columnLabel);
-        typeHandlers.put(OpenGaussType.CLOB, clobToString);
-
-        TypeHandler xmlToString = (rs, columnLabel) -> rs.getString(columnLabel);
-        typeHandlers.put(OpenGaussType.XML, xmlToString);
-
-        TypeHandler bitToString = (rs, columnLabel) -> bitToString(rs, columnLabel);
-        typeHandlers.put(OpenGaussType.BIT, bitToString);
-
-        TypeHandler binaryToString = (rs, columnLabel) -> binaryToString(rs, columnLabel);
-        typeHandlers.put(OpenGaussType.binary, binaryToString);
-        typeHandlers.put(OpenGaussType.varbinary, binaryToString);
-
-        TypeHandler booleanToString = (rs, columnLabel) -> booleanToString(rs, columnLabel);
-        typeHandlers.put(OpenGaussType.BOOLEAN, booleanToString);
-
-        TypeHandler bpCharToString = (rs, columnLabel) -> fixedLenCharToString(rs, columnLabel);
-        typeHandlers.put(OpenGaussType.BPCHAR, bpCharToString);
-
-        // float4 - float real
-        TypeHandler numeric0ToString = (rs, columnLabel) -> numeric0ToString(rs, columnLabel);
-        typeHandlers.put(OpenGaussType.INT4, numeric0ToString);
-        typeHandlers.put(OpenGaussType.INTEGER, numeric0ToString);
-        typeHandlers.put(OpenGaussType.NUMERIC0, numeric0ToString);
-
-        // date time timestamp
-        typeHandlers.put(OpenGaussType.DATE, this::getDateFormat);
-        typeHandlers.put(OpenGaussType.TIME, this::getTimeFormat);
-
-        opgsTypeHandlers.put(OpenGaussType.TIMESTAMP, this::getOpgsTimestampFormat);
-        opgsTypeHandlers.put(OpenGaussType.TIMESTAMPTZ, this::getOpgsTimestampFormat);
+        // openGauss-jdbc bug 获取real类型(precision，scale) 默认为(8，8)
+        openGaussTypeHandlers.put(OpenGaussType.FLOAT1, typeHandlerFactory.createOgSmallFloatHandler());
+        openGaussTypeHandlers.put(OpenGaussType.FLOAT2, typeHandlerFactory.createOgSmallFloatHandler());
+        openGaussTypeHandlers.put(OpenGaussType.FLOAT4, typeHandlerFactory.createOgFloatHandler());
+        openGaussTypeHandlers.put(OpenGaussType.FLOAT8, typeHandlerFactory.createOgDoubleHandler());
     }
 
     /**
@@ -105,92 +103,22 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
         super(supplyZero);
     }
 
-    private String getOpgsTimestampFormat(@NonNull ResultSet resultSet, String columnLabel, Field field)
-        throws SQLException {
-        final Timestamp timestamp =
-            resultSet.getTimestamp(columnLabel, Calendar.getInstance(TimeZone.getTimeZone("GMT+8")));
-        DateTimeFormatter dateTimeFormatter = TIMESTAMP_MAPPER.get(field.getMod());
-        return Objects.nonNull(timestamp) ? dateTimeFormatter.format(timestamp.toLocalDateTime()) : NULL;
-    }
-
-    /**
-     * binaryToString
-     *
-     * @param rs          rs
-     * @param columnLabel columnLabel
-     * @return result
-     * @throws SQLException SQLException
-     */
-    protected String binaryToString(ResultSet rs, String columnLabel) throws SQLException {
-        String binary = rs.getString(columnLabel);
-        return Objects.isNull(binary) ? NULL : binary.substring(2)
-                                                     .toUpperCase(Locale.ENGLISH);
-    }
-
-    /**
-     * bitToString
-     *
-     * @param rs          rs
-     * @param columnLabel columnLabel
-     * @return result
-     * @throws SQLException SQLException
-     */
-    protected String bitToString(ResultSet rs, String columnLabel) throws SQLException {
-        return HexUtil.binaryToHex(rs.getString(columnLabel));
-    }
-
-    /**
-     * intToString
-     *
-     * @param rs          rs
-     * @param columnLabel columnLabel
-     * @return result
-     * @throws SQLException SQLException
-     */
-    protected String intToString(ResultSet rs, String columnLabel) throws SQLException {
-        return rs.getString(columnLabel);
-    }
-
-    /**
-     * intToString
-     *
-     * @param rs          rs
-     * @param columnLabel columnLabel
-     * @return result
-     * @throws SQLException SQLException
-     */
-    protected String booleanToString(ResultSet rs, String columnLabel) throws SQLException {
-        final int booleanVal = rs.getInt(columnLabel);
-        return booleanVal == 1 ? "true" : "false";
-    }
-
     @Override
     public String convert(ResultSet resultSet, int columnIdx, ResultSetMetaData rsmd) throws SQLException {
         String columnLabel = rsmd.getColumnLabel(columnIdx);
         String columnTypeName = getPgColumnTypeName(rsmd, columnIdx);
-        if (OpenGaussType.isNumeric(columnTypeName)) {
-            return convertNumericToString(rsmd, resultSet, columnIdx);
-        } else if (OpenGaussType.isFloat(columnTypeName)) {
-            int precision = rsmd.getPrecision(columnIdx);
-            int scale = rsmd.getScale(columnIdx);
-            if (precision > scale && scale > 0) {
-                return floatingPointNumberToString(resultSet, columnLabel, scale);
-            } else {
-                return numericFloatNumberToString(resultSet, columnLabel);
-            }
-        } else if (OpenGaussType.isBigInteger(columnTypeName)) {
-            return numeric0ToString(resultSet, columnLabel);
-        } else if (OpenGaussType.isInteger(columnTypeName)) {
-            return intToString(resultSet, columnLabel);
-        } else if (typeHandlers.containsKey(columnTypeName)) {
-            return typeHandlers.get(columnTypeName)
-                               .convert(resultSet, columnLabel);
-        } else if (opgsTypeHandlers.containsKey(columnTypeName)) {
-            return opgsTypeHandlers.get(columnTypeName)
-                                   .convert(resultSet, columnLabel, getResultSetField(columnIdx, rsmd));
+        Field resultSetField = getResultSetField(columnIdx, rsmd);
+        if (simpleTypeHandlers.containsKey(columnTypeName)) {
+            return simpleTypeHandlers.get(columnTypeName)
+                                     .convert(resultSet, columnLabel);
+        } else if (commonTypeHandlers.containsKey(columnTypeName)) {
+            return commonTypeHandlers.get(columnTypeName)
+                                     .convert(resultSet, columnIdx, rsmd);
+        } else if (openGaussTypeHandlers.containsKey(columnTypeName)) {
+            return openGaussTypeHandlers.get(columnTypeName)
+                                        .convert(resultSet, columnIdx, resultSetField);
         } else {
-            Object object = resultSet.getObject(columnLabel);
-            return Objects.isNull(object) ? NULL : object.toString();
+            return defaultObjectHandler.convert(resultSet, columnLabel);
         }
     }
 
@@ -199,22 +127,6 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
             return ((PgResultSetMetaData) rsmd).getField(columnIdx);
         } else {
             return null;
-        }
-    }
-
-    private String convertNumericToString(ResultSetMetaData rsmd, ResultSet resultSet, int columnIdx)
-        throws SQLException {
-        int precision = rsmd.getPrecision(columnIdx);
-        int scale = rsmd.getScale(columnIdx);
-        String columnLabel = rsmd.getColumnLabel(columnIdx);
-        if (isNumericDefault(precision, scale)) {
-            return numericFloatNumberToString(resultSet, columnLabel);
-        } else if (isNumeric0(precision, scale)) {
-            return numeric0ToString(resultSet, columnLabel);
-        } else if (isNumericFloat(precision, scale)) {
-            return floatingPointNumberToString(resultSet, columnLabel, scale);
-        } else {
-            return numericFloatNumberToString(resultSet, columnLabel);
         }
     }
 
@@ -228,8 +140,11 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
         return columnTypeName;
     }
 
+    /**
+     * openGauss data type
+     */
     @SuppressWarnings("all")
-    private interface OpenGaussType {
+    protected interface OpenGaussType {
         /**
          * opengauss data type : pg_catalog
          */

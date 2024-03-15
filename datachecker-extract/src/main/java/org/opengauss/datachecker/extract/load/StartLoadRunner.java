@@ -18,6 +18,7 @@ package org.opengauss.datachecker.extract.load;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
+import org.opengauss.datachecker.common.service.DynamicThreadPoolManager;
 import org.opengauss.datachecker.common.service.MemoryManagerService;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.SpringUtil;
@@ -42,7 +43,6 @@ import javax.annotation.Resource;
  */
 @Component
 public class StartLoadRunner implements ApplicationRunner {
-    private static final Logger log = LogUtils.getLogger();
     @Resource
     private ConfigManagement configManagement;
     @Resource
@@ -51,13 +51,15 @@ public class StartLoadRunner implements ApplicationRunner {
     private MemoryManagerService memoryManagerService;
     @Resource
     private SliceProcessorContext sliceProcessorContext;
-
+    @Resource
+    private DynamicThreadPoolManager dynamicThreadPoolManager;
     @Override
     public void run(ApplicationArguments args) {
         // if extract boot start finished,then running.
         configManagement.loadExtractProperties();
         memoryManagerService.startMemoryManager(ConfigCache.getBooleanValue(ConfigConstants.MEMORY_MONITOR));
         resourceManager.initMaxConnectionCount();
+        dynamicThreadPoolManager.dynamicThreadPoolMonitor();
         initExtractContextDataSource();
         sliceProcessorContext.startSliceStatusFeedbackService();
     }

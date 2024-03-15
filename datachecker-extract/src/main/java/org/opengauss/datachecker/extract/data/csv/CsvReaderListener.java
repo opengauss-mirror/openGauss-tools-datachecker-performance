@@ -47,7 +47,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * @since ：11
  */
 public class CsvReaderListener implements CsvListener {
-    private static final Logger log = LogUtils.getLogger();
+    private static final Logger log = LogUtils.getLogger(CsvReaderListener.class);
+
     private final Map<String, List<SliceVo>> readerSliceMap = new ConcurrentHashMap<>();
     private volatile Set<Long> logDuplicateCheck = new HashSet<>();
     private Tailer tailer;
@@ -56,7 +57,7 @@ public class CsvReaderListener implements CsvListener {
 
     @Override
     public void initCsvListener(CheckingFeignClient checkingClient) {
-        log.info("csv reader listener is starting .");
+       LogUtils.info(log,"csv reader listener is starting .");
         this.checkingClient = checkingClient;
         Path reader = Path.of(ConfigCache.getReader());
         if (!CsvUtil.checkExistAndWait(reader)) {
@@ -69,35 +70,35 @@ public class CsvReaderListener implements CsvListener {
                 try {
                     isTailEnd = StringUtils.equalsIgnoreCase(line, ExtConstants.CSV_LISTENER_END);
                     if (isTailEnd) {
-                        log.info("reader tail end log : {}", line);
+                        LogUtils.info(log,"reader tail end log : {}", line);
                         stop();
                         return;
                     }
                     long contentHash = lineContentHash(line);
                     if (logDuplicateCheck.contains(contentHash)) {
-                        log.warn("writer log duplicate : {}", line);
+                        LogUtils.warn(log,"writer log duplicate : {}", line);
                         return;
                     }
                     logDuplicateCheck.add(contentHash);
 
                     SliceVo slice = JSONObject.parseObject(line, SliceVo.class);
                     if (skipNoInvalidSlice(slice)) {
-                        log.warn("reader skip no invalid slice log : {}", line);
+                        LogUtils.warn(log,"reader skip no invalid slice log : {}", line);
                         return;
                     }
                     if (skipNoMatchSchema(ConfigCache.getSchema(), slice.getSchema())) {
-                        log.warn("reader skip no match schema log : {}", line);
+                        LogUtils.warn(log,"reader skip no match schema log : {}", line);
                         return;
                     }
                     checkSlicePtnNum(slice);
                     MapUtils.put(readerSliceMap, slice.getTable(), slice);
-                    log.debug("reader add log : {}", line);
+                    LogUtils.debug(log,"reader add log : {}", line);
                 } catch (Exception ex) {
-                    log.error("reader log listener error : " + ex.getMessage());
+                    LogUtils.error(log,"reader log listener error : " + ex.getMessage());
                 }
             }
         }, ConfigCache.getCsvLogMonitorInterval(), false);
-        log.info("csv reader listener is started .");
+        LogUtils.info(log,"csv reader listener is started .");
     }
 
     @Override

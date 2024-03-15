@@ -110,20 +110,24 @@ public class IncrementManagerService {
     }
 
     private List<String> getDataLogTables(List<SourceDataLog> dataLogList) {
-        return dataLogList.stream().map(SourceDataLog::getTableName).collect(Collectors.toList());
+        return dataLogList.stream()
+                          .map(SourceDataLog::getTableName)
+                          .collect(Collectors.toList());
     }
 
     public void startIncrementDataLogs() {
         if (feignClientService.startIncrementMonitor()) {
             log.info("started source increment monitor");
-            ThreadUtil.newSingleThreadExecutor().submit(this::checkingIncrementDataLogs);
+            ThreadUtil.newSingleThreadExecutor()
+                      .submit(this::checkingIncrementDataLogs);
         } else {
             throw new CheckingException("start increment monitor failed");
         }
     }
 
     private void checkingIncrementDataLogs() {
-        Thread.currentThread().setName("inc-queue-process-loop");
+        Thread.currentThread()
+              .setName("inc-queue-process-loop");
         log.info("started process increment data logs thread");
         shutdownService.addMonitor();
         while (!shutdownService.isShutdown()) {
@@ -171,24 +175,33 @@ public class IncrementManagerService {
     private int calculationLastResultDiffCount(Map<String, SourceDataLog> lastResults) {
         AtomicInteger diffCount = new AtomicInteger();
         lastResults.forEach((tableName, lastLog) -> {
-            diffCount.addAndGet(lastLog.getCompositePrimaryValues().size());
+            diffCount.addAndGet(lastLog.getCompositePrimaryValues()
+                                       .size());
         });
         return diffCount.get();
     }
 
     private void mergeDataLogList(List<SourceDataLog> dataLogList, Map<String, SourceDataLog> collectLastResults) {
-        final Map<String, SourceDataLog> dataLogMap =
-            dataLogList.stream().collect(Collectors.toMap(SourceDataLog::getTableName, Function.identity()));
+        final Map<String, SourceDataLog> dataLogMap = dataLogList.stream()
+                                                                 .collect(Collectors.toMap(SourceDataLog::getTableName,
+                                                                     Function.identity()));
         collectLastResults.forEach((tableName, lastLog) -> {
             if (dataLogMap.containsKey(tableName)) {
-                final List<String> values = dataLogMap.get(tableName).getCompositePrimaryValues();
-                final long beginOffset = Math.min(dataLogMap.get(tableName).getBeginOffset(), lastLog.getBeginOffset());
+                final List<String> values = dataLogMap.get(tableName)
+                                                      .getCompositePrimaryValues();
+                final long beginOffset = Math.min(dataLogMap.get(tableName)
+                                                            .getBeginOffset(), lastLog.getBeginOffset());
                 final Set<String> margeValueSet = new HashSet<>();
                 margeValueSet.addAll(values);
                 margeValueSet.addAll(lastLog.getCompositePrimaryValues());
-                dataLogMap.get(tableName).getCompositePrimaryValues().clear();
-                dataLogMap.get(tableName).setBeginOffset(beginOffset);
-                dataLogMap.get(tableName).getCompositePrimaryValues().addAll(margeValueSet);
+                dataLogMap.get(tableName)
+                          .getCompositePrimaryValues()
+                          .clear();
+                dataLogMap.get(tableName)
+                          .setBeginOffset(beginOffset);
+                dataLogMap.get(tableName)
+                          .getCompositePrimaryValues()
+                          .addAll(margeValueSet);
             } else {
                 dataLogList.add(lastLog);
             }
@@ -204,7 +217,8 @@ public class IncrementManagerService {
         ThreadPoolExecutor asyncCheckExecutor = dynamicThreadPoolManager.getExecutor(CHECK_EXECUTOR);
         dataLogList.forEach(dataLog -> {
             log.debug("increment process=[{}] , tableName=[{}], begin offset =[{}], diffSize=[{}]", processNo,
-                dataLog.getTableName(), dataLog.getBeginOffset(), dataLog.getCompositePrimaryValues().size());
+                dataLog.getTableName(), dataLog.getBeginOffset(), dataLog.getCompositePrimaryValues()
+                                                                         .size());
             // Verify the data according to the table name and Kafka partition
             taskList.add(dataCheckService.incrementCheckTableData(dataLog.getTableName(), processNo, dataLog));
         });
@@ -228,7 +242,9 @@ public class IncrementManagerService {
             return new HashMap<>();
         }
         List<CheckFailed> historyFailedList = new ArrayList<>();
-        checkResultFileList.stream().filter(path -> FAILED_LOG_NAME.equals(path.getFileName().toString()))
+        checkResultFileList.stream()
+                           .filter(path -> FAILED_LOG_NAME.equals(path.getFileName()
+                                                                      .toString()))
                            .forEach(path -> {
                                try {
                                    String content = wrapperFailedResultArray(path);
@@ -266,12 +282,15 @@ public class IncrementManagerService {
                 final long beginOffset = Math.min(dataLogMarge.getBeginOffset(), dataLog.getBeginOffset());
                 final List<String> values = dataLogMarge.getCompositePrimaryValues();
                 diffKeyValues.addAll(values);
-                dataLogMarge.getCompositePrimaryValues().clear();
-                dataLogMarge.getCompositePrimaryValues().addAll(diffKeyValues);
+                dataLogMarge.getCompositePrimaryValues()
+                            .clear();
+                dataLogMarge.getCompositePrimaryValues()
+                            .addAll(diffKeyValues);
                 dataLogMarge.setBeginOffset(beginOffset);
             } else {
                 SourceDataLog sourceDataLog = new SourceDataLog();
-                sourceDataLog.setTableName(tableName).setBeginOffset(dataLog.getBeginOffset())
+                sourceDataLog.setTableName(tableName)
+                             .setBeginOffset(dataLog.getBeginOffset())
                              .setCompositePrimaryValues(new ArrayList<>(diffKeyValues));
                 dataLogMap.put(tableName, sourceDataLog);
             }

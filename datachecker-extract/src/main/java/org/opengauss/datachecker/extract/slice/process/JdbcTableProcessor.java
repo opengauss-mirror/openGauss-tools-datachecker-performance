@@ -62,8 +62,7 @@ public class JdbcTableProcessor extends AbstractTableProcessor {
     public void run() {
         SliceExtend tableSliceExtend = createTableSliceExtend();
         try {
-            initTableMetadata();
-            sliceSender = new SliceResultSetSender(tableMetadata, context.createSliceKafkaAgents(table));
+            sliceSender = new SliceResultSetSender(tableMetadata,  context.createSliceFixedKafkaAgents(topic, table));
             long tableRowCount;
             if (noTableSlice()) {
                 tableRowCount = executeFullTable();
@@ -102,7 +101,7 @@ public class JdbcTableProcessor extends AbstractTableProcessor {
                     int rowCount = 0;
                     while (resultSet.next()) {
                         rowCount++;
-                        sliceSender.resultSetTranslateAndSendRandom(rsmd, resultSet, result, i);
+                        sliceSender.resultSetTranslateAndSendSync(rsmd, resultSet, result, i);
                     }
                     sliceSender.resultFlush();
                     tableRowCount += rowCount;
@@ -139,7 +138,7 @@ public class JdbcTableProcessor extends AbstractTableProcessor {
                 int rowCount = 0;
                 while (resultSet.next()) {
                     rowCount++;
-                    sliceSender.resultSetTranslateAndSendRandom(rsmd, resultSet, result, 0);
+                    sliceSender.resultSetTranslateAndSendSync(rsmd, resultSet, result, 0);
                 }
                 tableRowCount += rowCount;
                 log.info("finish {} , {}: {}", table, rowCount, tableRowCount);

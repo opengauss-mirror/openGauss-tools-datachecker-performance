@@ -38,7 +38,8 @@ import static org.opengauss.datachecker.check.cache.TableStatusRegister.TASK_STA
  */
 @Service
 public class TaskManagerServiceImpl implements TaskManagerService {
-    private static final Logger log = LogUtils.getLogger();
+    private static final Logger log = LogUtils.getLogger(TaskManagerService.class);
+
     @Autowired
     private TableStatusRegister tableStatusRegister;
 
@@ -52,7 +53,8 @@ public class TaskManagerServiceImpl implements TaskManagerService {
     @Override
     public void refreshTableExtractStatus(String tableName, Endpoint endpoint, int status) {
         tableStatusRegister.update(tableName, status);
-        log.debug("refreshes extract status: [{} : {} -> {}]  ", endpoint.getDescription(), tableName, status);
+        LogUtils.debug(log, "refreshes extract status: [{} : {} -> {}]  ", endpoint.getDescription(), tableName,
+            status);
     }
 
     /**
@@ -63,9 +65,8 @@ public class TaskManagerServiceImpl implements TaskManagerService {
     @Override
     public void initTableExtractStatus(List<String> tableNameList) {
         if (tableStatusRegister.isEmpty() || tableStatusRegister.isCheckCompleted()) {
-            cleanTaskStatus();
             tableStatusRegister.init(new HashSet<>(tableNameList));
-            log.info("check server init extract tableNameList=[{}] ", tableNameList.size());
+            LogUtils.info(log, "check server init extract tableNameList=[{}] ", tableNameList.size());
         } else {
             // The last verification process is being executed,
             // and the table verification status data cannot be reinitialized!

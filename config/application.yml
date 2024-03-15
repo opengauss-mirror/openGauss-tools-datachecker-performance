@@ -6,8 +6,9 @@ spring:
   kafka:
     bootstrap-servers: localhost:9092
   check:
-    core-pool-size: 1
-    maximum-pool-size: 4
+    core-pool-size: 2
+    maximum-pool-size: 10
+    maximum-topic-size: 4
 data:
   check:
     data-path: ./check_result

@@ -15,17 +15,14 @@
 
 package org.opengauss.datachecker.extract.task;
 
-import org.opengauss.datachecker.common.util.HexUtil;
+import org.opengauss.datachecker.extract.task.functional.CommonTypeHandler;
+import org.opengauss.datachecker.extract.task.functional.SimpleTypeHandler;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.Reader;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -36,83 +33,37 @@ import java.util.concurrent.ConcurrentHashMap;
  * @since ：11
  */
 public class OracleResultSetHandler extends ResultSetHandler {
-    private final Map<String, TypeHandler> typeHandlers = new ConcurrentHashMap<>();
+    private final Map<String, CommonTypeHandler> commonTypeHandlers = new ConcurrentHashMap<>();
+    private final Map<String, SimpleTypeHandler> simpleTypeHandlers = new ConcurrentHashMap<>();
 
     {
-        TypeHandler blobToString = (rs, columnLabel) -> blobToString(rs, columnLabel);
-        TypeHandler rawToString = (rs, columnLabel) -> rawToString(rs, columnLabel);
-        TypeHandler clobToString = (rs, columnLabel) -> clobToString(rs, columnLabel);
-        TypeHandler xmlToString = (rs, columnLabel) -> rs.getString(columnLabel);
-        TypeHandler numberToString = (rs, columnLabel) -> floatingPointNumberToString(rs, columnLabel);
-        TypeHandler number0ToString = (rs, columnLabel) -> numeric0ToString(rs, columnLabel);
-
         // float4 - float real
-        typeHandlers.put(OracleType.NUMBER, numberToString);
-        typeHandlers.put(OracleType.NUMBER0, number0ToString);
-        // byte binary blob
-        typeHandlers.put(OracleType.RAW, rawToString);
-        typeHandlers.put(OracleType.NCLOB, clobToString);
-        typeHandlers.put(OracleType.BLOB, blobToString);
-        typeHandlers.put(OracleType.CLOB, clobToString);
-        typeHandlers.put(OracleType.XML, xmlToString);
-
+        commonTypeHandlers.put(OracleType.NUMBER, typeHandlerFactory.createOracleBigDecimalHandler());
         // date time timestamp
-        typeHandlers.put(OracleType.DATE, this::getTimestampFormat);
-        typeHandlers.put(OracleType.TIMESTAMP, this::getTimestampFormat);
-        typeHandlers.put(OracleType.TIMESTAMPTZ, this::getTimestampFormat);
-    }
+        commonTypeHandlers.put(OracleType.DATE, typeHandlerFactory.createDateTimeHandler());
+        commonTypeHandlers.put(OracleType.TIMESTAMP, typeHandlerFactory.createDateTimeHandler());
+        commonTypeHandlers.put(OracleType.TIMESTAMPTZ, typeHandlerFactory.createDateTimeHandler());
 
-    private String rawToString(ResultSet resultSet, String columnLabel) throws SQLException {
-        return resultSet.getString(columnLabel);
-    }
-
-    private String blobToString(ResultSet resultSet, String columnLabel) throws SQLException {
-        if (resultSet.wasNull()) {
-            return NULL;
-        }
-        return HexUtil.byteToHexTrim(resultSet.getBytes(columnLabel));
-    }
-
-    protected synchronized String clobToString(ResultSet resultSet, String columnLabel) throws SQLException {
-        if (resultSet.wasNull()) {
-            return NULL;
-        }
-        StringBuffer sb = new StringBuffer();
-        BufferedReader bf = null;
-        Reader reader = null;
-        try {
-            reader = resultSet.getCharacterStream(columnLabel);
-            if (reader == null) {
-                return NULL;
-            }
-            bf = new BufferedReader(reader);
-            String line;
-            while ((line = bf.readLine()) != null) {
-                sb.append(line);
-            }
-        } catch (IOException io) {
-            LOG.error("read clobToString error");
-        } finally {
-            closeBufferedReader(bf);
-            closeReader(reader);
-        }
-        return sb.toString();
+        // byte binary blob
+        simpleTypeHandlers.put(OracleType.RAW, typeHandlerFactory.createOracleRawHandler());
+        simpleTypeHandlers.put(OracleType.NCLOB, typeHandlerFactory.createOracleClobHandler());
+        simpleTypeHandlers.put(OracleType.CLOB, typeHandlerFactory.createOracleClobHandler());
+        simpleTypeHandlers.put(OracleType.BLOB, typeHandlerFactory.createOracleBlobHandler());
+        simpleTypeHandlers.put(OracleType.XML, typeHandlerFactory.createOracleXmlHandler());
     }
 
     @Override
     protected String convert(ResultSet resultSet, int columnIdx, ResultSetMetaData rsmd) throws SQLException {
         String columnLabel = rsmd.getColumnLabel(columnIdx);
         String columnTypeName = rsmd.getColumnTypeName(columnIdx);
-        if (OracleType.isNumeric0(columnTypeName, rsmd.getScale(columnIdx))) {
-            return typeHandlers.get(OracleType.NUMBER0)
-                               .convert(resultSet, columnLabel);
-        }
-        if (typeHandlers.containsKey(columnTypeName)) {
-            return typeHandlers.get(columnTypeName)
-                               .convert(resultSet, columnLabel);
+        if (simpleTypeHandlers.containsKey(columnTypeName)) {
+            return simpleTypeHandlers.get(columnTypeName)
+                                     .convert(resultSet, columnLabel);
+        } else if (commonTypeHandlers.containsKey(columnTypeName)) {
+            return commonTypeHandlers.get(columnTypeName)
+                                     .convert(resultSet, columnIdx, rsmd);
         } else {
-            Object object = resultSet.getObject(columnLabel);
-            return Objects.isNull(object) ? NULL : object.toString();
+            return defaultObjectHandler.convert(resultSet, columnLabel);
         }
     }
 
@@ -147,29 +98,6 @@ public class OracleResultSetHandler extends ResultSetHandler {
 
         public static boolean isDigit(String typeName) {
             return digit.contains(typeName);
-        }
-
-        public static boolean isNumeric0(String typeName, int scale) {
-            return NUMBER.equalsIgnoreCase(typeName) && scale >= NUMERIC_SCALE_F84 && scale <= NUMERIC_SCALE_0;
-        }
-    }
-    private void closeBufferedReader(BufferedReader bf) {
-        try {
-            if (Objects.nonNull(bf)) {
-                bf.close();
-            }
-        } catch (IOException e) {
-            LOG.error("close BufferedReader error");
-        }
-    }
-
-    private void closeReader(Reader reader) {
-        try {
-            if (Objects.nonNull(reader)) {
-                reader.close();
-            }
-        } catch (IOException e) {
-            LOG.error("close Reader error");
         }
     }
 }

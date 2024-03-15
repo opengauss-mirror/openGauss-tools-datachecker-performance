@@ -18,7 +18,6 @@ package org.opengauss.datachecker.extract.kafka;
 import lombok.RequiredArgsConstructor;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.util.LogUtils;
-import org.opengauss.datachecker.extract.config.KafkaConsumerConfig;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -36,7 +35,6 @@ public class KafkaManagerService {
     private static final Logger log = LogUtils.getKafkaLogger();
 
     private final KafkaAdminService kafkaAdminService;
-    private final KafkaConsumerConfig kafkaConsumerConfig;
 
     /**
      * Clear Kafka information
@@ -45,8 +43,6 @@ public class KafkaManagerService {
      */
     public void cleanKafka(String processNo) {
         log.info("Extract service cleanup Kafka topic mapping information");
-        kafkaConsumerConfig.cleanKafkaConsumer();
-        log.info("Extract service to clean up Kafka consumer information");
         List<String> topics = kafkaAdminService.getAllTopic(processNo);
         kafkaAdminService.deleteTopic(topics);
         log.info("Extract service cleanup current process ({}) Kafka topics {}", processNo, topics);

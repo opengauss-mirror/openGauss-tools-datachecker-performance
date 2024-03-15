@@ -55,7 +55,7 @@ public class TaskRegisterCenter {
     protected static final Map<String, Integer> sliceTableCounter = new ConcurrentHashMap<>();
     protected static final Map<String, Map<Endpoint, SliceExtend>> sliceExtendMap = new ConcurrentHashMap<>();
 
-    private static final Logger log = LogUtils.getLogger();
+    private static final Logger log = LogUtils.getLogger(TaskRegisterCenter.class);
     private static final int STATUS_UPDATED_ALL = 3;
 
     private final ReentrantLock lock = new ReentrantLock();
@@ -73,14 +73,14 @@ public class TaskRegisterCenter {
         lock.lock();
         try {
             if (center.containsKey(sliceVo.getName())) {
-                log.debug("{} register slice [{}] ", sliceVo.getEndpoint(), sliceVo.getName());
+                LogUtils.debug(log, "{} register slice [{}] ", sliceVo.getEndpoint(), sliceVo.getName());
                 return;
             }
-            log.debug("{} register slice [{}] ", sliceVo.getEndpoint(), sliceVo.getName());
+            LogUtils.debug(log, "{} register slice [{}] ", sliceVo.getEndpoint(), sliceVo.getName());
             center.put(sliceVo.getName(), sliceVo);
             addTableSliceCounter(sliceVo);
-            log.info("register slice [{}] , current = [tableCount={},sliceTotal={},currentSize={}]", sliceVo.getName(),
-                tableCount.get(), sliceTotalCount.get(), center.size());
+            LogUtils.info(log, "register slice [{}] , current = [tableCount={},sliceTotal={},currentSize={}]",
+                sliceVo.getName(), tableCount.get(), sliceTotalCount.get(), center.size());
         } finally {
             lock.unlock();
         }
@@ -115,7 +115,7 @@ public class TaskRegisterCenter {
                 int curStatus = slice.getStatus();
                 Endpoint endpoint = sliceExt.getEndpoint();
                 MapUtils.put(sliceExtendMap, sliceName, endpoint, sliceExt);
-                log.info("{} update slice [{}] status [{}->{}]", endpoint, sliceName, oldStatus, curStatus);
+                LogUtils.debug(log, "{} update slice [{}] status [{}->{}]", endpoint, sliceName, oldStatus, curStatus);
                 if (curStatus == STATUS_UPDATED_ALL) {
                     notifySliceCheckHandle(slice);
                 }
@@ -152,7 +152,8 @@ public class TaskRegisterCenter {
                     String csvDataPath = ConfigCache.getCsvData();
                     list.forEach(entry -> {
                         if (FileUtils.renameTo(csvDataPath, entry.getKey())) {
-                            log.debug("rename csv sharding completed [{}] by {}", entry.getKey(), "table miss");
+                            LogUtils.debug(log, "rename csv sharding completed [{}] by {}", entry.getKey(),
+                                "table miss");
                         }
                         remove(entry.getKey());
                     });
@@ -173,7 +174,7 @@ public class TaskRegisterCenter {
         try {
             center.remove(sliceName);
             sliceExtendMap.remove(sliceName);
-            log.info("drop slice [{}] due to had notified , release [{}]", sliceName, center.size());
+            LogUtils.info(log, "drop slice [{}] due to had notified , release [{}]", sliceName, center.size());
         } finally {
             lock.unlock();
         }
@@ -204,7 +205,8 @@ public class TaskRegisterCenter {
                                      tableEntry.getKey())))
                              .forEach(ignoreTable -> {
                                  notifyIgnoreSliceCheckHandle(ignoreTable.getKey());
-                                 log.warn("ignore table {} ===add ignore table to result===", ignoreTable.getKey());
+                                 LogUtils.warn(log, "ignore table {} ===add ignore table to result===",
+                                     ignoreTable.getKey());
                              });
         }
         return sliceTableCounter.values()
@@ -228,7 +230,7 @@ public class TaskRegisterCenter {
                     tableReleaseSize--;
                     sliceTableCounter.put(tableName, tableReleaseSize);
                 }
-                log.debug("table [{}] slice release {}", tableName, tableReleaseSize);
+                LogUtils.debug(log, "table [{}] slice release {}", tableName, tableReleaseSize);
             }
             return tableReleaseSize == 0;
         } finally {

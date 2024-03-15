@@ -15,29 +15,27 @@
 
 package org.opengauss.datachecker.extract.task.functional;
 
-import org.opengauss.core.Field;
-
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 
 /**
- * OpgsTypeHandler
- * result convert to string functional interface
+ * CommonTypeHandler
  *
  * @author ：wangchao
  * @date ：Created in 2024/2/26
  * @since ：11
  */
 @FunctionalInterface
-public interface OpgsTypeHandler {
+public interface CommonTypeHandler {
     /**
      * result convert to string
      *
-     * @param resultSet resultSet
-     * @param columnIdx columnIdx
-     * @param field     field
+     * @param resultSet         resultSet
+     * @param columnIdx         columnIdx
+     * @param resultSetMetaData resultSetMetaData
      * @return result result
      * @throws SQLException SQLException
      */
-    String convert(ResultSet resultSet, int columnIdx, Field field) throws SQLException;
+    String convert(ResultSet resultSet, int columnIdx, ResultSetMetaData resultSetMetaData) throws SQLException;
 }

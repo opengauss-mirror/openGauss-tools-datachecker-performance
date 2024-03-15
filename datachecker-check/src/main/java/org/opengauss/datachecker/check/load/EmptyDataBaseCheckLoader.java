@@ -19,6 +19,7 @@ import org.opengauss.datachecker.check.service.EndpointMetaDataManager;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.exception.CheckingException;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
@@ -45,10 +46,10 @@ public class EmptyDataBaseCheckLoader extends AbstractCheckLoader {
         }
         try {
             checkEnvironment.setCheckTableEmpty(
-                endpointMetaDataManager.isCheckTableEmpty(Endpoint.SINK) && endpointMetaDataManager
-                    .isCheckTableEmpty(Endpoint.SOURCE));
+                endpointMetaDataManager.isCheckTableEmpty(Endpoint.SINK) && endpointMetaDataManager.isCheckTableEmpty(
+                    Endpoint.SOURCE));
             if (checkEnvironment.isCheckTableEmpty()) {
-                log.info("check database table is empty.");
+                LogUtils.info(log, "check database table is empty.");
             }
         } catch (CheckingException ex) {
             shutdown(ex.getMessage());

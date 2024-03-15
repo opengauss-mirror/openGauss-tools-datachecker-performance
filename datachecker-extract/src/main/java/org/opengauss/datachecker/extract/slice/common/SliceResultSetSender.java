@@ -18,6 +18,7 @@ package org.opengauss.datachecker.extract.slice.common;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.RowDataHash;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
+import org.opengauss.datachecker.extract.task.CsvResultSetHandler;
 import org.opengauss.datachecker.extract.task.ResultSetHandler;
 import org.opengauss.datachecker.extract.task.ResultSetHandlerFactory;
 import org.opengauss.datachecker.extract.util.HashHandler;
@@ -26,7 +27,6 @@ import org.springframework.kafka.support.SendResult;
 import org.springframework.lang.NonNull;
 import org.springframework.util.concurrent.ListenableFuture;
 
-import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.util.List;
@@ -41,29 +41,14 @@ import java.util.Map;
  */
 public class SliceResultSetSender {
     private static final HashHandler HASH_HANDLER = new HashHandler();
-    private static final String CSV_NULL_VALUE = "null";
-    private static final String BINARY_TYPE = "binary";
-    private static final String BLOB_TYPE = "blob";
+
+    private final CsvResultSetHandler csvResultSetHandler = new CsvResultSetHandler();
     private final ResultSetHandler resultSetHandler;
     private final SliceKafkaAgents kafkaOperate;
     private final List<String> columns;
     private final List<ColumnsMetaData> columnMetas;
     private final List<String> primary;
     private final String tableName;
-    private final ResultParseConsumer<String, Map<String, String>, ColumnsMetaData> largeDigitalType =
-        (value, result, column) -> {
-            if (isScientificNotation(value)) {
-                result.put(column.getColumnName(), new BigDecimal(value).toPlainString());
-            } else {
-                result.put(column.getColumnName(), value);
-            }
-        };
-    private final ResultParseConsumer<String, Map<String, String>, ColumnsMetaData> defaultConsumer =
-        (value, result, column) -> result.put(column.getColumnName(), value);
-    private final ResultParseConsumer<String, Map<String, String>, ColumnsMetaData> binaryAndBlobConsumer =
-        (value, result, column) -> result.put(column.getColumnName(), value.substring(1));
-    private final ResultParseConsumer<String, Map<String, String>, ColumnsMetaData> csvNullValueConsumer =
-        (value, result, column) -> result.put(column.getColumnName(), CSV_NULL_VALUE);
 
     /**
      * constructor
@@ -81,39 +66,6 @@ public class SliceResultSetSender {
     }
 
     /**
-     * ResultParseConsumer
-     *
-     * @param <S> result row original text
-     * @param <M> parse result map
-     * @param <C> column metadata
-     */
-    @FunctionalInterface
-    private interface ResultParseConsumer<S, M, C> {
-        /**
-         * ResultParseConsumer
-         *
-         * @param value  result row original text
-         * @param result parse result map
-         * @param column column metadata
-         */
-        void accept(String value, Map<String, String> result, ColumnsMetaData column);
-    }
-
-    /**
-     * resultSetTranslateAndSendRandom
-     *
-     * @param rsmd   rsmd
-     * @param rs     rs
-     * @param result result
-     * @param sNo    sNo
-     */
-    public void resultSetTranslateAndSendRandom(ResultSetMetaData rsmd, ResultSet rs, Map<String, String> result,
-        int sNo) {
-        RowDataHash dataHash = resultSetTranslate(rsmd, rs, result, sNo);
-        kafkaOperate.sendRowDataRandomPartition(dataHash);
-    }
-
-    /**
      * resultSetTranslateAndSendSync
      *
      * @param rsmd   rsmd
@@ -125,6 +77,15 @@ public class SliceResultSetSender {
         ResultSet rs, Map<String, String> result, int sNo) {
         RowDataHash dataHash = resultSetTranslate(rsmd, rs, result, sNo);
         return kafkaOperate.sendRowDataSync(dataHash);
+    }
+
+    /**
+     * 设置发送记录 key ,该Key值用于标记当前数据属于哪个分片。
+     *
+     * @param key key
+     */
+    public void setRecordSendKey(String key) {
+        this.kafkaOperate.setRecordSendKey(key);
     }
 
     /**
@@ -203,11 +164,6 @@ public class SliceResultSetSender {
         kafkaOperate.sendRowData(dataHash);
     }
 
-    public void csvTranslateAndSendRandom(String[] nextLine, Map<String, String> result, int rowIdx, int sNo) {
-        RowDataHash dataHash = csvTranslate(nextLine, result, rowIdx, sNo);
-        kafkaOperate.sendRowDataRandomPartition(dataHash);
-    }
-
     /**
      * csv mode, translate next line data to map and send it to kafka topic
      *
@@ -223,45 +179,11 @@ public class SliceResultSetSender {
     }
 
     private RowDataHash csvTranslate(String[] nextLine, Map<String, String> result, int rowIdx, int sNo) {
-        parse(nextLine, result);
+        csvResultSetHandler.putOneResultSetToMap(columnMetas, nextLine, result);
         RowDataHash dataHash = handler(primary, columns, result);
         dataHash.setIdx(rowIdx);
         dataHash.setSNo(sNo);
         result.clear();
         return dataHash;
-    }
-
-    private void parse(String[] nextLine, Map<String, String> result) {
-        int idx;
-        String tmpValue;
-        for (ColumnsMetaData column : columnMetas) {
-            idx = column.getOrdinalPosition() - 1;
-            tmpValue = nextLine[idx];
-            if (CSV_NULL_VALUE.equalsIgnoreCase(tmpValue)) {
-                csvNullValueConsumer.accept(tmpValue, result, column);
-            } else {
-                if (isBinaryOrBlob(column.getColumnType())) {
-                    binaryAndBlobConsumer.accept(tmpValue, result, column);
-                } else if (MetaDataUtil.isLargeDigitalTypeKey(column)) {
-                    largeDigitalType.accept(tmpValue, result, column);
-                } else {
-                    defaultConsumer.accept(tmpValue, result, column);
-                }
-            }
-        }
-    }
-
-    private boolean isScientificNotation(String value) {
-        return value.contains("E") || value.contains("e");
-    }
-
-    /**
-     * 判断当前类型是否是binary（binary/varbinary） 或者 blob(blob,tinyblob,blob,mediumblob,longblob) 类型
-     *
-     * @param columnType CSV场景加载表元数据类型
-     * @return boolean
-     */
-    private boolean isBinaryOrBlob(String columnType) {
-        return columnType.contains(BINARY_TYPE) || columnType.contains(BLOB_TYPE);
     }
 }

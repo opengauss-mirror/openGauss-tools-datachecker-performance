@@ -44,9 +44,6 @@ public class ConfigManagement {
     private ExtractProperties properties;
     @Resource
     private KafkaAdminService kafkaAdminService;
-
-    @Value("${spring.check.maximum-topic-size}")
-    private int maximumTopicSize = 3;
     @Value("${spring.memory-monitor-enable}")
     private boolean isEnableMemoryMonitor;
     @Value("${spring.extract.debezium-row-display}")
@@ -123,7 +120,6 @@ public class ConfigManagement {
         }
 
         setExtractConfig(properties);
-        ConfigCache.put(ConfigConstants.MAXIMUM_TOPIC_SIZE, maximumTopicSize);
         ConfigCache.put(ConfigConstants.MEMORY_MONITOR, isEnableMemoryMonitor);
         ConfigCache.put(ConfigConstants.QUERY_DOP, queryDop);
         ConfigCache.put(ConfigConstants.MAXIMUM_TABLE_SLICE_SIZE, maximumTableSliceSize);

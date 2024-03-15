@@ -42,7 +42,6 @@ import org.opengauss.datachecker.common.entry.extract.ConditionLimit;
 import org.opengauss.datachecker.common.entry.extract.RowDataHash;
 import org.opengauss.datachecker.common.entry.extract.SliceExtend;
 import org.opengauss.datachecker.common.entry.extract.SliceVo;
-import org.opengauss.datachecker.common.entry.extract.Topic;
 import org.opengauss.datachecker.common.exception.BucketNumberInconsistentException;
 import org.opengauss.datachecker.common.exception.MerkleTreeDepthException;
 import org.opengauss.datachecker.common.util.LogUtils;
@@ -102,12 +101,7 @@ public class TableCheckWorker implements Runnable {
             SliceExtend sink = checkEvent.getSink();
             this.sliceRowCont = Math.max(source.getCount(), sink.getCount());
             log.info("check table of {}", slice.getName());
-            Topic topic = checkContext.getTopic(slice.getTable());
-            int ptnNum = topic.getPtnNum();
-            for (int ptn = 0; ptn < ptnNum; ptn++) {
-                log.info("check table {} of TopicPartition {}:{}", slice.getName(), ptnNum, ptn);
-                checkedTableSliceByTopicPartition(source, sink, ptn);
-            }
+            checkedTableSliceByTopicPartition(source, sink);
         } catch (Exception ignore) {
             log.error("check table has some error,", ignore);
             errorMsg = ignore.getMessage();
@@ -122,21 +116,14 @@ public class TableCheckWorker implements Runnable {
 
     private void finishedTableCheck() {
         TaskRegisterCenter registerCenter = SpringUtil.getBean(TaskRegisterCenter.class);
-        if (registerCenter.refreshAndCheckTableCompleted(slice)) {
-            dropTableTopics();
-        }
+        registerCenter.refreshAndCheckTableCompleted(slice);
     }
 
-    private void dropTableTopics() {
-        checkContext.dropTableTopics(slice.getTable());
-    }
-
-    private void checkedTableSliceByTopicPartition(SliceExtend source, SliceExtend sink, int ptn)
-        throws InterruptedException {
+    private void checkedTableSliceByTopicPartition(SliceExtend source, SliceExtend sink) throws InterruptedException {
         SliceTuple sourceTuple = SliceTuple.of(Endpoint.SOURCE, source, new LinkedList<>());
         SliceTuple sinkTuple = SliceTuple.of(Endpoint.SINK, sink, new LinkedList<>());
         // Initialize bucket list
-        initBucketList(sourceTuple, sinkTuple, ptn);
+        initBucketList(sourceTuple, sinkTuple);
         // No Merkel tree verification algorithm scenario
         if (shouldCheckMerkleTree(sourceTuple.getBucketSize(), sinkTuple.getBucketSize())) {
             // Construct Merkel tree constraint: bucketList cannot be empty, and size > =2
@@ -191,11 +178,21 @@ public class TableCheckWorker implements Runnable {
 
     private void checkResult(String resultMsg) {
         CheckDiffResultBuilder builder = CheckDiffResultBuilder.builder();
-        builder.process(ConfigCache.getValue(ConfigConstants.PROCESS_NO)).table(slice.getTable()).sno(slice.getNo())
-               .error(resultMsg).topic(getConcatTableTopics()).schema(slice.getSchema())
-               .conditionLimit(getConditionLimit()).partitions(slice.getPtn()).isTableStructureEquals(true)
-               .startTime(startTime).endTime(LocalDateTime.now()).isExistTableMiss(false, null)
-               .rowCount((int) sliceRowCont).errorRate(20).fileName(slice.getName())
+        builder.process(ConfigCache.getValue(ConfigConstants.PROCESS_NO))
+               .table(slice.getTable())
+               .sno(slice.getNo())
+               .error(resultMsg)
+               .topic(getConcatTableTopics())
+               .schema(slice.getSchema())
+               .conditionLimit(getConditionLimit())
+               .partitions(slice.getPtn())
+               .isTableStructureEquals(true)
+               .startTime(startTime)
+               .endTime(LocalDateTime.now())
+               .isExistTableMiss(false, null)
+               .rowCount((int) sliceRowCont)
+               .errorRate(20)
+               .fileName(slice.getName())
                .checkMode(ConfigCache.getValue(ConfigConstants.CHECK_MODE, CheckMode.class))
                .keyDiff(difference.getOnlyOnLeft(), difference.getDiffering(), difference.getOnlyOnRight());
         CheckDiffResult result = builder.build();
@@ -203,7 +200,9 @@ public class TableCheckWorker implements Runnable {
     }
 
     private String getConcatTableTopics() {
-        return checkContext.getTopicName(slice.getTable());
+        String sourcetopicName = checkContext.getTopicName(slice.getTable(), Endpoint.SOURCE);
+        String sinkTopicName = checkContext.getTopicName(slice.getTable(), Endpoint.SINK);
+        return sourcetopicName + "," + sinkTopicName;
     }
 
     private ConditionLimit getConditionLimit() {
@@ -280,7 +279,7 @@ public class TableCheckWorker implements Runnable {
         checkContext.refreshSliceCheckProgress(slice, sliceRowCont);
     }
 
-    private void initBucketList(SliceTuple sourceTuple, SliceTuple sinkTuple, int ptn) throws InterruptedException {
+    private void initBucketList(SliceTuple sourceTuple, SliceTuple sinkTuple) throws InterruptedException {
         List<SliceTuple> checkTupleList = List.of(sourceTuple, sinkTuple);
         Map<Integer, Pair<Integer, Integer>> bucketDiff = new ConcurrentHashMap<>();
         // Get the Kafka partition number corresponding to the current task
@@ -288,7 +287,7 @@ public class TableCheckWorker implements Runnable {
         CountDownLatch countDownLatch = new CountDownLatch(checkTupleList.size());
         checkTupleList.forEach(check -> {
             String topicName = checkContext.getTopicName(slice.getTable(), check.getEndpoint());
-            TopicPartition topicPartition = new TopicPartition(topicName, ptn);
+            TopicPartition topicPartition = new TopicPartition(topicName, 0);
             initBucketList(check.getEndpoint(), topicPartition, check.getBuckets(), bucketDiff);
             countDownLatch.countDown();
         });
@@ -347,7 +346,7 @@ public class TableCheckWorker implements Runnable {
     }
 
     private void getSliceDataFromTopicPartition(TopicPartition topicPartition, List<RowDataHash> dataList) {
-        KafkaConsumerHandler consumer = checkContext.buildKafkaHandler();
+        KafkaConsumerHandler consumer = checkContext.buildKafkaHandler(slice.getTable());
         logKafka.debug("create consumer of topic, [{}] : [{}] ", slice.getTable(), topicPartition.toString());
         consumer.poolTopicPartitionsData(topicPartition.topic(), topicPartition.partition(), dataList);
         consumer.closeConsumer();
@@ -365,10 +364,12 @@ public class TableCheckWorker implements Runnable {
         if (MapUtils.isNotEmpty(bucketDiff)) {
             bucketDiff.forEach((number, pair) -> {
                 if (pair.getSource() == -1) {
-                    sourceTuple.getBuckets().add(BuilderBucketHandler.builderEmpty(number));
+                    sourceTuple.getBuckets()
+                               .add(BuilderBucketHandler.builderEmpty(number));
                 }
                 if (pair.getSink() == -1) {
-                    sinkTuple.getBuckets().add(BuilderBucketHandler.builderEmpty(number));
+                    sinkTuple.getBuckets()
+                             .add(BuilderBucketHandler.builderEmpty(number));
                 }
             });
         }

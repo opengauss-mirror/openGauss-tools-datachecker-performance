@@ -17,8 +17,6 @@ package org.opengauss.datachecker.common.service;
 
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.springframework.stereotype.Service;
-import oshi.SystemInfo;
-import oshi.hardware.HardwareAbstractionLayer;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
@@ -37,7 +35,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class MemoryManagerService {
     private AtomicBoolean isServerStarted = new AtomicBoolean(false);
     private AtomicBoolean isEnableMemoryMonitored = new AtomicBoolean(false);
-    private SystemInfo systemInfo = new SystemInfo();
     @Resource
     private ShutdownService shutdownService;
 
@@ -54,10 +51,9 @@ public class MemoryManagerService {
      * memory monitor schedule
      */
     public void memoryMonitor() {
-        HardwareAbstractionLayer hardware = systemInfo.getHardware();
-        MemoryManager.setCpuInfo(hardware.getProcessor());
+        MemoryManager.setCpuInfo();
         if (isEnableMemoryMonitored.get() && isServerStarted.get()) {
-            MemoryManager.getRuntimeInfo(hardware);
+            MemoryManager.getRuntimeInfo();
         }
     }
 

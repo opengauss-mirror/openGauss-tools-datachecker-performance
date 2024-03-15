@@ -13,30 +13,24 @@
  * See the Mulan PSL v2 for more details.
  */
 
-package org.opengauss.datachecker.extract.task.functional;
+package org.opengauss.datachecker.common.entry.extract;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
-
-import com.mysql.cj.result.Field;
+import lombok.Data;
+import lombok.ToString;
+import lombok.experimental.Accessors;
 
 /**
- * MysqlTypeHandler
+ * PageExtractTask
  *
  * @author ：wangchao
- * @date ：Created in 2024/2/26
+ * @date ：Created in 2022/6/1
  * @since ：11
  */
-@FunctionalInterface
-public interface MysqlTypeHandler {
-    /**
-     * result convert to string
-     *
-     * @param resultSet resultSet
-     * @param columnIdx columnIdx
-     * @param field     field
-     * @return result result
-     * @throws SQLException SQLException
-     */
-    String convert(ResultSet resultSet, int columnIdx, Field field) throws SQLException;
+@ToString
+@Data
+@Accessors(chain = true)
+public class PageExtractTask {
+    private int size;
+    private int pageNo;
+    private int pageSize;
 }

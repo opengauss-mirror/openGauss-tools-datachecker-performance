@@ -29,10 +29,8 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * KafkaConsumerConfig
@@ -114,9 +112,14 @@ public class KafkaConsumerConfig {
     }
 
     /**
-     * clear KafkaConsumer
+     * 关闭kafka 消费者
+     *
+     * @param consumer consumer
      */
-    public void cleanKafkaConsumer() {
-        log.info("clear KafkaConsumer");
+    public void closeConsumer(KafkaConsumer<String, String> consumer) {
+        if (Objects.nonNull(consumer)) {
+            consumer.unsubscribe();
+            consumer.close();
+        }
     }
 }

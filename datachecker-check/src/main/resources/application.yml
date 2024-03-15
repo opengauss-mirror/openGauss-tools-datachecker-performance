@@ -14,6 +14,7 @@ spring:
   check:
     core-pool-size: 2
     maximum-pool-size: 10
+    maximum-topic-size: 4
     floating-point-data-supply-zero: false
     heart-beat-heath: true
   application:
@@ -23,6 +24,18 @@ spring:
   lifecycle:
     timeout-per-shutdown-phase: 5
   kafka:
+    bootstrap-servers: localhost:9092
+    properties:
+      linger.ms: 10
+      max.in.flight.requests.per.connection: 5
+    producer:
+      retries: 3
+      acks: all
+      batch-size: 65536 # 64K
+      buffer-memory: 67108864 # 64M
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
     consumer:
       group-id: checkgroup
       enable-auto-commit: true
@@ -33,7 +46,7 @@ spring:
       fetch-min-size: 1
       max-poll-records: 20000
       request-timeout-ms: 300000
-      fetch-max-bytes: 536870912  # 512M
+      fetch-max-bytes: 67108864  # 64M
   csv:
     sync: true
     schema: test_630
