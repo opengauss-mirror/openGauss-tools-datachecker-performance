@@ -16,6 +16,7 @@
 package org.opengauss.datachecker.common.entry.common;
 
 import lombok.Data;
+import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.entry.enums.RuleType;
 
@@ -40,5 +41,42 @@ public class GlobalConfig {
             commonConfig = new HashMap<>();
         }
         commonConfig.put(key, value);
+    }
+
+    /**
+     * add common config properties (string)
+     *
+     * @param name name
+     */
+    public void addProperties(String name) {
+        this.addCommonConfig(name, ConfigCache.getValue(name));
+    }
+
+    /**
+     * add common config properties (classz)
+     *
+     * @param name   name
+     * @param classz classz
+     */
+    public void addProperties(String name, Class classz) {
+        this.addCommonConfig(name, ConfigCache.getValue(name, classz));
+    }
+
+    /**
+     * add common config properties (int)
+     *
+     * @param name name
+     */
+    public void addIntProperties(String name) {
+        this.addCommonConfig(name, ConfigCache.getIntValue(name));
+    }
+
+    /**
+     * add common config properties (boolean)
+     *
+     * @param name name
+     */
+    public void addBoolProperties(String name) {
+        this.addCommonConfig(name, ConfigCache.getBooleanValue(name));
     }
 }

@@ -15,12 +15,10 @@
 
 package org.opengauss.datachecker.extract.load;
 
-import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.service.DynamicThreadPoolManager;
 import org.opengauss.datachecker.common.service.MemoryManagerService;
-import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.SpringUtil;
 import org.opengauss.datachecker.extract.config.DataSourceConfig;
 import org.opengauss.datachecker.extract.config.DruidDataSourceConfig;
@@ -53,6 +51,7 @@ public class StartLoadRunner implements ApplicationRunner {
     private SliceProcessorContext sliceProcessorContext;
     @Resource
     private DynamicThreadPoolManager dynamicThreadPoolManager;
+
     @Override
     public void run(ApplicationArguments args) {
         // if extract boot start finished,then running.
@@ -66,7 +65,7 @@ public class StartLoadRunner implements ApplicationRunner {
 
     private void initExtractContextDataSource() {
         DataSourceConfig config = SpringUtil.getBean(DataSourceConfig.class);
-        ExtractThreadSupport context = SpringUtil.getBean("extractThreadSupport",ExtractThreadSupport.class);
+        ExtractThreadSupport context = SpringUtil.getBean("extractThreadSupport", ExtractThreadSupport.class);
         if (config instanceof DruidDataSourceConfig) {
             context.setDataSource(((DruidDataSourceConfig) config).druidDataSource());
         }

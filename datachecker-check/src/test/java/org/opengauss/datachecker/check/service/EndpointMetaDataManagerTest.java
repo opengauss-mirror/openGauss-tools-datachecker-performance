@@ -9,6 +9,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.opengauss.datachecker.check.client.FeignClientService;
 import org.opengauss.datachecker.check.util.TestJsonUtil;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
+import org.opengauss.datachecker.common.entry.extract.PageExtract;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.exception.CheckMetaDataException;
 
@@ -40,8 +41,9 @@ class EndpointMetaDataManagerTest {
     @DisplayName("load fail all no")
     @Test
     void testLoad_fail_all_no() {
-        when(mockFeignClientService.queryMetaDataOfSchema(Endpoint.SOURCE)).thenReturn(new HashMap<>());
-        when(mockFeignClientService.queryMetaDataOfSchema(Endpoint.SINK)).thenReturn(new HashMap<>());
+        PageExtract pageExtract = PageExtract.buildInitPage(0);
+        when(mockFeignClientService.queryMetaDataOfSchema(Endpoint.SOURCE, pageExtract)).thenReturn(new HashMap<>());
+        when(mockFeignClientService.queryMetaDataOfSchema(Endpoint.SINK, pageExtract)).thenReturn(new HashMap<>());
         endpointMetaDataManagerUnderTest.isMetaLoading();
         assertThatThrownBy(() -> endpointMetaDataManagerUnderTest.load()).isInstanceOf(CheckMetaDataException.class);
     }
@@ -49,10 +51,11 @@ class EndpointMetaDataManagerTest {
     @DisplayName("load fail no source")
     @Test
     void testLoad_fail_no_source() {
+        PageExtract pageExtract = PageExtract.buildInitPage(13);
         final HashMap<String, TableMetadata> metadataMap =
             TestJsonUtil.parseHashMap(TestJsonUtil.KEY_META_DATA_13_TABLE, TableMetadata.class);
-        when(mockFeignClientService.queryMetaDataOfSchema(Endpoint.SOURCE)).thenReturn(new HashMap<>());
-        when(mockFeignClientService.queryMetaDataOfSchema(Endpoint.SINK)).thenReturn(metadataMap);
+        when(mockFeignClientService.queryMetaDataOfSchema(Endpoint.SOURCE, pageExtract)).thenReturn(new HashMap<>());
+        when(mockFeignClientService.queryMetaDataOfSchema(Endpoint.SINK, pageExtract)).thenReturn(metadataMap);
         endpointMetaDataManagerUnderTest.isMetaLoading();
         // Setup
         // Run the test
@@ -63,10 +66,11 @@ class EndpointMetaDataManagerTest {
     @DisplayName("load source and sink success")
     @Test
     void testLoad_success() {
+        PageExtract pageExtract = PageExtract.buildInitPage(13);
         final HashMap<String, TableMetadata> metadataMap =
             TestJsonUtil.parseHashMap(TestJsonUtil.KEY_META_DATA_13_TABLE, TableMetadata.class);
-        when(mockFeignClientService.queryMetaDataOfSchema(Endpoint.SOURCE)).thenReturn(metadataMap);
-        when(mockFeignClientService.queryMetaDataOfSchema(Endpoint.SINK)).thenReturn(metadataMap);
+        when(mockFeignClientService.queryMetaDataOfSchema(Endpoint.SOURCE, pageExtract)).thenReturn(metadataMap);
+        when(mockFeignClientService.queryMetaDataOfSchema(Endpoint.SINK, pageExtract)).thenReturn(metadataMap);
         endpointMetaDataManagerUnderTest.isMetaLoading();
         // Setup
         // Run the test
@@ -77,10 +81,11 @@ class EndpointMetaDataManagerTest {
     @DisplayName("meta load and return load status")
     @Test
     void testIsMetaLoading() {
+        PageExtract pageExtract = PageExtract.buildInitPage(13);
         final HashMap<String, TableMetadata> metadataMap =
             TestJsonUtil.parseHashMap(TestJsonUtil.KEY_META_DATA_13_TABLE, TableMetadata.class);
-        when(mockFeignClientService.queryMetaDataOfSchema(Endpoint.SOURCE)).thenReturn(metadataMap);
-        when(mockFeignClientService.queryMetaDataOfSchema(Endpoint.SINK)).thenReturn(metadataMap);
+        when(mockFeignClientService.queryMetaDataOfSchema(Endpoint.SOURCE, pageExtract)).thenReturn(metadataMap);
+        when(mockFeignClientService.queryMetaDataOfSchema(Endpoint.SINK, pageExtract)).thenReturn(metadataMap);
         // Run the test
         final boolean result = endpointMetaDataManagerUnderTest.isMetaLoading();
         // Verify the results
@@ -89,10 +94,11 @@ class EndpointMetaDataManagerTest {
 
     @Test
     void testGetTableMetadata() {
+        PageExtract pageExtract = PageExtract.buildInitPage(13);
         final HashMap<String, TableMetadata> metadataMap =
             TestJsonUtil.parseHashMap(TestJsonUtil.KEY_META_DATA_13_TABLE, TableMetadata.class);
-        when(mockFeignClientService.queryMetaDataOfSchema(Endpoint.SOURCE)).thenReturn(metadataMap);
-        when(mockFeignClientService.queryMetaDataOfSchema(Endpoint.SINK)).thenReturn(metadataMap);
+        when(mockFeignClientService.queryMetaDataOfSchema(Endpoint.SOURCE, pageExtract)).thenReturn(metadataMap);
+        when(mockFeignClientService.queryMetaDataOfSchema(Endpoint.SINK, pageExtract)).thenReturn(metadataMap);
         endpointMetaDataManagerUnderTest.isMetaLoading();
         // Run the test
         final TableMetadata result =
@@ -114,17 +120,21 @@ class EndpointMetaDataManagerTest {
     @DisplayName("get check table list success")
     @Test
     void testGetCheckTableList() {
+        PageExtract pageExtract = PageExtract.buildInitPage(13);
         final HashMap<String, TableMetadata> metadataMap =
             TestJsonUtil.parseHashMap(TestJsonUtil.KEY_META_DATA_13_TABLE, TableMetadata.class);
-        when(mockFeignClientService.queryMetaDataOfSchema(Endpoint.SOURCE)).thenReturn(metadataMap);
-        when(mockFeignClientService.queryMetaDataOfSchema(Endpoint.SINK)).thenReturn(metadataMap);
+        when(mockFeignClientService.queryMetaDataOfSchema(Endpoint.SOURCE, pageExtract)).thenReturn(metadataMap);
+        when(mockFeignClientService.queryMetaDataOfSchema(Endpoint.SINK, pageExtract)).thenReturn(metadataMap);
         endpointMetaDataManagerUnderTest.isMetaLoading();
         // Setup
         // Run the test
         endpointMetaDataManagerUnderTest.load();
         List<String> result = endpointMetaDataManagerUnderTest.getCheckTableList();
         result.sort(Comparator.naturalOrder());
-        assertThat(result).isEqualTo(metadataMap.keySet().stream().sorted().collect(Collectors.toList()));
+        assertThat(result).isEqualTo(metadataMap.keySet()
+                                                .stream()
+                                                .sorted()
+                                                .collect(Collectors.toList()));
     }
 
     @DisplayName("get check miss table list empty")

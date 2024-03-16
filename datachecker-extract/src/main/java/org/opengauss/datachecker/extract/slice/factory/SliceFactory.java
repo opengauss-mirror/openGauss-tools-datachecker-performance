@@ -15,6 +15,7 @@
 
 package org.opengauss.datachecker.extract.slice.factory;
 
+import com.alibaba.druid.pool.DruidDataSource;
 import org.opengauss.datachecker.common.entry.extract.SliceVo;
 import org.opengauss.datachecker.common.util.SpringUtil;
 import org.opengauss.datachecker.extract.slice.process.CsvTableProcessor;
@@ -24,7 +25,6 @@ import org.opengauss.datachecker.extract.slice.SliceProcessorContext;
 import org.opengauss.datachecker.extract.slice.process.CsvSliceProcessor;
 import org.opengauss.datachecker.extract.slice.process.JdbcSliceProcessor;
 
-import javax.sql.DataSource;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
@@ -37,14 +37,14 @@ import java.util.Objects;
  * @since ：11
  */
 public class SliceFactory {
-    private DataSource datasource;
+    private DruidDataSource datasource;
 
     /**
      * slice factory
      *
      * @param datasource datasource
      */
-    public SliceFactory(DataSource datasource) {
+    public SliceFactory(DruidDataSource datasource) {
         this.datasource = datasource;
     }
 
@@ -60,7 +60,7 @@ public class SliceFactory {
         if (Objects.isNull(datasource)) {
             return new CsvSliceProcessor(sliceVo, processorContext);
         }
-        return new JdbcSliceProcessor(sliceVo, processorContext);
+        return new JdbcSliceProcessor(sliceVo, processorContext, datasource);
     }
 
     /**

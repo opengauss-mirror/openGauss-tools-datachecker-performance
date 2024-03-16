@@ -21,6 +21,7 @@ import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.MetadataLoadProcess;
+import org.opengauss.datachecker.common.entry.extract.PageExtract;
 import org.opengauss.datachecker.common.entry.extract.PrimaryColumnBean;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.util.LogUtils;
@@ -31,6 +32,8 @@ import org.opengauss.datachecker.extract.resource.ResourceManager;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -61,15 +64,34 @@ public class MetaDataService {
     private ResourceManager resourceManager;
     private AtomicBoolean isCheckTableEmpty = new AtomicBoolean(false);
     private MetadataLoadProcess metadataLoadProcess = new MetadataLoadProcess();
+    private List<String> metaKeyList = new ArrayList<>();
 
     /**
      * Return database metadata information through cache
      *
+     * @param pageExtract pageExtract
      * @return metadata information
      */
-    public Map<String, TableMetadata> queryMetaDataOfSchemaCache() {
+    public Map<String, TableMetadata> queryMetaDataOfSchemaCache(PageExtract pageExtract) {
         LogUtils.debug(log, "load table metadata from cache isEmpty=[{}]", MetaDataCache.isEmpty());
-        return MetaDataCache.getAll();
+        int pageStartIdx = pageExtract.getPageStartIdx();
+        int pageEndIdx = pageExtract.getPageEndIdx();
+        Map<String, TableMetadata> map = new HashMap<>();
+        for (; pageStartIdx < pageEndIdx; pageStartIdx++) {
+            String key = metaKeyList.get(pageStartIdx);
+            map.put(key, MetaDataCache.get(key));
+        }
+        return map;
+    }
+
+    /**
+     * 获取抽取元数据分页信息
+     *
+     * @return 分页信息
+     */
+    public PageExtract getExtractMetaPageInfo() {
+        metaKeyList.addAll(Objects.requireNonNull(MetaDataCache.getAllKeys()));
+        return PageExtract.buildInitPage(metaKeyList.size());
     }
 
     public List<String> queryAllTableNames() {
@@ -212,9 +234,9 @@ public class MetaDataService {
     public synchronized boolean mdsIsCheckTableEmpty(boolean isForced) {
         if (isForced) {
             isCheckTableEmpty.set(!baseDataService.bdsCheckDatabaseNotEmpty());
-            LogUtils.info(log,"check database table (query) is {}", isCheckTableEmpty.get() ? "empty" : " not empty");
+            LogUtils.info(log, "check database table (query) is {}", isCheckTableEmpty.get() ? "empty" : " not empty");
         } else {
-            LogUtils.info(log,"check database table is {}", isCheckTableEmpty.get() ? "empty" : " not empty");
+            LogUtils.info(log, "check database table is {}", isCheckTableEmpty.get() ? "empty" : " not empty");
         }
         return isCheckTableEmpty.get();
     }

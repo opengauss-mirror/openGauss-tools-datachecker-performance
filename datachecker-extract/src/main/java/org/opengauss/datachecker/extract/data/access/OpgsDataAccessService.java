@@ -25,6 +25,7 @@ import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.extract.data.mapper.OpgsMetaDataMapper;
 
 import javax.annotation.PostConstruct;
+import java.sql.Connection;
 import java.util.List;
 import java.util.Objects;
 
@@ -115,13 +116,15 @@ public class OpgsDataAccessService extends AbstractDataAccessService {
     }
 
     @Override
-    public String min(DataAccessParam param) {
-        return opgsMetaDataMapper.min(param);
+    public String min(Connection connection, DataAccessParam param) {
+        String sql = " select min(" + param.getColName() + ") from " + param.getSchema() + "." + param.getName() + ";";
+        return adasQueryOnePoint(connection, sql);
     }
 
     @Override
-    public String max(DataAccessParam param) {
-        return opgsMetaDataMapper.max(param);
+    public String max(Connection connection, DataAccessParam param) {
+        String sql = " select max(" + param.getColName() + ") from " + param.getSchema() + "." + param.getName() + ";";
+        return adasQueryOnePoint(connection, sql);
     }
 
     @Override
@@ -130,12 +133,12 @@ public class OpgsDataAccessService extends AbstractDataAccessService {
     }
 
     @Override
-    public List<Object> queryPointList(DataAccessParam param) {
+    public List<Object> queryPointList(Connection connection, DataAccessParam param) {
         String sql = "select s.%s from ( select row_number() over(order by r.%s  asc) as rn,r.%s  from %s.%s r) s"
             + "  where mod(s.rn, %s ) = 0;";
         sql = String.format(sql, param.getColName(), param.getColName(), param.getColName(), param.getSchema(),
             param.getName(), param.getOffset());
-        return adasQueryPointList(sql);
+        return adasQueryPointList(connection, sql);
     }
 
     @Override

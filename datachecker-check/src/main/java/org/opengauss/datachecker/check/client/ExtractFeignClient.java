@@ -20,6 +20,7 @@ import org.opengauss.datachecker.common.entry.common.RepairEntry;
 import org.opengauss.datachecker.common.entry.csv.CsvPathConfig;
 import org.opengauss.datachecker.common.entry.extract.ExtractConfig;
 import org.opengauss.datachecker.common.entry.extract.ExtractTask;
+import org.opengauss.datachecker.common.entry.extract.PageExtract;
 import org.opengauss.datachecker.common.entry.extract.RowDataHash;
 import org.opengauss.datachecker.common.entry.extract.SourceDataLog;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
@@ -48,12 +49,21 @@ public interface ExtractFeignClient {
     Result<Void> health();
 
     /**
-     * Endpoint loading metadata information
+     * Endpoint loading metadata information page
      *
+     * @param pageExtract pageExtract
      * @return Return metadata
      */
-    @GetMapping("/extract/load/database/meta/data")
-    Result<Map<String, TableMetadata>> queryMetaDataOfSchema();
+    @PostMapping("/extract/load/page/meta/data")
+    Result<Map<String, TableMetadata>> queryMetaDataOfSchema(@RequestBody PageExtract pageExtract);
+
+    /**
+     * 获取元数据信息分页提取对象
+     *
+     * @return PageExtractTask
+     */
+    @GetMapping("/get/extract/meta/page/info")
+    Result<PageExtract> getExtractMetaPageInfo();
 
     /**
      * Extraction task construction
@@ -62,18 +72,25 @@ public interface ExtractFeignClient {
      * @return Return to build task collection
      */
     @PostMapping("/extract/build/task/all")
-    Result<List<ExtractTask>> buildExtractTaskAllTables(@RequestParam(name = "processNo") String processNo);
+    Result<PageExtract> buildExtractTaskAllTables(@RequestParam(name = "processNo") String processNo);
+
+    /**
+     * fetch extract task page
+     *
+     * @param pageExtract pageExtract
+     * @return Return to build task collection
+     */
+    @PostMapping("/extract/build/task/page")
+    Result<List<ExtractTask>> fetchExtractTaskPageTables(@RequestBody PageExtract pageExtract);
 
     /**
      * Destination extraction task configuration
      *
-     * @param processNo Execution process number
-     * @param taskList  Source side task list
+     * @param taskList Source side task list
      * @return Request results
      */
-    @PostMapping("/extract/config/sink/task/all")
-    Result<Void> buildExtractTaskAllTables(@RequestParam(name = "processNo") String processNo,
-        @RequestBody List<ExtractTask> taskList);
+    @PostMapping("/dispatch/sink/extract/task/page")
+    Result<Void> dispatchSinkExtractTaskPage(@RequestBody List<ExtractTask> taskList);
 
     /**
      * Full extraction business processing flow

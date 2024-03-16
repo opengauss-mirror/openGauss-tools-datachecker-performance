@@ -20,6 +20,7 @@ import org.opengauss.datachecker.common.entry.common.RepairEntry;
 import org.opengauss.datachecker.common.entry.csv.CsvPathConfig;
 import org.opengauss.datachecker.common.entry.extract.ExtractConfig;
 import org.opengauss.datachecker.common.entry.extract.ExtractTask;
+import org.opengauss.datachecker.common.entry.extract.PageExtract;
 import org.opengauss.datachecker.common.entry.extract.RowDataHash;
 import org.opengauss.datachecker.common.entry.extract.SourceDataLog;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
@@ -63,17 +64,27 @@ public class ExtractFallbackFactory implements FallbackFactory<ExtractFeignClien
         }
 
         @Override
-        public Result<Map<String, TableMetadata>> queryMetaDataOfSchema() {
-            return Result.error("Remote call, endpoint loading metadata information exception");
+        public Result<Map<String, TableMetadata>> queryMetaDataOfSchema(PageExtract pageExtract) {
+            return Result.error("Remote call, endpoint loading page metadata information exception");
         }
 
         @Override
-        public Result<List<ExtractTask>> buildExtractTaskAllTables(String processNo) {
+        public Result<PageExtract> getExtractMetaPageInfo() {
+            return Result.error("Remote call, endpoint loading PageExtract information exception");
+        }
+
+        @Override
+        public Result<PageExtract> buildExtractTaskAllTables(String processNo) {
             return Result.error("Remote call, extract task construction exception");
         }
 
         @Override
-        public Result<Void> buildExtractTaskAllTables(String processNo, List<ExtractTask> taskList) {
+        public Result<List<ExtractTask>> fetchExtractTaskPageTables(PageExtract pageExtract) {
+            return Result.error("Remote call, extract task construction exception");
+        }
+
+        @Override
+        public Result<Void> dispatchSinkExtractTaskPage(List<ExtractTask> taskList) {
             return Result.error("Remote call, abnormal configuration of the destination extraction task");
         }
 

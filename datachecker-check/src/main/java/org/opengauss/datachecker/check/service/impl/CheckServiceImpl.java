@@ -25,6 +25,7 @@ import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.extract.ExtractTask;
+import org.opengauss.datachecker.common.entry.extract.PageExtract;
 import org.opengauss.datachecker.common.exception.CheckingException;
 import org.opengauss.datachecker.common.exception.CommonException;
 import org.opengauss.datachecker.common.util.JsonObjectUtil;
@@ -106,12 +107,15 @@ public class CheckServiceImpl implements CheckService {
     private void startCheckFullMode() {
         String processNo = ConfigCache.getValue(ConfigConstants.PROCESS_NO);
         // Source endpoint task construction
-        final List<ExtractTask> extractTasks = feignClientService.buildExtractTaskAllTables(Endpoint.SOURCE, processNo);
-        LogUtils.debug(log, "check full mode : build extract task source {}", processNo);
-        // Sink endpoint task construction
-        feignClientService.buildExtractTaskAllTables(Endpoint.SINK, processNo, extractTasks);
-        LogUtils.debug(log, "check full mode : build extract task sink {}", processNo);
-
+        final PageExtract pageExtractTasks = feignClientService.buildExtractTaskAllTables(Endpoint.SOURCE, processNo);
+        LogUtils.info(log, "check full mode : build extract task source {}:{}", processNo, pageExtractTasks);
+        while (pageExtractTasks.getPageNo() < pageExtractTasks.getPageCount()) {
+            List<ExtractTask> extractTasks = feignClientService.fetchSourceExtractTaskPageTables(pageExtractTasks);
+            // Sink endpoint task construction
+            feignClientService.dispatchSinkExtractTaskPage(extractTasks);
+            LogUtils.info(log, "check full mode : build extract task sink {}", pageExtractTasks);
+            pageExtractTasks.incrementAndGetPageNo();
+        }
         // Perform all tasks
         feignClientService.execExtractTaskAllTables(Endpoint.SOURCE, processNo);
         feignClientService.execExtractTaskAllTables(Endpoint.SINK, processNo);

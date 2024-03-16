@@ -21,6 +21,7 @@ import org.opengauss.datachecker.common.entry.extract.PrimaryColumnBean;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.extract.data.mapper.OracleMetaDataMapper;
 
+import java.sql.Connection;
 import java.util.List;
 
 /**
@@ -97,12 +98,12 @@ public class OracleDataAccessService extends AbstractDataAccessService {
     }
 
     @Override
-    public String min(DataAccessParam param) {
+    public String min(Connection connection, DataAccessParam param) {
         return oracleMetaDataMapper.min(param);
     }
 
     @Override
-    public String max(DataAccessParam param) {
+    public String max(Connection connection, DataAccessParam param) {
         return oracleMetaDataMapper.max(param);
     }
 
@@ -112,7 +113,7 @@ public class OracleDataAccessService extends AbstractDataAccessService {
     }
 
     @Override
-    public List<Object> queryPointList(DataAccessParam param) {
+    public List<Object> queryPointList(Connection connection, DataAccessParam param) {
         return oracleMetaDataMapper.queryPointList(param);
     }
 

@@ -20,6 +20,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.opengauss.datachecker.common.entry.extract.ExtractConfig;
 import org.opengauss.datachecker.common.entry.extract.ExtractTask;
+import org.opengauss.datachecker.common.entry.extract.PageExtract;
 import org.opengauss.datachecker.common.entry.extract.RowDataHash;
 import org.opengauss.datachecker.common.entry.extract.SourceDataLog;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
@@ -63,10 +64,20 @@ public class ExtractController {
      *
      * @return database metadata information
      */
-    @GetMapping("/extract/load/database/meta/data")
-    public Result<Map<String, TableMetadata>> queryMetaDataOfSchema() {
-        Map<String, TableMetadata> metaDataMap = metaDataService.queryMetaDataOfSchemaCache();
+    @PostMapping("/extract/load/page/meta/data")
+    public Result<Map<String, TableMetadata>> queryMetaDataOfSchema(@RequestBody PageExtract pageExtract) {
+        Map<String, TableMetadata> metaDataMap = metaDataService.queryMetaDataOfSchemaCache(pageExtract);
         return Result.success(metaDataMap);
+    }
+
+    /**
+     * 获取元数据信息分页提取对象
+     *
+     * @return PageExtractTask
+     */
+    @GetMapping("/get/extract/meta/page/info")
+    public Result<PageExtract> getExtractMetaPageInfo() {
+        return Result.success(metaDataService.getExtractMetaPageInfo());
     }
 
     /**
@@ -78,26 +89,34 @@ public class ExtractController {
      */
     @Operation(summary = "construction a data extraction task for the current endpoint")
     @PostMapping("/extract/build/task/all")
-    public Result<List<ExtractTask>> buildExtractTaskAllTables(
+    public Result<PageExtract> buildExtractTaskAllTables(
         @Parameter(name = "processNo", description = "execution process no") @RequestParam(name = "processNo")
             String processNo) {
         return Result.success(dataExtractService.buildExtractTaskAllTables(processNo));
     }
 
     /**
+     * 分页获取抽取任务数据
+     *
+     * @param pageExtract pageExtract
+     * @return 任务列表
+     */
+    @PostMapping("/extract/build/task/page")
+    public Result<List<ExtractTask>> fetchExtractTaskPageTables(@RequestBody PageExtract pageExtract) {
+        return Result.success(dataExtractService.fetchExtractTaskPageTables(pageExtract));
+    }
+
+    /**
      * sink endpoint task configuration
      *
-     * @param processNo execution process no
-     * @param taskList  task list
+     * @param taskList task list
      * @throws ProcessMultipleException the data extraction service is being executed for the current instance.
      *                                  new verification process cannot be enabled.
      */
     @Operation(summary = "sink endpoint task configuration")
-    @PostMapping("/extract/config/sink/task/all")
-    Result<Void> buildExtractTaskAllTables(
-        @Parameter(name = "processNo", description = "execution process no") @RequestParam(name = "processNo")
-            String processNo, @RequestBody List<ExtractTask> taskList) {
-        dataExtractService.buildExtractTaskAllTables(processNo, taskList);
+    @PostMapping("/dispatch/sink/extract/task/page")
+    Result<Void> dispatchSinkExtractTaskPage(@RequestBody List<ExtractTask> taskList) {
+        dataExtractService.dispatchSinkExtractTaskPage(taskList);
         return Result.success();
     }
 

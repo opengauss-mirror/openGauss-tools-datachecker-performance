@@ -17,6 +17,7 @@ spring:
     maximum-topic-size: 4
     floating-point-data-supply-zero: false
     heart-beat-heath: true
+    rest-api-page-size: 1000
   application:
     name: gs_datacheck
   config:

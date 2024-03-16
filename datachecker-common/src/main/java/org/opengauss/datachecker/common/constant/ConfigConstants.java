@@ -292,4 +292,9 @@ public interface ConfigConstants {
      * spring.check.max-retry-times
      */
     String MAX_RETRY_TIMES = "spring.check.max-retry-times";
+
+    /**
+     * spring.check.rest-api-page-size
+     */
+    String REST_API_PAGE_SIZE = "spring.check.rest-api-page-size";
 }

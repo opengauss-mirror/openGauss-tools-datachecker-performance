@@ -23,6 +23,7 @@ import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.springframework.jdbc.core.RowMapper;
 
 import javax.sql.DataSource;
+import java.sql.Connection;
 import java.util.List;
 import java.util.Map;
 
@@ -107,18 +108,20 @@ public interface DataAccessService {
     /**
      * query table column min value
      *
-     * @param param param
+     * @param connection connection
+     * @param param      param
      * @return min value of string
      */
-    String min(DataAccessParam param);
+    String min(Connection connection, DataAccessParam param);
 
     /**
      * query table column max value
      *
-     * @param param param
+     * @param connection connection
+     * @param param      param
      * @return max value of string
      */
-    String max(DataAccessParam param);
+    String max(Connection connection, DataAccessParam param);
 
     /**
      * query table column next value
@@ -159,10 +162,11 @@ public interface DataAccessService {
     /**
      * query table check point list
      *
-     * @param param param
+     * @param connection connection
+     * @param param      param
      * @return point list
      */
-    List<Object> queryPointList(DataAccessParam param);
+    List<Object> queryPointList(Connection connection, DataAccessParam param);
 
     /**
      * check database weather has tables

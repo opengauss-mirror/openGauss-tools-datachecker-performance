@@ -15,6 +15,7 @@
 
 package org.opengauss.datachecker.extract.controller;
 
+import com.alibaba.druid.pool.DruidDataSource;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.config.ConfigCache;
@@ -24,7 +25,9 @@ import org.opengauss.datachecker.common.entry.csv.CsvPathConfig;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.service.ProcessLogService;
 import org.opengauss.datachecker.common.util.LogUtils;
+import org.opengauss.datachecker.common.util.SpringUtil;
 import org.opengauss.datachecker.common.web.Result;
+import org.opengauss.datachecker.extract.config.DruidDataSourceConfig;
 import org.opengauss.datachecker.extract.data.BaseDataService;
 import org.opengauss.datachecker.extract.load.ExtractEnvironmentContext;
 import org.opengauss.datachecker.extract.service.ConfigManagement;
@@ -58,6 +61,7 @@ public class ConfigController {
     private ConfigManagement configManagement;
     @Resource
     private ProcessLogService processLogService;
+
     /**
      * Distribution Extraction config
      *
@@ -75,10 +79,12 @@ public class ConfigController {
         baseDataService.initDataSourceSqlMode2ConfigCache();
         processLogService.saveProcessLog();
         ruleAdapterService.init(config.getRules());
-        LogUtils.info(log,"init filter rule config ");
         if (Objects.equals(checkMode, CheckMode.FULL) || Objects.equals(checkMode, CheckMode.INCREMENT)) {
+            DruidDataSourceConfig bean = SpringUtil.getBean(DruidDataSourceConfig.class);
+            baseDataService.initDynamicProxyDataSource((DruidDataSource) bean.druidDataSource());
             context.loadDatabaseMetaData();
         }
+        LogUtils.info(log, "init filter rule config ");
     }
 
     /**
@@ -89,7 +95,7 @@ public class ConfigController {
     @PostMapping("/csv/config/distribute")
     public Result<Void> distributeConfig(@RequestBody CsvPathConfig csvPathConfig) {
         configManagement.initCsvConfig(csvPathConfig);
-        LogUtils.info(log,"init csv config ");
+        LogUtils.info(log, "init csv config ");
         return Result.success();
     }
 }

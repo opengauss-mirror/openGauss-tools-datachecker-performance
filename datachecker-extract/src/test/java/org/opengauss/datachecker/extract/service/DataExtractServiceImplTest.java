@@ -27,6 +27,7 @@ import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.extract.Database;
 import org.opengauss.datachecker.common.entry.extract.ExtractConfig;
 import org.opengauss.datachecker.common.entry.extract.ExtractTask;
+import org.opengauss.datachecker.common.entry.extract.PageExtract;
 import org.opengauss.datachecker.common.entry.extract.RowDataHash;
 import org.opengauss.datachecker.common.entry.extract.SourceDataLog;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
@@ -84,7 +85,7 @@ class DataExtractServiceImplTest {
         final List<ExtractTask> extractTaskList = List.of(new ExtractTask());
         when(mockExtractTaskBuilder.builder(MetaDataCache.getAllKeys())).thenReturn(List.of(new ExtractTask()));
         // Run the test
-        final List<ExtractTask> result = dataExtractServiceImplUnderTest.buildExtractTaskAllTables("processNo");
+        final PageExtract result = dataExtractServiceImplUnderTest.buildExtractTaskAllTables("processNo");
         // Verify the results
         assertThat(result).isEqualTo(extractTaskList);
     }
@@ -96,7 +97,7 @@ class DataExtractServiceImplTest {
         when(mockExtractProperties.getEndpoint()).thenReturn(Endpoint.SOURCE);
         when(mockExtractTaskBuilder.builder(MetaDataCache.getAllKeys())).thenReturn(Collections.emptyList());
         // Run the test
-        final List<ExtractTask> result = dataExtractServiceImplUnderTest.buildExtractTaskAllTables("processNo");
+        final PageExtract result = dataExtractServiceImplUnderTest.buildExtractTaskAllTables("processNo");
         // Verify the results
         assertThat(result).isEqualTo(Collections.emptyList());
     }
@@ -110,8 +111,8 @@ class DataExtractServiceImplTest {
         when(mockExtractTaskBuilder.builder(MetaDataCache.getAllKeys())).thenReturn(List.of(new ExtractTask()));
         dataExtractServiceImplUnderTest.buildExtractTaskAllTables("processNo");
         // Run the test
-        assertThatThrownBy(() -> dataExtractServiceImplUnderTest.buildExtractTaskAllTables("processNo"))
-            .isInstanceOf(ProcessMultipleException.class);
+        assertThatThrownBy(() -> dataExtractServiceImplUnderTest.buildExtractTaskAllTables("processNo")).isInstanceOf(
+            ProcessMultipleException.class);
     }
 
     @Test
@@ -125,8 +126,8 @@ class DataExtractServiceImplTest {
     void testQueryTableInfo() {
         // Setup
         // Verify the results
-        assertThatThrownBy(() -> dataExtractServiceImplUnderTest.queryTableInfo("tableName"))
-            .isInstanceOf(TaskNotFoundException.class);
+        assertThatThrownBy(() -> dataExtractServiceImplUnderTest.queryTableInfo("tableName")).isInstanceOf(
+            TaskNotFoundException.class);
     }
 
     @Test
@@ -158,8 +159,8 @@ class DataExtractServiceImplTest {
         String table = "t_test_table_template";
         final TableMetadata tableMetadata = MetaDataCache.get(table);
         when(mockMetaDataService.getMetaDataOfSchemaByCache(table)).thenReturn(tableMetadata);
-        when(mockDataManipulationService.queryColumnValues(table, List.of("value"), tableMetadata))
-            .thenReturn(Collections.emptyList());
+        when(mockDataManipulationService.queryColumnValues(table, List.of("value"), tableMetadata)).thenReturn(
+            Collections.emptyList());
 
         // Run the test
         final List<Map<String, String>> result =
@@ -217,8 +218,8 @@ class DataExtractServiceImplTest {
         rowDataHash1.setKHash(0L);
         rowDataHash1.setVHash(0L);
         final List<RowDataHash> rowDataHashes = List.of(rowDataHash1);
-        when(mockDataManipulationService.queryColumnHashValues(table, List.of("value"), tableMetadata))
-            .thenReturn(rowDataHashes);
+        when(mockDataManipulationService.queryColumnHashValues(table, List.of("value"), tableMetadata)).thenReturn(
+            rowDataHashes);
 
         // Run the test
         final List<RowDataHash> result = dataExtractServiceImplUnderTest.querySecondaryCheckRowData(dataLog);
@@ -242,8 +243,8 @@ class DataExtractServiceImplTest {
         final TableMetadata tableMetadata = MetaDataCache.get(table);
         when(mockMetaDataService.getMetaDataOfSchemaByCache(table)).thenReturn(tableMetadata);
 
-        when(mockDataManipulationService.queryColumnHashValues(table, List.of("value"), tableMetadata))
-            .thenReturn(Collections.emptyList());
+        when(mockDataManipulationService.queryColumnHashValues(table, List.of("value"), tableMetadata)).thenReturn(
+            Collections.emptyList());
 
         // Run the test
         final List<RowDataHash> result = dataExtractServiceImplUnderTest.querySecondaryCheckRowData(dataLog);
