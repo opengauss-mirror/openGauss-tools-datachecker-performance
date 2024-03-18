@@ -21,7 +21,6 @@ import org.opengauss.datachecker.check.config.DataCheckProperties;
 import org.opengauss.datachecker.check.config.RuleConfig;
 import org.opengauss.datachecker.check.modules.rule.RuleParser;
 import org.opengauss.datachecker.check.service.ConfigManagement;
-import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.common.GlobalConfig;
 import org.opengauss.datachecker.common.entry.common.Rule;
@@ -98,17 +97,13 @@ public class CheckConfigDistributeLoader extends AbstractCheckLoader {
         globalConfig.setCheckMode(checkMode);
         globalConfig.setProcessPath(checkProperties.getDataPath());
 
-        globalConfig.addCommonConfig(ConfigConstants.PROCESS_NO, ConfigCache.getValue(ConfigConstants.PROCESS_NO));
-        globalConfig.addCommonConfig(ConfigConstants.MAXIMUM_TOPIC_SIZE,
-            ConfigCache.getIntValue(ConfigConstants.MAXIMUM_TOPIC_SIZE));
-        globalConfig.addCommonConfig(ConfigConstants.FLOATING_POINT_DATA_SUPPLY_ZERO,
-            ConfigCache.getBooleanValue(ConfigConstants.FLOATING_POINT_DATA_SUPPLY_ZERO));
-        globalConfig.addCommonConfig(ConfigConstants.SQL_MODE_PAD_CHAR_TO_FULL_LENGTH,
-            ConfigCache.getBooleanValue(ConfigConstants.SQL_MODE_PAD_CHAR_TO_FULL_LENGTH));
-        globalConfig.addCommonConfig(ConfigConstants.DATA_CHECK_SINK_DATABASE,
-            ConfigCache.getValue(ConfigConstants.DATA_CHECK_SINK_DATABASE, Database.class));
-        globalConfig.addCommonConfig(ConfigConstants.DATA_CHECK_SOURCE_DATABASE,
-            ConfigCache.getValue(ConfigConstants.DATA_CHECK_SOURCE_DATABASE, Database.class));
+        globalConfig.addProperties(ConfigConstants.PROCESS_NO);
+        globalConfig.addIntProperties(ConfigConstants.REST_API_PAGE_SIZE);
+        globalConfig.addIntProperties(ConfigConstants.MAXIMUM_TOPIC_SIZE);
+        globalConfig.addBoolProperties(ConfigConstants.FLOATING_POINT_DATA_SUPPLY_ZERO);
+        globalConfig.addBoolProperties(ConfigConstants.SQL_MODE_PAD_CHAR_TO_FULL_LENGTH);
+        globalConfig.addProperties(ConfigConstants.DATA_CHECK_SINK_DATABASE, Database.class);
+        globalConfig.addProperties(ConfigConstants.DATA_CHECK_SOURCE_DATABASE, Database.class);
         return globalConfig;
     }
 }

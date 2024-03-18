@@ -17,6 +17,7 @@ package org.opengauss.datachecker.extract.service;
 
 import org.opengauss.datachecker.common.entry.extract.ExtractConfig;
 import org.opengauss.datachecker.common.entry.extract.ExtractTask;
+import org.opengauss.datachecker.common.entry.extract.PageExtract;
 import org.opengauss.datachecker.common.entry.extract.RowDataHash;
 import org.opengauss.datachecker.common.entry.extract.SourceDataLog;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
@@ -26,7 +27,6 @@ import org.opengauss.datachecker.common.exception.TaskNotFoundException;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * DataExtractService
@@ -45,17 +45,24 @@ public interface DataExtractService {
      * @throws ProcessMultipleException The current instance is executing the data extraction service
      *                                  and cannot restart the new verification.
      */
-    List<ExtractTask> buildExtractTaskAllTables(String processNo) throws ProcessMultipleException;
+    PageExtract buildExtractTaskAllTables(String processNo) throws ProcessMultipleException;
+
+    /**
+     * fetchExtractTaskPageTables
+     *
+     * @param pageExtract pageExtractTask
+     * @return extract task list of page
+     */
+    List<ExtractTask> fetchExtractTaskPageTables(PageExtract pageExtract);
 
     /**
      * Destination task configuration
      *
-     * @param processNo processNo
-     * @param taskList  taskList
+     * @param taskList taskList
      * @throws ProcessMultipleException The current instance is executing the data extraction service
      *                                  and cannot restart the new verification.
      */
-    void buildExtractTaskAllTables(String processNo, List<ExtractTask> taskList) throws ProcessMultipleException;
+    void dispatchSinkExtractTaskPage(List<ExtractTask> taskList) throws ProcessMultipleException;
 
     /**
      * Execute table data extraction task

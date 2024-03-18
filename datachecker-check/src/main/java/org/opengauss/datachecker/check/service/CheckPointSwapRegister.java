@@ -61,6 +61,7 @@ public class CheckPointSwapRegister {
     private boolean isCompletedSwapTablePoint = false;
     private boolean isSinkStop;
     private boolean isSourceStop;
+    private volatile String table = null;
 
     public CheckPointSwapRegister(KafkaServiceManager kafkaServiceManager, String checkPointTopic) {
         this.checkPointSwapTopicName = checkPointTopic;
@@ -72,9 +73,11 @@ public class CheckPointSwapRegister {
 
     public void stopMonitor(Endpoint endpoint) {
         if (Objects.equals(endpoint, Endpoint.SOURCE)) {
+            LogUtils.info(log, " {} finished checkpoint", endpoint);
             this.isSourceStop = true;
         }
         if (Objects.equals(endpoint, Endpoint.SINK)) {
+            LogUtils.info(log, " {} finished checkpoint", endpoint);
             this.isSinkStop = true;
         }
         if (isSourceStop && isSinkStop) {
@@ -87,37 +90,39 @@ public class CheckPointSwapRegister {
     public void registerCheckPoint() {
         checkPointSender.submit(() -> {
             int deliveredCount = 0;
-            String table = null;
             CheckPointData calculateCheckPoint = null;
             List<Object> sourcePoints;
             List<Object> sinkPoints;
             while (!isCompletedSwapTablePoint) {
-                try {
-                    table = CHECK_POINT_QUEUE.poll();
-                    if (StringUtils.isEmpty(table) && !isCompletedSwapTablePoint) {
-                        ThreadUtil.sleepHalfSecond();
-                        continue;
-                    }
-                    LogUtils.info(log, "start calculate checkpoint [{}]", table);
-                    if (sourcePointCounter.containsKey(table) && sinkPointCounter.containsKey(table)) {
-                        sourcePoints = sourcePointCounter.get(table)
+                synchronized (this) {
+                    try {
+                        table = CHECK_POINT_QUEUE.poll();
+                        if ((Objects.isNull(table) || StringUtils.isEmpty(table)) && !isCompletedSwapTablePoint) {
+                            continue;
+                        }
+                        LogUtils.info(log, "start calculate checkpoint [{}][{}]", table, CHECK_POINT_QUEUE.size());
+                        if (table != null && sourcePointCounter.containsKey(table) && sinkPointCounter.containsKey(
+                            table)) {
+                            sourcePoints = sourcePointCounter.get(table)
+                                                             .getCheckPointList();
+                            sinkPoints = sinkPointCounter.get(table)
                                                          .getCheckPointList();
-                        sinkPoints = sinkPointCounter.get(table)
-                                                     .getCheckPointList();
-                        calculateCheckPoint =
-                            calculateCheckPoint(table, isCheckPointDigit(table), sourcePoints, sinkPoints);
-                        calculateCheckPoint.setEndpoint(Endpoint.CHECK);
-                        kafkaTemplate.send(checkPointSwapTopicName, Endpoint.CHECK.getDescription(),
-                            JSONObject.toJSONString(calculateCheckPoint));
-                        deliveredCount++;
-                        LogUtils.info(log,
-                            "send summarized checkpoint topic[{}]:table[{}]:deliverNum[{}]:checkpoint_size[{}]",
-                            checkPointSwapTopicName, calculateCheckPoint.getTableName(), deliveredCount,
-                            calculateCheckPoint.getCheckPointList()
-                                               .size());
+                            calculateCheckPoint =
+                                calculateCheckPoint(table, isCheckPointDigit(table), sourcePoints, sinkPoints);
+                            calculateCheckPoint.setEndpoint(Endpoint.CHECK);
+                            kafkaTemplate.send(checkPointSwapTopicName, Endpoint.CHECK.getDescription(),
+                                JSONObject.toJSONString(calculateCheckPoint));
+                            deliveredCount++;
+                            LogUtils.info(log,
+                                "send summarized checkpoint topic[{}]:table[{}]:deliverNum[{}]:checkpoint_size[{}]",
+                                checkPointSwapTopicName, calculateCheckPoint.getTableName(), deliveredCount,
+                                calculateCheckPoint.getCheckPointList()
+                                                   .size());
+                        }
+
+                    } catch (Exception ex) {
+                        log.error("checkPointSender error {}", table, ex);
                     }
-                } catch (Exception ex) {
-                    log.error("checkPointSender error {}", table, ex);
                 }
             }
         });
@@ -148,8 +153,6 @@ public class CheckPointSwapRegister {
                                 tryAddCheckQueue(tableName);
                             }
                         });
-                    } else {
-                        ThreadUtil.sleepOneSecond();
                     }
                 } catch (Exception ex) {
                     if (Objects.equals("java.lang.InterruptedException", ex.getMessage())) {

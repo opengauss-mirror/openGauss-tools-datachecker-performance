@@ -109,7 +109,7 @@ public class CheckTableStructureService {
 
     private void checkTableStructureChanged(String processNo) {
         final List<String> checkTableList = endpointMetaDataManager.getCheckTableList();
-        checkTableList.forEach(tableName -> {
+        checkTableList.parallelStream().forEach(tableName -> {
             final TableMetadata sourceMeta = endpointMetaDataManager.getTableMetadata(Endpoint.SOURCE, tableName);
             final TableMetadata sinkMeta = endpointMetaDataManager.getTableMetadata(Endpoint.SINK, tableName);
             checkTableStructureChanged(processNo, tableName, sourceMeta, sinkMeta);

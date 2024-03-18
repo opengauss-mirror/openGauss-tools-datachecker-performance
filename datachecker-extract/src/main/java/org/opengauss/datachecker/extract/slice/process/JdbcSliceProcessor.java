@@ -15,6 +15,7 @@
 
 package org.opengauss.datachecker.extract.slice.process;
 
+import com.alibaba.druid.pool.DruidDataSource;
 import org.opengauss.datachecker.common.entry.extract.SliceExtend;
 import org.opengauss.datachecker.common.entry.extract.SliceVo;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
@@ -52,6 +53,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class JdbcSliceProcessor extends AbstractSliceProcessor {
     private final JdbcDataOperations jdbcOperation;
     private final AtomicInteger rowCount = new AtomicInteger(0);
+    private final DruidDataSource dataSource;
 
     /**
      * JdbcSliceProcessor
@@ -59,10 +61,10 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
      * @param slice   slice
      * @param context context
      */
-    public JdbcSliceProcessor(SliceVo slice, SliceProcessorContext context) {
+    public JdbcSliceProcessor(SliceVo slice, SliceProcessorContext context, DruidDataSource dataSource) {
         super(slice, context);
         this.jdbcOperation = context.getJdbcDataOperations();
-        this.rowCount.set(0);
+        this.dataSource = dataSource;
     }
 
     @Override
@@ -104,13 +106,10 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
         try {
             long estimatedRowCount = slice.isSlice() ? slice.getFetchSize() : tableMetadata.getTableRows();
             long estimatedMemorySize = estimatedMemorySize(tableMetadata.getAvgRowLength(), estimatedRowCount);
-            connection = jdbcOperation.tryConnectionAndClosedAutoCommit(estimatedMemorySize);
-            stopWatch.stop();
-            stopWatch.start("query " + slice.getName());
+            connection = jdbcOperation.tryConnectionAndClosedAutoCommit(estimatedMemorySize, dataSource);
+            LogUtils.debug(log, "query slice and send data sql : {}", sqlEntry.getSql());
             ps = connection.prepareStatement(sqlEntry.getSql());
             resultSet = ps.executeQuery();
-            stopWatch.stop();
-            stopWatch.start("send " + slice.getName());
             resultSet.setFetchSize(FETCH_SIZE);
             sliceSender = createSliceResultSetSender(tableMetadata);
             sliceSender.setRecordSendKey(slice.getName());
@@ -127,7 +126,7 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
                 sliceSender.agentsClosed();
             }
             jdbcOperation.releaseConnection(connection);
-            LogUtils.info(log, System.lineSeparator() + "{}", stopWatch.prettyPrint());
+            LogUtils.info(log, "query slice and send data cost: {}", stopWatch.shortSummary());
         }
     }
 

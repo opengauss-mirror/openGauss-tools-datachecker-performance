@@ -40,6 +40,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -232,7 +233,7 @@ public class CsvDataAccessService implements DataAccessService {
     }
 
     @Override
-    public List<Object> queryPointList(DataAccessParam param) {
+    public List<Object> queryPointList(Connection connection, DataAccessParam param) {
         return null;
     }
 
@@ -248,12 +249,12 @@ public class CsvDataAccessService implements DataAccessService {
     }
 
     @Override
-    public String min(DataAccessParam param) {
+    public String min(Connection connection, DataAccessParam param) {
         return null;
     }
 
     @Override
-    public String max(DataAccessParam param) {
+    public String max(Connection connection, DataAccessParam param) {
         return null;
     }
 

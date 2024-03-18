@@ -15,6 +15,8 @@
 
 package org.opengauss.datachecker.extract.task;
 
+import com.alibaba.druid.pool.DruidDataSource;
+import com.alibaba.druid.pool.DruidPooledConnection;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
@@ -22,11 +24,16 @@ import org.opengauss.datachecker.common.entry.common.DataAccessParam;
 import org.opengauss.datachecker.common.entry.enums.DataBaseType;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
+import org.opengauss.datachecker.common.exception.ExtractDataAccessException;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.SqlUtil;
 import org.opengauss.datachecker.extract.data.access.DataAccessService;
+import org.opengauss.datachecker.extract.resource.ConnectionMgr;
 import org.opengauss.datachecker.extract.util.MetaDataUtil;
+import org.springframework.util.StopWatch;
 
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
@@ -43,6 +50,7 @@ public class CheckPoint {
     private static final Logger log = LogUtils.getLogger(CheckPoint.class);
 
     private final DataAccessService dataAccessService;
+    private DruidDataSource dataSource;
 
     /**
      * check point depends on JDBC DataSource
@@ -50,6 +58,17 @@ public class CheckPoint {
      * @param dataAccessService dataAccessService
      */
     public CheckPoint(DataAccessService dataAccessService) {
+        this.dataAccessService = dataAccessService;
+    }
+
+    /**
+     * check point depends on JDBC DataSource
+     *
+     * @param dataSource        dataSource
+     * @param dataAccessService dataAccessService
+     */
+    public CheckPoint(DruidDataSource dataSource, DataAccessService dataAccessService) {
+        this.dataSource = dataSource;
         this.dataAccessService = dataAccessService;
     }
 
@@ -67,21 +86,35 @@ public class CheckPoint {
         String pkName = getPkName(tableMetadata);
         String schema = tableMetadata.getSchema();
         String tableName = tableMetadata.getTableName();
+        StopWatch stopWatch = new StopWatch("table check point " + tableName);
+        stopWatch.start();
         DataBaseType dataBaseType = ConfigCache.getValue(ConfigConstants.DATA_BASE_TYPE, DataBaseType.class);
         DataAccessParam param = new DataAccessParam().setSchema(SqlUtil.escape(schema, dataBaseType))
                                                      .setName(SqlUtil.escape(tableName, dataBaseType))
                                                      .setColName(SqlUtil.escape(pkName, dataBaseType));
-        String minCheckPoint = dataAccessService.min(param);
+        Connection connection = Objects.nonNull(dataSource) ? getConnection() : ConnectionMgr.getConnection();
+        String minCheckPoint = dataAccessService.min(connection, param);
         param.setOffset(slice);
-        Object maxPoint = dataAccessService.max(param);
-        List<Object> checkPointList = dataAccessService.queryPointList(param);
+        Object maxPoint = dataAccessService.max(connection, param);
+        List<Object> checkPointList = dataAccessService.queryPointList(connection, param);
         checkPointList.add(minCheckPoint);
         checkPointList.add(maxPoint);
         checkPointList = checkPointList.stream()
                                        .distinct()
                                        .collect(Collectors.toList());
-        LogUtils.debug(log,"init check-point-list table [{}]:[{}] ", tableName, checkPointList);
+        stopWatch.stop();
+        LogUtils.info(log, "init check-point-list table [{}]:[{}] ", tableName, stopWatch.shortSummary());
+        ConnectionMgr.close(connection, null, null);
         return checkPointList;
+    }
+
+    private DruidPooledConnection getConnection() {
+        try {
+            return dataSource.getConnection();
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+            throw new ExtractDataAccessException("get connection error");
+        }
     }
 
     private void addCheckList(List<Object> checkList, Object value) {
@@ -131,7 +164,9 @@ public class CheckPoint {
         param.setSchema(tableMetadata.getSchema())
              .setName(tableMetadata.getTableName())
              .setColName(getPkName(tableMetadata));
-        String maxId = dataAccessService.max(param);
+        Connection connection = ConnectionMgr.getConnection();
+        String maxId = dataAccessService.max(connection, param);
+        ConnectionMgr.close(connection, null, null);
         return Long.parseLong(maxId);
     }
 

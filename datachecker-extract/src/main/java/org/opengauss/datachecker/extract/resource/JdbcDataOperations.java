@@ -15,6 +15,7 @@
 
 package org.opengauss.datachecker.extract.resource;
 
+import com.alibaba.druid.pool.DruidDataSource;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.config.ConfigCache;
@@ -95,11 +96,25 @@ public class JdbcDataOperations {
     /**
      * try to get a jdbc connection and close auto commit.
      *
+     * @param allocMemory allocMemory
+     * @param dataSource  dataSource
      * @return Connection
      */
-    public synchronized Connection tryConnectionAndClosedAutoCommit() {
+    public synchronized Connection tryConnectionAndClosedAutoCommit(long allocMemory,
+        DruidDataSource dataSource) throws SQLException {
+        takeConnection(allocMemory);
+        return getConnectionAndClosedAutoCommit(dataSource);
+    }
+
+    /**
+     * try to get a jdbc connection and close auto commit.
+     *
+     * @param dataSource dataSource
+     * @return Connection
+     */
+    public synchronized Connection tryConnectionAndClosedAutoCommit(DruidDataSource dataSource) throws SQLException {
         takeConnection(0);
-        return getConnectionAndClosedAutoCommit();
+        return getConnectionAndClosedAutoCommit(dataSource);
     }
 
     private Connection getConnectionAndClosedAutoCommit() {
@@ -108,6 +123,26 @@ public class JdbcDataOperations {
             throw new ExtractDataAccessException(message);
         }
         Connection connection = ConnectionMgr.getConnection();
+        int tryTime = 0;
+        while (Objects.isNull(connection) && tryTime < 30) {
+            ThreadUtil.sleepMaxHalfSecond();
+            connection = ConnectionMgr.getConnection();
+            tryTime++;
+            LogUtils.debug(log, "try to get jdbc connection! {}", tryTime);
+        }
+        if (Objects.isNull(connection)) {
+            throw new ExtractDataAccessException("can not get jdbc connection!");
+        }
+        initJdbcConnectionEnvParameter(connection);
+        return connection;
+    }
+
+    private Connection getConnectionAndClosedAutoCommit(DruidDataSource dynamicProxyDataSource) throws SQLException {
+        if (isShutdown()) {
+            String message = "extract service is shutdown ,task of table is canceled!";
+            throw new ExtractDataAccessException(message);
+        }
+        Connection connection = dynamicProxyDataSource.getConnection();
         int tryTime = 0;
         while (Objects.isNull(connection) && tryTime < 30) {
             ThreadUtil.sleepMaxHalfSecond();

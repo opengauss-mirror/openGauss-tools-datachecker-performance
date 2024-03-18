@@ -58,6 +58,8 @@ public class ConfigManagement {
     private boolean enableHeartBeatHeath;
     @Value("${spring.check.maximum-topic-size}")
     private int maxTopicSize;
+    @Value("${spring.check.rest-api-page-size}")
+    private int restApiPageSize;
     @Value("${data.check.sql_mode_pad_char_to_full_length}")
     private boolean sqlModePadCharToFullLength;
 
@@ -73,6 +75,7 @@ public class ConfigManagement {
         ConfigCache.put(ConfigConstants.FLOATING_POINT_DATA_SUPPLY_ZERO, floatingPointDataSupplyZero);
         ConfigCache.put(ConfigConstants.SQL_MODE_PAD_CHAR_TO_FULL_LENGTH, sqlModePadCharToFullLength);
         ConfigCache.put(ConfigConstants.ENABLE_HEART_BEAT_HEATH, enableHeartBeatHeath);
+        ConfigCache.put(ConfigConstants.REST_API_PAGE_SIZE, restApiPageSize);
         initKafka();
     }
 

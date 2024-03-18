@@ -23,6 +23,7 @@ import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.extract.ExtractConfig;
 import org.opengauss.datachecker.common.entry.extract.ExtractTask;
+import org.opengauss.datachecker.common.entry.extract.PageExtract;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.exception.CheckingException;
 import org.opengauss.datachecker.common.exception.DispatchClientException;
@@ -70,13 +71,32 @@ public class FeignClientService {
     }
 
     /**
-     * Endpoint loading metadata information
+     * 获取元数据信息分页提取对象
      *
      * @param endpoint endpoint type
+     * @return PageExtractTask
+     */
+    public PageExtract getExtractMetaPageInfo(@NonNull Endpoint endpoint) {
+        Result<PageExtract> result = getClient(endpoint).getExtractMetaPageInfo();
+        if (result.isSuccess()) {
+            return result.getData();
+        } else {
+            // Exception in scheduling source side service to obtain database metadata information
+            throw new DispatchClientException(endpoint,
+                "The scheduling source service gets the database metadata information abnormally,"
+                    + result.getMessage());
+        }
+    }
+
+    /**
+     * Endpoint loading metadata information
+     *
+     * @param endpoint    endpoint type
+     * @param pageExtract pageExtract
      * @return Return metadata
      */
-    public Map<String, TableMetadata> queryMetaDataOfSchema(@NonNull Endpoint endpoint) {
-        Result<Map<String, TableMetadata>> result = getClient(endpoint).queryMetaDataOfSchema();
+    public Map<String, TableMetadata> queryMetaDataOfSchema(@NonNull Endpoint endpoint, PageExtract pageExtract) {
+        Result<Map<String, TableMetadata>> result = getClient(endpoint).queryMetaDataOfSchema(pageExtract);
         if (result.isSuccess()) {
             Map<String, TableMetadata> metadata = result.getData();
             return metadata;
@@ -95,8 +115,8 @@ public class FeignClientService {
      * @param processNo Execution process number
      * @return Return to build task collection
      */
-    public List<ExtractTask> buildExtractTaskAllTables(@NonNull Endpoint endpoint, String processNo) {
-        Result<List<ExtractTask>> result = getClient(endpoint).buildExtractTaskAllTables(processNo);
+    public PageExtract buildExtractTaskAllTables(@NonNull Endpoint endpoint, String processNo) {
+        Result<PageExtract> result = getClient(endpoint).buildExtractTaskAllTables(processNo);
         if (result.isSuccess()) {
             return result.getData();
         } else {
@@ -107,21 +127,35 @@ public class FeignClientService {
     }
 
     /**
+     * 获取源端分页任务列表
+     *
+     * @param pageExtract 分页信息
+     * @return 任务列表
+     */
+    public List<ExtractTask> fetchSourceExtractTaskPageTables(PageExtract pageExtract) {
+        Result<List<ExtractTask>> result = getClient(Endpoint.SOURCE).fetchExtractTaskPageTables(pageExtract);
+        if (result.isSuccess()) {
+            return result.getData();
+        } else {
+            // Scheduling extraction service construction task exception
+            throw new DispatchClientException(Endpoint.SOURCE,
+                "The scheduling extraction service construction task is abnormal," + result.getMessage());
+        }
+    }
+
+    /**
      * Destination extraction task configuration
      *
-     * @param endpoint  endpoint type
-     * @param processNo Execution process number
-     * @param taskList  Source side task list
+     * @param taskList Source side task list
      * @return Request results
      */
-    public boolean buildExtractTaskAllTables(@NonNull Endpoint endpoint, String processNo,
-        @NonNull List<ExtractTask> taskList) {
-        Result<Void> result = getClient(endpoint).buildExtractTaskAllTables(processNo, taskList);
+    public boolean dispatchSinkExtractTaskPage(@NonNull List<ExtractTask> taskList) {
+        Result<Void> result = getClient(Endpoint.SINK).dispatchSinkExtractTaskPage(taskList);
         if (result.isSuccess()) {
             return result.isSuccess();
         } else {
             // Scheduling extraction service construction task exception
-            throw new DispatchClientException(endpoint,
+            throw new DispatchClientException(Endpoint.SINK,
                 "The scheduling extraction service construction task is abnormal," + result.getMessage());
         }
     }

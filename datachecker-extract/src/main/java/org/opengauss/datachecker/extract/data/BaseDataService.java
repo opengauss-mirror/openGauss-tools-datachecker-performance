@@ -15,6 +15,7 @@
 
 package org.opengauss.datachecker.extract.data;
 
+import com.alibaba.druid.pool.DruidDataSource;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.logging.log4j.Logger;
@@ -32,7 +33,6 @@ import org.opengauss.datachecker.extract.service.RuleAdapterService;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
-import javax.sql.DataSource;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -59,6 +59,7 @@ public class BaseDataService {
     private DataAccessService dataAccessService;
     @Resource
     private RuleAdapterService ruleAdapterService;
+    private DruidDataSource dynamicProxyDataSource;
     private final List<String> tableNameList = new LinkedList<>();
 
     public DataAccessService getDataAccessService() {
@@ -66,12 +67,19 @@ public class BaseDataService {
     }
 
     /**
+     * 初始化动态代理数据源
+     */
+    public void initDynamicProxyDataSource(DruidDataSource dataSource) {
+        dynamicProxyDataSource = dataSource;
+    }
+
+    /**
      * get data source
      *
      * @return datasource
      */
-    public DataSource getDataSource() {
-        return dataAccessService.getDataSource();
+    public DruidDataSource getDataSource() {
+        return dynamicProxyDataSource;
     }
 
     /**
