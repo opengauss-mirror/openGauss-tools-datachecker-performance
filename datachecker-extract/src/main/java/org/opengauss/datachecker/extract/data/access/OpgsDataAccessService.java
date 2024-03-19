@@ -18,6 +18,7 @@ package org.opengauss.datachecker.extract.data.access;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.common.DataAccessParam;
+import org.opengauss.datachecker.common.entry.common.Health;
 import org.opengauss.datachecker.common.entry.enums.OgCompatibility;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.PrimaryColumnBean;
@@ -57,8 +58,10 @@ public class OpgsDataAccessService extends AbstractDataAccessService {
     }
 
     @Override
-    public boolean health() {
-        return opgsMetaDataMapper.health();
+    public Health health() {
+        String schema = properties.getSchema();
+        String sql = "select nspname tableSchema from pg_namespace where nspname='" + schema + "' limit 1";
+        return health(schema, sql);
     }
 
     @Override

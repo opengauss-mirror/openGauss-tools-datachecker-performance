@@ -16,6 +16,7 @@
 package org.opengauss.datachecker.extract.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import org.opengauss.datachecker.common.entry.common.Health;
 import org.opengauss.datachecker.common.web.Result;
 import org.opengauss.datachecker.extract.data.access.DataAccessService;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -37,9 +38,8 @@ public class ExtractHealthController {
 
     @Operation(summary = "data extraction health check")
     @GetMapping("/extract/health")
-    public Result<Void> health() {
-        dataAccessService.health();
-        return Result.success();
+    public Result<Health> health() {
+        return Result.success(dataAccessService.health());
     }
 
     @GetMapping("/check/target/og/compatibility")

@@ -15,10 +15,13 @@
 
 package org.opengauss.datachecker.extract.data.access;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.entry.check.Difference;
+import org.opengauss.datachecker.common.entry.common.Health;
 import org.opengauss.datachecker.common.entry.extract.PrimaryColumnBean;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
+import org.opengauss.datachecker.common.exception.ExtractDataAccessException;
 import org.opengauss.datachecker.common.util.DurationUtils;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.extract.config.ExtractProperties;
@@ -70,6 +73,48 @@ public abstract class AbstractDataAccessService implements DataAccessService {
     @Override
     public DataSource getDataSource() {
         return jdbcTemplate.getDataSource();
+    }
+
+    /**
+     * 查询schema 信息是否存在
+     *
+     * @param executeQueryStatement executeQueryStatement
+     * @return result
+     */
+    public String adasQuerySchema(String executeQueryStatement) {
+        Connection connection = ConnectionMgr.getConnection();
+        String schema = "";
+        try (PreparedStatement ps = connection.prepareStatement(executeQueryStatement);
+            ResultSet resultSet = ps.executeQuery()) {
+            if (resultSet.next()) {
+                schema = resultSet.getString(RS_COL_SCHEMA);
+            }
+        } catch (SQLException esql) {
+            throw new ExtractDataAccessException("can not access current database");
+        } finally {
+            ConnectionMgr.close(connection, null, null);
+        }
+        return schema;
+    }
+
+    /**
+     * 数据库schema是否合法
+     *
+     * @param schema schema
+     * @param sql    sql
+     * @return result
+     */
+    public Health health(String schema, String sql) {
+        try {
+            String result = adasQuerySchema(sql);
+            if (StringUtils.equalsIgnoreCase(result, schema)) {
+                return Health.buildSuccess();
+            } else {
+                return Health.buildFailed("schema is not exist");
+            }
+        } catch (ExtractDataAccessException ex) {
+            return Health.buildFailed(ex.getMessage());
+        }
     }
 
     /**

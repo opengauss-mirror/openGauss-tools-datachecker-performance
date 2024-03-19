@@ -20,6 +20,7 @@ import org.opengauss.datachecker.check.client.FeignClientService;
 import org.opengauss.datachecker.check.config.DataCheckProperties;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
+import org.opengauss.datachecker.common.entry.common.Health;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.service.ShutdownService;
 import org.opengauss.datachecker.common.util.LogUtils;
@@ -95,13 +96,18 @@ public class EndpointManagerService {
         // service network check ping
         try {
             // service check: service database check
-            Result healthStatus = feignClientService.health(endpoint);
+            Result<Health> healthStatus = feignClientService.health(endpoint);
             if (healthStatus.isSuccess()) {
-                endpointStatusManager.resetStatus(endpoint, Boolean.TRUE);
-                LogUtils.info(log, "{} ：{} current state health", message, requestUri);
+                if (healthStatus.getData()
+                                .isHealth()) {
+                    endpointStatusManager.resetStatus(endpoint, Boolean.TRUE);
+                } else {
+                    endpointStatusManager.resetStatus(endpoint, Boolean.FALSE);
+                }
+                LogUtils.info(log, "{} ：{} status {}", message, requestUri, healthStatus.getData());
             } else {
                 endpointStatusManager.resetStatus(endpoint, Boolean.FALSE);
-                LogUtils.warn(log, "{} : {} current service status is abnormal", message, requestUri);
+                LogUtils.warn(log, "{} : {} status [{}]", message, requestUri, healthStatus.getData());
             }
         } catch (Exception ce) {
             LogUtils.warn(log, "{} : {} service unreachable", message, ce.getMessage());

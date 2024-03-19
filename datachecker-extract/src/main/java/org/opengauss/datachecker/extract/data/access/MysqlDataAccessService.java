@@ -16,6 +16,7 @@
 package org.opengauss.datachecker.extract.data.access;
 
 import org.opengauss.datachecker.common.entry.common.DataAccessParam;
+import org.opengauss.datachecker.common.entry.common.Health;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.PrimaryColumnBean;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
@@ -44,8 +45,11 @@ public class MysqlDataAccessService extends AbstractDataAccessService {
     }
 
     @Override
-    public boolean health() {
-        return mysqlMetaDataMapper.health();
+    public Health health() {
+        String schema = properties.getSchema();
+        String sql = "SELECT SCHEMA_NAME tableSchema FROM information_schema.SCHEMATA info WHERE SCHEMA_NAME='" + schema
+            + "' limit 1";
+        return health(schema, sql);
     }
 
     @Override

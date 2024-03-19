@@ -17,6 +17,7 @@ package org.opengauss.datachecker.extract.data.access;
 
 import org.opengauss.datachecker.common.entry.check.Difference;
 import org.opengauss.datachecker.common.entry.common.DataAccessParam;
+import org.opengauss.datachecker.common.entry.common.Health;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.PrimaryColumnBean;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
@@ -45,9 +46,9 @@ public interface DataAccessService {
     /**
      * check jdbc health
      *
-     * @return true | false
+     * @return health
      */
-    boolean health();
+    Health health();
 
     boolean isOgCompatibilityB();
 

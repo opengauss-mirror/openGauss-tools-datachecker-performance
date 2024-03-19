@@ -23,6 +23,7 @@ import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.entry.check.Difference;
 import org.opengauss.datachecker.common.entry.common.DataAccessParam;
+import org.opengauss.datachecker.common.entry.common.Health;
 import org.opengauss.datachecker.common.entry.csv.CsvTableColumnMeta;
 import org.opengauss.datachecker.common.entry.csv.CsvTableMeta;
 import org.opengauss.datachecker.common.entry.enums.ColumnKey;
@@ -68,8 +69,8 @@ public class CsvDataAccessService implements DataAccessService {
     }
 
     @Override
-    public boolean health() {
-        return true;
+    public Health health() {
+        return Health.buildSuccess();
     }
 
     @Override
