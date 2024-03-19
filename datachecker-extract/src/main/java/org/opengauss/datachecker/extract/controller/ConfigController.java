@@ -23,6 +23,7 @@ import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.common.GlobalConfig;
 import org.opengauss.datachecker.common.entry.csv.CsvPathConfig;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
+import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.service.ProcessLogService;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.SpringUtil;
@@ -96,6 +97,11 @@ public class ConfigController {
     public Result<Void> distributeConfig(@RequestBody CsvPathConfig csvPathConfig) {
         configManagement.initCsvConfig(csvPathConfig);
         LogUtils.info(log, "init csv config ");
+        if (Objects.equals(Endpoint.SINK,ConfigCache.getEndPoint())) {
+            DruidDataSourceConfig bean = SpringUtil.getBean(DruidDataSourceConfig.class);
+            baseDataService.initDynamicProxyDataSource((DruidDataSource) bean.druidDataSource());
+            context.loadDatabaseMetaData();
+        }
         return Result.success();
     }
 }

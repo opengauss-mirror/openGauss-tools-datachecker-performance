@@ -73,6 +73,11 @@ public class DmlBuilder {
 
     protected static final List<String> BLOB_LIST = List.of("blob", "tinyblob", "mediumblob", "longblob");
     protected static final List<String> BINARY = List.of("binary", "varbinary");
+
+    /**
+     * mysql中bit 类型长度范围为[1-64] 固定长度类型，不支持可变长的BIT类型
+     */
+    protected static final List<String> BIT = List.of("bit");
     /**
      * columns
      */
@@ -109,6 +114,7 @@ public class DmlBuilder {
      * hex prefix
      */
     protected String hexPrefix;
+    protected String bitPrefix;
 
     public DmlBuilder() {
     }
@@ -118,6 +124,7 @@ public class DmlBuilder {
         this.isOgCompatibilityB = ogCompatibility;
         this.checkMode = ConfigCache.getCheckMode();
         this.hexPrefix = Objects.equals(CheckMode.CSV, checkMode) ? HexUtil.HEX_OG_PREFIX : HexUtil.HEX_PREFIX;
+        this.bitPrefix = "b";
     }
 
     /**
@@ -187,6 +194,8 @@ public class DmlBuilder {
                 valueList.add(columnsValue.get(columnName));
             } else if (BLOB_LIST.contains(columnMeta.getDataType()) || BINARY.contains(columnMeta.getDataType())) {
                 valueList.add(SINGLE_QUOTES + hexPrefix + columnsValue.get(columnName) + SINGLE_QUOTES);
+            } else if (BIT.contains(columnMeta.getDataType())) {
+                valueList.add(convertBit(columnsValue.get(columnName), checkMode));
             } else {
                 String value = columnsValue.get(columnName);
                 if (Objects.isNull(value)) {
@@ -198,6 +207,14 @@ public class DmlBuilder {
             }
         });
         return valueList;
+    }
+
+    protected String convertBit(String value, CheckMode mode) {
+        if (Objects.equals(mode, CheckMode.CSV)) {
+            return bitPrefix + SINGLE_QUOTES + value + SINGLE_QUOTES;
+        } else {
+            return bitPrefix + SINGLE_QUOTES + HexUtil.hexToBinary(value) + SINGLE_QUOTES;
+        }
     }
 
     interface Fragment {

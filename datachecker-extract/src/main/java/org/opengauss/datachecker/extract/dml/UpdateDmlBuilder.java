@@ -142,6 +142,8 @@ public class UpdateDmlBuilder extends DmlBuilder {
                 builder.append(columnValue);
             } else if (BLOB_LIST.contains(columnMeta.getDataType()) || BINARY.contains(columnMeta.getDataType())) {
                 builder.append(convertValue(hexPrefix + columnValue));
+            } else if (BIT.contains(columnMeta.getDataType())) {
+                builder.append(convertBit(columnValue, checkMode));
             } else {
                 builder.append(convertValue(columnValue));
             }
