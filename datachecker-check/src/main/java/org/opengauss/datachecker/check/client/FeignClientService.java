@@ -17,6 +17,7 @@ package org.opengauss.datachecker.check.client;
 
 import org.opengauss.datachecker.common.constant.WorkerSwitch;
 import org.opengauss.datachecker.common.entry.common.GlobalConfig;
+import org.opengauss.datachecker.common.entry.common.Health;
 import org.opengauss.datachecker.common.entry.common.RepairEntry;
 import org.opengauss.datachecker.common.entry.csv.CsvPathConfig;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
@@ -66,7 +67,7 @@ public class FeignClientService {
      * @param endpoint endpoint type
      * @return Return the corresponding result of the interface
      */
-    public Result<Void> health(@NonNull Endpoint endpoint) {
+    public Result<Health> health(@NonNull Endpoint endpoint) {
         return getClient(endpoint).health();
     }
 

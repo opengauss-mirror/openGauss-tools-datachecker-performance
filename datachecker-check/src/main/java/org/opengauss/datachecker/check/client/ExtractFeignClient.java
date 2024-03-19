@@ -16,6 +16,7 @@
 package org.opengauss.datachecker.check.client;
 
 import org.opengauss.datachecker.common.entry.common.GlobalConfig;
+import org.opengauss.datachecker.common.entry.common.Health;
 import org.opengauss.datachecker.common.entry.common.RepairEntry;
 import org.opengauss.datachecker.common.entry.csv.CsvPathConfig;
 import org.opengauss.datachecker.common.entry.extract.ExtractConfig;
@@ -46,7 +47,7 @@ public interface ExtractFeignClient {
      * @return Return the corresponding result of the interface
      */
     @GetMapping("/extract/health")
-    Result<Void> health();
+    Result<Health> health();
 
     /**
      * Endpoint loading metadata information page

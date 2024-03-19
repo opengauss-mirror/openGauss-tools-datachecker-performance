@@ -16,6 +16,7 @@
 package org.opengauss.datachecker.check.client;
 
 import org.opengauss.datachecker.common.entry.common.GlobalConfig;
+import org.opengauss.datachecker.common.entry.common.Health;
 import org.opengauss.datachecker.common.entry.common.RepairEntry;
 import org.opengauss.datachecker.common.entry.csv.CsvPathConfig;
 import org.opengauss.datachecker.common.entry.extract.ExtractConfig;
@@ -59,7 +60,7 @@ public class ExtractFallbackFactory implements FallbackFactory<ExtractFeignClien
         }
 
         @Override
-        public Result<Void> health() {
+        public Result<Health> health() {
             return Result.error("Remote call service health check exception");
         }
 
