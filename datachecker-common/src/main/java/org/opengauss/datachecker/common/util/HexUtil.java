@@ -15,6 +15,8 @@
 
 package org.opengauss.datachecker.common.util;
 
+import java.math.BigInteger;
+
 /**
  * HexUtil
  *
@@ -141,6 +143,23 @@ public class HexUtil {
             hexBuilder.append(group);
         }
         return hexBuilder.toString();
+    }
+
+    /**
+     * 16进制字符串转换为二进制位串
+     *
+     * @param hexStream hexStream
+     * @return binary
+     */
+    public static String hexToBinary(String hexStream) {
+        byte[] bytes = new BigInteger(hexStream, 16).toByteArray();
+        StringBuilder binaryStringBuilder = new StringBuilder();
+        for (byte b : bytes) {
+            for (int i = 7; i >= 0; i--) {
+                binaryStringBuilder.append((b & (1 << i)) != 0 ? '1' : '0');
+            }
+        }
+        return binaryStringBuilder.toString();
     }
 
     private static boolean isValidBinary(String binary) {

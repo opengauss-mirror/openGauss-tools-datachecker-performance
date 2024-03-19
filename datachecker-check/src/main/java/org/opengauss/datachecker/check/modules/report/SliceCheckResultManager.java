@@ -118,7 +118,7 @@ public class SliceCheckResultManager {
         }
         tableStructureResult.put(table, result);
         failedTableCount++;
-        CheckFailed failed = translateCheckFailed(List.of(result));
+        CheckFailed failed = translateCheckFailed(List.of(), List.of(result));
         String failedLogPath = ConfigCache.getCheckResult() + CheckResultConstants.FAILED_LOG_NAME;
         FileUtils.writeAppendFile(failedLogPath, JsonObjectUtil.prettyFormatMillis(failed) + ",");
         refreshSummary();
@@ -151,7 +151,8 @@ public class SliceCheckResultManager {
             String checkResultPath = ConfigCache.getCheckResult();
             if (resultMap.containsKey(CheckResultConstants.RESULT_FAILED)) {
                 List<CheckDiffResult> tableFiledList = resultMap.get(CheckResultConstants.RESULT_FAILED);
-                CheckFailed failed = translateCheckFailed(tableFiledList);
+                List<CheckDiffResult> tableSuccessList = resultMap.get(CheckResultConstants.RESULT_SUCCESS);
+                CheckFailed failed = translateCheckFailed(tableSuccessList, tableFiledList);
                 String failedLogPath = checkResultPath + CheckResultConstants.FAILED_LOG_NAME;
                 FileUtils.writeAppendFile(failedLogPath, JsonObjectUtil.prettyFormatMillis(failed) + ",");
                 reduceFailedRepair(checkResultPath, tableFiledList);
@@ -160,6 +161,7 @@ public class SliceCheckResultManager {
                     String csvFailedLogPath = checkResultPath + CheckResultConstants.CSV_FAILED_DETAIL_NAME;
                     saveCsvSliceFailedDetails(csvFailedList, csvFailedLogPath);
                 }
+                rowCount += failed.getRowCount();
                 failedTableCount++;
             } else {
                 List<CheckDiffResult> tableSuccessList = resultMap.get(CheckResultConstants.RESULT_SUCCESS);
@@ -223,35 +225,36 @@ public class SliceCheckResultManager {
         FileUtils.writeFile(summaryPath, JsonObjectUtil.prettyFormatMillis(checkSummary));
     }
 
-    private CheckFailed translateCheckFailed(List<CheckDiffResult> tableFiledList) {
+    private CheckFailed translateCheckFailed(List<CheckDiffResult> successList, List<CheckDiffResult> tableFailedList) {
         CheckFailed failed = new CheckFailed();
-        CheckDiffResult resultCommon = tableFiledList.get(0);
+        CheckDiffResult resultCommon = tableFailedList.get(0);
         BeanUtils.copyProperties(resultCommon, failed);
         StringBuilder hasMore = new StringBuilder();
-        Set<String> insertKeySet = fetchInsertDiffKeys.fetchKey(tableFiledList);
-        Set<String> deleteKeySet = fetchDeleteDiffKeys.fetchKey(tableFiledList);
-        Set<String> updateKeySet = fetchUpdateDiffKeys.fetchKey(tableFiledList);
-        failed.setTopic(new String[] {tableFiledList.get(0).getTopic()})
-              .setDiffCount(fetchTotalRepair(tableFiledList))
-              .setStartTime(fetchMinStartTime(tableFiledList))
-              .setEndTime(fetchMaxEndTime(tableFiledList))
+        Set<String> insertKeySet = fetchInsertDiffKeys.fetchKey(tableFailedList);
+        Set<String> deleteKeySet = fetchDeleteDiffKeys.fetchKey(tableFailedList);
+        Set<String> updateKeySet = fetchUpdateDiffKeys.fetchKey(tableFailedList);
+        failed.setTopic(new String[] {tableFailedList.get(0).getTopic()})
+              .setStartTime(fetchMinStartTime(tableFailedList))
+              .setEndTime(fetchMaxEndTime(tableFailedList))
               .setKeyInsertSet(getKeyList(insertKeySet, hasMore, "insert key has more;"))
               .setKeyDeleteSet(getKeyList(deleteKeySet, hasMore, "delete key has more;"))
               .setKeyUpdateSet(getKeyList(updateKeySet, hasMore, "update key has more;"));
+        failed.setDiffCount(failed.getKeyInsertSize() + failed.getKeyUpdateSize() + failed.getKeyDeleteSize());
         String message = String.format(FAILED_MESSAGE, failed.getKeyInsertSize(), failed.getKeyUpdateSize(),
             failed.getKeyDeleteSize());
         if (resultCommon.isTableStructureEquals()) {
             failed.setMessage(message);
         }
         failed.setHasMore(hasMore.toString())
-              .setRowCount(fetchRowCount.fetchCount(tableFiledList))
+              .setRowCount(fetchRowCount.fetchCount(tableFailedList) + fetchRowCount.fetchCount(successList))
               .setCost(calcCheckTaskCost(failed.getStartTime(), failed.getEndTime()));
         return failed;
     }
 
-    private FetchRowCount fetchRowCount = list -> list.stream()
-                                                      .mapToLong(CheckDiffResult::getRowCount)
-                                                      .sum();
+    private FetchRowCount fetchRowCount = list -> Objects.isNull(list) ? 0 : list.stream()
+                                                                                 .mapToLong(
+                                                                                     CheckDiffResult::getRowCount)
+                                                                                 .sum();
 
     private FetchDiffKeys fetchInsertDiffKeys = tableFiledList -> {
         Set<String> diffKey = new TreeSet<>();

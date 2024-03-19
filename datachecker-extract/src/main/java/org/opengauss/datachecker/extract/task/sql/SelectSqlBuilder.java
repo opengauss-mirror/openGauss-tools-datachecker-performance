@@ -209,7 +209,7 @@ public class SelectSqlBuilder {
             return getNumberPkConditionFull(primaryKey);
         }
         if (isFirst) {
-            return primaryKey + "<= " + offset;
+            return primaryKey + "< " + offset;
         }
         if (isEnd) {
             return primaryKey + ">= " + start;
