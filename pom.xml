@@ -38,7 +38,12 @@
         <snakeyaml.version>2.0</snakeyaml.version>
         <powermock.version>2.0.0</powermock.version>
         <commons.cli.version>1.4</commons.cli.version>
+        <commons.fileupload.version>1.5</commons.fileupload.version>
+        <commons.compress.version>1.26.1</commons.compress.version>
+        <commons.collection.version>4.4</commons.collection.version>
+        <log4j.version>2.23.1</log4j.version>
         <oshi.version>6.5.0</oshi.version>
+        <hutool-all.version>5.7.8</hutool-all.version>
         <opencsv.version>5.7.1</opencsv.version>
         <disruptor.version>3.4.4</disruptor.version>
     </properties>
@@ -74,7 +79,7 @@
             <dependency>
                 <groupId>cn.hutool</groupId>
                 <artifactId>hutool-all</artifactId>
-                <version>5.7.8</version>
+                <version>${hutool-all.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.opencsv</groupId>
@@ -90,6 +95,31 @@
                 <groupId>org.springdoc</groupId>
                 <artifactId>springdoc-openapi-ui</artifactId>
                 <version>${springdoc.openapi.ui.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-slf4j-impl</artifactId>
+                <version>${log4j2.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-api</artifactId>
+                <version>${log4j2.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-core</artifactId>
+                <version>${log4j2.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-compress</artifactId>
+                <version>${commons.compress.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>commons-fileupload</groupId>
+                <artifactId>commons-fileupload</artifactId>
+                <version>${commons.fileupload.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.lmax</groupId>
@@ -136,7 +166,7 @@
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-collections4</artifactId>
-                <version>4.4</version>
+                <version>${commons.collection.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.google.guava</groupId>
