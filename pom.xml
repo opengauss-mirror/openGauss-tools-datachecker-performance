@@ -11,7 +11,7 @@
 
     <groupId>org.opengauss</groupId>
     <artifactId>gs_datachecker</artifactId>
-    <version>6.0.0.rc1</version>
+    <version>6.0.0rc1</version>
     <packaging>pom</packaging>
 
     <name>gs_datachecker</name>
@@ -20,7 +20,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <gs.datacheck.version>6.0.0.rc1</gs.datacheck.version>
+        <gs.datacheck.version>${project.version}</gs.datacheck.version>
         <spring.boot.version>2.6.15</spring.boot.version>
         <spring.cloud.version>2021.0.0</spring.cloud.version>
         <java.version>11</java.version>
