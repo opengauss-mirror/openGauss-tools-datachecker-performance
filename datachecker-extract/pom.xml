@@ -20,12 +20,12 @@
     <parent>
         <groupId>org.opengauss</groupId>
         <artifactId>gs_datachecker</artifactId>
-        <version>6.0.0.rc1</version>
+        <version>6.0.0rc1</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>datachecker-extract</artifactId>
-    <version>${gs.datacheck.version}</version>
+    <version>${project.parent.version}</version>
     <name>datachecker-extract</name>
     <packaging>jar</packaging>
     <description>datachecker-extract</description>
