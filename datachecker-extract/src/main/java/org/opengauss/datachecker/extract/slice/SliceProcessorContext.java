@@ -34,6 +34,7 @@ import org.opengauss.datachecker.extract.task.sql.SliceQueryStatement;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.PreDestroy;
 import javax.annotation.Resource;
 import java.util.Objects;
 
@@ -63,6 +64,15 @@ public class SliceProcessorContext {
 
     public void saveProcessing(SliceVo slice) {
         processLogService.saveProcessHistoryLogging(slice.getTable(), slice.getNo());
+    }
+
+
+    /**
+     * 销毁kafkaTemplate
+     */
+    @PreDestroy
+    public void destroy() {
+        kafkaTemplate.destroy();
     }
 
     /**

@@ -95,7 +95,7 @@
     <select id="queryPointList" resultType="string">
         select s.${param.colName}
         from ( select row_number() over(order by r.${param.colName} asc) as rn,r.${param.colName} from ${param.schema}.${param.name}  r ) s
-        where mod(s.rn, #{param.offset}) = 0
+        where mod(s.rn, #{param.offset}) = 1
     </select>
 
     <select id="checkDatabaseNotEmpty" resultType="boolean">

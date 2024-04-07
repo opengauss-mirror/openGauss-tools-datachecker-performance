@@ -41,6 +41,7 @@ import java.time.LocalDateTime;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * AbstractDataAccessService
@@ -106,6 +107,10 @@ public abstract class AbstractDataAccessService implements DataAccessService {
      */
     public Health health(String schema, String sql) {
         try {
+            Connection connection = ConnectionMgr.getConnection();
+            if (Objects.isNull(connection)) {
+                return Health.buildFailed("can not connection current database");
+            }
             String result = adasQuerySchema(sql);
             if (StringUtils.equalsIgnoreCase(result, schema)) {
                 return Health.buildSuccess();

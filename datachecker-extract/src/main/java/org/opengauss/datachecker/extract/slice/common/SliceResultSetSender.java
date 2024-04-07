@@ -49,6 +49,7 @@ public class SliceResultSetSender {
     private final List<ColumnsMetaData> columnMetas;
     private final List<String> primary;
     private final String tableName;
+    private String sliceKey;
 
     /**
      * constructor
@@ -86,6 +87,7 @@ public class SliceResultSetSender {
      */
     public void setRecordSendKey(String key) {
         this.kafkaOperate.setRecordSendKey(key);
+        this.sliceKey = key;
     }
 
     /**
@@ -140,6 +142,7 @@ public class SliceResultSetSender {
         RowDataHash hashData = new RowDataHash();
         hashData.setKey(primaryValue)
                 .setKHash(primaryHash)
+                .setSliceKey(sliceKey)
                 .setVHash(rowHash);
         return hashData;
     }

@@ -241,7 +241,7 @@ public class SliceCheckResultManager {
               .setKeyUpdateSet(getKeyList(updateKeySet, hasMore, "update key has more;"));
         failed.setDiffCount(failed.getKeyInsertSize() + failed.getKeyUpdateSize() + failed.getKeyDeleteSize());
         String message = String.format(FAILED_MESSAGE, failed.getKeyInsertSize(), failed.getKeyUpdateSize(),
-            failed.getKeyDeleteSize());
+                failed.getKeyDeleteSize()) + resultCommon.getError();
         if (resultCommon.isTableStructureEquals()) {
             failed.setMessage(message);
         }

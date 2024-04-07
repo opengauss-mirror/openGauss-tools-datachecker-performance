@@ -25,6 +25,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * ThreadUtil
@@ -94,17 +95,33 @@ public class ThreadUtil {
      * @param name thread name
      */
     public static void killThreadByName(String name) {
-        ThreadGroup currentGroup = Thread.currentThread()
-                                         .getThreadGroup();
-        int noThreads = currentGroup.activeCount();
-        Thread[] lstThreads = new Thread[noThreads];
-        currentGroup.enumerate(lstThreads);
-        Arrays.stream(lstThreads)
-              .filter(thread -> StringUtils.startsWith(thread.getName(), name))
-              .forEach(thread -> {
-                  thread.interrupt();
-                  LogUtils.warn(log, "thread [{}] has interrupted", thread.getName());
-              });
+        AtomicInteger threadCount = new AtomicInteger(0);
+        do {
+            ThreadGroup currentGroup = Thread.currentThread().getThreadGroup();
+            int noThreads = currentGroup.activeCount();
+            Thread[] lstThreads = new Thread[noThreads];
+            currentGroup.enumerate(lstThreads);
+            threadCount.set(0);
+            Arrays.stream(lstThreads)
+                    .filter(thread -> {
+                        if (StringUtils.containsIgnoreCase(thread.getName(), name)) {
+                            threadCount.incrementAndGet();
+                            return true;
+                        }
+                        return false;
+                    })
+                    .forEach(thread -> {
+                        if (thread.getState().equals(Thread.State.WAITING)) {
+                            log.warn("thread [{}] :[{} ] has interrupted", thread.getName(), thread.getState());
+                            thread.interrupt();
+                        } else {
+                            threadCount.decrementAndGet();
+                            log.warn("thread [{}] :[{} ]  has stop", thread.getName(), thread.getState());
+                            thread.stop();
+                        }
+                    });
+        } while (threadCount.get() > 0);
+
     }
 
     /**

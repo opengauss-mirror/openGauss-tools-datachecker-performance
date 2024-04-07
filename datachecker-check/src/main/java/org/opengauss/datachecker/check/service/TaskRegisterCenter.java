@@ -57,6 +57,7 @@ public class TaskRegisterCenter {
 
     private static final Logger log = LogUtils.getLogger(TaskRegisterCenter.class);
     private static final int STATUS_UPDATED_ALL = 3;
+    private static final int STATUS_FAILED = -1;
 
     private final ReentrantLock lock = new ReentrantLock();
     @Resource
@@ -116,21 +117,19 @@ public class TaskRegisterCenter {
                 Endpoint endpoint = sliceExt.getEndpoint();
                 MapUtils.put(sliceExtendMap, sliceName, endpoint, sliceExt);
                 LogUtils.debug(log, "{} update slice [{}] status [{}->{}]", endpoint, sliceName, oldStatus, curStatus);
+                SliceExtend source = MapUtils.get(sliceExtendMap, sliceName, Endpoint.SOURCE);
+                SliceExtend sink = MapUtils.get(sliceExtendMap, sliceName, Endpoint.SINK);
                 if (curStatus == STATUS_UPDATED_ALL) {
-                    notifySliceCheckHandle(slice);
+                    sliceCheckEventHandler.handle(new SliceCheckEvent(slice, source, sink));
+                    remove(slice);
+                }else if (curStatus == STATUS_FAILED) {
+                    sliceCheckEventHandler.handleFailed(new SliceCheckEvent(slice, source, sink));
+                    remove(slice);
                 }
             }
         } finally {
             lock.unlock();
         }
-    }
-
-    private void notifySliceCheckHandle(SliceVo slice) {
-        String sliceName = slice.getName();
-        SliceExtend source = MapUtils.get(sliceExtendMap, sliceName, Endpoint.SOURCE);
-        SliceExtend sink = MapUtils.get(sliceExtendMap, sliceName, Endpoint.SINK);
-        sliceCheckEventHandler.handle(new SliceCheckEvent(slice, source, sink));
-        remove(slice);
     }
 
     private void notifyIgnoreSliceCheckHandle(String table) {

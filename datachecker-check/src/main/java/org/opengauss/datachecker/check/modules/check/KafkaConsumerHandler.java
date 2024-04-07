@@ -24,14 +24,11 @@ import org.apache.kafka.common.TopicPartition;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.entry.extract.RowDataHash;
 import org.opengauss.datachecker.common.entry.extract.SliceExtend;
+import org.opengauss.datachecker.common.exception.CheckConsumerPollEmptyException;
 import org.opengauss.datachecker.common.util.LogUtils;
-import org.opengauss.datachecker.common.util.ThreadUtil;
 
 import java.time.Duration;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -44,9 +41,9 @@ import java.util.concurrent.atomic.AtomicLong;
 public class KafkaConsumerHandler {
     private static final Logger log = LogUtils.getLogger(KafkaConsumerHandler.class);
     private static final int KAFKA_CONSUMER_POLL_DURATION = 20;
+    private static final int MAX_CONSUMER_POLL_TIMES = 50;
 
-    private final KafkaConsumer<String, String> kafkaConsumer;
-
+    private KafkaConsumer<String, String> kafkaConsumer;
     /**
      * Constructor
      *
@@ -55,6 +52,23 @@ public class KafkaConsumerHandler {
      */
     public KafkaConsumerHandler(KafkaConsumer<String, String> consumer, int retryTimes) {
         kafkaConsumer = consumer;
+    }
+
+    /**
+     * Constructor
+     *
+     * @param consumer consumer
+     */
+    public KafkaConsumerHandler(KafkaConsumer<String, String> consumer) {
+        kafkaConsumer = consumer;
+    }
+
+    /**
+     * 获取kafka consumer
+     *
+     */
+    public KafkaConsumer<String, String> getConsumer() {
+        return kafkaConsumer;
     }
 
     /**
@@ -83,19 +97,35 @@ public class KafkaConsumerHandler {
      *
      * @param topicPartition topic partition
      * @param sExtend        slice extend
-     * @param dataList       data list
+     * @param attempts
      */
-    public void pollTpSliceData(TopicPartition topicPartition, SliceExtend sExtend, List<RowDataHash> dataList) {
+    public void consumerAssign(TopicPartition topicPartition, SliceExtend sExtend, int attempts) {
         kafkaConsumer.assign(List.of(topicPartition));
-        kafkaConsumer.seek(topicPartition, sExtend.getStartOffset());
+        if (attempts == 0) {
+            kafkaConsumer.seek(topicPartition, sExtend.getStartOffset());
+        }
+    }
+
+    /**
+     * consumer poll data from the topic partition, and filter bu slice extend. then add data in the data list.
+     *
+     * @param sExtend  slice extend
+     * @param dataList data list
+     */
+    public synchronized void pollTpSliceData(SliceExtend sExtend, List<RowDataHash> dataList) {
         AtomicLong currentCount = new AtomicLong(0);
+        int pollEmptyCount = 0;
         while (currentCount.get() < sExtend.getCount()) {
             ConsumerRecords<String, String> records =
                 kafkaConsumer.poll(Duration.ofMillis(KAFKA_CONSUMER_POLL_DURATION));
             if (records.count() <= 0) {
-                ThreadUtil.sleepHalfSecond();
+                pollEmptyCount++;
+                if (pollEmptyCount > MAX_CONSUMER_POLL_TIMES) {
+                    throw new CheckConsumerPollEmptyException(sExtend.getName());
+                }
                 continue;
             }
+            pollEmptyCount = 0;
             records.forEach(record -> {
                 RowDataHash row = JSON.parseObject(record.value(), RowDataHash.class);
                 if (row.getSNo() == sExtend.getNo() && StringUtils.equals(record.key(), sExtend.getName())) {
@@ -170,8 +200,8 @@ public class KafkaConsumerHandler {
      */
     public void closeConsumer() {
         if (kafkaConsumer != null) {
-            kafkaConsumer.unsubscribe();
             kafkaConsumer.close();
+            kafkaConsumer = null;
         }
     }
 }

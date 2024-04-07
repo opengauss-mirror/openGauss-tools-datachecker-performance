@@ -58,6 +58,7 @@ public class CheckPoint {
      * @param dataAccessService dataAccessService
      */
     public CheckPoint(DataAccessService dataAccessService) {
+        this.dataSource = (DruidDataSource) dataAccessService.getDataSource();
         this.dataAccessService = dataAccessService;
     }
 
@@ -93,11 +94,9 @@ public class CheckPoint {
                                                      .setName(SqlUtil.escape(tableName, dataBaseType))
                                                      .setColName(SqlUtil.escape(pkName, dataBaseType));
         Connection connection = Objects.nonNull(dataSource) ? getConnection() : ConnectionMgr.getConnection();
-        String minCheckPoint = dataAccessService.min(connection, param);
         param.setOffset(slice);
         Object maxPoint = dataAccessService.max(connection, param);
         List<Object> checkPointList = dataAccessService.queryPointList(connection, param);
-        checkPointList.add(minCheckPoint);
         checkPointList.add(maxPoint);
         checkPointList = checkPointList.stream()
                                        .distinct()

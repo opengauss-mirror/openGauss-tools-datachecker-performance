@@ -60,9 +60,12 @@ public class ConfigManagement {
     private int maxTopicSize;
     @Value("${spring.check.rest-api-page-size}")
     private int restApiPageSize;
+    @Value("${data.check.auto-delete-topic}")
+    private int autoDeleteTopic;
     @Value("${data.check.sql_mode_pad_char_to_full_length}")
     private boolean sqlModePadCharToFullLength;
-
+    @Value("${spring.check.maximum-pool-size}")
+    private int maxPoolSize = 10;
     /**
      * config management init
      */
@@ -76,6 +79,8 @@ public class ConfigManagement {
         ConfigCache.put(ConfigConstants.SQL_MODE_PAD_CHAR_TO_FULL_LENGTH, sqlModePadCharToFullLength);
         ConfigCache.put(ConfigConstants.ENABLE_HEART_BEAT_HEATH, enableHeartBeatHeath);
         ConfigCache.put(ConfigConstants.REST_API_PAGE_SIZE, restApiPageSize);
+        ConfigCache.put(ConfigConstants.AUTO_DELETE_TOPIC, autoDeleteTopic);
+        ConfigCache.put(ConfigConstants.MAXIMUM_POOL_SIZE, maxPoolSize);
         initKafka();
     }
 

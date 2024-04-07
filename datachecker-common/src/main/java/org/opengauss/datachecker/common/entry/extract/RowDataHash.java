@@ -39,6 +39,7 @@ public class RowDataHash {
      */
     private String key;
 
+    private String sliceKey;
     /**
      * CSV scene for locating data in CSV files
      */
@@ -67,11 +68,12 @@ public class RowDataHash {
             return false;
         }
         RowDataHash that = (RowDataHash) o;
-        return kHash == that.kHash && vHash == that.vHash && sNo == that.sNo && getKey().equals(that.getKey());
+        return kHash == that.kHash && vHash == that.vHash && sNo == that.sNo && getKey().equals(that.getKey())
+                && getSliceKey().equals(that.getSliceKey());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getKey(), kHash, vHash, sNo);
+        return Objects.hash(getKey(), kHash, vHash, sNo, sliceKey);
     }
 }

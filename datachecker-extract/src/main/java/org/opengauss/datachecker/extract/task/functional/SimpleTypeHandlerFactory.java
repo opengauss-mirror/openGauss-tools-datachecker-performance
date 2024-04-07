@@ -35,6 +35,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TimeZone;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 类型处理器工厂
@@ -50,7 +51,7 @@ public class SimpleTypeHandlerFactory {
     private static final DateTimeFormatter YEAR = DateTimeFormatter.ofPattern("yyyy");
     private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm:ss");
     private static final DateTimeFormatterMap TIMESTAMP_MAPPER = new DateTimeFormatterMap();
-    private static final Map<Integer, String> FLOAT_FORMAT_CACHE = new HashMap<>();
+    private static final Map<Integer, String> FLOAT_FORMAT_CACHE = new ConcurrentHashMap<>();
     private static final int O_NUMERIC_SCALE_F84 = -84;
     private static final int O_NUMERIC_SCALE_0 = 0;
 

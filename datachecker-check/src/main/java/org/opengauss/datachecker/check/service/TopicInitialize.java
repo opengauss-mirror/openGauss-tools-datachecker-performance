@@ -93,13 +93,18 @@ public class TopicInitialize {
      * </pre>
      */
     public void drop() {
-        if (StringUtils.isNotEmpty(checkPointSwapTopicName)) {
-            kafkaServiceManager.deleteTopic(List.of(checkPointSwapTopicName));
-            LogUtils.info(log, "drop check point swap topic [{}]", checkPointSwapTopicName);
-        }
-        if (CollectionUtils.isNotEmpty(topicList)) {
-            topicList.forEach(topic -> kafkaServiceManager.deleteTopic(List.of(topic)));
-            LogUtils.info(log, "drop data check fixed topic name {}", topicList);
+        kafkaServiceManager.closeConsumerPool();
+        if (ConfigCache.isDeleteTopic()) {
+            if (StringUtils.isNotEmpty(checkPointSwapTopicName)) {
+                kafkaServiceManager.deleteTopic(List.of(checkPointSwapTopicName));
+                LogUtils.info(log, "drop check point swap topic [{}]", checkPointSwapTopicName);
+            }
+            if (CollectionUtils.isNotEmpty(topicList)) {
+                topicList.forEach(topic -> kafkaServiceManager.deleteTopic(List.of(topic)));
+                LogUtils.info(log, "drop data check fixed topic name {}", topicList);
+            }
+        } else {
+            LogUtils.info(log, "delete topic is disabled by config [{},{}]", checkPointSwapTopicName, topicList);
         }
     }
 

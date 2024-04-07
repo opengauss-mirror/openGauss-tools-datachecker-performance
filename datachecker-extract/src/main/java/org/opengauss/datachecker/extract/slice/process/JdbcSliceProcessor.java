@@ -16,6 +16,7 @@
 package org.opengauss.datachecker.extract.slice.process;
 
 import com.alibaba.druid.pool.DruidDataSource;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.entry.extract.SliceExtend;
 import org.opengauss.datachecker.common.entry.extract.SliceVo;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
@@ -51,6 +52,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @since ：11
  */
 public class JdbcSliceProcessor extends AbstractSliceProcessor {
+    private static final Logger log = LogUtils.getLogger(JdbcSliceProcessor.class);
     private final JdbcDataOperations jdbcOperation;
     private final AtomicInteger rowCount = new AtomicInteger(0);
     private final DruidDataSource dataSource;
