@@ -41,8 +41,7 @@ import java.util.concurrent.ExecutionException;
  * @since ：11
  */
 public abstract class AbstractSliceProcessor extends AbstractProcessor {
-    protected static final int FETCH_SIZE = 10000;
-    protected static final Logger log = LogUtils.getLogger(AbstractSliceProcessor.class);
+    private static final Logger log = LogUtils.getLogger(AbstractSliceProcessor.class);
 
     protected SliceVo slice;
     protected final String topic;
@@ -88,67 +87,5 @@ public abstract class AbstractSliceProcessor extends AbstractProcessor {
     protected long durationBetweenToMillis(LocalDateTime start, LocalDateTime end) {
         return Duration.between(start, end)
                        .toMillis();
-    }
-
-    /**
-     * min offset
-     *
-     * @param offsetList offsetList
-     * @return min
-     */
-    protected long getMinOffset(List<long[]> offsetList) {
-        return offsetList.stream()
-                         .mapToLong(a -> a[0])
-                         .min()
-                         .orElse(0L);
-    }
-
-    /**
-     * max offset
-     *
-     * @param offsetList offsetList
-     * @return max
-     */
-    protected long getMaxOffset(List<long[]> offsetList) {
-        return offsetList.stream()
-                         .mapToLong(a -> a[1])
-                         .max()
-                         .orElse(0L);
-    }
-
-    /**
-     * Analyze the sending result SendResult of the sharding record <br>
-     * and obtain the offset range written to the topic in the current set, offset (min, max)
-     *
-     * @param batchFutures batchFutures
-     * @return offset (min, max)
-     */
-    protected long[] getBatchFutureRecordOffsetScope(List<ListenableFuture<SendResult<String, String>>> batchFutures) {
-        Iterator<ListenableFuture<SendResult<String, String>>> futureIterator = batchFutures.iterator();
-        ListenableFuture<SendResult<String, String>> candidate = futureIterator.next();
-        long minOffset = getFutureOffset(candidate);
-        long maxOffset = minOffset;
-
-        while (futureIterator.hasNext()) {
-            long next = getFutureOffset(futureIterator.next());
-            if (next < minOffset) {
-                minOffset = next;
-            }
-            if (next > maxOffset) {
-                maxOffset = next;
-            }
-        }
-        return new long[] {minOffset, maxOffset};
-    }
-
-    private long getFutureOffset(ListenableFuture<SendResult<String, String>> next) {
-        try {
-            SendResult<String, String> sendResult = next.get();
-            return sendResult.getRecordMetadata()
-                             .offset();
-        } catch (InterruptedException | ExecutionException e) {
-            LogUtils.warn(log,"get record offset InterruptedException  or ExecutionException");
-        }
-        return 0;
     }
 }

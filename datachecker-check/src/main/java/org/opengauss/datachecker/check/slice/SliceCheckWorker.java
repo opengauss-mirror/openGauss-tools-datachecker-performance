@@ -44,6 +44,7 @@ import org.opengauss.datachecker.common.entry.extract.SliceExtend;
 import org.opengauss.datachecker.common.entry.extract.SliceVo;
 import org.opengauss.datachecker.common.entry.extract.Topic;
 import org.opengauss.datachecker.common.exception.BucketNumberInconsistentException;
+import org.opengauss.datachecker.common.exception.CheckConsumerPollEmptyException;
 import org.opengauss.datachecker.common.exception.MerkleTreeDepthException;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.TopicUtil;
@@ -71,6 +72,8 @@ import java.util.concurrent.CountDownLatch;
 public class SliceCheckWorker implements Runnable {
     private static final Logger LOGGER = LogUtils.getLogger(SliceCheckWorker.class);
     private static final int THRESHOLD_MIN_BUCKET_SIZE = 2;
+    // 设置最大尝试次数
+    private static final int MAX_ATTEMPTS=5;
 
     private final SliceVo slice;
 
@@ -313,11 +316,13 @@ public class SliceCheckWorker implements Runnable {
         int avgSliceCount = (int) (sourceTuple.getSlice()
                                               .getCount() + sinkTuple.getSlice()
                                                                      .getCount()) / 2;
+        KafkaConsumerHandler consumer = checkContext.createKafkaHandler();
         checkTupleList.forEach(check -> {
-            initBucketList(check.getEndpoint(), check.getSlice(), check.getBuckets(), bucketDiff, avgSliceCount);
+            initBucketList(check.getEndpoint(), check.getSlice(), check.getBuckets(), bucketDiff, avgSliceCount, consumer);
             countDownLatch.countDown();
         });
         countDownLatch.await();
+        checkContext.returnConsumer(consumer);
         LogUtils.debug(LOGGER, "fetch slice {} data from topic, cost {} millis", slice.toSimpleString(),
             costMillis(startFetch));
         // Align the source and destination bucket list
@@ -331,16 +336,24 @@ public class SliceCheckWorker implements Runnable {
     }
 
     private void initBucketList(Endpoint endpoint, SliceExtend sliceExtend, List<Bucket> bucketList,
-        Map<Integer, Pair<Integer, Integer>> bucketDiff, int avgSliceCount) {
+                                Map<Integer, Pair<Integer, Integer>> bucketDiff, int avgSliceCount, KafkaConsumerHandler consumer) {
         // Use feign client to pull Kafka data
         List<RowDataHash> dataList = new LinkedList<>();
-        TopicPartition topicPartition;
-        if (Objects.equals(Endpoint.SOURCE, endpoint)) {
-            topicPartition = new TopicPartition(topic.getSourceTopicName(), topic.getPtnNum());
-        } else {
-            topicPartition = new TopicPartition(topic.getSinkTopicName(), topic.getPtnNum());
+        TopicPartition topicPartition = new TopicPartition(Objects.equals(Endpoint.SOURCE, endpoint) ?
+                topic.getSourceTopicName() : topic.getSinkTopicName(), topic.getPtnNum());
+        int attempts = 0;
+        while (attempts < MAX_ATTEMPTS) {
+            try {
+                consumer.consumerAssign(topicPartition, sliceExtend, attempts);
+                consumer.pollTpSliceData(sliceExtend, dataList);
+                break; // 如果成功，跳出循环
+            } catch (CheckConsumerPollEmptyException ex) {
+                if (++attempts >= MAX_ATTEMPTS) {
+                    checkContext.returnConsumer(consumer);
+                    throw ex; // 如果达到最大尝试次数，重新抛出异常
+                }
+            }
         }
-        getSliceDataFromTopicPartition(topicPartition, sliceExtend, dataList);
         if (CollectionUtils.isEmpty(dataList)) {
             return;
         }
@@ -381,13 +394,10 @@ public class SliceCheckWorker implements Runnable {
         bucketList.sort(Comparator.comparingInt(Bucket::getNumber));
     }
 
-    private void getSliceDataFromTopicPartition(TopicPartition topicPartition, SliceExtend sExtend,
-        List<RowDataHash> dataList) {
-        KafkaConsumerHandler consumer = checkContext.buildKafkaHandler(sExtend.getName());
-        LogUtils.debug(LOGGER, "create consumer of topic, [{}] : [{}] ", slice.getTable(), topicPartition.toString());
-        consumer.pollTpSliceData(topicPartition, sExtend, dataList);
-        consumer.closeConsumer();
-        LogUtils.debug(LOGGER, "close consumer of topic, [{}] : [{}] ", slice.getTable(), topicPartition.toString());
+    private void getSliceDataFromTopicPartition(KafkaConsumerHandler consumer, SliceExtend sExtend,
+                                                List<RowDataHash> dataList) throws CheckConsumerPollEmptyException {
+
+
     }
 
     /**

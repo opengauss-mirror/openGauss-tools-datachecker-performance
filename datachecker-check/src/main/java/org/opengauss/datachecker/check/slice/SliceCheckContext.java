@@ -15,6 +15,7 @@
 
 package org.opengauss.datachecker.check.slice;
 
+import org.opengauss.datachecker.check.config.KafkaConsumerConfig;
 import org.opengauss.datachecker.check.modules.check.CheckDiffResult;
 import org.opengauss.datachecker.check.modules.check.KafkaConsumerHandler;
 import org.opengauss.datachecker.check.modules.check.KafkaConsumerService;
@@ -42,6 +43,8 @@ public class SliceCheckContext {
     @Resource
     private KafkaConsumerService kafkaConsumerService;
     @Resource
+    private KafkaConsumerConfig kafkaConsumerConfig;
+    @Resource
     private SliceProgressService sliceProgressService;
     @Resource
     private SliceCheckResultManager sliceCheckResultManager;
@@ -54,9 +57,18 @@ public class SliceCheckContext {
      * @param groupId groupId
      * @return KafkaConsumerHandler
      */
-    public KafkaConsumerHandler buildKafkaHandler(String groupId) {
-        return new KafkaConsumerHandler(kafkaConsumerService.buildKafkaConsumer(groupId),
-            kafkaConsumerService.getRetryFetchRecordTimes());
+    public synchronized KafkaConsumerHandler buildKafkaHandler(String groupId) {
+        KafkaConsumerHandler kafkaHandler = new KafkaConsumerHandler(kafkaConsumerConfig.takeConsumer());
+        return new KafkaConsumerHandler(kafkaConsumerConfig.takeConsumer());
+    }
+
+    /**
+     * 从kafka消费者缓存池中，获取一个consumer，并创建kafka处理器对象
+     *
+     * @return KafkaConsumerHandler
+     */
+    public synchronized KafkaConsumerHandler createKafkaHandler() {
+        return new KafkaConsumerHandler(kafkaConsumerConfig.takeConsumer());
     }
 
     /**
@@ -108,5 +120,14 @@ public class SliceCheckContext {
 
     public void saveProcessHistoryLogging(SliceVo slice) {
         processLogService.saveProcessHistoryLogging(slice.getTable(), slice.getNo());
+    }
+
+    /**
+     * 归还当前kafka consumer 到消费者池
+     *
+     * @param consumer consumer
+     */
+    public void returnConsumer(KafkaConsumerHandler consumer) {
+        kafkaConsumerConfig.returnConsumer(consumer.getConsumer());
     }
 }

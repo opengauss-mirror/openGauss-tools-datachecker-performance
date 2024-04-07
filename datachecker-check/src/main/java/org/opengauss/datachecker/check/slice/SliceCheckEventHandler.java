@@ -86,28 +86,51 @@ public class SliceCheckEventHandler {
         }
     }
 
-    private void handleTableStructureDiff(SliceCheckEvent checkEvent) {
+    /**
+     * 添加校验失败分片事件处理流程
+     *
+     * @param checkEvent
+     */
+    public void handleFailed(SliceCheckEvent checkEvent) {
+        LogUtils.warn(log, "slice check event , table slice has unknown error [{}][{} : {}]", checkEvent.getCheckName(),
+                checkEvent.getSource()
+                        .getTableHash(), checkEvent.getSink()
+                        .getTableHash());
+        long count = getCheckSliceCount(checkEvent);
+        sliceCheckContext.refreshSliceCheckProgress(checkEvent.getSlice(), count);
+        CheckDiffResult result = buildSliceDiffResult(checkEvent.getSlice(), (int) count, true, "slice has unknown error");
+        sliceCheckContext.addCheckResult(checkEvent.getSlice(), result);
+        registerCenter.refreshCheckedTableCompleted(checkEvent.getSlice()
+                .getTable());
+    }
+
+    private static long getCheckSliceCount(SliceCheckEvent checkEvent) {
         SliceExtend source = checkEvent.getSource();
         SliceExtend sink = checkEvent.getSink();
         long count = Math.max(source.getCount(), sink.getCount());
+        return count;
+    }
+
+    private void handleTableStructureDiff(SliceCheckEvent checkEvent) {
+        long count = getCheckSliceCount(checkEvent);
         sliceCheckContext.refreshSliceCheckProgress(checkEvent.getSlice(), count);
-        CheckDiffResult result = buildTableStructureDiffResult(checkEvent.getSlice(), (int) count);
+        CheckDiffResult result = buildSliceDiffResult(checkEvent.getSlice(), (int) count, false, "table structure diff");
         sliceCheckContext.addTableStructureDiffResult(checkEvent.getSlice(), result);
     }
 
-    private CheckDiffResult buildTableStructureDiffResult(SliceVo slice, int count) {
+    private CheckDiffResult buildSliceDiffResult(SliceVo slice, int count, boolean isTableStructure, String message) {
         CheckDiffResultBuilder builder = CheckDiffResultBuilder.builder();
         builder.checkMode(ConfigCache.getCheckMode())
-               .process(ConfigCache.getValue(ConfigConstants.PROCESS_NO))
-               .schema(slice.getSchema())
-               .table(slice.getTable())
-               .sno(slice.getNo())
-               .startTime(LocalDateTime.now())
-               .endTime(LocalDateTime.now())
-               .isTableStructureEquals(false)
-               .isExistTableMiss(false, null)
-               .rowCount(count)
-               .error("table structure diff");
+                .process(ConfigCache.getValue(ConfigConstants.PROCESS_NO))
+                .schema(slice.getSchema())
+                .table(slice.getTable())
+                .sno(slice.getNo())
+                .startTime(LocalDateTime.now())
+                .endTime(LocalDateTime.now())
+                .isTableStructureEquals(isTableStructure)
+                .isExistTableMiss(false, null)
+                .rowCount(count)
+                .error(message);
         return builder.build();
     }
 

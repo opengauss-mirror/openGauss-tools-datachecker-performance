@@ -48,20 +48,20 @@
     </select>
 
     <select id="queryTableColumnsMetaData" resultMap="columnMetadataMap">
-        select table_name tableName ,lower(column_name) columnName, ordinal_position ordinalPosition, data_type dataType,
+        select table_name tableName ,column_name columnName, ordinal_position ordinalPosition, data_type dataType,
             column_type columnType,column_key columnKey, extra extra
         from information_schema.columns
         where table_schema=#{schema} and table_name =#{name} order by ordinal_position asc
     </select>
 
     <select id="queryTablePrimaryColumns" resultMap="primaryColumnBeanMap">
-         select table_name tableName ,lower(column_name) columnName
+         select table_name tableName ,column_name columnName
         from information_schema.columns
         where table_schema=#{schema} and column_key='PRI' order by ordinal_position asc
     </select>
 
     <select id="queryTablePrimaryColumnsByTableName" resultMap="primaryColumnBeanMap">
-        select table_name tableName ,lower(column_name) columnName
+        select table_name tableName ,column_name columnName
         from information_schema.columns
         where table_schema=#{schema} and table_name =#{name} and column_key='PRI' order by ordinal_position asc
     </select>
@@ -88,7 +88,7 @@
                  from ${param.schema}.${param.name} r, (select @rowno := 0) t
                  ORDER BY r.${param.colName} asc
              ) s
-        where mod(s.rn, #{param.offset}) = 0
+        where mod(s.rn, #{param.offset}) = 1
     </select>
 
     <select id="checkDatabaseNotEmpty" resultType="boolean">

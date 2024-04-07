@@ -127,6 +127,14 @@ public class ConfigCache {
     }
 
     /**
+     * 检查配置项，当前是否删除Topic
+     * @return
+     */
+    public static boolean isDeleteTopic() {
+        return getIntValue(ConfigConstants.AUTO_DELETE_TOPIC) == 1;
+    }
+
+    /**
      * get config key when value type is Boolean
      *
      * @param key config key

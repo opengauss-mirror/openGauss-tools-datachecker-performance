@@ -120,7 +120,7 @@ public class MysqlDataAccessService extends AbstractDataAccessService {
     @Override
     public List<Object> queryPointList(Connection connection, DataAccessParam param) {
         String sql = "select s.%s from (SELECT @rowno:=@rowno+1 as rn,r.%s from %s.%s r,"
-            + "  (select @rowno := 0) t ORDER BY r.%s asc) s where mod(s.rn, %s) = 0";
+            + "  (select @rowno := 0) t ORDER BY r.%s asc) s where mod(s.rn, %s) = 1";
         sql = String.format(sql, param.getColName(), param.getColName(), param.getSchema(), param.getName(),
             param.getColName(), param.getOffset());
         return adasQueryPointList(connection, sql);

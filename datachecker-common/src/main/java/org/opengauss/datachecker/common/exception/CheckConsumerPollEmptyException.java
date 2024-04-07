@@ -22,11 +22,11 @@ package org.opengauss.datachecker.common.exception;
  * @date ：Created in 2022/5/23
  * @since ：11
  */
-public class CheckingPollingException extends CheckingException {
+public class CheckConsumerPollEmptyException extends CheckingException {
     private static final long serialVersionUID = 6526279344405897976L;
 
-    public CheckingPollingException(String message) {
-        super(message);
+    public CheckConsumerPollEmptyException(String message) {
+        super("check consumer poll empty " + message);
     }
 
 }

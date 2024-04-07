@@ -49,7 +49,6 @@ public class StartLoadRunner implements ApplicationRunner {
         LogUtils.info(log, "start load runner :{}", Arrays.deepToString(args.getSourceArgs()));
         configManagement.init();
         startRunner.initCheckEnvironment(checkEnvironment);
-        kafkaServiceManager.initAdminClient();
         startRunner.start();
     }
 }

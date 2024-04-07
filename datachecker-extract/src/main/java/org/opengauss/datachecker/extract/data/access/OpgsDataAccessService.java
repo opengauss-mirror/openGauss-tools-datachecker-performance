@@ -138,7 +138,7 @@ public class OpgsDataAccessService extends AbstractDataAccessService {
     @Override
     public List<Object> queryPointList(Connection connection, DataAccessParam param) {
         String sql = "select s.%s from ( select row_number() over(order by r.%s  asc) as rn,r.%s  from %s.%s r) s"
-            + "  where mod(s.rn, %s ) = 0;";
+            + "  where mod(s.rn, %s ) = 1;";
         sql = String.format(sql, param.getColName(), param.getColName(), param.getColName(), param.getSchema(),
             param.getName(), param.getOffset());
         return adasQueryPointList(connection, sql);

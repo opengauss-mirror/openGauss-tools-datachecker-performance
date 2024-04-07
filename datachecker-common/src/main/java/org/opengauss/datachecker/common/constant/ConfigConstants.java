@@ -144,6 +144,11 @@ public interface ConfigConstants {
     String EXTEND_MAXIMUM_POOL_SIZE = "spring.check.extend-maximum-pool-size";
 
     /**
+     * with table slice check, config the maximum number of threads in the thread pool
+     */
+    String MAXIMUM_POOL_SIZE = "spring.check.maximum-pool-size";
+
+    /**
      * data.check.bucket-expect-capacity
      */
     String BUCKET_CAPACITY = "data.check.bucket-expect-capacity";
@@ -297,4 +302,9 @@ public interface ConfigConstants {
      * spring.check.rest-api-page-size
      */
     String REST_API_PAGE_SIZE = "spring.check.rest-api-page-size";
+
+    /**
+     * data.check.auto-delete-topic
+     */
+    String AUTO_DELETE_TOPIC = "data.check.auto-delete-topic";
 }

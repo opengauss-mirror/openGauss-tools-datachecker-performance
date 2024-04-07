@@ -64,8 +64,22 @@ public class KafkaServiceManager {
     @Resource
     private KafkaConsumerConfig kafkaConsumerConfig;
 
+    /**
+     * 返回一个KafkaTemplate 实例
+     *
+     * @return kafkaTemplate
+     */
     public KafkaTemplate<String, String> getKafkaTemplate() {
         return kafkaTemplate;
+    }
+
+    /**
+     * 销毁kafkaTemplate
+     */
+    @PreDestroy
+    public void destroy() {
+        kafkaTemplate.destroy();
+        adminClient.close();
     }
 
     public KafkaConsumer<String, String> getKafkaConsumer(boolean isNewGroup) {
@@ -81,7 +95,7 @@ public class KafkaServiceManager {
     }
 
     /**
-     * Initialize Admin Client
+     * Initialize Admin Client and init consumer pool
      */
     public void initAdminClient() {
         Map<String, Object> props = new HashMap<>(1);
@@ -97,6 +111,7 @@ public class KafkaServiceManager {
             log.error("kafka Client link exception: ", ex);
             throw new KafkaException("kafka Client link exception");
         }
+        kafkaConsumerConfig.initConsumerPool();
     }
 
     /**
@@ -182,5 +197,12 @@ public class KafkaServiceManager {
             kafkaConsumer.unsubscribe();
             kafkaConsumer.close();
         }
+    }
+
+    /**
+     * 等待全部消费者归还后，关闭消费者池
+     */
+    public void closeConsumerPool() {
+        kafkaConsumerConfig.closeConsumerPool();
     }
 }

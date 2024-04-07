@@ -43,8 +43,6 @@ public class ShutdownService {
         ThreadUtil.sleep(ConfigCache.getIntValue(ConfigConstants.TIMEOUT_PER_SHUTDOWN_PHASE));
         LogUtils.info(log, "The check server wait 5s and will be shutdown , {} . check server exited .", message);
         isShutdown.set(true);
-        ThreadUtil.killThreadByName("kafka-producer-network-thread");
-
         dynamicThreadPoolManager.closeDynamicThreadPoolMonitor();
         while (monitor.get() > 0) {
             ThreadUtil.sleepHalfSecond();
@@ -52,7 +50,6 @@ public class ShutdownService {
         processLogService.saveStopProcessLog();
         threadExecutorList.forEach(ExecutorConfigurationSupport::shutdown);
         executorServiceList.forEach(ExecutorService::shutdownNow);
-        ThreadUtil.sleepHalfSecond();
         System.exit(SpringApplication.exit(SpringUtil.getApplicationContext()));
     }
 

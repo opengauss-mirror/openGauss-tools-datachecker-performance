@@ -15,14 +15,18 @@
 
 package org.opengauss.datachecker.extract.slice.process;
 
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.entry.extract.SliceExtend;
 import org.opengauss.datachecker.common.exception.ExtractDataAccessException;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.extract.resource.JdbcDataOperations;
 import org.opengauss.datachecker.extract.slice.SliceProcessorContext;
 import org.opengauss.datachecker.extract.slice.common.SliceResultSetSender;
 import org.opengauss.datachecker.extract.task.sql.AutoSliceQueryStatement;
 import org.opengauss.datachecker.extract.task.sql.FullQueryStatement;
 import org.opengauss.datachecker.extract.task.sql.QuerySqlEntry;
+import org.springframework.kafka.support.SendResult;
+import org.springframework.util.concurrent.ListenableFuture;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -31,6 +35,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -43,6 +48,7 @@ import java.util.TreeMap;
  * @since ：11
  */
 public class JdbcTableProcessor extends AbstractTableProcessor {
+    private static final Logger log = LogUtils.getLogger(JdbcTableProcessor.class);
     private final JdbcDataOperations jdbcOperation;
 
     private SliceResultSetSender sliceSender;
@@ -63,11 +69,12 @@ public class JdbcTableProcessor extends AbstractTableProcessor {
         SliceExtend tableSliceExtend = createTableSliceExtend();
         try {
             sliceSender = new SliceResultSetSender(tableMetadata,  context.createSliceFixedKafkaAgents(topic, table));
+            sliceSender.setRecordSendKey(table);
             long tableRowCount;
             if (noTableSlice()) {
-                tableRowCount = executeFullTable();
+                tableRowCount = executeFullTable(tableSliceExtend);
             } else {
-                tableRowCount = executeMultiSliceTable();
+                tableRowCount = executeMultiSliceTable(tableSliceExtend);
             }
             tableSliceExtend.setCount(tableRowCount);
             feedbackStatus(tableSliceExtend);
@@ -81,7 +88,7 @@ public class JdbcTableProcessor extends AbstractTableProcessor {
         }
     }
 
-    private long executeMultiSliceTable() {
+    private long executeMultiSliceTable(SliceExtend tableSliceExtend) {
         final LocalDateTime start = LocalDateTime.now();
         Connection connection = null;
         List<QuerySqlEntry> querySqlList = getAutoSliceQuerySqlList();
@@ -90,8 +97,12 @@ public class JdbcTableProcessor extends AbstractTableProcessor {
         try {
             long estimatedSize = estimatedMemorySize(tableMetadata.getAvgRowLength(), fetchSize);
             connection = jdbcOperation.tryConnectionAndClosedAutoCommit(estimatedSize);
+            List<Long> minOffsetList = new LinkedList<>();
+            List<Long> maxOffsetList = new LinkedList<>();
             for (int i = 0; i < querySqlList.size(); i++) {
                 QuerySqlEntry sqlEntry = querySqlList.get(i);
+                List<long[]> offsetList = new LinkedList<>();
+                List<ListenableFuture<SendResult<String, String>>> batchFutures = new LinkedList<>();
                 log.info(" {} , {}", table, sqlEntry.toString());
                 try (PreparedStatement ps = connection.prepareStatement(sqlEntry.getSql());
                     ResultSet resultSet = ps.executeQuery()) {
@@ -101,13 +112,26 @@ public class JdbcTableProcessor extends AbstractTableProcessor {
                     int rowCount = 0;
                     while (resultSet.next()) {
                         rowCount++;
-                        sliceSender.resultSetTranslateAndSendSync(rsmd, resultSet, result, i);
+                        batchFutures.add(sliceSender.resultSetTranslateAndSendSync(rsmd, resultSet, result, i));
+                        if (batchFutures.size() == FETCH_SIZE) {
+                            offsetList.add(getBatchFutureRecordOffsetScope(batchFutures));
+                            batchFutures.clear();
+                        }
                     }
+                    if (batchFutures.size() > 0) {
+                        offsetList.add(getBatchFutureRecordOffsetScope(batchFutures));
+                        batchFutures.clear();
+                    }
+                    minOffsetList.add(getMinOffset(offsetList));
+                    maxOffsetList.add(getMaxOffset(offsetList));
                     sliceSender.resultFlush();
                     tableRowCount += rowCount;
                     log.info("finish {} - {} - {}, {}", table, i, rowCount, tableRowCount);
                 }
             }
+            tableSliceExtend.setStartOffset(getMinMinOffset(minOffsetList));
+            tableSliceExtend.setEndOffset(getMaxMaxOffset(maxOffsetList));
+            tableSliceExtend.setCount(tableRowCount);
         } catch (SQLException ex) {
             log.error("jdbc query  {} error : {}", table, ex.getMessage());
             throw new ExtractDataAccessException();
@@ -120,7 +144,7 @@ public class JdbcTableProcessor extends AbstractTableProcessor {
         return tableRowCount;
     }
 
-    private long executeFullTable() {
+    private long executeFullTable(SliceExtend tableSliceExtend) {
         final LocalDateTime start = LocalDateTime.now();
         Connection connection = null;
         long tableRowCount = 0;
@@ -130,18 +154,29 @@ public class JdbcTableProcessor extends AbstractTableProcessor {
             connection = jdbcOperation.tryConnectionAndClosedAutoCommit(estimatedSize);
             QuerySqlEntry sqlEntry = getFullQuerySqlEntry();
             log.info(" {} , {}", table, sqlEntry.toString());
+            List<long[]> offsetList = new LinkedList<>();
+            List<ListenableFuture<SendResult<String, String>>> batchFutures = new LinkedList<>();
             try (PreparedStatement ps = connection.prepareStatement(sqlEntry.getSql());
                 ResultSet resultSet = ps.executeQuery()) {
                 resultSet.setFetchSize(fetchSize);
                 ResultSetMetaData rsmd = resultSet.getMetaData();
                 Map<String, String> result = new TreeMap<>();
-                int rowCount = 0;
                 while (resultSet.next()) {
-                    rowCount++;
-                    sliceSender.resultSetTranslateAndSendSync(rsmd, resultSet, result, 0);
+                    tableRowCount++;
+                    batchFutures.add(sliceSender.resultSetTranslateAndSendSync(rsmd, resultSet, result, 0));
+                    if (batchFutures.size() == FETCH_SIZE) {
+                        offsetList.add(getBatchFutureRecordOffsetScope(batchFutures));
+                        batchFutures.clear();
+                    }
                 }
-                tableRowCount += rowCount;
-                log.info("finish {} , {}: {}", table, rowCount, tableRowCount);
+                if (batchFutures.size() > 0) {
+                    offsetList.add(getBatchFutureRecordOffsetScope(batchFutures));
+                    batchFutures.clear();
+                }
+                tableSliceExtend.setStartOffset(getMinOffset(offsetList));
+                tableSliceExtend.setEndOffset(getMaxOffset(offsetList));
+                tableSliceExtend.setCount(tableRowCount);
+                log.info("finish {} , {}", table, tableRowCount);
             }
         } catch (SQLException ex) {
             log.error("jdbc query  {} error : {}", table, ex.getMessage());
@@ -161,6 +196,7 @@ public class JdbcTableProcessor extends AbstractTableProcessor {
     }
 
     private List<QuerySqlEntry> getAutoSliceQuerySqlList() {
+        // 单主键根据主键进行SQL分片，联合主键根据第一主键值进行SQL分片
         AutoSliceQueryStatement statement = context.createAutoSliceQueryStatement(tableMetadata);
         return statement.builderByTaskOffset(tableMetadata, getMaximumTableSliceSize());
     }

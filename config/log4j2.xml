@@ -14,7 +14,7 @@
   ~ See the Mulan PSL v2 for more details.
   -->
 
-<Configuration status="OFF" monitorInterval="600">
+<Configuration status="INFO" monitorInterval="600">
     <Properties>
         <!--Property LOG_HOME must be absolute path dir -->
         <Property name="LOG_HOME">logs</Property>
@@ -34,11 +34,18 @@
         </Console>
 
         <RollingRandomAccessFile name="progress" immediateFlush="true" fileName="${LOG_HOME}/${LOG_NAME}.log"
-                                 filePattern="${LOG_HOME}/history/${LOG_NAME} - %d{yyyy-MM-dd}.log.gz">
+                                 filePattern="${LOG_HOME}/history/${LOG_NAME}.%d{yyyyMMddHHmm}.zip">
             <PatternLayout pattern="${LOG_PATTERN}"/>
             <Policies>
-                <SizeBasedTriggeringPolicy size="20MB"/>
+                <SizeBasedTriggeringPolicy size="1MB"/>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
             </Policies>
+            <DefaultRolloverStrategy max="60">
+                <Delete basePath="${LOG_HOME}" maxDepth="2">
+                    <IfFileName glob="*/${LOG_NAME}.*.zip" />
+                    <IfLastModified age="60M" />
+                </Delete>
+            </DefaultRolloverStrategy>
             <Filters>
                 <ThresholdFilter level="${LOG_LEVEL}" onMatch="ACCEPT" onMismatch="DENY"/>
             </Filters>

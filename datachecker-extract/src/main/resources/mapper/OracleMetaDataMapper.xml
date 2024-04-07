@@ -82,7 +82,7 @@
     <select id="queryPointList" resultType="string">
         select * from (
              select rownum rn ,${param.colName} from ${param.schema}.${param.name}  order by ${param.colName} asc
-        ) where mod(rn,#{param.offset})=0
+        ) where mod(rn,#{param.offset})=1
     </select>
 
     <select id="checkDatabaseNotEmpty" resultType="boolean">

@@ -17,6 +17,7 @@ package org.opengauss.datachecker.extract.slice.process;
 
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.entry.extract.SliceExtend;
 import org.opengauss.datachecker.common.entry.extract.SliceVo;
@@ -48,6 +49,7 @@ import java.util.TreeMap;
  * @since ：11
  */
 public class CsvSliceProcessor extends AbstractSliceProcessor {
+    private static final Logger log = LogUtils.getLogger(CsvSliceProcessor.class);
     protected MemoryOperations memoryOperations;
 
     public CsvSliceProcessor(SliceVo slice, SliceProcessorContext context) {

@@ -17,6 +17,7 @@ package org.opengauss.datachecker.check.modules.check;
 
 import com.alibaba.fastjson.annotation.JSONType;
 import lombok.Data;
+import org.apache.commons.lang3.StringUtils;
 import org.opengauss.datachecker.common.entry.check.Difference;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
@@ -148,14 +149,22 @@ public class CheckDiffResult {
         }
         if (CheckResultUtils.isEmptyDiff(keyDeleteSet, keyUpdateSet, keyInsertSet) && CheckResultUtils.isEmptyDiff(
             keyDelete, keyUpdate, keyInsert)) {
-            result = RESULT_SUCCESS;
-            message += result;
+            if (StringUtils.isEmpty(error)) {
+                result = RESULT_SUCCESS;
+                message += result;
+            } else {
+                result = RESULT_FAILED;
+                message += error;
+            }
         } else {
             result = RESULT_FAILED;
             message += String.format(FAILED_MESSAGE, keyInsertSet.size() + keyInsert.size(),
                 keyUpdateSet.size() + keyUpdate.size(), keyDeleteSet.size() + keyDelete.size());
             if (totalRepair > 0 && !isNotLargeDiffKeys) {
                 message += CHECKED_DIFF_TOO_LARGE;
+            }
+            if (StringUtils.isNotEmpty(error)) {
+                message += error;
             }
         }
     }

@@ -38,14 +38,13 @@ import org.opengauss.datachecker.common.entry.check.DifferencePair;
 import org.opengauss.datachecker.common.entry.check.Pair;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
-import org.opengauss.datachecker.common.entry.extract.ConditionLimit;
-import org.opengauss.datachecker.common.entry.extract.RowDataHash;
-import org.opengauss.datachecker.common.entry.extract.SliceExtend;
-import org.opengauss.datachecker.common.entry.extract.SliceVo;
+import org.opengauss.datachecker.common.entry.extract.*;
 import org.opengauss.datachecker.common.exception.BucketNumberInconsistentException;
+import org.opengauss.datachecker.common.exception.CheckConsumerPollEmptyException;
 import org.opengauss.datachecker.common.exception.MerkleTreeDepthException;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.SpringUtil;
+import org.opengauss.datachecker.common.util.TopicUtil;
 import org.springframework.lang.NonNull;
 
 import java.time.LocalDateTime;
@@ -79,7 +78,8 @@ public class TableCheckWorker implements Runnable {
     private final DifferencePair<List<Difference>, List<Difference>, List<Difference>> difference =
         DifferencePair.of(new LinkedList<>(), new LinkedList<>(), new LinkedList<>());
     private final LocalDateTime startTime;
-
+    private Topic topic = new Topic();
+    private final String processNo;
     /**
      * slice check worker construct
      *
@@ -91,6 +91,7 @@ public class TableCheckWorker implements Runnable {
         this.checkContext = sliceCheckContext;
         this.startTime = LocalDateTime.now();
         this.slice = checkEvent.getSlice();
+        this.processNo = ConfigCache.getValue(ConfigConstants.PROCESS_NO);
     }
 
     @Override
@@ -100,6 +101,7 @@ public class TableCheckWorker implements Runnable {
             SliceExtend source = checkEvent.getSource();
             SliceExtend sink = checkEvent.getSink();
             this.sliceRowCont = Math.max(source.getCount(), sink.getCount());
+            setTableFixedTopic();
             log.info("check table of {}", slice.getName());
             checkedTableSliceByTopicPartition(source, sink);
         } catch (Exception ignore) {
@@ -284,27 +286,41 @@ public class TableCheckWorker implements Runnable {
         Map<Integer, Pair<Integer, Integer>> bucketDiff = new ConcurrentHashMap<>();
         // Get the Kafka partition number corresponding to the current task
         // Initialize source bucket column list data
+        KafkaConsumerHandler consumer = checkContext.createKafkaHandler();
         CountDownLatch countDownLatch = new CountDownLatch(checkTupleList.size());
         checkTupleList.forEach(check -> {
-            String topicName = checkContext.getTopicName(slice.getTable(), check.getEndpoint());
-            TopicPartition topicPartition = new TopicPartition(topicName, 0);
-            initBucketList(check.getEndpoint(), topicPartition, check.getBuckets(), bucketDiff);
+            initBucketList(check.getEndpoint(), check.getSlice(), check.getBuckets(), bucketDiff, consumer);
             countDownLatch.countDown();
         });
         countDownLatch.await();
-
+        checkContext.returnConsumer(consumer);
         // Align the source and destination bucket list
         alignAllBuckets(sourceTuple, sinkTuple, bucketDiff);
         sortBuckets(sourceTuple.getBuckets());
         sortBuckets(sinkTuple.getBuckets());
     }
 
-    private void initBucketList(Endpoint endpoint, TopicPartition topicPartition, List<Bucket> bucketList,
-        Map<Integer, Pair<Integer, Integer>> bucketDiff) {
+    private void initBucketList(Endpoint endpoint, SliceExtend sliceExtend,List<Bucket> bucketList,
+                                Map<Integer, Pair<Integer, Integer>> bucketDiff, KafkaConsumerHandler consumer) {
         // Use feign client to pull Kafka data
         List<RowDataHash> dataList = new LinkedList<>();
-        getSliceDataFromTopicPartition(topicPartition, dataList);
+        TopicPartition topicPartition = new TopicPartition(Objects.equals(Endpoint.SOURCE, endpoint) ?
+                topic.getSourceTopicName() : topic.getSinkTopicName(), topic.getPtnNum());
 
+        int maxAttempts = 5; // 设置最大尝试次数
+        int attempts = 0;
+        while (attempts < maxAttempts) {
+            try {
+                consumer.consumerAssign(topicPartition, sliceExtend, attempts);
+                consumer.pollTpSliceData(sliceExtend, dataList);
+                break; // 如果成功，跳出循环
+            } catch (CheckConsumerPollEmptyException ex) {
+                if (++attempts >= maxAttempts) {
+                    checkContext.returnConsumer(consumer);
+                    throw ex; // 如果达到最大尝试次数，重新抛出异常
+                }
+            }
+        }
         if (CollectionUtils.isEmpty(dataList)) {
             return;
         }
@@ -345,13 +361,13 @@ public class TableCheckWorker implements Runnable {
         bucketList.sort(Comparator.comparingInt(Bucket::getNumber));
     }
 
-    private void getSliceDataFromTopicPartition(TopicPartition topicPartition, List<RowDataHash> dataList) {
-        KafkaConsumerHandler consumer = checkContext.buildKafkaHandler(slice.getTable());
-        logKafka.debug("create consumer of topic, [{}] : [{}] ", slice.getTable(), topicPartition.toString());
-        consumer.poolTopicPartitionsData(topicPartition.topic(), topicPartition.partition(), dataList);
-        consumer.closeConsumer();
-        logKafka.debug("close consumer of topic, [{}] : [{}] ", slice.getTable(), topicPartition.toString());
-    }
+//    private void getSliceDataFromTopicPartition(TopicPartition topicPartition, List<RowDataHash> dataList) {
+//        KafkaConsumerHandler consumer = checkContext.buildKafkaHandler(slice.getTable());
+//        logKafka.debug("create consumer of topic, [{}] : [{}] ", slice.getTable(), topicPartition.toString());
+//        consumer.poolTopicPartitionsData(topicPartition.topic(), topicPartition.partition(), dataList);
+//        consumer.closeConsumer();
+//        logKafka.debug("close consumer of topic, [{}] : [{}] ", slice.getTable(), topicPartition.toString());
+//    }
 
     /**
      * <pre>
@@ -373,5 +389,15 @@ public class TableCheckWorker implements Runnable {
                 }
             });
         }
+    }
+    private void setTableFixedTopic() {
+        int maxTopicSize = ConfigCache.getIntValue(ConfigConstants.MAXIMUM_TOPIC_SIZE);
+        String table = slice.getTable();
+        String sourceTopicName = TopicUtil.getMoreFixedTopicName(processNo, Endpoint.SOURCE, table, maxTopicSize);
+        String sinkTopicName = TopicUtil.getMoreFixedTopicName(processNo, Endpoint.SINK, table, maxTopicSize);
+        topic.setSourceTopicName(sourceTopicName);
+        topic.setSinkTopicName(sinkTopicName);
+        topic.setPtnNum(0);
+        topic.setPartitions(1);
     }
 }

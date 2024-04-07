@@ -31,12 +31,14 @@ import org.opengauss.datachecker.extract.data.BaseDataService;
 import org.opengauss.datachecker.extract.data.csv.CsvListener;
 import org.opengauss.datachecker.extract.slice.factory.SliceFactory;
 
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.stream.Collectors;
 
 import static org.opengauss.datachecker.common.constant.DynamicTpConstant.EXTRACT_EXECUTOR;
 
@@ -116,16 +118,10 @@ public class SliceDispatcher implements Runnable {
                             continue;
                         }
                     }
-                    sliceRegister.batchRegister(tableSliceList);
-                    listener.releaseSliceCache(table);
-                    if (tableSliceList.size() <= 20) {
-                        LogUtils.debug(log, "table [{}] get main executor success", table);
-                        tableSliceList.forEach(sliceVo -> doTableSlice(executor, sliceVo));
+                    if (tableMetadata.isSinglePrimary()) {
+                        doSinglePrimarySliceDispatcher(tableSliceList, tableMetadata, executor, topicSize, extendMaxPoolSize);
                     } else {
-                        ThreadPoolExecutor extendExecutor =
-                            (ThreadPoolExecutor) dynamicThreadPoolManager.getFreeExecutor(topicSize, extendMaxPoolSize);
-                        LogUtils.debug(log, "table [{}] get extend executor success", table);
-                        tableSliceList.forEach(sliceVo -> doTableSlice(extendExecutor, sliceVo));
+                        doMultiPrimarySliceDispatcher(tableSliceList, tableMetadata, executor, topicSize, extendMaxPoolSize);
                     }
                 }
                 if (listener.isFinished()) {
@@ -140,6 +136,38 @@ public class SliceDispatcher implements Runnable {
             }
         } catch (Exception exception) {
             LogUtils.error(log, "ex", exception);
+        }
+    }
+
+    private void doMultiPrimarySliceDispatcher(List<SliceVo> tableSliceList, TableMetadata tableMetadata, ThreadPoolExecutor executor, int topicSize, int extendMaxPoolSize) {
+        List<Path> sliceNameList = tableSliceList.stream().map(SliceVo::getName).map(Path::of).collect(Collectors.toList());
+        SliceVo multiPkSlice = new SliceVo();
+        String table = tableMetadata.getTableName();
+        multiPkSlice.setName(table);
+        multiPkSlice.setTable(table);
+        multiPkSlice.setNo(0);
+        multiPkSlice.setTotal(1);
+        multiPkSlice.setSchema(tableMetadata.getSchema());
+        multiPkSlice.setEndpoint(ConfigCache.getEndPoint());
+        multiPkSlice.setStatus(0);
+        multiPkSlice.setTableHash(tableMetadata.getTableHash());
+        sliceRegister.batchRegister(List.of(multiPkSlice));
+        listener.releaseSliceCache(table);
+        executor.submit(sliceFactory.createTableProcessor(table, sliceNameList));
+    }
+
+    private void doSinglePrimarySliceDispatcher(List<SliceVo> tableSliceList, TableMetadata tableMetadata, ThreadPoolExecutor executor, int topicSize, int extendMaxPoolSize) {
+        sliceRegister.batchRegister(tableSliceList);
+        String table = tableMetadata.getTableName();
+        listener.releaseSliceCache(table);
+        if (tableSliceList.size() <= 20) {
+            LogUtils.debug(log, "table [{}] get main executor success", table);
+            tableSliceList.forEach(sliceVo -> doTableSlice(executor, sliceVo));
+        } else {
+            ThreadPoolExecutor extendExecutor =
+                    (ThreadPoolExecutor) dynamicThreadPoolManager.getFreeExecutor(topicSize, extendMaxPoolSize);
+            LogUtils.debug(log, "table [{}] get extend executor success", table);
+            tableSliceList.forEach(sliceVo -> doTableSlice(extendExecutor, sliceVo));
         }
     }
 

@@ -15,16 +15,15 @@
 
 package org.opengauss.datachecker.common.entry.extract;
 
-import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 import org.opengauss.datachecker.common.entry.enums.DataBaseType;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
+import org.springframework.util.CollectionUtils;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
@@ -75,10 +74,6 @@ public class TableMetadata {
 
     private ConditionLimit conditionLimit;
 
-    public void setColumnsMetas(List<ColumnsMetaData> columnsMetas) {
-        this.columnsMetas = columnsMetas;
-    }
-
     /**
      * Judge if this table is auto increment, if this true and no conditionLimit configured,
      * you can use id between start and end.
@@ -91,6 +86,15 @@ public class TableMetadata {
         }
         return primaryMetas.get(0)
                            .isAutoIncrementColumn();
+    }
+
+    /**
+     * 当前是否是单一主键表
+     *
+     * @return
+     */
+    public boolean isSinglePrimary() {
+        return !CollectionUtils.isEmpty(primaryMetas) && primaryMetas.size() == 1;
     }
 
     public ColumnsMetaData getSinglePrimary() {

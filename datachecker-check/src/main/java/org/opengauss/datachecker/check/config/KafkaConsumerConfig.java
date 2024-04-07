@@ -17,15 +17,20 @@ package org.opengauss.datachecker.check.config;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.opengauss.datachecker.common.config.ConfigCache;
+import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.constant.Constants.InitialCapacity;
+import org.opengauss.datachecker.common.exception.CheckingException;
+import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import static org.opengauss.datachecker.common.constant.ConfigConstants.KAFKA_SERVERS;
 import static org.opengauss.datachecker.common.constant.ConfigConstants.KAFKA_DEFAULT_GROUP_ID;
@@ -44,10 +49,59 @@ import static org.opengauss.datachecker.common.constant.ConfigConstants.KAFKA_FE
  */
 @Component
 public class KafkaConsumerConfig {
+    private LinkedBlockingQueue<KafkaConsumer<String, String>> consumerPool = new LinkedBlockingQueue<>();
+
+    /**
+     * 初始化消费者池
+     */
+    public void initConsumerPool() {
+        int maxPoolSize = ConfigCache.getIntValue(ConfigConstants.MAXIMUM_POOL_SIZE);
+        String process = ConfigCache.getValue(ConfigConstants.PROCESS_NO);
+        for (int i = 0; i < maxPoolSize; i++) {
+            consumerPool.add((KafkaConsumer<String, String>) consumerFactory(process).createConsumer());
+        }
+    }
+
+    /**
+     * 获取一个空闲Kafka consumer
+     *
+     * @return consumer
+     */
+    public KafkaConsumer<String, String> takeConsumer() {
+        try {
+            return consumerPool.take();
+        } catch (InterruptedException e) {
+            throw new CheckingException("take consumer interruptedException");
+        }
+    }
+
+    /**
+     * 归还当前kafka consumer 到消费者池
+     *
+     * @param consumer consumer
+     */
+    public void returnConsumer(KafkaConsumer<String, String> consumer) {
+        consumerPool.add(consumer);
+    }
+
+    /**
+     * 等待全部消费者归还后，关闭消费者池
+     */
+    public void closeConsumerPool() {
+        int maxPoolSize = ConfigCache.getIntValue(ConfigConstants.MAXIMUM_POOL_SIZE);
+        while (consumerPool.size() < maxPoolSize) {
+            ThreadUtil.sleepMaxHalfSecond();
+        }
+        while (!consumerPool.isEmpty()) {
+            KafkaConsumer<String, String> consumer = takeConsumer();
+            consumer.close();
+        }
+    }
+
     /**
      * consumerConfigs
      *
-     * @param groupId
+     * @param groupId  groupId
      * @return consumerConfigs
      */
     public Map<String, Object> consumerConfigs(String groupId) {

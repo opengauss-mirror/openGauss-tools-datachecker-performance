@@ -56,7 +56,8 @@ public class ConfigManagement {
     private int maximumTableSliceSize;
     @Value("${spring.check.extend-maximum-pool-size}")
     private int extendMaxPoolSize = 10;
-
+    @Value("${spring.check.maximum-pool-size}")
+    private int maxPoolSize = 10;
     @Value("${spring.datasource.driver-class-name}")
     private String driverClassName;
     @Value("${spring.datasource.url}")
@@ -126,6 +127,7 @@ public class ConfigManagement {
         ConfigCache.put(ConfigConstants.FETCH_SIZE, 1000);
         ConfigCache.put(ConfigConstants.TIMEOUT_PER_SHUTDOWN_PHASE, timeoutPerShutdownPhase);
         ConfigCache.put(ConfigConstants.EXTEND_MAXIMUM_POOL_SIZE, extendMaxPoolSize);
+        ConfigCache.put(ConfigConstants.MAXIMUM_POOL_SIZE, maxPoolSize);
         ConfigCache.put(ConfigConstants.MAX_RETRY_TIMES, maxRetryTimes);
 
         loadKafkaProperties();
