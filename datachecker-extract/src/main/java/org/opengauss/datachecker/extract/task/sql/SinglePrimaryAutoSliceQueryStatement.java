@@ -15,6 +15,7 @@
 
 package org.opengauss.datachecker.extract.task.sql;
 
+import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.extract.task.CheckPoint;
 
@@ -52,7 +53,8 @@ public class SinglePrimaryAutoSliceQueryStatement implements AutoSliceQueryState
             taskOffset = singlePrimaryCheckPoint.translateBetweenString(checkPointList);
         }
         final SelectSqlBuilder sqlBuilder = new SelectSqlBuilder(tableMetadata);
-        sqlBuilder.isDivisions(taskOffset.length > 1);
+        sqlBuilder.isDivisions(taskOffset.length > 1)
+                .isCsvMode(ConfigCache.isCsvMode());
         String tableName = tableMetadata.getTableName();
         IntStream.range(0, taskOffset.length).forEach(idx -> {
             sqlBuilder.isFullCondition(idx == taskOffset.length - 1).offset(taskOffset[idx][0], taskOffset[idx][1]);
