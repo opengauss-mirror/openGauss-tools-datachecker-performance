@@ -227,4 +227,13 @@ public class ConfigCache {
     public static void remove(String key) {
         CACHE.remove(key);
     }
+
+    /**
+     * 检查当前校验模式是否为CSV模式
+     *
+     * @return true | false
+     */
+    public static boolean isCsvMode() {
+        return Objects.equals(CheckMode.CSV, getCheckMode());
+    }
 }

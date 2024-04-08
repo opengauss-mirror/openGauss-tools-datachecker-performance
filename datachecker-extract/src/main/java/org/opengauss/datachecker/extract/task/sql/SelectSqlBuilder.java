@@ -98,6 +98,7 @@ public class SelectSqlBuilder {
     private boolean isHalfOpenHalfClosed = true;
     private boolean isFirst = false;
     private boolean isEnd = false;
+    private boolean isCsvMode = false;
 
     /**
      * Table fragment query SQL Statement Builder
@@ -162,6 +163,16 @@ public class SelectSqlBuilder {
     }
 
     /**
+     * 设置当前校验模式是否为CSV模式
+     *
+     * @param isCsvMode isCsvMode
+     * @return builder
+     */
+    public SelectSqlBuilder isCsvMode(boolean isCsvMode) {
+        this.isCsvMode = isCsvMode;
+        return this;
+    }
+    /**
      * Table fragment query SQL Statement Builder
      *
      * @return build sql
@@ -209,7 +220,11 @@ public class SelectSqlBuilder {
             return getNumberPkConditionFull(primaryKey);
         }
         if (isFirst) {
-            return primaryKey + "< " + offset;
+            if (isCsvMode) {
+                return primaryKey + "<= " + offset;
+            } else {
+                return primaryKey + "< " + offset;
+            }
         }
         if (isEnd) {
             return primaryKey + ">= " + start;
@@ -234,7 +249,11 @@ public class SelectSqlBuilder {
             return getPkConditionFull(primaryKey);
         }
         if (isFirst) {
-            return primaryKey + " <= '" + seqEnd + "'";
+            if (isCsvMode) {
+                return primaryKey + "<= '" + seqEnd + "'";
+            } else {
+                return primaryKey + "< '" + seqEnd + "'";
+            }
         }
         if (isEnd) {
             return primaryKey + ">= '" + seqStart + "'";

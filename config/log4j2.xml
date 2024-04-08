@@ -20,9 +20,6 @@
         <Property name="LOG_HOME">logs</Property>
         <Property name="LOG_LEVEL">INFO</Property>
         <Property name="LOG_NAME">${sys:logName}</Property>
-        <Property name="LOG_DEBUGGER">debugger</Property>
-        <Property name="LOG_KAFKA">kafka</Property>
-        <Property name="LOG_BUSINESS">business</Property>
         <property name="LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%c{1.}] - %msg%n"/>
     </Properties>
     <Appenders>
@@ -34,16 +31,16 @@
         </Console>
 
         <RollingRandomAccessFile name="progress" immediateFlush="true" fileName="${LOG_HOME}/${LOG_NAME}.log"
-                                 filePattern="${LOG_HOME}/history/${LOG_NAME}.%d{yyyyMMddHHmm}.zip">
+                                 filePattern="${LOG_HOME}/history/${LOG_NAME}.%d{yyyyMMddHH}.zip">
             <PatternLayout pattern="${LOG_PATTERN}"/>
             <Policies>
-                <SizeBasedTriggeringPolicy size="1MB"/>
+                <SizeBasedTriggeringPolicy size="200MB"/>
                 <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
             </Policies>
-            <DefaultRolloverStrategy max="60">
+            <DefaultRolloverStrategy max="24">
                 <Delete basePath="${LOG_HOME}" maxDepth="2">
                     <IfFileName glob="*/${LOG_NAME}.*.zip" />
-                    <IfLastModified age="60M" />
+                    <IfLastModified age="24H" />
                 </Delete>
             </DefaultRolloverStrategy>
             <Filters>

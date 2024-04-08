@@ -49,6 +49,7 @@ public class SinglePrimarySliceQueryStatement implements SliceQueryStatement {
         sqlBuilder.isFirstCondition(slice.getNo() == 1);
         sqlBuilder.isEndCondition(slice.getNo() == slice.getTotal());
         sqlBuilder.isHalfOpenHalfClosed(isHalfOpenHalfClosed);
+        sqlBuilder.isCsvMode(ConfigCache.isCsvMode());
         ColumnsMetaData primaryKey = tableMetadata.getSinglePrimary();
         boolean isDigit = MetaDataUtil.isDigitPrimaryKey(primaryKey);
         Object offset = translateOffset(isDigit, slice.getBeginIdx());
