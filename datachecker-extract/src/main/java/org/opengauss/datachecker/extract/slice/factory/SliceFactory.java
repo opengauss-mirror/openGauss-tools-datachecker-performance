@@ -75,6 +75,6 @@ public class SliceFactory {
         if (Objects.isNull(datasource)) {
             return new CsvTableProcessor(table, tableFilePaths, processorContext);
         }
-        return new JdbcTableProcessor(table, processorContext);
+        return new JdbcTableProcessor(table, processorContext, datasource);
     }
 }

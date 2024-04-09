@@ -15,6 +15,7 @@
 
 package org.opengauss.datachecker.extract.data.access;
 
+import com.alibaba.druid.pool.DruidDataSource;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.entry.check.Difference;
@@ -63,7 +64,21 @@ public abstract class AbstractDataAccessService implements DataAccessService {
     @Resource
     protected JdbcTemplate jdbcTemplate;
     @Resource
+    protected DruidDataSource druidDataSource;
+    @Resource
     protected ExtractProperties properties;
+
+    private Connection getConnection() {
+        try {
+            return druidDataSource.getConnection();
+        } catch (SQLException e) {
+            throw new ExtractDataAccessException(e);
+        }
+    }
+
+    private void closeConnection(Connection connection) {
+        ConnectionMgr.close(connection);
+    }
 
     @Override
     public <T> List<T> query(String sql, Map<String, Object> param, RowMapper<T> rowMapper) {
@@ -73,7 +88,7 @@ public abstract class AbstractDataAccessService implements DataAccessService {
 
     @Override
     public DataSource getDataSource() {
-        return jdbcTemplate.getDataSource();
+        return druidDataSource;
     }
 
     /**
@@ -82,8 +97,7 @@ public abstract class AbstractDataAccessService implements DataAccessService {
      * @param executeQueryStatement executeQueryStatement
      * @return result
      */
-    public String adasQuerySchema(String executeQueryStatement) {
-        Connection connection = ConnectionMgr.getConnection();
+    public String adasQuerySchema(Connection connection, String executeQueryStatement) {
         String schema = "";
         try (PreparedStatement ps = connection.prepareStatement(executeQueryStatement);
             ResultSet resultSet = ps.executeQuery()) {
@@ -93,7 +107,7 @@ public abstract class AbstractDataAccessService implements DataAccessService {
         } catch (SQLException esql) {
             throw new ExtractDataAccessException("can not access current database");
         } finally {
-            ConnectionMgr.close(connection, null, null);
+            closeConnection(connection);
         }
         return schema;
     }
@@ -107,11 +121,11 @@ public abstract class AbstractDataAccessService implements DataAccessService {
      */
     public Health health(String schema, String sql) {
         try {
-            Connection connection = ConnectionMgr.getConnection();
+            Connection connection = getConnection();
             if (Objects.isNull(connection)) {
                 return Health.buildFailed("can not connection current database");
             }
-            String result = adasQuerySchema(sql);
+            String result = adasQuerySchema(connection, sql);
             if (StringUtils.equalsIgnoreCase(result, schema)) {
                 return Health.buildSuccess();
             } else {
@@ -130,7 +144,7 @@ public abstract class AbstractDataAccessService implements DataAccessService {
      */
     public List<String> adasQueryTableNameList(String executeQueryStatement) {
         final LocalDateTime start = LocalDateTime.now();
-        Connection connection = ConnectionMgr.getConnection();
+        Connection connection = getConnection();
         List<String> list = new LinkedList<>();
         try (PreparedStatement ps = connection.prepareStatement(executeQueryStatement);
             ResultSet resultSet = ps.executeQuery()) {
@@ -140,7 +154,7 @@ public abstract class AbstractDataAccessService implements DataAccessService {
         } catch (SQLException esql) {
             LogUtils.error(log, "adasQueryTableNameList error ", esql);
         } finally {
-            ConnectionMgr.close(connection, null, null);
+            closeConnection(connection);
         }
         long betweenToMillis = durationBetweenToMillis(start, LocalDateTime.now());
         LogUtils.debug(log, "adasQueryTableNameList cost [{}ms]", betweenToMillis);
@@ -155,7 +169,7 @@ public abstract class AbstractDataAccessService implements DataAccessService {
      */
     public List<PrimaryColumnBean> adasQueryTablePrimaryColumns(String executeQueryStatement) {
         final LocalDateTime start = LocalDateTime.now();
-        Connection connection = ConnectionMgr.getConnection();
+        Connection connection = getConnection();
         List<PrimaryColumnBean> list = new LinkedList<>();
         try (PreparedStatement ps = connection.prepareStatement(executeQueryStatement);
             ResultSet resultSet = ps.executeQuery()) {
@@ -169,7 +183,7 @@ public abstract class AbstractDataAccessService implements DataAccessService {
         } catch (SQLException esql) {
             LogUtils.error(log, "adasQueryTablePrimaryColumns error:", esql);
         } finally {
-            ConnectionMgr.close(connection, null, null);
+            closeConnection(connection);
         }
         long betweenToMillis = durationBetweenToMillis(start, LocalDateTime.now());
         LogUtils.debug(log, "adasQueryTablePrimaryColumns cost [{}ms]", betweenToMillis);
@@ -184,7 +198,7 @@ public abstract class AbstractDataAccessService implements DataAccessService {
      */
     public List<TableMetadata> adasQueryTableMetadataList(String executeQueryStatement) {
         final LocalDateTime start = LocalDateTime.now();
-        Connection connection = ConnectionMgr.getConnection();
+        Connection connection = getConnection();
         List<TableMetadata> list = new LinkedList<>();
         try (PreparedStatement ps = connection.prepareStatement(executeQueryStatement);
             ResultSet resultSet = ps.executeQuery()) {
@@ -200,7 +214,7 @@ public abstract class AbstractDataAccessService implements DataAccessService {
         } catch (SQLException esql) {
             LogUtils.error(log, "adasQueryTableMetadataList error: ", esql);
         } finally {
-            ConnectionMgr.close(connection, null, null);
+            closeConnection(connection);
         }
         long betweenToMillis = durationBetweenToMillis(start, LocalDateTime.now());
         LogUtils.debug(log, "dasQueryTableMetadataList cost [{}ms]", betweenToMillis);

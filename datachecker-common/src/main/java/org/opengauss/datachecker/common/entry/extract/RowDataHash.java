@@ -68,8 +68,8 @@ public class RowDataHash {
             return false;
         }
         RowDataHash that = (RowDataHash) o;
-        return kHash == that.kHash && vHash == that.vHash && sNo == that.sNo && getKey().equals(that.getKey())
-                && getSliceKey().equals(that.getSliceKey());
+        return kHash == that.kHash && vHash == that.vHash && sNo == that.sNo && Objects.equals(getKey(), that.getKey())
+                && Objects.equals(getSliceKey(), that.getSliceKey());
     }
 
     @Override

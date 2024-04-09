@@ -63,17 +63,6 @@ public class CheckPoint {
     }
 
     /**
-     * check point depends on JDBC DataSource
-     *
-     * @param dataSource        dataSource
-     * @param dataAccessService dataAccessService
-     */
-    public CheckPoint(DruidDataSource dataSource, DataAccessService dataAccessService) {
-        this.dataSource = dataSource;
-        this.dataAccessService = dataAccessService;
-    }
-
-    /**
      * init table CheckPoint List
      *
      * @param tableMetadata tableMetadata
@@ -93,7 +82,7 @@ public class CheckPoint {
         DataAccessParam param = new DataAccessParam().setSchema(SqlUtil.escape(schema, dataBaseType))
                                                      .setName(SqlUtil.escape(tableName, dataBaseType))
                                                      .setColName(SqlUtil.escape(pkName, dataBaseType));
-        Connection connection = Objects.nonNull(dataSource) ? getConnection() : ConnectionMgr.getConnection();
+        Connection connection = getConnection();
         param.setOffset(slice);
         Object maxPoint = dataAccessService.max(connection, param);
         List<Object> checkPointList = dataAccessService.queryPointList(connection, param);
@@ -103,7 +92,7 @@ public class CheckPoint {
                                        .collect(Collectors.toList());
         stopWatch.stop();
         LogUtils.info(log, "init check-point-list table [{}]:[{}] ", tableName, stopWatch.shortSummary());
-        ConnectionMgr.close(connection, null, null);
+        ConnectionMgr.close(connection);
         return checkPointList;
     }
 
