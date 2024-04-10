@@ -22,6 +22,7 @@ import org.opengauss.datachecker.common.exception.ExtractDataAccessException;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 
+import javax.sql.PooledConnection;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -136,6 +137,27 @@ public class ConnectionMgr {
                 connection.close();
             } catch (SQLException sql) {
                 sql.printStackTrace();
+            }
+        }
+    }
+
+    /**
+     * 关闭数据库链接（连接池连接返回连接池）
+     *
+     * @param connection connection
+     */
+    public static void close(Connection connection) {
+        if (connection instanceof PooledConnection) {
+            try {
+                ((PooledConnection) connection).close();
+            } catch (SQLException e) {
+                throw new ExtractDataAccessException("close pooled connection error");
+            }
+        } else {
+            try {
+                connection.close();
+            } catch (SQLException e) {
+                throw new ExtractDataAccessException("close connection error");
             }
         }
     }

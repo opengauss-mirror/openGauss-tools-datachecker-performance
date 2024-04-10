@@ -146,7 +146,7 @@ public class JdbcDataOperations {
         int tryTime = 0;
         while (Objects.isNull(connection) && tryTime < 30) {
             ThreadUtil.sleepMaxHalfSecond();
-            connection = ConnectionMgr.getConnection();
+            connection = dynamicProxyDataSource.getConnection();
             tryTime++;
             LogUtils.debug(log, "try to get jdbc connection! {}", tryTime);
         }

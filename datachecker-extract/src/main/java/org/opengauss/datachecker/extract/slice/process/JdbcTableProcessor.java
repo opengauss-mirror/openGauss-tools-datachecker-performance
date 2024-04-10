@@ -15,6 +15,7 @@
 
 package org.opengauss.datachecker.extract.slice.process;
 
+import com.alibaba.druid.pool.DruidDataSource;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.entry.extract.SliceExtend;
 import org.opengauss.datachecker.common.exception.ExtractDataAccessException;
@@ -50,7 +51,7 @@ import java.util.TreeMap;
 public class JdbcTableProcessor extends AbstractTableProcessor {
     private static final Logger log = LogUtils.getLogger(JdbcTableProcessor.class);
     private final JdbcDataOperations jdbcOperation;
-
+    private final DruidDataSource dataSource;
     private SliceResultSetSender sliceSender;
 
     /**
@@ -59,9 +60,10 @@ public class JdbcTableProcessor extends AbstractTableProcessor {
      * @param table   table
      * @param context context
      */
-    public JdbcTableProcessor(String table, SliceProcessorContext context) {
+    public JdbcTableProcessor(String table, SliceProcessorContext context, DruidDataSource dataSource) {
         super(table, context);
         this.jdbcOperation = context.getJdbcDataOperations();
+        this.dataSource = dataSource;
     }
 
     @Override
@@ -151,7 +153,7 @@ public class JdbcTableProcessor extends AbstractTableProcessor {
         int fetchSize = getFetchSize();
         try {
             long estimatedSize = estimatedMemorySize(tableMetadata.getAvgRowLength(), fetchSize);
-            connection = jdbcOperation.tryConnectionAndClosedAutoCommit(estimatedSize);
+            connection = jdbcOperation.tryConnectionAndClosedAutoCommit(estimatedSize, dataSource);
             QuerySqlEntry sqlEntry = getFullQuerySqlEntry();
             log.info(" {} , {}", table, sqlEntry.toString());
             List<long[]> offsetList = new LinkedList<>();
