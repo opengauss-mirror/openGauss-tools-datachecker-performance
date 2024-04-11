@@ -6,9 +6,9 @@ spring:
   kafka:
     bootstrap-servers: localhost:9092
   check:
-    core-pool-size: 2
+    core-pool-size: 5
     maximum-pool-size: 10
-    maximum-topic-size: 4
+    maximum-topic-size: 1
 data:
   check:
     data-path: ./check_result
@@ -16,7 +16,7 @@ data:
     sink-uri: http://127.0.0.1:9002 # server.port=9002
     # auto-delete-topic :  Configure whether to automatically delete topic.
     # 0 is not delete; 1 is delete when checked all completed ; 2 is delete when checked a table
-    auto-delete-topic: 2
+    auto-delete-topic: 1
     increment-max-diff-count: 1000
     max-retry-times: 200
 rules:

@@ -5,9 +5,9 @@ logging:
 spring:
   check:
     server-uri: http://127.0.0.1:9000
-    core-pool-size: 2
+    core-pool-size: 5
     maximum-pool-size: 10
-    maximum-topic-size: 4
+    maximum-topic-size: 1
     maximum-table-slice-size: 100000
     extend-maximum-pool-size: 5
   extract:
