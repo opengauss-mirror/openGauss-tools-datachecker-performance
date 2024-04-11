@@ -51,7 +51,11 @@
 
     <Loggers>
         <Root level="${LOG_LEVEL}">
-            <AppenderRef ref="console_out_appender"/>
+            <!--
+                must be close console_out_appender ,when portal exec gs data check .
+                portal will catch console log for something, this will cause check data process shutdown error.
+            -->
+            <!--<AppenderRef ref="console_out_appender"/> -->
             <AppenderRef ref="progress"/>
         </Root>
         <logger name="org.apache.kafka" level="off" />
