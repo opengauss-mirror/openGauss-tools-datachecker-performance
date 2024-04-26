@@ -90,7 +90,8 @@ public class SimpleTypeHandlerFactory {
             if (rsmd.getPrecision(columnIdx) == 1) {
                 return resultSet.getString(columnIdx);
             }
-            return HexUtil.byteToHexTrim(resultSet.getBytes(columnIdx));
+            byte[] data = resultSet.getBytes(columnIdx);
+            return resultSet.wasNull() ? NULL : HexUtil.byteToHexTrim(data);
         };
     }
 
@@ -148,7 +149,10 @@ public class SimpleTypeHandlerFactory {
      * @return SimpleTypeHandler
      */
     public SimpleTypeHandler createBytesHandler() {
-        return (resultSet, columnLabel) -> HexUtil.byteToHex(resultSet.getBytes(columnLabel));
+        return (resultSet, columnLabel) -> {
+            byte[] data = resultSet.getBytes(columnLabel);
+            return resultSet.wasNull() ? NULL : HexUtil.byteToHex(data);
+        };
     }
 
     /**
