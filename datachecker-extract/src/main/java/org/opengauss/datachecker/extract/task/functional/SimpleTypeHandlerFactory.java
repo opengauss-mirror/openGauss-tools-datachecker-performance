@@ -488,7 +488,10 @@ public class SimpleTypeHandlerFactory {
      * @return SimpleTypeHandler
      */
     public SimpleTypeHandler createOgBitHandler() {
-        return (rs, columnLabel) -> HexUtil.binaryToHex(rs.getString(columnLabel));
+        return (rs, columnLabel) -> {
+            String bit = rs.getString(columnLabel);
+            return rs.wasNull() ? NULL : HexUtil.binaryToHex(bit);
+        };
     }
 
     /**
