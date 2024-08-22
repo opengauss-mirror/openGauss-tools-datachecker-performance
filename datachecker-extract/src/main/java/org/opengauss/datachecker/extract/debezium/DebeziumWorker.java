@@ -79,7 +79,7 @@ public class DebeziumWorker implements Runnable {
             }
         } else {
             log.info("consumer record count=0");
-            ThreadUtil.sleepMax2Second();
+            ThreadUtil.sleepSecond(5);
         }
     }
 

@@ -47,7 +47,7 @@ public class AsyncConfig {
         executor.setCorePoolSize(1);
         executor.setMaxPoolSize(5);
         executor.setQueueCapacity(1000);
-        executor.setThreadNamePrefix("MyExecutor-");
+        executor.setThreadNamePrefix("check-executor-");
         executor.initialize();
         return executor;
     }

@@ -91,7 +91,7 @@ public class ExportCheckResult {
         resultPaths.forEach(file -> {
             try {
                 Files.move(file, Path.of(concat(backDir, file.getFileName()
-                                                             .toString())), ATOMIC_MOVE);
+                        .toString())), ATOMIC_MOVE);
             } catch (IOException e) {
                 LogUtils.error(log, "back the verification result environment error");
             }
@@ -103,13 +103,18 @@ public class ExportCheckResult {
         return ROOT_PATH.concat(CHECK_RESULT_PATH);
     }
 
-    private static String getResultBakRootDir() {
+    /**
+     * get result backup root dir
+     *
+     * @return path
+     */
+    public static String getResultBakRootDir() {
         return ROOT_PATH.concat(CHECK_RESULT_BAK_DIR);
     }
 
     private static String concat(String dir, String fileName) {
         return dir.concat(File.separator)
-                  .concat(fileName);
+                .concat(fileName);
     }
 
     private static String getResultBakDir() {

@@ -87,6 +87,9 @@ public class IncrementManagerService {
     private CheckResultManagerService checkResultManagerService;
     @Resource
     private DynamicThreadPoolManager dynamicThreadPoolManager;
+    @Resource
+    private IncrementLogManager incrementLogManager;
+
     private final AtomicInteger retryTimes = new AtomicInteger(0);
     private static final int RETRY_SLEEP_TIMES = 1000;
     private static final int MAX_RETRY_SLEEP_TIMES = 1000;
@@ -157,13 +160,14 @@ public class IncrementManagerService {
             mergeDataLogList(dataLogList, lastResults);
             if (CollectionUtils.isNotEmpty(dataLogList)) {
                 ExportCheckResult.backCheckResultDirectory();
+                incrementLogManager.bakResultLogMonitor();
                 sliceProgressService.startProgressing();
                 PROCESS_SIGNATURE.set(IdGenerator.nextId36());
                 checkResultManagerService.progressing(dataLogList.size());
                 incrementDataLogsChecking(dataLogList);
             } else {
                 LogUtils.info(log, "There are no differences to verify at the current time. Please wait.");
-                ThreadUtil.sleep(30000);
+                ThreadUtil.sleepSecond(5);
             }
         } catch (Exception ex) {
             LogUtils.error(log, "take inc log queue interrupted  ");
