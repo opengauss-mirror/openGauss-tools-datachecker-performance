@@ -162,7 +162,7 @@ public class KafkaAdminService {
      */
     public boolean isTopicExists(String topicName) {
         try {
-            LogUtils.debug(log, "check topic [{} : group{}] has exists --> check kafka list topics", topicName);
+            LogUtils.debug(log, "check topic [{}] has exists --> check kafka list topics", topicName);
             return adminClient.listTopics()
                               .listings()
                               .get()

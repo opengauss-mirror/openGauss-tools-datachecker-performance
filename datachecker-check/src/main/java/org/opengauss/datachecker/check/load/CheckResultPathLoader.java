@@ -17,6 +17,7 @@ package org.opengauss.datachecker.check.load;
 
 import org.opengauss.datachecker.check.config.DataCheckProperties;
 import org.opengauss.datachecker.check.modules.check.ExportCheckResult;
+import org.opengauss.datachecker.check.service.IncrementLogManager;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
@@ -35,6 +36,8 @@ import javax.annotation.Resource;
 public class CheckResultPathLoader extends AbstractCheckLoader {
     @Resource
     private DataCheckProperties properties;
+    @Resource
+    private IncrementLogManager incrementLogManager;
 
     /**
      * Initialize the verification result environment
@@ -44,6 +47,7 @@ public class CheckResultPathLoader extends AbstractCheckLoader {
         ExportCheckResult.initEnvironment(properties.getDataPath());
         checkEnvironment.setExportCheckPath(properties.getDataPath());
         ExportCheckResult.backCheckResultDirectory();
+        incrementLogManager.init(ExportCheckResult.getResultBakRootDir());
         LogUtils.info(log, "check service load export environment success.");
     }
 }

@@ -23,6 +23,7 @@ import org.apache.logging.log4j.Logger;
 import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -45,6 +46,19 @@ public class ThreadUtil {
     public static void sleep(int millisTime) {
         try {
             Thread.sleep(millisTime);
+        } catch (InterruptedException ie) {
+            LogUtils.warn(log, "thread sleep interrupted exception ");
+        }
+    }
+
+    /**
+     * Thread sleep second
+     *
+     * @param second Sleep time
+     */
+    public static void sleepSecond(int second) {
+        try {
+            TimeUnit.SECONDS.sleep(second);
         } catch (InterruptedException ie) {
             LogUtils.warn(log, "thread sleep interrupted exception ");
         }
@@ -141,13 +155,13 @@ public class ThreadUtil {
      */
     public static ScheduledExecutorService newSingleThreadScheduledExecutor() {
         return new ScheduledThreadPoolExecutor(1, new BasicThreadFactory.Builder().daemon(true)
-                                                                                  .build());
+                .build());
     }
 
     public static ScheduledExecutorService newSingleThreadScheduledExecutor(String name) {
         return new ScheduledThreadPoolExecutor(1, new BasicThreadFactory.
-            Builder().namingPattern(name)
-                     .build());
+                Builder().namingPattern(name)
+                .build());
     }
 
 }
