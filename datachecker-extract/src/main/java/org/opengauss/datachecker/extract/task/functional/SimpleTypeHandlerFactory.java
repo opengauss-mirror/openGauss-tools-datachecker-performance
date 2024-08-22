@@ -26,11 +26,9 @@ import java.io.Reader;
 import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.ResultSet;
-import java.sql.Time;
 import java.sql.Timestamp;
 import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
-import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
@@ -209,8 +207,8 @@ public class SimpleTypeHandlerFactory {
      */
     public SimpleTypeHandler createTimeHandler() {
         return (resultSet, columnLabel) -> {
-            final Time time = resultSet.getTime(columnLabel);
-            return Objects.nonNull(time) ? TIME.format(time.toLocalTime()) : NULL;
+            String timeStr = resultSet.getString(columnLabel);
+            return Objects.nonNull(timeStr) ? timeStr : NULL;
         };
     }
 
