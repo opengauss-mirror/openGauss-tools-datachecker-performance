@@ -28,6 +28,7 @@ import javax.annotation.PreDestroy;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * DebeziumWorker
@@ -40,11 +41,20 @@ public class DebeziumWorker implements Runnable {
     private static final Logger log = LogUtils.getLogger();
     private static final AtomicBoolean PAUSE_OR_RESUME = new AtomicBoolean(WorkerSwitch.RESUME);
     private static final AtomicBoolean RUNNING = new AtomicBoolean(true);
+    private static final AtomicInteger POLL_BATCH_COUNT = new AtomicInteger();
+    private static final int MAX_BATCH_COUNT = 1000;
     private static final String NAME = "DebeziumWorker";
+
     private DebeziumConsumerListener debeziumConsumerListener;
     private KafkaConsumerConfig kafkaConsumerConfig;
     private KafkaConsumer<String, Object> consumer = null;
 
+    /**
+     * DebeziumWorker
+     *
+     * @param debeziumConsumerListener debeziumConsumerListener
+     * @param kafkaConsumerConfig      kafkaConsumerConfig
+     */
     public DebeziumWorker(DebeziumConsumerListener debeziumConsumerListener, KafkaConsumerConfig kafkaConsumerConfig) {
         this.debeziumConsumerListener = debeziumConsumerListener;
         this.kafkaConsumerConfig = kafkaConsumerConfig;
@@ -53,7 +63,7 @@ public class DebeziumWorker implements Runnable {
     @Override
     public void run() {
         Thread.currentThread()
-              .setName(NAME);
+                .setName(NAME);
         log.info("The Debezium message listener task has started");
         consumer = kafkaConsumerConfig.getDebeziumConsumer();
         while (RUNNING.get()) {
@@ -77,9 +87,14 @@ public class DebeziumWorker implements Runnable {
                     log.error("DebeziumWorker unknown error, message,{},{}", record.toString(), ex);
                 }
             }
+            POLL_BATCH_COUNT.addAndGet(records.count());
+            if (POLL_BATCH_COUNT.get() > MAX_BATCH_COUNT) {
+                PAUSE_OR_RESUME.set(WorkerSwitch.PAUSE);
+                POLL_BATCH_COUNT.set(0);
+            }
         } else {
             log.info("consumer record count=0");
-            ThreadUtil.sleepSecond(5);
+            PAUSE_OR_RESUME.set(WorkerSwitch.PAUSE);
         }
     }
 

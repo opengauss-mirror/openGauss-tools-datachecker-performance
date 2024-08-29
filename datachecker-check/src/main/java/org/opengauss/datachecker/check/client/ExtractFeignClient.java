@@ -111,7 +111,7 @@ public interface ExtractFeignClient {
      */
     @GetMapping("/extract/query/topic/data")
     Result<List<RowDataHash>> queryTopicData(@RequestParam("tableName") String tableName,
-        @RequestParam("partitions") int partitions);
+                                             @RequestParam("partitions") int partitions);
 
     /**
      * Query the specified incremental topic data
@@ -172,8 +172,17 @@ public interface ExtractFeignClient {
      * @param tableName tableName
      * @return Table metadata hash
      */
-    @PostMapping("/extract/query/table/metadata/hash")
-    Result<TableMetadataHash> queryTableMetadataHash(@RequestParam(name = "tableName") String tableName);
+    @PostMapping("/extract/source/table/metadata/hash")
+    Result<TableMetadataHash> querySourceTableMetadataHash(@RequestParam(name = "tableName") String tableName);
+
+    /**
+     * Query table metadata hash information
+     *
+     * @param tableName tableName
+     * @return Table metadata hash
+     */
+    @PostMapping("/extract/sink/table/metadata/hash")
+    Result<TableMetadataHash> querySinkTableMetadataHash(@RequestParam(name = "tableName") String tableName);
 
     /**
      * Extract incremental log data records
@@ -181,8 +190,35 @@ public interface ExtractFeignClient {
      * @param dataLog data Log
      * @return Return extraction results
      */
-    @PostMapping("/extract/query/secondary/data/row/hash")
-    Result<List<RowDataHash>> querySecondaryCheckRowData(@RequestBody SourceDataLog dataLog);
+    @PostMapping("/extract/source/data/row/hash")
+    Result<List<RowDataHash>> querySourceCheckRowData(@RequestBody SourceDataLog dataLog);
+
+    /**
+     * Extract incremental log data records
+     *
+     * @param dataLog data Log
+     * @return Return extraction results
+     */
+    @PostMapping("/extract/sink/data/row/hash")
+    Result<List<RowDataHash>> querySinkCheckRowData(@RequestBody SourceDataLog dataLog);
+
+    /**
+     * Extract incremental log data records
+     *
+     * @param dataLog data Log
+     * @return Return extraction results
+     */
+    @PostMapping("/extract/source/secondary/data/row/hash")
+    Result<List<RowDataHash>> querySourceSecondaryCheckRowData(@RequestBody SourceDataLog dataLog);
+
+    /**
+     * Extract incremental log data records
+     *
+     * @param dataLog data Log
+     * @return Return extraction results
+     */
+    @PostMapping("/extract/sink/secondary/data/row/hash")
+    Result<List<RowDataHash>> querySinkSecondaryCheckRowData(@RequestBody SourceDataLog dataLog);
 
     /**
      * Get the current endpoint configuration information

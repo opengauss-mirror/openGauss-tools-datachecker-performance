@@ -24,6 +24,8 @@ import org.opengauss.datachecker.check.event.CheckSuccessReportEvent;
 import org.opengauss.datachecker.check.load.CheckEnvironment;
 import org.opengauss.datachecker.check.modules.check.CheckDiffResult;
 import org.opengauss.datachecker.check.modules.check.CheckResultConstants;
+import org.opengauss.datachecker.common.config.ConfigCache;
+import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.check.CheckPartition;
 import org.opengauss.datachecker.common.entry.common.RepairEntry;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
@@ -106,8 +108,11 @@ public class CheckResultManagerService implements ApplicationContextAware {
             String logFilePath = getLogRootPath();
             final List<CheckDiffResult> successList = filterResultByResult(CheckResultConstants.RESULT_SUCCESS);
             final List<CheckDiffResult> failedList = filterResultByResult(CheckResultConstants.RESULT_FAILED);
-            boolean ogCompatibility = feignClient.checkTargetOgCompatibility();
-            reduceFailedRepair(logFilePath, failedList, ogCompatibility);
+            if (!ConfigCache.hasCompatibility()) {
+                ConfigCache.put(ConfigConstants.OG_COMPATIBILITY_B, feignClient.checkTargetOgCompatibility());
+            }
+            Boolean isOgCompatibility = ConfigCache.getBooleanValue(ConfigConstants.OG_COMPATIBILITY_B);
+            reduceFailedRepair(logFilePath, failedList, isOgCompatibility);
             reduceSummary(successList, failedList);
         } catch (Exception exception) {
             log.error("summaryCheckResult ", exception);
@@ -131,10 +136,10 @@ public class CheckResultManagerService implements ApplicationContextAware {
         if (CollectionUtils.isNotEmpty(updateDiffs)) {
             RepairEntry update = new RepairEntry();
             update.setTable(tableFailed.getTable())
-                  .setSchema(tableFailed.getSchema())
-                  .setFileName(tableFailed.getFileName())
-                  .setOgCompatibility(ogCompatibility)
-                  .setDiffSet(updateDiffs);
+                    .setSchema(tableFailed.getSchema())
+                    .setFileName(tableFailed.getFileName())
+                    .setOgCompatibility(ogCompatibility)
+                    .setDiffSet(updateDiffs);
             final List<String> updateRepairs = feignClient.buildRepairStatementUpdateDml(Endpoint.SOURCE, update);
             appendLogFile(repairFile, updateRepairs);
         }
@@ -145,10 +150,10 @@ public class CheckResultManagerService implements ApplicationContextAware {
         if (CollectionUtils.isNotEmpty(insertDiffs)) {
             RepairEntry insert = new RepairEntry();
             insert.setTable(tableFailed.getTable())
-                  .setSchema(tableFailed.getSchema())
-                  .setFileName(tableFailed.getFileName())
-                  .setOgCompatibility(ogCompatibility)
-                  .setDiffSet(insertDiffs);
+                    .setSchema(tableFailed.getSchema())
+                    .setFileName(tableFailed.getFileName())
+                    .setOgCompatibility(ogCompatibility)
+                    .setDiffSet(insertDiffs);
             final List<String> insertRepairs = feignClient.buildRepairStatementInsertDml(Endpoint.SOURCE, insert);
             appendLogFile(repairFile, insertRepairs);
         }
@@ -159,10 +164,10 @@ public class CheckResultManagerService implements ApplicationContextAware {
         if (CollectionUtils.isNotEmpty(deleteDiffs)) {
             RepairEntry delete = new RepairEntry();
             delete.setTable(tableFailed.getTable())
-                  .setSchema(tableFailed.getSchema())
-                  .setFileName(tableFailed.getFileName())
-                  .setOgCompatibility(ogCompatibility)
-                  .setDiffSet(deleteDiffs);
+                    .setSchema(tableFailed.getSchema())
+                    .setFileName(tableFailed.getFileName())
+                    .setOgCompatibility(ogCompatibility)
+                    .setDiffSet(deleteDiffs);
             final List<String> deleteRepairs = feignClient.buildRepairStatementDeleteDml(Endpoint.SOURCE, delete);
             appendLogFile(repairFile, deleteRepairs);
         }
@@ -210,10 +215,10 @@ public class CheckResultManagerService implements ApplicationContextAware {
 
     private List<CheckDiffResult> filterResultByResult(String resultType) {
         List<CheckDiffResult> resultList = new LinkedList<>(checkResultCache.values()
-                                                                            .stream()
-                                                                            .filter(result -> result.getResult()
-                                                                                                    .equals(resultType))
-                                                                            .collect(Collectors.toList()));
+                .stream()
+                .filter(result -> result.getResult()
+                        .equals(resultType))
+                .collect(Collectors.toList()));
         if (CheckResultConstants.RESULT_FAILED.equals(resultType)) {
             resultList.addAll(noCheckedCache.values());
         }
@@ -222,15 +227,15 @@ public class CheckResultManagerService implements ApplicationContextAware {
 
     private int calcTableCount(List<CheckDiffResult> resultList) {
         return (int) resultList.stream()
-                               .map(CheckDiffResult::getTable)
-                               .distinct()
-                               .count();
+                .map(CheckDiffResult::getTable)
+                .distinct()
+                .count();
     }
 
     private long calcRowCount(List<CheckDiffResult> resultList) {
         return resultList.stream()
-                         .mapToLong(CheckDiffResult::getRowCount)
-                         .sum();
+                .mapToLong(CheckDiffResult::getRowCount)
+                .sum();
     }
 
     @Override

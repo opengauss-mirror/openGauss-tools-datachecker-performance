@@ -45,6 +45,7 @@ import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.SpringUtil;
 import org.opengauss.datachecker.common.web.Result;
 import org.springframework.lang.NonNull;
+import org.springframework.util.StopWatch;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -77,7 +78,7 @@ public class IncrementCheckThread extends Thread {
     private final List<Bucket> sourceBucketList = new ArrayList<>();
     private final List<Bucket> sinkBucketList = new ArrayList<>();
     private final DifferencePair<Map<String, RowDataHash>, Map<String, RowDataHash>, Map<String, Pair<Node, Node>>>
-        difference = DifferencePair.of(new HashMap<>(), new HashMap<>(), new HashMap<>());
+            difference = DifferencePair.of(new HashMap<>(), new HashMap<>(), new HashMap<>());
     private final Map<Integer, Pair<Integer, Integer>> bucketNumberDiffMap = new HashMap<>();
     private final QueryRowDataWapper queryRowDataWapper;
     private final CheckResultManagerService checkResultManagerService;
@@ -91,6 +92,7 @@ public class IncrementCheckThread extends Thread {
     private CheckRateCache checkRateCache;
     private EndpointMetaDataManager endpointMetaDataManager;
     private int maxRowSize;
+    private StopWatch stopWatch;
 
     /**
      * IncrementCheckThread constructor method
@@ -99,7 +101,7 @@ public class IncrementCheckThread extends Thread {
      * @param support    Data Check Runnable Support
      */
     public IncrementCheckThread(@NonNull IncrementDataCheckParam checkParam,
-        @NonNull DataCheckRunnableSupport support) {
+                                @NonNull DataCheckRunnableSupport support) {
         startTime = LocalDateTime.now();
         dataLog = checkParam.getDataLog();
         process = checkParam.getProcess();
@@ -112,6 +114,7 @@ public class IncrementCheckThread extends Thread {
         checkRateCache = SpringUtil.getBean(CheckRateCache.class);
         endpointMetaDataManager = SpringUtil.getBean(EndpointMetaDataManager.class);
         queryRowDataWapper = new QueryRowDataWapper(feignClient);
+        stopWatch = new StopWatch("inc " + sinkSchema + "." + tableName);
     }
 
     /**
@@ -128,34 +131,43 @@ public class IncrementCheckThread extends Thread {
     @Override
     public void run() {
         try {
+            stopWatch.start("checkTableMetadata");
             setName(buildThreadName());
             // Metadata verification
             isTableStructureEquals = checkTableMetadata();
+            stopWatch.stop();
             if (isTableStructureEquals) {
                 maxRowSize = dataLog.getCompositePrimaryValues().size();
+                stopWatch.start("firstCheckCompare " + maxRowSize);
                 // Initial verification
                 firstCheckCompare();
+                stopWatch.stop();
                 // Analyze the initial verification results
+                stopWatch.start("secondaryCheckCompare");
                 List<String> diffIdList = parseDiffResult();
                 // Conduct secondary verification according to the initial verification results
                 secondaryCheckCompare(diffIdList);
+                stopWatch.stop();
             } else {
                 log.error("check table {} metadata error", tableName);
             }
             // Verification result verification repair report
+            stopWatch.start("checkResult");
             checkResult();
             checkRateCache.add(buildCheckTable());
-            log.info(" {} check table {} end", process, tableName);
+            stopWatch.stop();
         } catch (Exception ex) {
             log.error("check error", ex);
+        } finally {
+            log.info(" {} check {} ", process, stopWatch.shortSummary());
         }
     }
 
     private CheckTable buildCheckTable() {
         TableMetadata tableMetadata = endpointMetaDataManager.queryIncrementMetaData(Endpoint.SINK, tableName);
         return CheckTable.builder().tableName(tableName).rowCount(rowCount)
-                         .completeTimestamp(System.currentTimeMillis()).avgRowLength(tableMetadata.getAvgRowLength())
-                         .build();
+                .completeTimestamp(System.currentTimeMillis()).avgRowLength(tableMetadata.getAvgRowLength())
+                .build();
     }
 
     /**
@@ -233,7 +245,7 @@ public class IncrementCheckThread extends Thread {
             } else {
                 // sourceSize is less than thresholdMinBucketSize, that is, there is only one bucket. Compare
                 DifferencePair<Map, Map, Map> subDifference =
-                    compareBucket(sourceBucketList.get(0), sinkBucketList.get(0));
+                        compareBucket(sourceBucketList.get(0), sinkBucketList.get(0));
                 difference.getDiffering().putAll(subDifference.getDiffering());
                 difference.getOnlyOnLeft().putAll(subDifference.getOnlyOnLeft());
                 difference.getOnlyOnRight().putAll(subDifference.getOnlyOnRight());
@@ -276,8 +288,8 @@ public class IncrementCheckThread extends Thread {
      * @return Return metadata verification results
      */
     private boolean checkTableMetadata() {
-        TableMetadataHash sourceTableHash = queryTableMetadataHash(Endpoint.SOURCE, tableName);
-        TableMetadataHash sinkTableHash = queryTableMetadataHash(Endpoint.SINK, tableName);
+        TableMetadataHash sourceTableHash = querySourceTableMetadataHash(tableName);
+        TableMetadataHash sinkTableHash = querySinkTableMetadataHash(tableName);
         boolean isEqual = Objects.equals(sourceTableHash, sinkTableHash);
         if (!isEqual) {
             isExistTableMiss = true;
@@ -294,13 +306,26 @@ public class IncrementCheckThread extends Thread {
         return isEqual;
     }
 
-    private TableMetadataHash queryTableMetadataHash(Endpoint endpoint, String tableName) {
-        Result<TableMetadataHash> result = feignClient.getClient(endpoint).queryTableMetadataHash(tableName);
+    private TableMetadataHash querySourceTableMetadataHash(String tableName) {
+        Result<TableMetadataHash> result = feignClient.getClient(Endpoint.SOURCE)
+                .querySourceTableMetadataHash(tableName);
         if (result.isSuccess()) {
             return result.getData();
         } else {
-            throw new DispatchClientException(endpoint,
-                "query table metadata hash " + tableName + " error, " + result.getMessage());
+            throw new DispatchClientException(
+                    Endpoint.SOURCE,
+                    "query table metadata hash " + tableName + " error, " + result.getMessage());
+        }
+    }
+
+    private TableMetadataHash querySinkTableMetadataHash(String tableName) {
+        Result<TableMetadataHash> result = feignClient.getClient(Endpoint.SINK)
+                .querySinkTableMetadataHash(tableName);
+        if (result.isSuccess()) {
+            return result.getData();
+        } else {
+            throw new DispatchClientException(Endpoint.SINK,
+                    "query table metadata hash " + tableName + " error, " + result.getMessage());
         }
     }
 
@@ -325,9 +350,9 @@ public class IncrementCheckThread extends Thread {
         // Merkel tree comparison
         if (sourceTree.getDepth() != sinkTree.getDepth()) {
             throw new MerkleTreeDepthException(String.format(Locale.ROOT,
-                "source & sink data have large different, Please synchronize data again! "
-                    + "merkel tree depth different,source depth=[%d],sink depth=[%d]", sourceTree.getDepth(),
-                sinkTree.getDepth()));
+                    "source & sink data have large different, Please synchronize data again! "
+                            + "merkel tree depth different,source depth=[%d],sink depth=[%d]", sourceTree.getDepth(),
+                    sinkTree.getDepth()));
         }
         Node source = sourceTree.getRoot();
         Node sink = sinkTree.getRoot();
@@ -365,7 +390,11 @@ public class IncrementCheckThread extends Thread {
      * @param bucketList bucket list
      */
     private void initFirstCheckBucketList(Endpoint endpoint, List<Bucket> bucketList) {
-        List<RowDataHash> dataList = queryRowDataWapper.queryRowData(endpoint, dataLog);
+        StopWatch rowDataQueryWatch = new StopWatch("first query row data " + endpoint);
+        rowDataQueryWatch.start(dataLog.getTableName() + " " + dataLog.getCompositePrimaryValues().size());
+        List<RowDataHash> dataList = queryRowDataWapper.queryCheckRowData(endpoint, dataLog);
+        rowDataQueryWatch.stop();
+        LogUtils.debug(log, "query row data cost: {}", rowDataQueryWatch.shortSummary());
         buildBucket(dataList, endpoint, bucketList);
     }
 
@@ -384,7 +413,11 @@ public class IncrementCheckThread extends Thread {
     }
 
     private void buildSecondaryCheckBucket(Endpoint endpoint, SourceDataLog dataLog, List<Bucket> bucketList) {
-        final List<RowDataHash> dataList = getSecondaryCheckRowData(endpoint, dataLog);
+        StopWatch rowDataSecQueryWatch = new StopWatch("check sec query row data " + endpoint);
+        rowDataSecQueryWatch.start(dataLog.getTableName() + " " + dataLog.getCompositePrimaryValues().size());
+        List<RowDataHash> dataList = queryRowDataWapper.querySecondaryCheckRowData(endpoint, dataLog);
+        rowDataSecQueryWatch.stop();
+        LogUtils.debug(log, "query sec row data cost: {}", rowDataSecQueryWatch.shortSummary());
         buildBucket(dataList, endpoint, bucketList);
     }
 
@@ -419,13 +452,6 @@ public class IncrementCheckThread extends Thread {
         });
     }
 
-    private List<RowDataHash> getSecondaryCheckRowData(Endpoint endpoint, SourceDataLog dataLog) {
-        if (dataLog == null || CollectionUtils.isEmpty(dataLog.getCompositePrimaryValues())) {
-            return new ArrayList<>();
-        }
-        return queryRowDataWapper.queryRowData(endpoint, dataLog);
-    }
-
     /**
      * Compare the difference data recorded inside the two barrels
      *
@@ -436,7 +462,7 @@ public class IncrementCheckThread extends Thread {
     private DifferencePair<Map, Map, Map> compareBucket(Bucket sourceBucket, Bucket sinkBucket) {
         if (sourceBucket == null || sinkBucket == null) {
             return DifferencePair.of(sourceBucket == null ? sinkBucket.getBucket() : new HashMap<>(),
-                sinkBucket == null ? sourceBucket.getBucket() : new HashMap<>(), new HashMap());
+                    sinkBucket == null ? sourceBucket.getBucket() : new HashMap<>(), new HashMap());
         }
         Map<String, RowDataHash> sourceMap = sourceBucket.getBucket();
         Map<String, RowDataHash> sinkMap = sinkBucket.getBucket();
@@ -485,12 +511,14 @@ public class IncrementCheckThread extends Thread {
     private void checkResult() {
         final AbstractCheckDiffResultBuilder<?, ?> builder = AbstractCheckDiffResultBuilder.builder();
         CheckDiffResult result =
-            builder.table(tableName).process(process).beginOffset(dataLog.getBeginOffset()).schema(sinkSchema)
-                   .partitions(0).rowCount(rowCount).startTime(startTime).endTime(LocalDateTime.now())
-                   .isExistTableMiss(isExistTableMiss, onlyExistEndpoint).checkMode(CheckMode.INCREMENT)
-                   .isTableStructureEquals(isTableStructureEquals).keyUpdateSet(difference.getDiffering().keySet())
-                   .keyInsertSet(difference.getOnlyOnLeft().keySet()).keyDeleteSet(difference.getOnlyOnRight().keySet())
-                   .build();
+                builder.table(tableName).process(process).beginOffset(dataLog.getBeginOffset()).schema(sinkSchema)
+                        .partitions(0).rowCount(rowCount).startTime(startTime).endTime(LocalDateTime.now())
+                        .isExistTableMiss(isExistTableMiss, onlyExistEndpoint).checkMode(CheckMode.INCREMENT)
+                        .isTableStructureEquals(isTableStructureEquals)
+                        .keyUpdateSet(difference.getDiffering().keySet())
+                        .keyInsertSet(difference.getOnlyOnLeft().keySet())
+                        .keyDeleteSet(difference.getOnlyOnRight().keySet())
+                        .build();
         checkResultManagerService.addResult(new CheckPartition(tableName, 0), result);
     }
 

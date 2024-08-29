@@ -90,7 +90,7 @@ public class ExtractController {
     @Operation(summary = "construction a data extraction task for the current endpoint")
     @PostMapping("/extract/build/task/all")
     public Result<PageExtract> buildExtractTaskAllTables(
-        @Parameter(name = "processNo", description = "execution process no") @RequestParam(name = "processNo")
+            @Parameter(name = "processNo", description = "execution process no") @RequestParam(name = "processNo")
             String processNo) {
         return Result.success(dataExtractService.buildExtractTaskAllTables(processNo));
     }
@@ -138,7 +138,7 @@ public class ExtractController {
     @Operation(summary = "execute the data extraction task that has been created for the current endpoint")
     @PostMapping("/extract/exec/task/all")
     public Result<Void> execExtractTaskAllTables(
-        @Parameter(name = "processNo", description = "execution process no") @RequestParam(name = "processNo")
+            @Parameter(name = "processNo", description = "execution process no") @RequestParam(name = "processNo")
             String processNo) {
         dataExtractService.execExtractTaskAllTables(processNo);
         return Result.success();
@@ -163,9 +163,7 @@ public class ExtractController {
      * @return table data extraction task information
      */
     @GetMapping("/extract/table/info")
-    @Operation(summary = "queries information about data extraction tasks in a specified table in the current process.")
-    Result<ExtractTask> queryTableInfo(
-        @Parameter(name = "tableName", description = "table name") @RequestParam(name = "tableName") String tableName) {
+    Result<ExtractTask> queryTableInfo(@RequestParam(name = "tableName") String tableName) {
         return Result.success(dataExtractService.queryTableInfo(tableName));
     }
 
@@ -179,16 +177,32 @@ public class ExtractController {
     @Operation(summary = "querying table data")
     @PostMapping("/extract/query/table/data")
     Result<List<Map<String, String>>> queryTableColumnValues(
-        @NotEmpty(message = "the name of the table to be repaired belongs cannot be empty")
-        @RequestParam(name = "tableName") String tableName,
-        @NotEmpty(message = "the primary key set to be repaired belongs cannot be empty") @RequestBody
+            @NotEmpty(message = "the name of the table to be repaired belongs cannot be empty")
+            @RequestParam(name = "tableName") String tableName,
+            @NotEmpty(message = "the primary key set to be repaired belongs cannot be empty") @RequestBody
             Set<String> compositeKeySet) {
         return Result.success(dataExtractService.queryTableColumnValues(tableName, new ArrayList<>(compositeKeySet)));
     }
 
-    @Operation(summary = "query the metadata of the current table structure and perform hash calculation.")
-    @PostMapping("/extract/query/table/metadata/hash")
-    Result<TableMetadataHash> queryTableMetadataHash(@RequestParam(name = "tableName") String tableName) {
+    /**
+     * Query the hash value of the metadata of the table
+     *
+     * @param tableName tableName
+     * @return TableMetadataHash
+     */
+    @PostMapping("/extract/source/table/metadata/hash")
+    Result<TableMetadataHash> querySourceTableMetadataHash(@RequestParam(name = "tableName") String tableName) {
+        return Result.success(dataExtractService.queryTableMetadataHash(tableName));
+    }
+
+    /**
+     * Query the hash value of the metadata of the table
+     *
+     * @param tableName tableName
+     * @return TableMetadataHash
+     */
+    @PostMapping("/extract/sink/table/metadata/hash")
+    Result<TableMetadataHash> querySinkTableMetadataHash(@RequestParam(name = "tableName") String tableName) {
         return Result.success(dataExtractService.queryTableMetadataHash(tableName));
     }
 
@@ -205,13 +219,49 @@ public class ExtractController {
 
     /**
      * queries data corresponding to a specified primary key value in a table
+     * and performs hash for verification data query.
+     *
+     * @param dataLog data change logs
+     * @return row data hash
+     */
+    @PostMapping("/extract/source/data/row/hash")
+    Result<List<RowDataHash>> querySourceCheckRowData(@RequestBody SourceDataLog dataLog) {
+        return Result.success(dataExtractService.querySecondaryCheckRowData(dataLog));
+    }
+
+    /**
+     * queries data corresponding to a specified primary key value in a table
+     * and performs hash for verification data query.
+     *
+     * @param dataLog data change logs
+     * @return row data hash
+     */
+    @PostMapping("/extract/sink/data/row/hash")
+    Result<List<RowDataHash>> querySinkCheckRowData(@RequestBody SourceDataLog dataLog) {
+        return Result.success(dataExtractService.querySecondaryCheckRowData(dataLog));
+    }
+
+    /**
+     * queries data corresponding to a specified primary key value in a table
      * and performs hash for secondary verification data query.
      *
      * @param dataLog data change logs
      * @return row data hash
      */
-    @PostMapping("/extract/query/secondary/data/row/hash")
-    Result<List<RowDataHash>> querySecondaryCheckRowData(@RequestBody SourceDataLog dataLog) {
+    @PostMapping("/extract/source/secondary/data/row/hash")
+    Result<List<RowDataHash>> querySourceSecondaryCheckRowData(@RequestBody SourceDataLog dataLog) {
+        return Result.success(dataExtractService.querySecondaryCheckRowData(dataLog));
+    }
+
+    /**
+     * queries data corresponding to a specified primary key value in a table
+     * and performs hash for secondary verification data query.
+     *
+     * @param dataLog data change logs
+     * @return row data hash
+     */
+    @PostMapping("/extract/sink/secondary/data/row/hash")
+    Result<List<RowDataHash>> querySinkSecondaryCheckRowData(@RequestBody SourceDataLog dataLog) {
         return Result.success(dataExtractService.querySecondaryCheckRowData(dataLog));
     }
 

@@ -20,19 +20,15 @@ import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.PreDestroy;
 import javax.annotation.Resource;
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.WatchKey;
 import java.nio.file.Files;
 import java.nio.file.SimpleFileVisitor;
-import java.nio.file.WatchEvent;
 import java.nio.file.FileVisitResult;
-import java.nio.file.StandardWatchEventKinds;
-import java.nio.file.WatchService;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -51,8 +47,8 @@ public class IncrementLogManager {
 
     @Resource
     private ThreadPoolTaskExecutor threadPoolTaskExecutor;
-    private WatchService watchService;
-    private LinkedList<Path> backDirs = new LinkedList<>();
+    private boolean isWatching = true;
+    private final LinkedList<Path> backDirs = new LinkedList<>();
 
     /**
      * init log dir and register watch service
@@ -60,54 +56,43 @@ public class IncrementLogManager {
      * @param path path
      */
     public void init(String path) {
-        try {
-            watchService = FileSystems.getDefault().newWatchService();
-            Path dir = Paths.get(path);
-            File[] files = dir.toFile().listFiles();
-            if (files != null && files.length > 0) {
-                backDirs.addAll(Arrays.stream(files).map(File::toPath).sorted().collect(Collectors.toList()));
-            }
-            dir.register(watchService, StandardWatchEventKinds.ENTRY_CREATE);
-            LogUtils.info(log, "registers path {} with a watch service. ", path);
-            bakResultLogMonitor();
-        } catch (IOException e) {
-            LogUtils.error(log, "init watch service failed. ", e);
-        }
+        bakResultLogMonitor(path);
     }
 
     /**
      * monitor the result log file
+     *
+     * @param path path
      */
-    public void bakResultLogMonitor() {
+    private void bakResultLogMonitor(String path) {
         threadPoolTaskExecutor.submit(() -> {
-            try {
-                WatchKey key = watchService.take();
-                for (WatchEvent<?> event : key.pollEvents()) {
-                    WatchEvent.Kind<?> kind = event.kind();
-
-                    // 过滤出目录本身的事件
-                    WatchEvent<Path> ev = (WatchEvent<Path>) event;
-                    Path fileName = ev.context();
-                    if (kind.equals(StandardWatchEventKinds.ENTRY_CREATE)) {
-                        LogUtils.warn(log, "monitor result back dir {} : {}", kind, fileName);
-                        backDirs.addLast(fileName);
-                    }
-
-                    while (backDirs.size() > MAX_BACK_DIR_NUM) {
-                        try {
-                            Path path = backDirs.removeFirst();
-                            deleteDir(path);
-                            LogUtils.warn(log, "remove result back more dir : {}", path);
-                        } catch (IOException e) {
-                            LogUtils.error(log, "remove result back more dir : {}", e.getMessage());
-                        }
+            while (isWatching) {
+                Path dir = Paths.get(path);
+                File[] files = dir.toFile().listFiles();
+                if (files != null && files.length > 0) {
+                    backDirs.addAll(Arrays.stream(files).map(File::toPath).sorted().collect(Collectors.toList()));
+                }
+                while (backDirs.size() > MAX_BACK_DIR_NUM) {
+                    Path delDir = backDirs.removeFirst();
+                    try {
+                        deleteDir(delDir);
+                        LogUtils.warn(log, "remove result back more dir : {}", delDir);
+                    } catch (IOException e) {
+                        LogUtils.error(log, "remove result back more dir : ", e.getMessage());
+                        backDirs.addLast(delDir);
                     }
                 }
-                key.reset();
-            } catch (InterruptedException e) {
-                LogUtils.error(log, "monitor result back dir : {}", e.getMessage());
+                backDirs.clear();
             }
         });
+    }
+
+    /**
+     * stop watch
+     */
+    @PreDestroy
+    public void destroy() {
+        isWatching = false;
     }
 
     private static void deleteDir(Path dir) throws IOException {

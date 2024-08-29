@@ -2,7 +2,7 @@ server:
   shutdown: graceful
   tomcat:
     threads:
-      max: 10
+      max: 20
 debug: false
 logging:
   config: classpath:log4j2.xml
@@ -54,6 +54,9 @@ mybatis:
 feign:
   okhttp:
     enabled: true
+  httpclient:
+    connection-timeout: 500000
+    max-connections: 500
 
 springdoc:
   version: '@springdoc.version@'

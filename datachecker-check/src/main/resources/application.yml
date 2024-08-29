@@ -3,7 +3,7 @@ server:
   shutdown: graceful
   tomcat:
     threads:
-      max: 10
+      max: 20
 logging:
   config: classpath:./config/log4j2.xml
 debug: false
@@ -79,6 +79,13 @@ data:
     auto-delete-topic: 2
     increment-max-diff-count: 10
     sql_mode_pad_char_to_full_length: false # sql_mode : pad_char_to_full_length disabled
+feign:
+  okhttp:
+    enabled: true
+  httpclient:
+    connection-timeout: 500000
+    max-connections: 500
+
 rules:
   # There are three types of filtering rules: table-level rules, row-level rules, and column-level rules.
   # Rules are configured in the form of List collection.

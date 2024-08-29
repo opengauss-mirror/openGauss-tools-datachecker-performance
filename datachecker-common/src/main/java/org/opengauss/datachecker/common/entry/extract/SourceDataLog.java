@@ -56,4 +56,13 @@ public class SourceDataLog {
      */
     @Schema(name = "compositePrimaryValues")
     private List<String> compositePrimaryValues;
+
+    /**
+     * source data of compositePrimarys size
+     *
+     * @return length
+     */
+    public int length() {
+        return compositePrimarys.size();
+    }
 }
