@@ -36,19 +36,19 @@ import java.util.stream.Collectors;
  */
 public class MetaDataUtil {
     private static final List<String> numberDataTypes =
-        List.of("integer", "int", "uint1", "uint2", "uint4", "uint8", "long", "decimal", "numeric", "smallint",
-            "NUMBER", "tinyint", "mediumint", "bigint");
+            List.of("integer", "int", "uint1", "uint2", "uint4", "uint8", "long", "decimal", "numeric",
+                    "smallint", "NUMBER", "tinyint", "mediumint", "bigint");
     private static final List<String> dataTypes =
-        List.of("integer", "int", "uint1", "uint2", "uint4", "uint8", "long", "decimal", "numeric", "NUMBER",
-            "VARCHAR2", "smallint", "tinyint", "mediumint", "bigint", "character", "char", "varchar",
-            "character varying", "CHAR");
+            List.of("integer", "int", "uint1", "uint2", "uint4", "uint8", "long", "decimal", "numeric",
+                    "NUMBER", "VARCHAR2", "smallint", "tinyint", "mediumint", "bigint", "character", "char", "varchar",
+                    "character varying", "CHAR", "time without time zone", "\"varbinary\"", "varbinary", "time");
 
     private static final List<String> digitalDataTypes =
-        List.of("integer", "int", "uint1", "uint2", "uint4", "uint8", "long", "decimal", "numeric", "smallint",
-            "number", "tinyint", "mediumint", "bigint", "double", "float");
+            List.of("integer", "int", "uint1", "uint2", "uint4", "uint8", "long", "decimal", "numeric", "smallint",
+                    "number", "tinyint", "mediumint", "bigint", "double", "float");
 
     private static final List<String> LARGE_DIGITAL_TYPES =
-        List.of("uint8", "long", "decimal", "numeric", "number", "bigint", "double", "float");
+            List.of("uint8", "long", "decimal", "numeric", "number", "bigint", "double", "float");
 
     /**
      * getTableColumns
@@ -87,9 +87,9 @@ public class MetaDataUtil {
             return emptyList();
         }
         return columnsMetas.stream()
-                           .sorted(Comparator.comparing(ColumnsMetaData::getOrdinalPosition))
-                           .map(ColumnsMetaData::getColumnName)
-                           .collect(Collectors.toUnmodifiableList());
+                .sorted(Comparator.comparing(ColumnsMetaData::getOrdinalPosition))
+                .map(ColumnsMetaData::getColumnName)
+                .collect(Collectors.toUnmodifiableList());
     }
 
     /**
@@ -123,7 +123,7 @@ public class MetaDataUtil {
      */
     public static boolean isDigitKey(ColumnsMetaData columnKey) {
         return digitalDataTypes.contains(columnKey.getDataType()
-                                                  .toLowerCase(Locale.getDefault()));
+                .toLowerCase(Locale.getDefault()));
     }
 
     public static boolean isDigitKey(String dataType) {
@@ -138,13 +138,16 @@ public class MetaDataUtil {
      */
     public static boolean isLargeDigitalTypeKey(ColumnsMetaData primaryKey) {
         return LARGE_DIGITAL_TYPES.contains(primaryKey.getDataType()
-                                                      .toLowerCase(Locale.getDefault()));
+                .toLowerCase(Locale.getDefault()));
     }
 
     public static boolean isInvalidPrimaryKey(ColumnsMetaData primaryKey) {
         if (primaryKey.getColumnKey() != ColumnKey.PRI) {
             return false;
         }
-        return !dataTypes.contains(primaryKey.getDataType());
+        return dataTypes.stream()
+                .filter(dataType -> dataType.equalsIgnoreCase(primaryKey.getDataType()))
+                .findAny()
+                .isEmpty();
     }
 }
