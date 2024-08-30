@@ -29,14 +29,15 @@ import org.opengauss.datachecker.check.modules.report.SliceProgressService;
 import org.opengauss.datachecker.common.entry.extract.SourceDataLog;
 import org.opengauss.datachecker.common.entry.report.CheckFailed;
 import org.opengauss.datachecker.common.exception.CheckingException;
-import org.opengauss.datachecker.common.service.DynamicThreadPoolManager;
 import org.opengauss.datachecker.common.service.ShutdownService;
 import org.opengauss.datachecker.common.util.FileUtils;
 import org.opengauss.datachecker.common.util.IdGenerator;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.PhaserUtil;
 import org.opengauss.datachecker.common.util.ThreadUtil;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StopWatch;
 
 import javax.annotation.Resource;
 import java.nio.file.Path;
@@ -49,7 +50,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
@@ -59,7 +59,6 @@ import static org.opengauss.datachecker.check.modules.check.CheckResultConstants
 import static org.opengauss.datachecker.check.modules.check.CheckResultConstants.FAILED_LOG_NAME;
 import static org.opengauss.datachecker.check.modules.check.CheckResultConstants.LEFT_SQUARE_BRACKET;
 import static org.opengauss.datachecker.check.modules.check.CheckResultConstants.RIGHT_SQUARE_BRACKET;
-import static org.opengauss.datachecker.common.constant.DynamicTpConstant.CHECK_EXECUTOR;
 
 /**
  * IncrementManagerService
@@ -73,6 +72,9 @@ public class IncrementManagerService {
     private static final Logger log = LogUtils.getLogger(IncrementManagerService.class);
     private static final AtomicReference<String> PROCESS_SIGNATURE = new AtomicReference<>();
     private static final BlockingQueue<List<SourceDataLog>> INC_LOG_QUEUE = new LinkedBlockingQueue<>();
+    private static final int RETRY_SLEEP_TIMES = 1000;
+    private static final int MAX_RETRY_SLEEP_TIMES = 1000;
+
     @Resource
     private DataCheckService dataCheckService;
     @Resource
@@ -86,13 +88,10 @@ public class IncrementManagerService {
     @Resource
     private CheckResultManagerService checkResultManagerService;
     @Resource
-    private DynamicThreadPoolManager dynamicThreadPoolManager;
-    @Resource
-    private IncrementLogManager incrementLogManager;
+    private ThreadPoolTaskExecutor threadPoolTaskExecutor;
 
     private final AtomicInteger retryTimes = new AtomicInteger(0);
-    private static final int RETRY_SLEEP_TIMES = 1000;
-    private static final int MAX_RETRY_SLEEP_TIMES = 1000;
+    private final AtomicInteger totalKeySize = new AtomicInteger(0);
 
     /**
      * Incremental verification log notification
@@ -103,10 +102,12 @@ public class IncrementManagerService {
         if (CollectionUtils.isEmpty(dataLogList)) {
             return;
         }
+        int sum = dataLogList.stream().map(SourceDataLog::length).mapToInt(Integer::intValue).sum();
+        totalKeySize.addAndGet(sum);
         try {
             INC_LOG_QUEUE.put(dataLogList);
-            LogUtils.info(log, "add {} data_log to the inc_log_queue,this tables contain : {}", dataLogList.size(),
-                getDataLogTables(dataLogList));
+            LogUtils.info(log, "increment log queue size= {}, current add {} tables, contain : {}",
+                    INC_LOG_QUEUE.size(), dataLogList.size(), getDataLogTables(dataLogList));
         } catch (InterruptedException ex) {
             LogUtils.error(log, "notify inc data logs interrupted  ");
         }
@@ -114,15 +115,16 @@ public class IncrementManagerService {
 
     private List<String> getDataLogTables(List<SourceDataLog> dataLogList) {
         return dataLogList.stream()
-                          .map(SourceDataLog::getTableName)
-                          .collect(Collectors.toList());
+                .map(SourceDataLog::getTableName)
+                .collect(Collectors.toList());
     }
 
     public void startIncrementDataLogs() {
         if (feignClientService.startIncrementMonitor()) {
             LogUtils.info(log, "started source increment monitor");
+            feignClientService.resumeIncrementMonitor();
             ThreadUtil.newSingleThreadExecutor()
-                      .submit(this::checkingIncrementDataLogs);
+                    .submit(this::checkingIncrementDataLogs);
         } else {
             throw new CheckingException("start increment monitor failed");
         }
@@ -130,7 +132,7 @@ public class IncrementManagerService {
 
     private void checkingIncrementDataLogs() {
         Thread.currentThread()
-              .setName("inc-queue-process-loop");
+                .setName("inc-queue-process-loop");
         LogUtils.info(log, "started process increment data logs thread");
         shutdownService.addMonitor();
         while (!shutdownService.isShutdown()) {
@@ -147,27 +149,28 @@ public class IncrementManagerService {
             if (diffCount >= properties.getIncrementMaxDiffCount()) {
                 feignClientService.pauseIncrementMonitor();
                 LogUtils.warn(log, "pause increment monitor, because the diff-count is too large [{}] ,"
-                    + " please to repair this large diff manual !", diffCount);
+                        + " please to repair this large diff manual !", diffCount);
                 ThreadUtil.sleep(getRetryTime());
-            } else {
+            }
+            if (INC_LOG_QUEUE.isEmpty()) {
                 feignClientService.resumeIncrementMonitor();
-                LogUtils.debug(log, "resume increment monitor,and take inc log queue!");
-                if (CollectionUtils.isNotEmpty(INC_LOG_QUEUE.peek())) {
-                    dataLogList.addAll(INC_LOG_QUEUE.take());
-                }
+                LogUtils.warn(log, "resume increment monitor, because the inc-log-queue is empty !");
+            } else {
+                feignClientService.pauseIncrementMonitor();
+                LogUtils.warn(log, "pause increment monitor, because the inc-log-queue is not empty !");
+                dataLogList.addAll(INC_LOG_QUEUE.take());
             }
             // Collect the last verification results and build an incremental verification log
             mergeDataLogList(dataLogList, lastResults);
             if (CollectionUtils.isNotEmpty(dataLogList)) {
                 ExportCheckResult.backCheckResultDirectory();
-                incrementLogManager.bakResultLogMonitor();
                 sliceProgressService.startProgressing();
                 PROCESS_SIGNATURE.set(IdGenerator.nextId36());
                 checkResultManagerService.progressing(dataLogList.size());
                 incrementDataLogsChecking(dataLogList);
+                feignClientService.resumeIncrementMonitor();
             } else {
-                LogUtils.info(log, "There are no differences to verify at the current time. Please wait.");
-                ThreadUtil.sleepSecond(5);
+                ThreadUtil.sleepSecond(1);
             }
         } catch (Exception ex) {
             LogUtils.error(log, "take inc log queue interrupted  ");
@@ -185,32 +188,32 @@ public class IncrementManagerService {
         AtomicInteger diffCount = new AtomicInteger();
         lastResults.forEach((tableName, lastLog) -> {
             diffCount.addAndGet(lastLog.getCompositePrimaryValues()
-                                       .size());
+                    .size());
         });
         return diffCount.get();
     }
 
     private void mergeDataLogList(List<SourceDataLog> dataLogList, Map<String, SourceDataLog> collectLastResults) {
         final Map<String, SourceDataLog> dataLogMap = dataLogList.stream()
-                                                                 .collect(Collectors.toMap(SourceDataLog::getTableName,
-                                                                     Function.identity()));
+                .collect(Collectors.toMap(SourceDataLog::getTableName,
+                        Function.identity()));
         collectLastResults.forEach((tableName, lastLog) -> {
             if (dataLogMap.containsKey(tableName)) {
                 final List<String> values = dataLogMap.get(tableName)
-                                                      .getCompositePrimaryValues();
+                        .getCompositePrimaryValues();
                 final long beginOffset = Math.min(dataLogMap.get(tableName)
-                                                            .getBeginOffset(), lastLog.getBeginOffset());
+                        .getBeginOffset(), lastLog.getBeginOffset());
                 final Set<String> margeValueSet = new HashSet<>();
                 margeValueSet.addAll(values);
                 margeValueSet.addAll(lastLog.getCompositePrimaryValues());
                 dataLogMap.get(tableName)
-                          .getCompositePrimaryValues()
-                          .clear();
+                        .getCompositePrimaryValues()
+                        .clear();
                 dataLogMap.get(tableName)
-                          .setBeginOffset(beginOffset);
+                        .setBeginOffset(beginOffset);
                 dataLogMap.get(tableName)
-                          .getCompositePrimaryValues()
-                          .addAll(margeValueSet);
+                        .getCompositePrimaryValues()
+                        .addAll(margeValueSet);
             } else {
                 dataLogList.add(lastLog);
             }
@@ -221,22 +224,26 @@ public class IncrementManagerService {
     private void incrementDataLogsChecking(List<SourceDataLog> dataLogList) {
         String processNo = PROCESS_SIGNATURE.get();
         List<Runnable> taskList = new ArrayList<>();
-        LogUtils.info(log, "check increment {} data log", processNo);
-
-        ThreadPoolExecutor asyncCheckExecutor = dynamicThreadPoolManager.getExecutor(CHECK_EXECUTOR);
+        StopWatch stopWatch = new StopWatch("check inc data " + processNo);
+        stopWatch.start("start check thread");
         dataLogList.forEach(dataLog -> {
             LogUtils.debug(log, "increment process=[{}] , tableName=[{}], begin offset =[{}], diffSize=[{}]", processNo,
-                dataLog.getTableName(), dataLog.getBeginOffset(), dataLog.getCompositePrimaryValues()
-                                                                         .size());
+                    dataLog.getTableName(), dataLog.getBeginOffset(), dataLog.getCompositePrimaryValues()
+                            .size());
             // Verify the data according to the table name and Kafka partition
             taskList.add(dataCheckService.incrementCheckTableData(dataLog.getTableName(), processNo, dataLog));
         });
+        stopWatch.stop();
+        stopWatch.start("wait check thread");
         // Block the current thread until all thread pool tasks are executed.
-        PhaserUtil.submit(asyncCheckExecutor, taskList, () -> {
+        PhaserUtil.submit(threadPoolTaskExecutor, taskList, () -> {
             LogUtils.debug(log, "multiple check subtasks have been completed.");
         });
+        stopWatch.stop();
+        stopWatch.start("summary check result");
         checkResultManagerService.summaryCheckResult();
-        LogUtils.info(log, "check increment {} data log end", processNo);
+        stopWatch.stop();
+        LogUtils.debug(log, stopWatch.prettyPrint());
     }
 
     /**
@@ -252,16 +259,16 @@ public class IncrementManagerService {
         }
         List<CheckFailed> historyFailedList = new ArrayList<>();
         checkResultFileList.stream()
-                           .filter(path -> FAILED_LOG_NAME.equals(path.getFileName()
-                                                                      .toString()))
-                           .forEach(path -> {
-                               try {
-                                   String content = wrapperFailedResultArray(path);
-                                   historyFailedList.addAll(JSONObject.parseArray(content, CheckFailed.class));
-                               } catch (CheckingException | JSONException ex) {
-                                   log.error("load check result {} has error", path.getFileName());
-                               }
-                           });
+                .filter(path -> FAILED_LOG_NAME.equals(path.getFileName()
+                        .toString()))
+                .forEach(path -> {
+                    try {
+                        String content = wrapperFailedResultArray(path);
+                        historyFailedList.addAll(JSONObject.parseArray(content, CheckFailed.class));
+                    } catch (CheckingException | JSONException ex) {
+                        log.error("load check result {} has error", path.getFileName());
+                    }
+                });
 
         LogUtils.debug(log, "collect last failed results {}", historyFailedList.size());
         return parseCheckResult(historyFailedList);
@@ -292,15 +299,15 @@ public class IncrementManagerService {
                 final List<String> values = dataLogMarge.getCompositePrimaryValues();
                 diffKeyValues.addAll(values);
                 dataLogMarge.getCompositePrimaryValues()
-                            .clear();
+                        .clear();
                 dataLogMarge.getCompositePrimaryValues()
-                            .addAll(diffKeyValues);
+                        .addAll(diffKeyValues);
                 dataLogMarge.setBeginOffset(beginOffset);
             } else {
                 SourceDataLog sourceDataLog = new SourceDataLog();
                 sourceDataLog.setTableName(tableName)
-                             .setBeginOffset(dataLog.getBeginOffset())
-                             .setCompositePrimaryValues(new ArrayList<>(diffKeyValues));
+                        .setBeginOffset(dataLog.getBeginOffset())
+                        .setCompositePrimaryValues(new ArrayList<>(diffKeyValues));
                 dataLogMap.put(tableName, sourceDataLog);
             }
         });

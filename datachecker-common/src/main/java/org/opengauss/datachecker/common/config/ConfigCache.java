@@ -128,6 +128,7 @@ public class ConfigCache {
 
     /**
      * 检查配置项，当前是否删除Topic
+     *
      * @return
      */
     public static boolean isDeleteTopic() {
@@ -222,7 +223,7 @@ public class ConfigCache {
     /**
      * remove config cache
      *
-     * @param key
+     * @param key key
      */
     public static void remove(String key) {
         CACHE.remove(key);
@@ -235,5 +236,14 @@ public class ConfigCache {
      */
     public static boolean isCsvMode() {
         return Objects.equals(CheckMode.CSV, getCheckMode());
+    }
+
+    /**
+     * 是否包含兼容性配置属性
+     *
+     * @return boolean
+     */
+    public static boolean hasCompatibility() {
+        return CACHE.containsKey(ConfigConstants.OG_COMPATIBILITY_B);
     }
 }

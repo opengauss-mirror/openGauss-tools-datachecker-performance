@@ -101,6 +101,7 @@ public class DataConsolidationServiceImpl implements DataConsolidationService {
     public void pauseOrResumeIncrementMonitor(Boolean pauseOrResume) {
         if (Objects.nonNull(worker)) {
             worker.switchPauseOrResume(pauseOrResume);
+            LOG.info("increment monitor :{}", pauseOrResume.booleanValue() ? "pause" : "resume");
         }
     }
 
@@ -133,10 +134,10 @@ public class DataConsolidationServiceImpl implements DataConsolidationService {
         }
         final List<ColumnsMetaData> columnsMetas = tableMetadata.getColumnsMetas();
         final List<String> dateList = columnsMetas.stream()
-                                                  .filter(column -> StringUtils.equalsIgnoreCase(column.getColumnType(),
-                                                      MYSQL_DATE_TYPE))
-                                                  .map(ColumnsMetaData::getColumnName)
-                                                  .collect(Collectors.toList());
+                .filter(column -> StringUtils.equalsIgnoreCase(column.getColumnType(),
+                        MYSQL_DATE_TYPE))
+                .map(ColumnsMetaData::getColumnName)
+                .collect(Collectors.toList());
         final Map<String, String> valueMap = debeziumDataBean.getData();
         dateList.forEach(dateField -> {
             final String time = valueMap.get(dateField);
@@ -150,7 +151,7 @@ public class DataConsolidationServiceImpl implements DataConsolidationService {
 
     private String decompressLocalDate(int compressDate) {
         return LocalDate.ofEpochDay(compressDate)
-                        .format(DATE_FORMATTER);
+                .format(DATE_FORMATTER);
     }
 
     /**
@@ -194,9 +195,9 @@ public class DataConsolidationServiceImpl implements DataConsolidationService {
         final Set<String> allKeys = MetaDataCache.getAllKeys();
         checkDebeziumEnvironment(config.getDebeziumTopic(), config.getDebeziumTables(), allKeys);
         INCREMENT_CHECK_CONIFG.setDebeziumTables(config.getDebeziumTables())
-                              .setDebeziumTopic(config.getDebeziumTopic())
-                              .setGroupId(config.getGroupId())
-                              .setPartitions(config.getPartitions());
+                .setDebeziumTopic(config.getDebeziumTopic())
+                .setGroupId(config.getGroupId())
+                .setPartitions(config.getPartitions());
     }
 
     /**
@@ -209,14 +210,14 @@ public class DataConsolidationServiceImpl implements DataConsolidationService {
      * @param allTableSet    Source end table set
      */
     private void checkDebeziumEnvironment(
-        @NotEmpty(message = "Debezium configuration topic cannot be empty") String debeziumTopic,
-        List<String> debeziumTables,
-        @NotEmpty(message = "Source side table metadata cache exception") Set<String> allTableSet) {
+            @NotEmpty(message = "Debezium configuration topic cannot be empty") String debeziumTopic,
+            List<String> debeziumTables,
+            @NotEmpty(message = "Source side table metadata cache exception") Set<String> allTableSet) {
         checkSourceEndpoint();
         if (!kafkaAdminService.isTopicExists(debeziumTopic)) {
             // The configuration item debezium topic information does not exist
             throw new DebeziumConfigException(
-                "The configuration item debezium topic " + debeziumTopic + " information does not exist");
+                    "The configuration item debezium topic " + debeziumTopic + " information does not exist");
         }
 
         if (CollectionUtils.isEmpty(debeziumTables)) {
@@ -224,19 +225,19 @@ public class DataConsolidationServiceImpl implements DataConsolidationService {
             return;
         }
         final List<String> allTableList = allTableSet.stream()
-                                                     .map(String::toUpperCase)
-                                                     .collect(Collectors.toList());
+                .map(String::toUpperCase)
+                .collect(Collectors.toList());
         List<String> invalidTables = debeziumTables.stream()
-                                                   .map(String::toUpperCase)
-                                                   .filter(table -> !allTableList.contains(table))
-                                                   .collect(Collectors.toList());
+                .map(String::toUpperCase)
+                .filter(table -> !allTableList.contains(table))
+                .collect(Collectors.toList());
 
         if (!CollectionUtils.isEmpty(invalidTables)) {
             // The configuration item debezium tables contains non-existent or black and white list tables
             LOG.warn("in current period , debezium has no table to check");
             throw new DebeziumConfigException(
-                "The configuration item debezium-tables contains non-existent or black-and-white list tables:"
-                    + invalidTables.toString());
+                    "The configuration item debezium-tables contains non-existent or black-and-white list tables:"
+                            + invalidTables.toString());
         }
     }
 }

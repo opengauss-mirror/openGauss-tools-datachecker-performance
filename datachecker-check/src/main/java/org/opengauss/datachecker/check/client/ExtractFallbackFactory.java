@@ -147,14 +147,70 @@ public class ExtractFallbackFactory implements FallbackFactory<ExtractFeignClien
             return Result.error("Remote call, build and repair statement exceptions according to parameters");
         }
 
+        /**
+         * querySourceTableMetadataHash
+         *
+         * @param tableName tableName
+         * @return error
+         */
         @Override
-        public Result<TableMetadataHash> queryTableMetadataHash(String tableName) {
-            return Result.error("Remote call, query table metadata hash information exception");
+        public Result<TableMetadataHash> querySourceTableMetadataHash(String tableName) {
+            return Result.error("Remote call failed");
         }
 
+        /**
+         * querySinkTableMetadataHash
+         *
+         * @param tableName tableName
+         * @return error
+         */
         @Override
-        public Result<List<RowDataHash>> querySecondaryCheckRowData(SourceDataLog dataLog) {
-            return Result.error("Remote call, query secondary verification increment log data exception");
+        public Result<TableMetadataHash> querySinkTableMetadataHash(String tableName) {
+            return Result.error("Remote call failed");
+        }
+
+        /**
+         * querySourceCheckRowData
+         *
+         * @param dataLog data Log
+         * @return error
+         */
+        @Override
+        public Result<List<RowDataHash>> querySourceCheckRowData(SourceDataLog dataLog) {
+            return Result.error("Remote call failed");
+        }
+
+        /**
+         * querySinkCheckRowData
+         *
+         * @param dataLog data Log
+         * @return error
+         */
+        @Override
+        public Result<List<RowDataHash>> querySinkCheckRowData(SourceDataLog dataLog) {
+            return Result.error("Remote call failed");
+        }
+
+        /**
+         * querySourceSecondaryCheckRowData
+         *
+         * @param dataLog data Log
+         * @return error
+         */
+        @Override
+        public Result<List<RowDataHash>> querySourceSecondaryCheckRowData(SourceDataLog dataLog) {
+            return Result.error("Remote call failed");
+        }
+
+        /**
+         * querySinkSecondaryCheckRowData
+         *
+         * @param dataLog data Log
+         * @return error
+         */
+        @Override
+        public Result<List<RowDataHash>> querySinkSecondaryCheckRowData(SourceDataLog dataLog) {
+            return Result.error("Remote call failed");
         }
 
         @Override

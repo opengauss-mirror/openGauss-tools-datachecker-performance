@@ -66,7 +66,7 @@ public class DebeziumAvroHandler implements DebeziumDataHandler<GenericData.Reco
      */
     @Override
     public void handler(long offset, @NotEmpty GenericData.Record message,
-        @NotNull LinkedBlockingQueue<DebeziumDataBean> queue) {
+                        @NotNull LinkedBlockingQueue<DebeziumDataBean> queue) {
         try {
             if (Objects.isNull(message)) {
                 return;
@@ -167,9 +167,10 @@ public class DebeziumAvroHandler implements DebeziumDataHandler<GenericData.Reco
     }
 
     private Map<String, String> parseRecordData(Record message, String key) {
-        final Object object = message.get(key);
-        if (Objects.nonNull(object)) {
-            return JSONObject.parseObject(object.toString(), new TypeReference<>() {});
+        Object object = message.get(key);
+        if (Objects.nonNull(object) && object instanceof Record) {
+            return JSONObject.parseObject(object.toString(), new TypeReference<>() {
+            });
         } else {
             return new HashMap<>(0);
         }

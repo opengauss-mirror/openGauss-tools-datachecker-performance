@@ -15,6 +15,7 @@
 
 package org.opengauss.datachecker.extract.config;
 
+import com.alibaba.druid.pool.DruidDataSource;
 import com.alibaba.druid.spring.boot.autoconfigure.DruidDataSourceBuilder;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.SqlSessionFactoryBean;
@@ -52,8 +53,12 @@ public class DruidDataSourceConfig implements DataSourceConfig {
     @Bean(name = "dataSource")
     @ConfigurationProperties(prefix = "spring.datasource.druid")
     public DataSource druidDataSource() {
-        return DruidDataSourceBuilder.create()
-                                     .build();
+        DruidDataSource druidDataSource = DruidDataSourceBuilder.create()
+                .build();
+        druidDataSource.setMaxPoolPreparedStatementPerConnectionSize(20);
+        druidDataSource.setMaxActive(20);
+        druidDataSource.setMinIdle(10);
+        return druidDataSource;
     }
 
     @Bean(name = "sqlSessionFactory")
@@ -66,7 +71,7 @@ public class DruidDataSourceConfig implements DataSourceConfig {
 
     @Bean("sqlSessionTemplate")
     public SqlSessionTemplate primarySqlSessionTemplate(
-        @Qualifier("sqlSessionFactory") SqlSessionFactory sessionfactory) {
+            @Qualifier("sqlSessionFactory") SqlSessionFactory sessionfactory) {
         return new SqlSessionTemplate(sessionfactory);
     }
 
