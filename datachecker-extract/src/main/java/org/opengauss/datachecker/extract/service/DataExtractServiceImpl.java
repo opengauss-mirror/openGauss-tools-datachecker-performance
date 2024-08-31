@@ -447,7 +447,7 @@ public class DataExtractServiceImpl implements DataExtractService {
         new Thread(() -> {
             checkPointManager = new ExtractPointSwapManager(kafkaTemplate, kafkaConsumerConfig);
             checkPointManager.setCheckPointSwapTopicName(ConfigCache.getValue(ConfigConstants.PROCESS_NO));
-            LogUtils.info(log, "tableRegisterCheckPoint start pollSwapPoint thread");
+            LogUtils.info(log, "start pollSwapPoint thread to register CheckPoint taskSize=" + taskList.size());
             checkPointManager.pollSwapPoint(tableCheckPointCache);
             Endpoint endpoint = ConfigCache.getEndPoint();
             CountDownLatch countDownLatch = new CountDownLatch(taskList.size());
@@ -474,17 +474,21 @@ public class DataExtractServiceImpl implements DataExtractService {
     }
 
     private void registerCheckPoint(ExtractTask task, Endpoint endpoint) {
-        String tableName = task.getTableName();
-        LogUtils.info(log, "register check point [{}][{}]", endpoint, tableName);
-        CheckPoint checkPoint = new CheckPoint(dataAccessService);
-        List<Object> checkPointList = getCheckPoint(checkPoint, task.getTableMetadata());
-        if (checkPointList == null || checkPointList.size() <= 2) {
-            checkPointList = List.of();
-            tableCheckPointCache.put(tableName, checkPointList);
+        try {
+            String tableName = task.getTableName();
+            LogUtils.info(log, "register check point [{}][{}]", endpoint, tableName);
+            CheckPoint checkPoint = new CheckPoint(dataAccessService);
+            List<Object> checkPointList = getCheckPoint(checkPoint, task.getTableMetadata());
+            if (checkPointList == null || checkPointList.size() <= 2) {
+                checkPointList = List.of();
+                tableCheckPointCache.put(tableName, checkPointList);
+            }
+            checkPointManager.send(new CheckPointData().setTableName(tableName)
+                    .setDigit(checkPoint.checkPkNumber(task.getTableMetadata()))
+                    .setCheckPointList(checkPointList));
+        } catch (Exception e) {
+            log.error("register check point failed ", e);
         }
-        checkPointManager.send(new CheckPointData().setTableName(tableName)
-                .setDigit(checkPoint.checkPkNumber(task.getTableMetadata()))
-                .setCheckPointList(checkPointList));
     }
 
     private String sliceTaskNameBuilder(@NonNull String tableName, int index) {
