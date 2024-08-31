@@ -98,9 +98,9 @@ public class UpdateDmlBuilder extends DmlBuilder {
 
     public String build() {
         return Fragment.DML_UPDATE.replace(Fragment.SCHEMA, schema)
-                                  .replace(Fragment.TABLE_NAME, tableName)
-                                  .replace(Fragment.COLUMNS, buildColumnsValue())
-                                  .replace(Fragment.CONDITION, buildConditionCompositePrimary());
+                .replace(Fragment.TABLE_NAME, tableName)
+                .replace(Fragment.COLUMNS, buildColumnsValue())
+                .replace(Fragment.CONDITION, buildConditionCompositePrimary());
     }
 
     private String buildConditionCompositePrimary() {
@@ -108,7 +108,7 @@ public class UpdateDmlBuilder extends DmlBuilder {
         final List<ColumnsMetaData> primaryMetaDatas = metadata.getPrimaryMetas();
         for (ColumnsMetaData primaryMeta : primaryMetaDatas) {
             builder.append(primaryMeta.getColumnName())
-                   .append(Fragment.EQUAL);
+                    .append(Fragment.EQUAL);
             if (MetaDataUtil.isDigitKey(primaryMeta)) {
                 builder.append(columnsValues.get(primaryMeta.getColumnName()));
             } else if (BLOB_LIST.contains(primaryMeta.getDataType()) || BINARY.contains(primaryMeta.getDataType())) {
@@ -124,7 +124,10 @@ public class UpdateDmlBuilder extends DmlBuilder {
     }
 
     private String convertValue(String fieldValue) {
-        return Fragment.SINGLE_QUOTES + fieldValue + Fragment.SINGLE_QUOTES;
+        if (Objects.nonNull(fieldValue)) {
+            return Fragment.SINGLE_QUOTES + fieldValue + Fragment.SINGLE_QUOTES;
+        }
+        return fieldValue;
     }
 
     private String buildColumnsValue() {
@@ -136,7 +139,7 @@ public class UpdateDmlBuilder extends DmlBuilder {
             }
             final String columnName = columnMeta.getColumnName();
             builder.append(columnName)
-                   .append(Fragment.EQUAL);
+                    .append(Fragment.EQUAL);
             final String columnValue = columnsValues.get(columnName);
             if (MetaDataUtil.isDigitKey(columnMeta)) {
                 builder.append(columnValue);
