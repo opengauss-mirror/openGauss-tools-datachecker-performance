@@ -42,7 +42,9 @@ public class DebeziumWorker implements Runnable {
     private static final AtomicBoolean PAUSE_OR_RESUME = new AtomicBoolean(WorkerSwitch.RESUME);
     private static final AtomicBoolean RUNNING = new AtomicBoolean(true);
     private static final AtomicInteger POLL_BATCH_COUNT = new AtomicInteger();
+    private static final AtomicInteger RETRY_POLL_EMPTY = new AtomicInteger();
     private static final int MAX_BATCH_COUNT = 1000;
+    private static final int RETRY_TIMES = 3;
     private static final String NAME = "DebeziumWorker";
 
     private DebeziumConsumerListener debeziumConsumerListener;
@@ -68,9 +70,9 @@ public class DebeziumWorker implements Runnable {
         consumer = kafkaConsumerConfig.getDebeziumConsumer();
         while (RUNNING.get()) {
             if (Objects.equals(PAUSE_OR_RESUME.get(), WorkerSwitch.RESUME)) {
+                log.debug("Debezium message listener is resume");
                 doConsumerRecord(consumer.poll(Duration.ofMillis(50)));
             } else {
-                log.debug("Debezium message listener is paused");
                 ThreadUtil.sleep(WorkerSwitch.SLEEP_TIME);
             }
         }
@@ -92,9 +94,13 @@ public class DebeziumWorker implements Runnable {
                 PAUSE_OR_RESUME.set(WorkerSwitch.PAUSE);
                 POLL_BATCH_COUNT.set(0);
             }
+            RETRY_POLL_EMPTY.set(0);
         } else {
-            log.info("consumer record count=0");
-            PAUSE_OR_RESUME.set(WorkerSwitch.PAUSE);
+            log.info("consumer record count=0 retry {}", RETRY_POLL_EMPTY.get());
+            if (RETRY_POLL_EMPTY.incrementAndGet() > RETRY_TIMES) {
+                RETRY_POLL_EMPTY.set(0);
+                PAUSE_OR_RESUME.set(WorkerSwitch.PAUSE);
+            }
         }
     }
 

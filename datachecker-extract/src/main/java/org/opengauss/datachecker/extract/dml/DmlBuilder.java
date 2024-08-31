@@ -199,7 +199,7 @@ public class DmlBuilder {
             } else {
                 String value = columnsValue.get(columnName);
                 if (Objects.isNull(value)) {
-                    valueList.add("null");
+                    valueList.add(null);
                 } else {
                     valueList.add(SINGLE_QUOTES.concat(value)
                                                .concat(SINGLE_QUOTES));

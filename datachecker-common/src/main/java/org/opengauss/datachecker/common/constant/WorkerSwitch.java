@@ -23,7 +23,18 @@ package org.opengauss.datachecker.common.constant;
  * @since ：11
  */
 public interface WorkerSwitch {
+    /**
+     * resume false
+     */
     Boolean RESUME = false;
+
+    /**
+     * pause true
+     */
     Boolean PAUSE = true;
-    int SLEEP_TIME = 200;
+
+    /**
+     * sleep time 2000 ms
+     */
+    int SLEEP_TIME = 2000;
 }
