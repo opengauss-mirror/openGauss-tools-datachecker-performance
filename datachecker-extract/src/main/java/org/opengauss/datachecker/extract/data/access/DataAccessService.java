@@ -18,6 +18,7 @@ package org.opengauss.datachecker.extract.data.access;
 import org.opengauss.datachecker.common.entry.check.Difference;
 import org.opengauss.datachecker.common.entry.common.DataAccessParam;
 import org.opengauss.datachecker.common.entry.common.Health;
+import org.opengauss.datachecker.common.entry.enums.LowerCaseTableNames;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.PrimaryColumnBean;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
@@ -175,4 +176,15 @@ public interface DataAccessService {
      * @return boolean
      */
     boolean dasCheckDatabaseNotEmpty();
+
+    /**
+     * <pre>
+     * query database variables lower_case_table_names
+     *  lower_case_table_names=0  : SENSITIVE    : 表名区分大小写
+     *  lower_case_table_names=1  : INSENSITIVE  : 表名不区分大小写
+     * </pre>
+     *
+     * @return value
+     */
+    LowerCaseTableNames queryLowerCaseTableNames();
 }

@@ -39,8 +39,10 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class DebeziumConsumerListener {
     private static final Logger log = LogUtils.getLogger();
     private static final LinkedBlockingQueue<DebeziumDataBean> DATA_LOG_QUEUE = new LinkedBlockingQueue<>();
+
     private DeserializerAdapter adapter = new DeserializerAdapter();
     private DebeziumDataHandler debeziumDataHandler;
+    private int maxBachSize;
     @Resource
     private MetaDataService metaDataService;
     @Resource
@@ -66,7 +68,7 @@ public class DebeziumConsumerListener {
         } catch (DebeziumConfigException | JSONException ex) {
             // Abnormal message structure, ignoring the current message
             log.error("parse message abnormal: [{}] {} ignoring this message : {}", ex.getMessage(),
-                System.getProperty("line.separator"), record);
+                    System.getProperty("line.separator"), record);
         }
     }
 
@@ -86,5 +88,23 @@ public class DebeziumConsumerListener {
      */
     public DebeziumDataBean poll() {
         return DATA_LOG_QUEUE.poll();
+    }
+
+    /**
+     * maxBachSize
+     *
+     * @param maxBachSize maxBachSize
+     */
+    public void setMaxBatchSize(int maxBachSize) {
+        this.maxBachSize = maxBachSize;
+    }
+
+    /**
+     * maxBachSize
+     *
+     * @return maxBachSize
+     */
+    public int getMaxBatchSize() {
+        return this.maxBachSize;
     }
 }

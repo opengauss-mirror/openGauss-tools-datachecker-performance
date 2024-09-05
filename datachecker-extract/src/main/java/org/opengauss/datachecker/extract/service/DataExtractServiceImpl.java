@@ -99,7 +99,6 @@ public class DataExtractServiceImpl implements DataExtractService {
      * The sleep time of the thread executing the data extraction task each time, in milliseconds
      */
     private static final int MAX_SLEEP_MILLIS_TIME = 2000;
-    private static final int MAX_QUERY_PAGE_SIZE = 500;
     private static final String PROCESS_NO_RESET = "0";
     private static final String TASK_NAME_PREFIX = "extract_task_";
     private static final int SINGLE_SLICE_NUM = 1;
@@ -566,6 +565,7 @@ public class DataExtractServiceImpl implements DataExtractService {
         final Database database = new Database();
         BeanUtils.copyProperties(extractProperties, database);
         BeanUtils.copyProperties(extractProperties, config);
+        database.setLowercaseTableNames(dataAccessService.queryLowerCaseTableNames());
         config.setDatabase(database);
         return config;
     }

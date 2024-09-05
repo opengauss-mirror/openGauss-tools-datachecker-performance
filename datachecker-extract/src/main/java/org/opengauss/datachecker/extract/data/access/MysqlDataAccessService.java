@@ -17,13 +17,18 @@ package org.opengauss.datachecker.extract.data.access;
 
 import org.opengauss.datachecker.common.entry.common.DataAccessParam;
 import org.opengauss.datachecker.common.entry.common.Health;
+import org.opengauss.datachecker.common.entry.enums.LowerCaseTableNames;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.PrimaryColumnBean;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.extract.data.mapper.MysqlMetaDataMapper;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * MysqlDataAccessService
@@ -47,8 +52,8 @@ public class MysqlDataAccessService extends AbstractDataAccessService {
     @Override
     public Health health() {
         String schema = properties.getSchema();
-        String sql = "SELECT SCHEMA_NAME tableSchema FROM information_schema.SCHEMATA info WHERE SCHEMA_NAME='" + schema
-            + "' limit 1";
+        String sql = "SELECT SCHEMA_NAME tableSchema FROM information_schema.SCHEMATA info WHERE SCHEMA_NAME='"
+                + schema + "' limit 1";
         return health(schema, sql);
     }
 
@@ -60,8 +65,8 @@ public class MysqlDataAccessService extends AbstractDataAccessService {
     @Override
     public List<String> dasQueryTableNameList() {
         String schema = properties.getSchema();
-        String sql =
-            "SELECT info.table_name tableName FROM information_schema.tables info WHERE table_schema='" + schema + "'";
+        String sql = "SELECT info.table_name tableName FROM information_schema.tables info WHERE table_schema='"
+                + schema + "'";
         return adasQueryTableNameList(sql);
     }
 
@@ -78,7 +83,8 @@ public class MysqlDataAccessService extends AbstractDataAccessService {
     @Override
     public List<PrimaryColumnBean> queryTablePrimaryColumns() {
         String sql = "select table_name tableName ,lower(column_name) columnName from information_schema.columns "
-            + "where table_schema='" + properties.getSchema() + "' and column_key='PRI' order by ordinal_position asc ";
+                + "where table_schema='" + properties.getSchema()
+                + "' and column_key='PRI' order by ordinal_position asc ";
         return adasQueryTablePrimaryColumns(sql);
     }
 
@@ -89,9 +95,13 @@ public class MysqlDataAccessService extends AbstractDataAccessService {
 
     @Override
     public List<TableMetadata> dasQueryTableMetadataList() {
-        String sql = " SELECT info.TABLE_SCHEMA tableSchema,info.table_name tableName,info.table_rows tableRows , "
-            + "info.avg_row_length avgRowLength FROM information_schema.tables info WHERE TABLE_SCHEMA='"
-            + properties.getSchema() + "'";
+        LowerCaseTableNames lowerCaseTableNames = getLowerCaseTableNames();
+        String colTableName = Objects.equals(LowerCaseTableNames.SENSITIVE, lowerCaseTableNames)
+                ? "info.table_name tableName"
+                : "lower(info.table_name) tableName";
+        String sql = " SELECT info.TABLE_SCHEMA tableSchema," + colTableName + ",info.table_rows tableRows , "
+                + "info.avg_row_length avgRowLength FROM information_schema.tables info WHERE TABLE_SCHEMA='"
+                + properties.getSchema() + "'";
         return wrapperTableMetadata(adasQueryTableMetadataList(sql));
     }
 
@@ -120,14 +130,31 @@ public class MysqlDataAccessService extends AbstractDataAccessService {
     @Override
     public List<Object> queryPointList(Connection connection, DataAccessParam param) {
         String sql = "select s.%s from (SELECT @rowno:=@rowno+1 as rn,r.%s from %s.%s r,"
-            + "  (select @rowno := 0) t ORDER BY r.%s asc) s where mod(s.rn, %s) = 1";
+                + "  (select @rowno := 0) t ORDER BY r.%s asc) s where mod(s.rn, %s) = 1";
         sql = String.format(sql, param.getColName(), param.getColName(), param.getSchema(), param.getName(),
-            param.getColName(), param.getOffset());
+                param.getColName(), param.getOffset());
         return adasQueryPointList(connection, sql);
     }
 
     @Override
     public boolean dasCheckDatabaseNotEmpty() {
         return mysqlMetaDataMapper.checkDatabaseNotEmpty(properties.getSchema());
+    }
+
+    @Override
+    public LowerCaseTableNames queryLowerCaseTableNames() {
+        String sql = "SHOW VARIABLES  LIKE 'lower_case_table_names';";
+        Connection connection = getConnection();
+        try (PreparedStatement ps = connection.prepareStatement(sql); ResultSet resultSet = ps.executeQuery()) {
+            if (resultSet.next()) {
+                String value = resultSet.getString("value");
+                return LowerCaseTableNames.codeOf(value);
+            }
+        } catch (SQLException ex) {
+            log.error("queryLowerCaseTableNames error", ex);
+        } finally {
+            closeConnection(connection);
+        }
+        return LowerCaseTableNames.UNKNOWN;
     }
 }

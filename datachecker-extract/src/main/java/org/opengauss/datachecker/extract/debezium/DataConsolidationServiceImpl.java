@@ -32,6 +32,7 @@ import org.opengauss.datachecker.extract.config.KafkaConsumerConfig;
 import org.opengauss.datachecker.extract.kafka.KafkaAdminService;
 import org.opengauss.datachecker.extract.service.MetaDataService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
@@ -72,6 +73,8 @@ public class DataConsolidationServiceImpl implements DataConsolidationService {
     private ExtractProperties extractProperties;
     @Autowired
     private MetaDataService metaDataService;
+    @Value("${spring.extract.debezium-num-period}")
+    private int maxBachSize;
     private DebeziumWorker worker = null;
     private ExecutorService executorService = null;
 
@@ -81,6 +84,7 @@ public class DataConsolidationServiceImpl implements DataConsolidationService {
     @Override
     public void initIncrementConfig() {
         if (extractProperties.isDebeziumEnable()) {
+            debeziumListener.setMaxBatchSize(maxBachSize);
             worker = new DebeziumWorker(debeziumListener, kafkaConfig);
             executorService = ThreadUtil.newSingleThreadExecutor();
             executorService.submit(worker);

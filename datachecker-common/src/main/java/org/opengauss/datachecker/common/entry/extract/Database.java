@@ -19,6 +19,7 @@ import lombok.Data;
 import lombok.experimental.Accessors;
 import org.opengauss.datachecker.common.entry.enums.DataBaseType;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
+import org.opengauss.datachecker.common.entry.enums.LowerCaseTableNames;
 
 import java.util.Objects;
 
@@ -38,6 +39,7 @@ public class Database {
     String schema;
     DataBaseType databaseType;
     Endpoint endpoint;
+    LowerCaseTableNames lowercaseTableNames;
 
     /**
      * get schema
