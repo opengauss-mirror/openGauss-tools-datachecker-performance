@@ -17,6 +17,7 @@ package org.opengauss.datachecker.extract.data.access;
 
 import org.opengauss.datachecker.common.entry.common.DataAccessParam;
 import org.opengauss.datachecker.common.entry.common.Health;
+import org.opengauss.datachecker.common.entry.enums.LowerCaseTableNames;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.PrimaryColumnBean;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
@@ -24,6 +25,7 @@ import org.opengauss.datachecker.extract.data.mapper.OracleMetaDataMapper;
 
 import java.sql.Connection;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * OracleDataAccessService
@@ -74,8 +76,8 @@ public class OracleDataAccessService extends AbstractDataAccessService {
     @Override
     public List<PrimaryColumnBean> queryTablePrimaryColumns() {
         String sql = "SELECT A.TABLE_NAME tableName, A.COLUMN_NAME columnName FROM ALL_CONS_COLUMNS A,ALL_CONSTRAINTS B"
-            + " WHERE A.constraint_name = B.constraint_name AND  B.constraint_type = 'P' AND A.OWNER = '"
-            + properties.getSchema() + "'";
+                + " WHERE A.constraint_name = B.constraint_name AND  B.constraint_type = 'P' AND A.OWNER = '"
+                + properties.getSchema() + "'";
         return adasQueryTablePrimaryColumns(sql);
     }
 
@@ -87,9 +89,14 @@ public class OracleDataAccessService extends AbstractDataAccessService {
     @Override
     public List<TableMetadata> dasQueryTableMetadataList() {
         String schema = properties.getSchema();
-        String sql = "SELECT t.owner tableSchema,t.table_name tableName,t.num_rows tableRows,avg_row_len avgRowLength"
-            + " FROM ALL_TABLES t LEFT JOIN (SELECT DISTINCT table_name from ALL_CONSTRAINTS where OWNER = '" + schema
-            + "' AND constraint_type='P') pc on t.table_name=pc.table_name WHERE t.OWNER = '" + schema + "'";
+        LowerCaseTableNames lowerCaseTableNames = getLowerCaseTableNames();
+        String colTableName = Objects.equals(LowerCaseTableNames.SENSITIVE, lowerCaseTableNames)
+                ? "t.table_name tableName"
+                : "lower(t.table_name) tableName";
+        String sql = "SELECT t.owner tableSchema," + colTableName + ",t.num_rows tableRows,avg_row_len avgRowLength"
+                + " FROM ALL_TABLES t LEFT JOIN (SELECT DISTINCT table_name from ALL_CONSTRAINTS where OWNER = '"
+                + schema + "' AND constraint_type='P') pc on t.table_name=pc.table_name WHERE t.OWNER = '"
+                + schema + "'";
         return wrapperTableMetadata(adasQueryTableMetadataList(sql));
     }
 
@@ -121,5 +128,10 @@ public class OracleDataAccessService extends AbstractDataAccessService {
     @Override
     public boolean dasCheckDatabaseNotEmpty() {
         return oracleMetaDataMapper.checkDatabaseNotEmpty(properties.getSchema());
+    }
+
+    @Override
+    public LowerCaseTableNames queryLowerCaseTableNames() {
+        return LowerCaseTableNames.INSENSITIVE;
     }
 }

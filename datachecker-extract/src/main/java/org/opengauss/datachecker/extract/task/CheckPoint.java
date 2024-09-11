@@ -157,10 +157,4 @@ public class CheckPoint {
         ConnectionMgr.close(connection, null, null);
         return Long.parseLong(maxId);
     }
-
-    public boolean checkInvalidPrimaryKey(TableMetadata tableMetadata) {
-        ColumnsMetaData pkColumn = tableMetadata.getPrimaryMetas()
-                                                .get(0);
-        return MetaDataUtil.isInvalidPrimaryKey(pkColumn);
-    }
 }

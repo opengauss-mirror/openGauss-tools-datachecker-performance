@@ -27,6 +27,7 @@ import org.opengauss.datachecker.common.entry.common.Health;
 import org.opengauss.datachecker.common.entry.csv.CsvTableColumnMeta;
 import org.opengauss.datachecker.common.entry.csv.CsvTableMeta;
 import org.opengauss.datachecker.common.entry.enums.ColumnKey;
+import org.opengauss.datachecker.common.entry.enums.LowerCaseTableNames;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.PrimaryColumnBean;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
@@ -87,10 +88,10 @@ public class CsvDataAccessService implements DataAccessService {
             }
             Stream<String> lineOfTables = Files.lines(pathOfTables);
             return lineOfTables.parallel()
-                               .map(tableJson -> JSONObject.parseObject(tableJson, CsvTableMeta.class))
-                               .filter(CsvTableMeta::isContain_primary_key)
-                               .map(CsvTableMeta::getTable)
-                               .collect(Collectors.toList());
+                    .map(tableJson -> JSONObject.parseObject(tableJson, CsvTableMeta.class))
+                    .filter(CsvTableMeta::isContain_primary_key)
+                    .map(CsvTableMeta::getTable)
+                    .collect(Collectors.toList());
         } catch (IOException e) {
             log.error("load table name of csv exception : ", e);
             throw new ExtractDataAccessException("load table name of csv exception");
@@ -123,17 +124,17 @@ public class CsvDataAccessService implements DataAccessService {
                 columns.add(csvColumnMeta.toColumnsMetaData());
             });
             columns.stream()
-                   .sorted()
-                   .collect(Collectors.groupingBy(ColumnsMetaData::getTableName))
-                   .forEach((table, tableColumns) -> {
-                       TableMetadata tableMetadata = tableMetadataMap.get(table);
-                       tableMetadata.setColumnsMetas(tableColumns);
-                       tableMetadata.setPrimaryMetas(tableColumns.stream()
-                                                                 .filter(col -> Objects.equals(col.getColumnKey(),
-                                                                     ColumnKey.PRI))
-                                                                 .sorted()
-                                                                 .collect(Collectors.toList()));
-                   });
+                    .sorted()
+                    .collect(Collectors.groupingBy(ColumnsMetaData::getTableName))
+                    .forEach((table, tableColumns) -> {
+                        TableMetadata tableMetadata = tableMetadataMap.get(table);
+                        tableMetadata.setColumnsMetas(tableColumns);
+                        tableMetadata.setPrimaryMetas(tableColumns.stream()
+                                .filter(col -> Objects.equals(col.getColumnKey(),
+                                        ColumnKey.PRI))
+                                .sorted()
+                                .collect(Collectors.toList()));
+                    });
         } catch (IOException e) {
             log.error("load table name of csv exception : ", e);
             throw new ExtractDataAccessException("load table name of csv exception");
@@ -197,12 +198,12 @@ public class CsvDataAccessService implements DataAccessService {
             List<Map<String, String>> diffRowList = new LinkedList<>();
             String csvDataRootPath = ConfigCache.getCsvData();
             String sliceFilePath = Path.of(csvDataRootPath, fileName)
-                                       .toString();
+                    .toString();
             TableMetadata metadata = tableMetadataMap.get(table);
             List<Integer> keyIdxList = differenceList.stream()
-                                                     .map(Difference::getIdx)
-                                                     .sorted()
-                                                     .collect(Collectors.toList());
+                    .map(Difference::getIdx)
+                    .sorted()
+                    .collect(Collectors.toList());
             int fileReadIdx = 0;
             try (CSVReader reader = new CSVReader(new FileReader(sliceFilePath))) {
                 String[] nextLine;
@@ -223,7 +224,7 @@ public class CsvDataAccessService implements DataAccessService {
         Map<String, String> result = new TreeMap<>();
         for (int idx = 0; idx < nextLine.length && idx < columns.size(); idx++) {
             result.put(columns.get(idx)
-                              .getColumnName(), nextLine[idx]);
+                    .getColumnName(), nextLine[idx]);
         }
         return result;
     }
@@ -262,5 +263,10 @@ public class CsvDataAccessService implements DataAccessService {
     @Override
     public String next(DataAccessParam param) {
         return null;
+    }
+
+    @Override
+    public LowerCaseTableNames queryLowerCaseTableNames() {
+        return LowerCaseTableNames.INSENSITIVE;
     }
 }

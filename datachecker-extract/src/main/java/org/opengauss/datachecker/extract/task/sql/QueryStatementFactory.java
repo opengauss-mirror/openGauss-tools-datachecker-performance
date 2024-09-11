@@ -17,7 +17,6 @@ package org.opengauss.datachecker.extract.task.sql;
 
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
-import org.opengauss.datachecker.common.exception.ExtractPrimaryKeyException;
 import org.opengauss.datachecker.extract.task.CheckPoint;
 
 /**
@@ -37,14 +36,6 @@ public class QueryStatementFactory {
      * @return SliceQueryStatement
      */
     public AutoSliceQueryStatement createSliceQueryStatement(CheckPoint checkPoint, TableMetadata tableMetadata) {
-        if (checkPoint.checkInvalidPrimaryKey(tableMetadata)) {
-            String dataType = tableMetadata.getPrimaryMetas()
-                                           .get(0)
-                                           .getDataType();
-            throw new ExtractPrimaryKeyException(
-                "current not support primary key type  for this table " + tableMetadata.getTableName() + " dataType : "
-                    + dataType);
-        }
         return new SinglePrimaryAutoSliceQueryStatement(checkPoint);
     }
 

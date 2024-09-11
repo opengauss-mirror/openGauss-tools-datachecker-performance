@@ -307,4 +307,9 @@ public interface ConfigConstants {
      * data.check.auto-delete-topic
      */
     String AUTO_DELETE_TOPIC = "data.check.auto-delete-topic";
+
+    /**
+     * lower_case_table_names
+     */
+    String LOWER_CASE_TABLE_NAMES = "lower_case_table_names";
 }

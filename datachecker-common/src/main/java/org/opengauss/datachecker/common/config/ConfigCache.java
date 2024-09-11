@@ -244,6 +244,16 @@ public class ConfigCache {
      * @return boolean
      */
     public static boolean hasCompatibility() {
-        return CACHE.containsKey(ConfigConstants.OG_COMPATIBILITY_B);
+        return hasKey(ConfigConstants.OG_COMPATIBILITY_B);
+    }
+
+    /**
+     * check current cache has key
+     *
+     * @param key key
+     * @return boolean
+     */
+    public static boolean hasKey(String key) {
+        return CACHE.containsKey(key);
     }
 }

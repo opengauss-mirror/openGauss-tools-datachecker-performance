@@ -18,8 +18,11 @@ package org.opengauss.datachecker.extract.data.access;
 import com.alibaba.druid.pool.DruidDataSource;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Logger;
+import org.opengauss.datachecker.common.config.ConfigCache;
+import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.check.Difference;
 import org.opengauss.datachecker.common.entry.common.Health;
+import org.opengauss.datachecker.common.entry.enums.LowerCaseTableNames;
 import org.opengauss.datachecker.common.entry.extract.PrimaryColumnBean;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.exception.ExtractDataAccessException;
@@ -68,7 +71,12 @@ public abstract class AbstractDataAccessService implements DataAccessService {
     @Resource
     protected ExtractProperties properties;
 
-    private Connection getConnection() {
+    /**
+     * 获取数据库连接
+     *
+     * @return connection
+     */
+    protected Connection getConnection() {
         try {
             return druidDataSource.getConnection();
         } catch (SQLException e) {
@@ -76,7 +84,12 @@ public abstract class AbstractDataAccessService implements DataAccessService {
         }
     }
 
-    private void closeConnection(Connection connection) {
+    /**
+     * 关闭数据库连接
+     *
+     * @param connection connection
+     */
+    protected void closeConnection(Connection connection) {
         ConnectionMgr.close(connection);
     }
 
@@ -100,7 +113,7 @@ public abstract class AbstractDataAccessService implements DataAccessService {
     public String adasQuerySchema(Connection connection, String executeQueryStatement) {
         String schema = "";
         try (PreparedStatement ps = connection.prepareStatement(executeQueryStatement);
-            ResultSet resultSet = ps.executeQuery()) {
+             ResultSet resultSet = ps.executeQuery()) {
             if (resultSet.next()) {
                 schema = resultSet.getString(RS_COL_SCHEMA);
             }
@@ -147,7 +160,7 @@ public abstract class AbstractDataAccessService implements DataAccessService {
         Connection connection = getConnection();
         List<String> list = new LinkedList<>();
         try (PreparedStatement ps = connection.prepareStatement(executeQueryStatement);
-            ResultSet resultSet = ps.executeQuery()) {
+             ResultSet resultSet = ps.executeQuery()) {
             while (resultSet.next()) {
                 list.add(resultSet.getString(RS_COL_TABLE_NAME));
             }
@@ -172,7 +185,7 @@ public abstract class AbstractDataAccessService implements DataAccessService {
         Connection connection = getConnection();
         List<PrimaryColumnBean> list = new LinkedList<>();
         try (PreparedStatement ps = connection.prepareStatement(executeQueryStatement);
-            ResultSet resultSet = ps.executeQuery()) {
+             ResultSet resultSet = ps.executeQuery()) {
             PrimaryColumnBean metadata;
             while (resultSet.next()) {
                 metadata = new PrimaryColumnBean();
@@ -201,7 +214,7 @@ public abstract class AbstractDataAccessService implements DataAccessService {
         Connection connection = getConnection();
         List<TableMetadata> list = new LinkedList<>();
         try (PreparedStatement ps = connection.prepareStatement(executeQueryStatement);
-            ResultSet resultSet = ps.executeQuery()) {
+             ResultSet resultSet = ps.executeQuery()) {
             TableMetadata metadata;
             while (resultSet.next()) {
                 metadata = new TableMetadata();
@@ -265,7 +278,7 @@ public abstract class AbstractDataAccessService implements DataAccessService {
 
     private long durationBetweenToMillis(LocalDateTime start, LocalDateTime end) {
         return Duration.between(start, end)
-                       .toMillis();
+                .toMillis();
     }
 
     /**
@@ -279,8 +292,8 @@ public abstract class AbstractDataAccessService implements DataAccessService {
             return null;
         }
         return tableMetadata.setDataBaseType(properties.getDatabaseType())
-                            .setEndpoint(properties.getEndpoint())
-                            .setOgCompatibilityB(isOgCompatibilityB);
+                .setEndpoint(properties.getEndpoint())
+                .setOgCompatibilityB(isOgCompatibilityB);
     }
 
     /**
@@ -304,8 +317,21 @@ public abstract class AbstractDataAccessService implements DataAccessService {
      */
     protected List<TableMetadata> wrapperTableMetadata(List<TableMetadata> list) {
         list.forEach(meta -> meta.setDataBaseType(properties.getDatabaseType())
-                                 .setEndpoint(properties.getEndpoint())
-                                 .setOgCompatibilityB(isOgCompatibilityB));
+                .setEndpoint(properties.getEndpoint())
+                .setOgCompatibilityB(isOgCompatibilityB));
         return list;
+    }
+
+    /**
+     * get lowerCaseTableNames
+     *
+     * @return lowerCaseTableNames
+     */
+    protected LowerCaseTableNames getLowerCaseTableNames() {
+        if (!ConfigCache.hasKey(ConfigConstants.LOWER_CASE_TABLE_NAMES)) {
+            LowerCaseTableNames lowerCaseTableNames = queryLowerCaseTableNames();
+            ConfigCache.put(ConfigConstants.LOWER_CASE_TABLE_NAMES, lowerCaseTableNames);
+        }
+        return ConfigCache.getValue(ConfigConstants.LOWER_CASE_TABLE_NAMES, LowerCaseTableNames.class);
     }
 }

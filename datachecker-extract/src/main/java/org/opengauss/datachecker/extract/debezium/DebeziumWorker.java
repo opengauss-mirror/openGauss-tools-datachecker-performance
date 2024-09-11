@@ -43,10 +43,11 @@ public class DebeziumWorker implements Runnable {
     private static final AtomicBoolean RUNNING = new AtomicBoolean(true);
     private static final AtomicInteger POLL_BATCH_COUNT = new AtomicInteger();
     private static final AtomicInteger RETRY_POLL_EMPTY = new AtomicInteger();
-    private static final int MAX_BATCH_COUNT = 1000;
+    private static final int DEFAULT_MAX_BATCH_SIZE = 1000;
     private static final int RETRY_TIMES = 3;
     private static final String NAME = "DebeziumWorker";
 
+    private int maxBatchCount;
     private DebeziumConsumerListener debeziumConsumerListener;
     private KafkaConsumerConfig kafkaConsumerConfig;
     private KafkaConsumer<String, Object> consumer = null;
@@ -60,6 +61,8 @@ public class DebeziumWorker implements Runnable {
     public DebeziumWorker(DebeziumConsumerListener debeziumConsumerListener, KafkaConsumerConfig kafkaConsumerConfig) {
         this.debeziumConsumerListener = debeziumConsumerListener;
         this.kafkaConsumerConfig = kafkaConsumerConfig;
+        int maxBatchSize = debeziumConsumerListener.getMaxBatchSize();
+        this.maxBatchCount = maxBatchSize <= 0 ? DEFAULT_MAX_BATCH_SIZE : maxBatchSize;
     }
 
     @Override
@@ -90,7 +93,7 @@ public class DebeziumWorker implements Runnable {
                 }
             }
             POLL_BATCH_COUNT.addAndGet(records.count());
-            if (POLL_BATCH_COUNT.get() > MAX_BATCH_COUNT) {
+            if (POLL_BATCH_COUNT.get() > maxBatchCount) {
                 PAUSE_OR_RESUME.set(WorkerSwitch.PAUSE);
                 POLL_BATCH_COUNT.set(0);
             }

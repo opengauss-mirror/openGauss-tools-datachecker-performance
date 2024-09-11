@@ -19,13 +19,17 @@ import org.opengauss.datachecker.check.client.FeignClientService;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
+import org.opengauss.datachecker.common.entry.enums.LowerCaseTableNames;
+import org.opengauss.datachecker.common.entry.extract.Database;
 import org.opengauss.datachecker.common.entry.extract.ExtractConfig;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
+import org.springframework.util.Assert;
 
 import javax.annotation.Resource;
+import java.util.Objects;
 
 /**
  * CheckDatabaseLoader
@@ -63,10 +67,26 @@ public class CheckDatabaseLoader extends AbstractCheckLoader {
             shutdown("sink endpoint server has error");
             return;
         }
+        checkDatabaseLowerCaseTableNames(sourceConfig.getDatabase(), sinkConfig.getDatabase());
         checkEnvironment.addExtractDatabase(Endpoint.SOURCE, sourceConfig.getDatabase());
         checkEnvironment.addExtractDatabase(Endpoint.SINK, sinkConfig.getDatabase());
         ConfigCache.put(ConfigConstants.DATA_CHECK_SOURCE_DATABASE, sourceConfig.getDatabase());
         ConfigCache.put(ConfigConstants.DATA_CHECK_SINK_DATABASE, sinkConfig.getDatabase());
+        ConfigCache.put(ConfigConstants.LOWER_CASE_TABLE_NAMES, sinkConfig.getDatabase().getLowercaseTableNames());
         LogUtils.info(log, "check service load database configuration success.");
+    }
+
+    private void checkDatabaseLowerCaseTableNames(Database source, Database sink) {
+        Assert.notNull(source, "source database config can't be null");
+        Assert.notNull(sink, "sink database config can't be null");
+        Assert.notNull(source.getLowercaseTableNames(), "source database lower_case_table_name fetch error");
+        Assert.notNull(sink.getLowercaseTableNames(), "sink database lower_case_table_name fetch error");
+        Assert.isTrue(!Objects.equals(source.getLowercaseTableNames(), LowerCaseTableNames.UNKNOWN),
+                "sink database lower_case_table_name fetch unknown");
+        Assert.isTrue(!Objects.equals(sink.getLowercaseTableNames(), LowerCaseTableNames.UNKNOWN),
+                "sink database lower_case_table_name fetch unknown");
+        Assert.isTrue(Objects.equals(source.getLowercaseTableNames(), sink.getLowercaseTableNames()),
+                "source and sink database lower_case_table_name must be the same");
+        LogUtils.info(log, "check database lower_case_table_name is {}", source.getLowercaseTableNames());
     }
 }
