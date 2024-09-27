@@ -43,7 +43,7 @@
         <commons.fileupload.version>1.5</commons.fileupload.version>
         <commons.compress.version>1.26.1</commons.compress.version>
         <commons.collection.version>4.4</commons.collection.version>
-        <log4j.version>2.23.1</log4j.version>
+        <log4j2.version>2.23.1</log4j2.version>
         <oshi.version>6.5.0</oshi.version>
         <hutool-all.version>5.7.8</hutool-all.version>
         <opencsv.version>5.7.1</opencsv.version>
