@@ -65,8 +65,8 @@ public class MysqlDataAccessService extends AbstractDataAccessService {
     @Override
     public List<String> dasQueryTableNameList() {
         String schema = properties.getSchema();
-        String sql = "SELECT info.table_name tableName FROM information_schema.tables info WHERE table_schema='"
-                + schema + "'";
+        String sql = "select info.table_name tableName from information_schema.tables info where table_schema='"
+                + schema + "'  and table_type='BASE TABLE'";
         return adasQueryTableNameList(sql);
     }
 

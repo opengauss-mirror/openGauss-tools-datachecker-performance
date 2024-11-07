@@ -93,9 +93,7 @@ public class SliceCheckEventHandler {
      */
     public void handleFailed(SliceCheckEvent checkEvent) {
         LogUtils.warn(log, "slice check event , table slice has unknown error [{}][{} : {}]", checkEvent.getCheckName(),
-                checkEvent.getSource()
-                        .getTableHash(), checkEvent.getSink()
-                        .getTableHash());
+                checkEvent.getSource(), checkEvent.getSink());
         long count = getCheckSliceCount(checkEvent);
         sliceCheckContext.refreshSliceCheckProgress(checkEvent.getSlice(), count);
         CheckDiffResult result = buildSliceDiffResult(checkEvent.getSlice(), (int) count, true, "slice has unknown error");

@@ -27,6 +27,7 @@ import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.extract.data.mapper.OpgsMetaDataMapper;
 
 import javax.annotation.PostConstruct;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -75,22 +76,43 @@ public class OpgsDataAccessService extends AbstractDataAccessService {
         return health(schema, sql);
     }
 
+    /**
+     * <pre>
+     * DAS查询表名列表
+     *  select c.relname tableName from pg_class c  LEFT JOIN pg_namespace n on n.oid = c.relnamespace
+     *  where n.nspname=? and c.relkind ='r';
+     *  </pre>
+     *
+     * @return tableNameList
+     */
     @Override
     public List<String> dasQueryTableNameList() {
         String schema = properties.getSchema();
         String sql = "select c.relname tableName from pg_class c  LEFT JOIN pg_namespace n on n.oid = c.relnamespace "
-                + " where n.nspname='" + schema + "' and c.relkind ='r';";
+            + " where n.nspname='" + schema + "' and c.relkind ='r';";
         return adasQueryTableNameList(sql);
     }
 
+    /**
+     * <pre>
+     *     查询表主键列信息
+     *      select c.relname tableName,ns.nspname,ns.oid,a.attname columnName from pg_class c
+     *      left join pg_namespace ns on c.relnamespace=ns.oid
+     *      left join pg_attribute a on c.oid=a.attrelid and a.attnum>0 and not a.attisdropped
+     *      inner join pg_constraint cs on a.attrelid=cs.conrelid and a.attnum=any(cs.conkey)
+     *      where ns.nspname='test' and cs.contype='p';
+     * </pre>
+     *
+     * @return primaryColumnList 主键列信息列表
+     */
     @Override
     public List<PrimaryColumnBean> queryTablePrimaryColumns() {
         String schema = properties.getSchema();
         String sql = "select c.relname tableName,ns.nspname,ns.oid,a.attname columnName from pg_class c "
-                + "left join pg_namespace ns on c.relnamespace=ns.oid "
-                + "left join pg_attribute a on c.oid=a.attrelid and a.attnum>0 and not a.attisdropped "
-                + "inner join pg_constraint cs on a.attrelid=cs.conrelid and a.attnum=any(cs.conkey) "
-                + "where ns.nspname='" + schema + "' and cs.contype='p';";
+            + "left join pg_namespace ns on c.relnamespace=ns.oid "
+            + "left join pg_attribute a on c.oid=a.attrelid and a.attnum>0 and not a.attisdropped "
+            + "inner join pg_constraint cs on a.attrelid=cs.conrelid and a.attnum=any(cs.conkey) "
+            + "where ns.nspname='" + schema + "' and cs.contype='p';";
         return adasQueryTablePrimaryColumns(sql);
     }
 
@@ -98,10 +120,10 @@ public class OpgsDataAccessService extends AbstractDataAccessService {
     public List<PrimaryColumnBean> queryTablePrimaryColumns(String tableName) {
         String schema = properties.getSchema();
         String sql = "select c.relname tableName,ns.nspname,ns.oid,a.attname columnName from pg_class c "
-                + "left join pg_namespace ns on c.relnamespace=ns.oid "
-                + "left join pg_attribute a on c.oid=a.attrelid and a.attnum>0 and not a.attisdropped "
-                + "inner join pg_constraint cs on a.attrelid=cs.conrelid and a.attnum=any(cs.conkey) "
-                + "where ns.nspname='" + schema + "' and c.relname='" + tableName + "' and cs.contype='p';";
+            + "left join pg_namespace ns on c.relnamespace=ns.oid "
+            + "left join pg_attribute a on c.oid=a.attrelid and a.attnum>0 and not a.attisdropped "
+            + "inner join pg_constraint cs on a.attrelid=cs.conrelid and a.attnum=any(cs.conkey) "
+            + "where ns.nspname='" + schema + "' and c.relname='" + tableName + "' and cs.contype='p';";
         return adasQueryTablePrimaryColumns(sql);
     }
 
@@ -119,12 +141,12 @@ public class OpgsDataAccessService extends AbstractDataAccessService {
     public List<TableMetadata> dasQueryTableMetadataList() {
         LowerCaseTableNames lowerCaseTableNames = getLowerCaseTableNames();
         String colTableName = Objects.equals(LowerCaseTableNames.SENSITIVE, lowerCaseTableNames)
-                ? "c.relname tableName"
-                : "lower(c.relname) tableName";
+            ? "c.relname tableName"
+            : "lower(c.relname) tableName";
         String sql = " select n.nspname tableSchema, " + colTableName + ",c.reltuples tableRows, "
-                + "case when c.reltuples>0 then pg_table_size(c.oid)/c.reltuples else 0 end as avgRowLength "
-                + "from pg_class c LEFT JOIN pg_namespace n on n.oid = c.relnamespace " + "where n.nspname='"
-                + properties.getSchema() + "' and c.relkind ='r';";
+            + "case when c.reltuples>0 then pg_table_size(c.oid)/c.reltuples else 0 end as avgRowLength "
+            + "from pg_class c LEFT JOIN pg_namespace n on n.oid = c.relnamespace " + "where n.nspname='"
+            + properties.getSchema() + "' and c.relkind ='r';";
         return wrapperTableMetadata(adasQueryTableMetadataList(sql));
     }
 
@@ -153,9 +175,9 @@ public class OpgsDataAccessService extends AbstractDataAccessService {
     @Override
     public List<Object> queryPointList(Connection connection, DataAccessParam param) {
         String sql = "select s.%s from ( select row_number() over(order by r.%s  asc) as rn,r.%s  from %s.%s r) s"
-                + "  where mod(s.rn, %s ) = 1;";
+            + "  where mod(s.rn, %s ) = 1;";
         sql = String.format(sql, param.getColName(), param.getColName(), param.getColName(), param.getSchema(),
-                param.getName(), param.getOffset());
+            param.getName(), param.getOffset());
         return adasQueryPointList(connection, sql);
     }
 
@@ -163,7 +185,6 @@ public class OpgsDataAccessService extends AbstractDataAccessService {
     public boolean dasCheckDatabaseNotEmpty() {
         return opgsMetaDataMapper.checkDatabaseNotEmpty(properties.getSchema());
     }
-
 
     @Override
     public LowerCaseTableNames queryLowerCaseTableNames() {
@@ -181,7 +202,8 @@ public class OpgsDataAccessService extends AbstractDataAccessService {
         } finally {
             closeConnection(connection);
         }
-        return isOgCompatibilityB() ? result.getOrDefault(DOLPHIN_LOWER_CASE_TABLE_NAMES, LowerCaseTableNames.UNKNOWN)
-                : result.getOrDefault(LOWER_CASE_TABLE_NAMES, LowerCaseTableNames.UNKNOWN);
+        return isOgCompatibilityB()
+            ? result.getOrDefault(DOLPHIN_LOWER_CASE_TABLE_NAMES, LowerCaseTableNames.UNKNOWN)
+            : result.getOrDefault(LOWER_CASE_TABLE_NAMES, LowerCaseTableNames.UNKNOWN);
     }
 }
