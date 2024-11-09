@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2022 Huawei Technologies Co.,Ltd.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2024-2024. All rights reserved.
  *
  * openGauss is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -15,27 +15,34 @@
 
 package org.opengauss.datachecker.common.entry.extract;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 /**
- * PrimaryColumnBean
+ * UniqueColumnBean
  *
  * @author ：wangchao
  * @date ：Created in 2023/12/23
  * @since ：11
  */
 @Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class PrimaryColumnBean {
+public class UniqueColumnBean {
     /**
      * Table
      */
     private String tableName;
+
     /**
      * Primary key column name
      */
     private String columnName;
+
+    /**
+     * Index identifier
+     */
+    private String indexIdentifier;
+
+    /**
+     * Column index
+     */
+    private Integer colIdx;
 }

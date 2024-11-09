@@ -30,19 +30,13 @@
             <PatternLayout pattern="${LOG_PATTERN}"/>
         </Console>
 
-        <RollingRandomAccessFile name="progress" immediateFlush="true" fileName="${LOG_HOME}/${LOG_NAME}.log"
-                                 filePattern="${LOG_HOME}/history/${LOG_NAME}.%d{yyyyMMddHH}.zip">
+        <RollingRandomAccessFile name="progress" immediateFlush="true" fileName="${LOG_HOME}/${LOG_NAME}.log">
             <PatternLayout pattern="${LOG_PATTERN}"/>
             <Policies>
                 <SizeBasedTriggeringPolicy size="200MB"/>
                 <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
             </Policies>
-            <DefaultRolloverStrategy max="24">
-                <Delete basePath="${LOG_HOME}" maxDepth="2">
-                    <IfFileName glob="*/${LOG_NAME}.*.zip" />
-                    <IfLastModified age="24H" />
-                </Delete>
-            </DefaultRolloverStrategy>
+
             <Filters>
                 <ThresholdFilter level="${LOG_LEVEL}" onMatch="ACCEPT" onMismatch="DENY"/>
             </Filters>

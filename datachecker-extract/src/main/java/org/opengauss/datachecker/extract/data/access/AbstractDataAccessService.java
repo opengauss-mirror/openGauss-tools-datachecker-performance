@@ -16,6 +16,9 @@
 package org.opengauss.datachecker.extract.data.access;
 
 import com.alibaba.druid.pool.DruidDataSource;
+
+import cn.hutool.core.collection.CollUtil;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.config.ConfigCache;
@@ -25,6 +28,7 @@ import org.opengauss.datachecker.common.entry.common.Health;
 import org.opengauss.datachecker.common.entry.enums.LowerCaseTableNames;
 import org.opengauss.datachecker.common.entry.extract.PrimaryColumnBean;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
+import org.opengauss.datachecker.common.entry.extract.UniqueColumnBean;
 import org.opengauss.datachecker.common.exception.ExtractDataAccessException;
 import org.opengauss.datachecker.common.util.DurationUtils;
 import org.opengauss.datachecker.common.util.LogUtils;
@@ -36,16 +40,19 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 import javax.annotation.Resource;
 import javax.sql.DataSource;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * AbstractDataAccessService
@@ -113,7 +120,7 @@ public abstract class AbstractDataAccessService implements DataAccessService {
     public String adasQuerySchema(Connection connection, String executeQueryStatement) {
         String schema = "";
         try (PreparedStatement ps = connection.prepareStatement(executeQueryStatement);
-             ResultSet resultSet = ps.executeQuery()) {
+            ResultSet resultSet = ps.executeQuery()) {
             if (resultSet.next()) {
                 schema = resultSet.getString(RS_COL_SCHEMA);
             }
@@ -129,7 +136,7 @@ public abstract class AbstractDataAccessService implements DataAccessService {
      * 数据库schema是否合法
      *
      * @param schema schema
-     * @param sql    sql
+     * @param sql sql
      * @return result
      */
     public Health health(String schema, String sql) {
@@ -160,7 +167,7 @@ public abstract class AbstractDataAccessService implements DataAccessService {
         Connection connection = getConnection();
         List<String> list = new LinkedList<>();
         try (PreparedStatement ps = connection.prepareStatement(executeQueryStatement);
-             ResultSet resultSet = ps.executeQuery()) {
+            ResultSet resultSet = ps.executeQuery()) {
             while (resultSet.next()) {
                 list.add(resultSet.getString(RS_COL_TABLE_NAME));
             }
@@ -185,7 +192,7 @@ public abstract class AbstractDataAccessService implements DataAccessService {
         Connection connection = getConnection();
         List<PrimaryColumnBean> list = new LinkedList<>();
         try (PreparedStatement ps = connection.prepareStatement(executeQueryStatement);
-             ResultSet resultSet = ps.executeQuery()) {
+            ResultSet resultSet = ps.executeQuery()) {
             PrimaryColumnBean metadata;
             while (resultSet.next()) {
                 metadata = new PrimaryColumnBean();
@@ -204,6 +211,50 @@ public abstract class AbstractDataAccessService implements DataAccessService {
     }
 
     /**
+     * adas查询表的唯一性约束列信息
+     *
+     * @param executeQueryStatement executeQueryStatement
+     * @return List<UniqueColumnBean>
+     */
+    public List<UniqueColumnBean> adasQueryTableUniqueColumns(String executeQueryStatement) {
+        Connection connection = getConnection();
+        List<UniqueColumnBean> list = new LinkedList<>();
+        try (PreparedStatement ps = connection.prepareStatement(executeQueryStatement);
+            ResultSet resultSet = ps.executeQuery()) {
+            UniqueColumnBean metadata;
+            while (resultSet.next()) {
+                metadata = new UniqueColumnBean();
+                metadata.setTableName(resultSet.getString("tableName"));
+                metadata.setColumnName(resultSet.getString("columnName"));
+                metadata.setIndexIdentifier(resultSet.getString("indexIdentifier"));
+                metadata.setColIdx(resultSet.getInt("colIdx"));
+                list.add(metadata);
+            }
+        } catch (SQLException esql) {
+            LogUtils.error(log, "adasQueryTablePrimaryColumns error:", esql);
+        } finally {
+            closeConnection(connection);
+        }
+        return list;
+    }
+
+    /**
+     * 将UniqueColumnBean列表转换为PrimaryColumnBean列表
+     *
+     * @param uniqueColumns 输入的UniqueColumnBean列表，可能为空
+     * @return PrimaryColumnBean列表，永远不会为null，其中的元素是唯一的
+     */
+    public List<PrimaryColumnBean> translateUniqueToPrimaryColumns(List<UniqueColumnBean> uniqueColumns) {
+        if (CollUtil.isEmpty(uniqueColumns)) {
+            return new ArrayList<>();
+        }
+        return uniqueColumns.stream()
+            .map(u -> new PrimaryColumnBean(u.getTableName(), u.getColumnName()))
+            .distinct()
+            .collect(Collectors.toList());
+    }
+
+    /**
      * adasQueryTableMetadataList
      *
      * @param executeQueryStatement executeQueryStatement
@@ -214,7 +265,7 @@ public abstract class AbstractDataAccessService implements DataAccessService {
         Connection connection = getConnection();
         List<TableMetadata> list = new LinkedList<>();
         try (PreparedStatement ps = connection.prepareStatement(executeQueryStatement);
-             ResultSet resultSet = ps.executeQuery()) {
+            ResultSet resultSet = ps.executeQuery()) {
             TableMetadata metadata;
             while (resultSet.next()) {
                 metadata = new TableMetadata();
@@ -238,7 +289,7 @@ public abstract class AbstractDataAccessService implements DataAccessService {
      * 查询表数据抽样检查点清单
      *
      * @param connection connection
-     * @param sql        检查点查询SQL
+     * @param sql 检查点查询SQL
      * @return 检查点列表
      */
     protected List<Object> adasQueryPointList(Connection connection, String sql) {
@@ -259,7 +310,7 @@ public abstract class AbstractDataAccessService implements DataAccessService {
      * 查询表数据抽样检查点清单
      *
      * @param connection connection
-     * @param sql        检查点查询SQL
+     * @param sql 检查点查询SQL
      * @return 检查点列表
      */
     protected String adasQueryOnePoint(Connection connection, String sql) {
@@ -277,8 +328,7 @@ public abstract class AbstractDataAccessService implements DataAccessService {
     }
 
     private long durationBetweenToMillis(LocalDateTime start, LocalDateTime end) {
-        return Duration.between(start, end)
-                .toMillis();
+        return Duration.between(start, end).toMillis();
     }
 
     /**
@@ -292,15 +342,15 @@ public abstract class AbstractDataAccessService implements DataAccessService {
             return null;
         }
         return tableMetadata.setDataBaseType(properties.getDatabaseType())
-                .setEndpoint(properties.getEndpoint())
-                .setOgCompatibilityB(isOgCompatibilityB);
+            .setEndpoint(properties.getEndpoint())
+            .setOgCompatibilityB(isOgCompatibilityB);
     }
 
     /**
      * jdbc mode does not use it
      *
-     * @param table          table
-     * @param fileName       fileName
+     * @param table table
+     * @param fileName fileName
      * @param differenceList differenceList
      * @return result
      */
@@ -317,8 +367,8 @@ public abstract class AbstractDataAccessService implements DataAccessService {
      */
     protected List<TableMetadata> wrapperTableMetadata(List<TableMetadata> list) {
         list.forEach(meta -> meta.setDataBaseType(properties.getDatabaseType())
-                .setEndpoint(properties.getEndpoint())
-                .setOgCompatibilityB(isOgCompatibilityB));
+            .setEndpoint(properties.getEndpoint())
+            .setOgCompatibilityB(isOgCompatibilityB));
         return list;
     }
 
