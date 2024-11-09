@@ -24,6 +24,7 @@ import org.opengauss.datachecker.common.entry.enums.OgCompatibility;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.PrimaryColumnBean;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
+import org.opengauss.datachecker.common.entry.extract.UniqueColumnBean;
 import org.opengauss.datachecker.extract.data.mapper.OpgsMetaDataMapper;
 
 import javax.annotation.PostConstruct;
@@ -125,6 +126,18 @@ public class OpgsDataAccessService extends AbstractDataAccessService {
             + "inner join pg_constraint cs on a.attrelid=cs.conrelid and a.attnum=any(cs.conkey) "
             + "where ns.nspname='" + schema + "' and c.relname='" + tableName + "' and cs.contype='p';";
         return adasQueryTablePrimaryColumns(sql);
+    }
+
+    @Override
+    public List<PrimaryColumnBean> queryTableUniqueColumns(String tableName) {
+        String schema = properties.getSchema();
+        String sql = "SELECT c.relname AS tableName, ns.nspname, i.indexrelid indexIdentifier, "
+            + " a.attname AS columnName, a.attnum colIdx FROM pg_index i"
+            + " JOIN pg_class c ON i.indrelid = c.oid join pg_namespace ns on c.relnamespace=ns.oid"
+            + " JOIN pg_attribute a ON i.indrelid = a.attrelid AND a.attnum = ANY(i.indkey)         "
+            + " where ns.nspname='" + schema + "' and c.relname='" + tableName + "' and i.indisunique = true;";
+        List<UniqueColumnBean> uniqueColumns = adasQueryTableUniqueColumns(sql);
+        return translateUniqueToPrimaryColumns(uniqueColumns);
     }
 
     @Override
