@@ -16,6 +16,7 @@
 package org.opengauss.datachecker.extract.data;
 
 import com.alibaba.druid.pool.DruidDataSource;
+
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.logging.log4j.Logger;
@@ -33,6 +34,7 @@ import org.opengauss.datachecker.extract.service.RuleAdapterService;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
+
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -103,15 +105,13 @@ public class BaseDataService {
      */
     public List<TableMetadata> bdsQueryTableMetadataList() {
         List<TableMetadata> metadataList = dataAccessService.dasQueryTableMetadataList();
-        return metadataList.stream()
-                           .filter(meta -> {
-                               boolean isChecking = ruleAdapterService.filterTableByRule(meta.getTableName());
-                               if (isChecking) {
-                                   tableNameList.add(meta.getTableName());
-                               }
-                               return isChecking;
-                           })
-                           .collect(Collectors.toList());
+        return metadataList.stream().filter(meta -> {
+            boolean isChecking = ruleAdapterService.filterTableByRule(meta.getTableName());
+            if (isChecking) {
+                tableNameList.add(meta.getTableName());
+            }
+            return isChecking;
+        }).collect(Collectors.toList());
     }
 
     /**
@@ -124,8 +124,7 @@ public class BaseDataService {
         if (CollectionUtils.isEmpty(columnBeanList)) {
             return new HashMap<>();
         }
-        return columnBeanList.stream()
-                             .collect(Collectors.groupingBy(PrimaryColumnBean::getTableName));
+        return columnBeanList.stream().collect(Collectors.groupingBy(PrimaryColumnBean::getTableName));
     }
 
     private List<String> filterByTableRules(List<String> tableNameList) {
@@ -189,28 +188,31 @@ public class BaseDataService {
     /**
      * update table metadata, and filter column rules
      *
-     * @param tableMetadata      table metadata
+     * @param tableMetadata table metadata
      * @param primaryColumnBeans primary column
      */
     public void updateTableColumnMetaData(TableMetadata tableMetadata, List<PrimaryColumnBean> primaryColumnBeans) {
         String tableName = tableMetadata.getTableName();
         final List<ColumnsMetaData> columns = dataAccessService.queryTableColumnsMetaData(tableName);
-        if (Objects.isNull(columns)) {
+        if (CollectionUtils.isEmpty(columns)) {
             LogUtils.error(log, "table columns metadata is null ,{}", tableName);
             return;
         }
-        if (Objects.isNull(primaryColumnBeans)) {
-            primaryColumnBeans = dataAccessService.queryTablePrimaryColumns(tableName);
+        List<PrimaryColumnBean> tempPrimaryColumnBeans = primaryColumnBeans;
+        if (CollectionUtils.isEmpty(primaryColumnBeans)) {
+            tempPrimaryColumnBeans = dataAccessService.queryTablePrimaryColumns(tableName);
         }
-        if (Objects.nonNull(primaryColumnBeans)) {
-            List<String> primaryColumnNameList = getPrimaryColumnNames(primaryColumnBeans);
+        if (CollectionUtils.isEmpty(tempPrimaryColumnBeans)) {
+            tempPrimaryColumnBeans = dataAccessService.queryTableUniqueColumns(tableName);
+        }
+        if (CollectionUtils.isNotEmpty(tempPrimaryColumnBeans)) {
+            List<String> primaryColumnNameList = getPrimaryColumnNames(tempPrimaryColumnBeans);
             for (ColumnsMetaData column : columns) {
                 if (primaryColumnNameList.contains(column.getLowerCaseColumnName())) {
                     column.setColumnKey(ColumnKey.PRI);
                 }
             }
         }
-
         tableMetadata.setColumnsMetas(ruleAdapterService.executeColumnRule(columns));
         tableMetadata.setPrimaryMetas(getTablePrimaryColumn(columns));
         tableMetadata.setTableHash(calcTableHash(columns));
@@ -218,16 +220,17 @@ public class BaseDataService {
 
     private List<String> getPrimaryColumnNames(List<PrimaryColumnBean> primaryColumnBeans) {
         return primaryColumnBeans.stream()
-                                 .map(PrimaryColumnBean::getColumnName)
-                                 .map(String::toLowerCase)
-                                 .collect(Collectors.toList());
+            .map(PrimaryColumnBean::getColumnName)
+            .map(String::toLowerCase)
+            .distinct()
+            .collect(Collectors.toList());
     }
 
     private List<ColumnsMetaData> getTablePrimaryColumn(List<ColumnsMetaData> columnsMetaData) {
         return columnsMetaData.stream()
-                              .filter(meta -> ColumnKey.PRI.equals(meta.getColumnKey()))
-                              .sorted(Comparator.comparing(ColumnsMetaData::getOrdinalPosition))
-                              .collect(Collectors.toList());
+            .filter(meta -> ColumnKey.PRI.equals(meta.getColumnKey()))
+            .sorted(Comparator.comparing(ColumnsMetaData::getOrdinalPosition))
+            .collect(Collectors.toList());
     }
 
     /**
@@ -255,9 +258,8 @@ public class BaseDataService {
     private long calcTableHash(List<ColumnsMetaData> columnsMetas) {
         StringBuilder buffer = new StringBuilder();
         columnsMetas.sort(Comparator.comparing(ColumnsMetaData::getOrdinalPosition));
-        columnsMetas.forEach(column -> buffer.append(column.getColumnName()
-                                                           .toLowerCase(Locale.ENGLISH))
-                                             .append(column.getOrdinalPosition()));
+        columnsMetas.forEach(column -> buffer.append(column.getColumnName().toLowerCase(Locale.ENGLISH))
+            .append(column.getOrdinalPosition()));
         return HASH_UTIL.hashBytes(buffer.toString());
     }
 
@@ -289,9 +291,8 @@ public class BaseDataService {
         } else {
             String[] sqlModeArray = sqlMode.split(",");
             String newSqlMode = Arrays.stream(sqlModeArray)
-                                      .filter(mode -> !mode.equalsIgnoreCase(
-                                          ConfigConstants.SQL_MODE_NAME_PAD_CHAR_TO_FULL_LENGTH))
-                                      .collect(Collectors.joining(","));
+                .filter(mode -> !mode.equalsIgnoreCase(ConfigConstants.SQL_MODE_NAME_PAD_CHAR_TO_FULL_LENGTH))
+                .collect(Collectors.joining(","));
             boolean isPadCharFull = ConfigCache.getBooleanValue(ConfigConstants.SQL_MODE_PAD_CHAR_TO_FULL_LENGTH);
             if (isPadCharFull) {
                 newSqlMode += ConfigConstants.SQL_MODE_NAME_PAD_CHAR_TO_FULL_LENGTH;

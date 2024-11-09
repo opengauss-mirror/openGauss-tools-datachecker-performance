@@ -21,6 +21,7 @@ import org.opengauss.datachecker.common.entry.enums.LowerCaseTableNames;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.PrimaryColumnBean;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
+import org.opengauss.datachecker.common.entry.extract.UniqueColumnBean;
 import org.opengauss.datachecker.extract.data.mapper.OracleMetaDataMapper;
 
 import java.sql.Connection;
@@ -76,9 +77,20 @@ public class OracleDataAccessService extends AbstractDataAccessService {
     @Override
     public List<PrimaryColumnBean> queryTablePrimaryColumns() {
         String sql = "SELECT A.TABLE_NAME tableName, A.COLUMN_NAME columnName FROM ALL_CONS_COLUMNS A,ALL_CONSTRAINTS B"
-                + " WHERE A.constraint_name = B.constraint_name AND  B.constraint_type = 'P' AND A.OWNER = '"
-                + properties.getSchema() + "'";
+            + " WHERE A.constraint_name = B.constraint_name AND  B.constraint_type = 'P' AND A.OWNER = '"
+            + properties.getSchema() + "'";
         return adasQueryTablePrimaryColumns(sql);
+    }
+
+    @Override
+    public List<PrimaryColumnBean> queryTableUniqueColumns(String tableName) {
+        String schema = properties.getSchema();
+        String sql = "SELECT uc.table_name tableName,uc.constraint_name indexIdentifier,ucc.column_name columnName,"
+            + " uc.constraint_type,ucc.position colIdx FROM USER_CONSTRAINTS uc "
+            + " JOIN USER_CONS_COLUMNS ucc ON uc.constraint_name=ucc.constraint_name "
+            + " WHERE uc.constraint_type='U' and uc.owner='" + schema + "'and uc.table_name='" + tableName + "'";
+        List<UniqueColumnBean> uniqueColumns = adasQueryTableUniqueColumns(sql);
+        return translateUniqueToPrimaryColumns(uniqueColumns);
     }
 
     @Override
@@ -91,12 +103,11 @@ public class OracleDataAccessService extends AbstractDataAccessService {
         String schema = properties.getSchema();
         LowerCaseTableNames lowerCaseTableNames = getLowerCaseTableNames();
         String colTableName = Objects.equals(LowerCaseTableNames.SENSITIVE, lowerCaseTableNames)
-                ? "t.table_name tableName"
-                : "lower(t.table_name) tableName";
+            ? "t.table_name tableName"
+            : "lower(t.table_name) tableName";
         String sql = "SELECT t.owner tableSchema," + colTableName + ",t.num_rows tableRows,avg_row_len avgRowLength"
-                + " FROM ALL_TABLES t LEFT JOIN (SELECT DISTINCT table_name from ALL_CONSTRAINTS where OWNER = '"
-                + schema + "' AND constraint_type='P') pc on t.table_name=pc.table_name WHERE t.OWNER = '"
-                + schema + "'";
+            + " FROM ALL_TABLES t LEFT JOIN (SELECT DISTINCT table_name from ALL_CONSTRAINTS where OWNER = '" + schema
+            + "' AND constraint_type='P') pc on t.table_name=pc.table_name WHERE t.OWNER = '" + schema + "'";
         return wrapperTableMetadata(adasQueryTableMetadataList(sql));
     }
 
