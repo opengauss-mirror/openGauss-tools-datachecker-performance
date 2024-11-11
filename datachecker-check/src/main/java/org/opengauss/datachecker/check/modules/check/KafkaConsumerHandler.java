@@ -16,6 +16,7 @@
 package org.opengauss.datachecker.check.modules.check;
 
 import com.alibaba.fastjson.JSON;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -26,6 +27,7 @@ import org.opengauss.datachecker.common.entry.extract.RowDataHash;
 import org.opengauss.datachecker.common.entry.extract.SliceExtend;
 import org.opengauss.datachecker.common.exception.CheckConsumerPollEmptyException;
 import org.opengauss.datachecker.common.util.LogUtils;
+import org.opengauss.datachecker.common.util.ThreadUtil;
 
 import java.time.Duration;
 import java.util.*;
@@ -44,10 +46,11 @@ public class KafkaConsumerHandler {
     private static final int MAX_CONSUMER_POLL_TIMES = 50;
 
     private KafkaConsumer<String, String> kafkaConsumer;
+
     /**
      * Constructor
      *
-     * @param consumer   consumer
+     * @param consumer consumer
      * @param retryTimes retryTimes
      */
     public KafkaConsumerHandler(KafkaConsumer<String, String> consumer, int retryTimes) {
@@ -66,6 +69,7 @@ public class KafkaConsumerHandler {
     /**
      * 获取kafka consumer
      *
+     * @return consumer
      */
     public KafkaConsumer<String, String> getConsumer() {
         return kafkaConsumer;
@@ -74,7 +78,7 @@ public class KafkaConsumerHandler {
     /**
      * Query the Kafka partition data corresponding to the specified table
      *
-     * @param topic      Kafka topic
+     * @param topic Kafka topic
      * @param partitions Kafka partitions
      * @return kafka partitions data
      */
@@ -96,8 +100,8 @@ public class KafkaConsumerHandler {
      * consumer poll data from the topic partition, and filter bu slice extend. then add data in the data list.
      *
      * @param topicPartition topic partition
-     * @param sExtend        slice extend
-     * @param attempts
+     * @param sExtend slice extend
+     * @param attempts attempts
      */
     public void consumerAssign(TopicPartition topicPartition, SliceExtend sExtend, int attempts) {
         kafkaConsumer.assign(List.of(topicPartition));
@@ -109,20 +113,21 @@ public class KafkaConsumerHandler {
     /**
      * consumer poll data from the topic partition, and filter bu slice extend. then add data in the data list.
      *
-     * @param sExtend  slice extend
+     * @param sExtend slice extend
      * @param dataList data list
      */
     public synchronized void pollTpSliceData(SliceExtend sExtend, List<RowDataHash> dataList) {
         AtomicLong currentCount = new AtomicLong(0);
         int pollEmptyCount = 0;
         while (currentCount.get() < sExtend.getCount()) {
-            ConsumerRecords<String, String> records =
-                kafkaConsumer.poll(Duration.ofMillis(KAFKA_CONSUMER_POLL_DURATION));
+            ConsumerRecords<String, String> records = kafkaConsumer.poll(
+                Duration.ofMillis(KAFKA_CONSUMER_POLL_DURATION));
             if (records.count() <= 0) {
                 pollEmptyCount++;
                 if (pollEmptyCount > MAX_CONSUMER_POLL_TIMES) {
                     throw new CheckConsumerPollEmptyException(sExtend.getName());
                 }
+                ThreadUtil.sleep(KAFKA_CONSUMER_POLL_DURATION);
                 continue;
             }
             pollEmptyCount = 0;
@@ -139,8 +144,8 @@ public class KafkaConsumerHandler {
     /**
      * Query the Kafka partition data corresponding to the specified table
      *
-     * @param topic                     Kafka topic
-     * @param partitions                Kafka partitions
+     * @param topic Kafka topic
+     * @param partitions Kafka partitions
      * @param shouldChangeConsumerGroup if true change consumer Group random
      * @return kafka partitions data
      */
@@ -188,8 +193,8 @@ public class KafkaConsumerHandler {
     }
 
     private void getTopicRecords(List<RowDataHash> dataList, KafkaConsumer<String, String> kafkaConsumer) {
-        ConsumerRecords<String, String> consumerRecords =
-            kafkaConsumer.poll(Duration.ofMillis(KAFKA_CONSUMER_POLL_DURATION));
+        ConsumerRecords<String, String> consumerRecords = kafkaConsumer.poll(
+            Duration.ofMillis(KAFKA_CONSUMER_POLL_DURATION));
         consumerRecords.forEach(record -> {
             dataList.add(JSON.parseObject(record.value(), RowDataHash.class));
         });

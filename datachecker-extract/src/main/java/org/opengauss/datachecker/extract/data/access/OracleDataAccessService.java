@@ -85,10 +85,12 @@ public class OracleDataAccessService extends AbstractDataAccessService {
     @Override
     public List<PrimaryColumnBean> queryTableUniqueColumns(String tableName) {
         String schema = properties.getSchema();
-        String sql = "SELECT uc.table_name tableName,uc.constraint_name indexIdentifier,ucc.column_name columnName,"
-            + " uc.constraint_type,ucc.position colIdx FROM USER_CONSTRAINTS uc "
-            + " JOIN USER_CONS_COLUMNS ucc ON uc.constraint_name=ucc.constraint_name "
-            + " WHERE uc.constraint_type='U' and uc.owner='" + schema + "'and uc.table_name='" + tableName + "'";
+        String sql = " SELECT ui.index_name indexIdentifier,ui.table_owner,ui.table_name tableName,"
+            + " utc.column_name columnName, utc.column_id colIdx"
+            + " from user_indexes ui left join user_ind_columns uic on ui.index_name=uic.index_name "
+            + " and ui.table_name=uic.table_name  "
+            + " left join user_tab_columns utc on ui.table_name =utc.table_name and uic.column_name=utc.column_name"
+            + " where ui.uniqueness='UNIQUE' and ui.table_owner='" + schema + "' and ui.table_name='" + tableName + "'";
         List<UniqueColumnBean> uniqueColumns = adasQueryTableUniqueColumns(sql);
         return translateUniqueToPrimaryColumns(uniqueColumns);
     }
