@@ -91,12 +91,11 @@ public class MysqlDataAccessService extends AbstractDataAccessService {
     @Override
     public List<PrimaryColumnBean> queryTableUniqueColumns(String tableName) {
         String schema = properties.getSchema();
-        String sql = "select kcu.table_name tableName, kcu.column_name columnName,kcu.ordinal_position colIdx,"
-            + " kcu.constraint_name indexIdentifier from  information_schema.table_constraints tc "
-            + " left join information_schema.KEY_COLUMN_USAGE kcu on tc.table_schema =kcu.table_schema"
-            + " and tc.constraint_name=kcu.constraint_name and tc.table_name = kcu.table_name"
-            + " where tc.table_schema='" + schema + "' and tc.table_name='" + tableName + "'"
-            + " and tc.constraint_type='UNIQUE' ;";
+        String sql = "select s.table_schema,s.table_name tableName,s.column_name columnName,c.ordinal_position colIdx,"
+            + " s.index_name indexIdentifier from information_schema.statistics s "
+            + " left join information_schema.columns c on s.table_schema=c.table_schema  "
+            + " and s.table_schema=c.table_schema and s.table_name=c.table_name and s.column_name=c.column_name "
+            + " where s.table_schema='" + schema + "' and s.table_name='" + tableName + "'" + " and s.non_unique=0;";
         List<UniqueColumnBean> uniqueColumns = adasQueryTableUniqueColumns(sql);
         return translateUniqueToPrimaryColumns(uniqueColumns);
     }
