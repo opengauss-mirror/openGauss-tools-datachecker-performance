@@ -82,9 +82,18 @@ public class SliceCheckContext {
     }
 
     /**
+     * get consumer retry fetch record times
+     *
+     * @return duration times
+     */
+    public int getRetryFetchRecordTimes() {
+        return kafkaConsumerService.getRetryFetchRecordTimes();
+    }
+
+    /**
      * get source or sink table topic
      *
-     * @param table    table
+     * @param table table
      * @param endpoint source or sink
      * @return topic name
      */
@@ -97,7 +106,7 @@ public class SliceCheckContext {
     /**
      * refresh slice check progress
      *
-     * @param slice    slice
+     * @param slice slice
      * @param rowCount slice of row count
      */
     public void refreshSliceCheckProgress(SliceVo slice, long rowCount) {
@@ -107,7 +116,7 @@ public class SliceCheckContext {
     /**
      * add slice check Result
      *
-     * @param slice  slice
+     * @param slice slice
      * @param result check result
      */
     public void addCheckResult(SliceVo slice, CheckDiffResult result) {

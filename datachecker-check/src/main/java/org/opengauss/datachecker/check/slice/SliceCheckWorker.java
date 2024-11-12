@@ -17,6 +17,7 @@ package org.opengauss.datachecker.check.slice;
 
 import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
+
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.kafka.common.TopicPartition;
@@ -47,6 +48,7 @@ import org.opengauss.datachecker.common.exception.BucketNumberInconsistentExcept
 import org.opengauss.datachecker.common.exception.CheckConsumerPollEmptyException;
 import org.opengauss.datachecker.common.exception.MerkleTreeDepthException;
 import org.opengauss.datachecker.common.util.LogUtils;
+import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.opengauss.datachecker.common.util.TopicUtil;
 import org.springframework.lang.NonNull;
 
@@ -72,8 +74,6 @@ import java.util.concurrent.CountDownLatch;
 public class SliceCheckWorker implements Runnable {
     private static final Logger LOGGER = LogUtils.getLogger(SliceCheckWorker.class);
     private static final int THRESHOLD_MIN_BUCKET_SIZE = 2;
-    // 设置最大尝试次数
-    private static final int MAX_ATTEMPTS=5;
 
     private final SliceVo slice;
 
@@ -81,17 +81,19 @@ public class SliceCheckWorker implements Runnable {
     private final SliceCheckEvent checkEvent;
     private final SliceCheckContext checkContext;
     private final TaskRegisterCenter registerCenter;
-    private final DifferencePair<List<Difference>, List<Difference>, List<Difference>> difference =
-        DifferencePair.of(new LinkedList<>(), new LinkedList<>(), new LinkedList<>());
+    private final DifferencePair<List<Difference>, List<Difference>, List<Difference>> difference = DifferencePair.of(
+        new LinkedList<>(), new LinkedList<>(), new LinkedList<>());
     private final LocalDateTime startTime;
 
     private long sliceRowCount;
+    // 设置最大尝试次数
+    private int maxAttemptsTimes;
     private Topic topic = new Topic();
 
     /**
      * slice check worker construct
      *
-     * @param checkEvent        check event
+     * @param checkEvent check event
      * @param sliceCheckContext slice check context
      */
     public SliceCheckWorker(SliceCheckEvent checkEvent, SliceCheckContext sliceCheckContext,
@@ -102,6 +104,7 @@ public class SliceCheckWorker implements Runnable {
         this.slice = checkEvent.getSlice();
         this.registerCenter = registerCenter;
         this.processNo = ConfigCache.getValue(ConfigConstants.PROCESS_NO);
+        this.maxAttemptsTimes = sliceCheckContext.getRetryFetchRecordTimes();
     }
 
     @Override
@@ -168,22 +171,17 @@ public class SliceCheckWorker implements Runnable {
                 LogUtils.debug(LOGGER, "slice {} fetch empty", slice.getName());
             } else {
                 // sourceSize is less than thresholdMinBucketSize, that is, there is only one bucket. Compare
-                DifferencePair<List<Difference>, List<Difference>, List<Difference>> subDifference =
-                    compareBucketCommon(sourceTuple.getBuckets()
-                                                   .get(0), sinkTuple.getBuckets()
-                                                                     .get(0));
-                difference.getDiffering()
-                          .addAll(subDifference.getDiffering());
-                difference.getOnlyOnLeft()
-                          .addAll(subDifference.getOnlyOnLeft());
-                difference.getOnlyOnRight()
-                          .addAll(subDifference.getOnlyOnRight());
+                DifferencePair<List<Difference>, List<Difference>, List<Difference>> subDifference = null;
+                subDifference = compareBucketCommon(sourceTuple.getBuckets().get(0), sinkTuple.getBuckets().get(0));
+                difference.getDiffering().addAll(subDifference.getDiffering());
+                difference.getOnlyOnLeft().addAll(subDifference.getOnlyOnLeft());
+                difference.getOnlyOnRight().addAll(subDifference.getOnlyOnRight());
             }
         } else {
             throw new BucketNumberInconsistentException(String.format(
-                "table[%s] slice[%s] build the bucket number is inconsistent, source-bucket-count=[%s] sink-bucket-count=[%s]"
-                    + " Please synchronize data again! ", slice.getTable(), slice.getNo(), sourceTuple.getBucketSize(),
-                sinkTuple.getBucketSize()));
+                "table[%s] slice[%s] build the bucket number is inconsistent, source-bucket-count=[%s] "
+                    + "sink-bucket-count=[%s] Please synchronize data again! ", slice.getTable(), slice.getNo(),
+                sourceTuple.getBucketSize(), sinkTuple.getBucketSize()));
         }
     }
 
@@ -193,24 +191,23 @@ public class SliceCheckWorker implements Runnable {
 
     private void checkResult(String resultMsg) {
         CheckDiffResultBuilder builder = CheckDiffResultBuilder.builder();
-
         builder.process(ConfigCache.getValue(ConfigConstants.PROCESS_NO))
-               .table(slice.getTable())
-               .sno(slice.getNo())
-               .error(resultMsg)
-               .topic(getConcatTableTopics())
-               .schema(slice.getSchema())
-               .fileName(slice.getName())
-               .conditionLimit(getConditionLimit())
-               .partitions(slice.getPtnNum())
-               .isTableStructureEquals(true)
-               .startTime(startTime)
-               .endTime(LocalDateTime.now())
-               .isExistTableMiss(false, null)
-               .rowCount((int) sliceRowCount)
-               .errorRate(20)
-               .checkMode(ConfigCache.getValue(ConfigConstants.CHECK_MODE, CheckMode.class))
-               .keyDiff(difference.getOnlyOnLeft(), difference.getDiffering(), difference.getOnlyOnRight());
+            .table(slice.getTable())
+            .sno(slice.getNo())
+            .error(resultMsg)
+            .topic(getConcatTableTopics())
+            .schema(slice.getSchema())
+            .fileName(slice.getName())
+            .conditionLimit(getConditionLimit())
+            .partitions(slice.getPtnNum())
+            .isTableStructureEquals(true)
+            .startTime(startTime)
+            .endTime(LocalDateTime.now())
+            .isExistTableMiss(false, null)
+            .rowCount((int) sliceRowCount)
+            .errorRate(20)
+            .checkMode(ConfigCache.getValue(ConfigConstants.CHECK_MODE, CheckMode.class))
+            .keyDiff(difference.getOnlyOnLeft(), difference.getDiffering(), difference.getOnlyOnRight());
         CheckDiffResult result = builder.build();
         LogUtils.debug(LOGGER, "result {}", result);
         checkContext.addCheckResult(slice, result);
@@ -233,18 +230,13 @@ public class SliceCheckWorker implements Runnable {
             return;
         }
         diffNodeList.forEach(diffNode -> {
-            Bucket sourceBucket = diffNode.getSource()
-                                          .getBucket();
-            Bucket sinkBucket = diffNode.getSink()
-                                        .getBucket();
-            DifferencePair<List<Difference>, List<Difference>, List<Difference>> subDifference =
-                compareBucketCommon(sourceBucket, sinkBucket);
-            difference.getDiffering()
-                      .addAll(subDifference.getDiffering());
-            difference.getOnlyOnLeft()
-                      .addAll(subDifference.getOnlyOnLeft());
-            difference.getOnlyOnRight()
-                      .addAll(subDifference.getOnlyOnRight());
+            Bucket sourceBucket = diffNode.getSource().getBucket();
+            Bucket sinkBucket = diffNode.getSink().getBucket();
+            DifferencePair<List<Difference>, List<Difference>, List<Difference>> subDifference = compareBucketCommon(
+                sourceBucket, sinkBucket);
+            difference.getDiffering().addAll(subDifference.getDiffering());
+            difference.getOnlyOnLeft().addAll(subDifference.getOnlyOnLeft());
+            difference.getOnlyOnRight().addAll(subDifference.getOnlyOnRight());
         });
         diffNodeList.clear();
     }
@@ -257,13 +249,10 @@ public class SliceCheckWorker implements Runnable {
         List<Difference> entriesOnlyOnLeft = collectorDeleteOrInsert(bucketDifference.entriesOnlyOnLeft());
         List<Difference> entriesOnlyOnRight = collectorDeleteOrInsert(bucketDifference.entriesOnlyOnRight());
         List<Difference> differing = collectorUpdate(bucketDifference.entriesDiffering());
-
-        LogUtils.debug(LOGGER, "diff slice {} insert {}", slice.getName(), bucketDifference.entriesOnlyOnLeft()
-                                                                                           .size());
-        LogUtils.debug(LOGGER, "diff slice {} delete {}", slice.getName(), bucketDifference.entriesOnlyOnRight()
-                                                                                           .size());
-        LogUtils.debug(LOGGER, "diff slice {} update {}", slice.getName(), bucketDifference.entriesDiffering()
-                                                                                           .size());
+        LogUtils.debug(LOGGER, "diff slice {} insert {}", slice.getName(), bucketDifference.entriesOnlyOnLeft().size());
+        LogUtils.debug(LOGGER, "diff slice {} delete {}", slice.getName(),
+            bucketDifference.entriesOnlyOnRight().size());
+        LogUtils.debug(LOGGER, "diff slice {} update {}", slice.getName(), bucketDifference.entriesDiffering().size());
         return DifferencePair.of(entriesOnlyOnLeft, entriesOnlyOnRight, differing);
     }
 
@@ -313,12 +302,11 @@ public class SliceCheckWorker implements Runnable {
         // Initialize source bucket column list data
         long startFetch = System.currentTimeMillis();
         CountDownLatch countDownLatch = new CountDownLatch(checkTupleList.size());
-        int avgSliceCount = (int) (sourceTuple.getSlice()
-                                              .getCount() + sinkTuple.getSlice()
-                                                                     .getCount()) / 2;
+        int avgSliceCount = (int) (sourceTuple.getSlice().getCount() + sinkTuple.getSlice().getCount()) / 2;
         KafkaConsumerHandler consumer = checkContext.createKafkaHandler();
         checkTupleList.forEach(check -> {
-            initBucketList(check.getEndpoint(), check.getSlice(), check.getBuckets(), bucketDiff, avgSliceCount, consumer);
+            initBucketList(check.getEndpoint(), check.getSlice(), check.getBuckets(), bucketDiff, avgSliceCount,
+                consumer);
             countDownLatch.countDown();
         });
         countDownLatch.await();
@@ -336,30 +324,33 @@ public class SliceCheckWorker implements Runnable {
     }
 
     private void initBucketList(Endpoint endpoint, SliceExtend sliceExtend, List<Bucket> bucketList,
-                                Map<Integer, Pair<Integer, Integer>> bucketDiff, int avgSliceCount, KafkaConsumerHandler consumer) {
+        Map<Integer, Pair<Integer, Integer>> bucketDiff, int avgSliceCount, KafkaConsumerHandler consumer) {
         // Use feign client to pull Kafka data
         List<RowDataHash> dataList = new LinkedList<>();
-        TopicPartition topicPartition = new TopicPartition(Objects.equals(Endpoint.SOURCE, endpoint) ?
-                topic.getSourceTopicName() : topic.getSinkTopicName(), topic.getPtnNum());
+        TopicPartition topicPartition = new TopicPartition(
+            Objects.equals(Endpoint.SOURCE, endpoint) ? topic.getSourceTopicName() : topic.getSinkTopicName(),
+            topic.getPtnNum());
         int attempts = 0;
-        while (attempts < MAX_ATTEMPTS) {
+        while (attempts < maxAttemptsTimes) {
             try {
                 consumer.consumerAssign(topicPartition, sliceExtend, attempts);
                 consumer.pollTpSliceData(sliceExtend, dataList);
                 break; // 如果成功，跳出循环
             } catch (CheckConsumerPollEmptyException ex) {
-                if (++attempts >= MAX_ATTEMPTS) {
+                if (++attempts >= maxAttemptsTimes) {
                     checkContext.returnConsumer(consumer);
                     throw ex; // 如果达到最大尝试次数，重新抛出异常
                 }
+                ThreadUtil.sleepOneSecond();
+                LogUtils.warn(LOGGER, "poll slice data {} {} , retry ({})", sliceExtend.getName(), sliceExtend.getNo(),
+                    attempts);
             }
         }
         if (CollectionUtils.isEmpty(dataList)) {
             return;
         }
-        BuilderBucketHandler bucketBuilder =
-            new BuilderBucketHandler(ConfigCache.getIntValue(ConfigConstants.BUCKET_CAPACITY));
-
+        BuilderBucketHandler bucketBuilder = new BuilderBucketHandler(
+            ConfigCache.getIntValue(ConfigConstants.BUCKET_CAPACITY));
         Map<Integer, Bucket> bucketMap = new ConcurrentHashMap<>(InitialCapacity.CAPACITY_128);
         // Use the pulled data to build the bucket list
         bucketBuilder.builder(dataList, avgSliceCount, bucketMap);
@@ -394,12 +385,6 @@ public class SliceCheckWorker implements Runnable {
         bucketList.sort(Comparator.comparingInt(Bucket::getNumber));
     }
 
-    private void getSliceDataFromTopicPartition(KafkaConsumerHandler consumer, SliceExtend sExtend,
-                                                List<RowDataHash> dataList) throws CheckConsumerPollEmptyException {
-
-
-    }
-
     /**
      * <pre>
      * Align the bucket list data according to the statistical results of source
@@ -411,12 +396,10 @@ public class SliceCheckWorker implements Runnable {
         if (MapUtils.isNotEmpty(bucketDiff)) {
             bucketDiff.forEach((number, pair) -> {
                 if (pair.getSource() == -1) {
-                    sourceTuple.getBuckets()
-                               .add(BuilderBucketHandler.builderEmpty(number));
+                    sourceTuple.getBuckets().add(BuilderBucketHandler.builderEmpty(number));
                 }
                 if (pair.getSink() == -1) {
-                    sinkTuple.getBuckets()
-                             .add(BuilderBucketHandler.builderEmpty(number));
+                    sinkTuple.getBuckets().add(BuilderBucketHandler.builderEmpty(number));
                 }
             });
         }
