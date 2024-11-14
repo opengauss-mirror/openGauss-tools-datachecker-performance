@@ -269,4 +269,9 @@ public class CsvDataAccessService implements DataAccessService {
     public LowerCaseTableNames queryLowerCaseTableNames() {
         return LowerCaseTableNames.INSENSITIVE;
     }
+
+    @Override
+    public List<PrimaryColumnBean> queryTableUniqueColumns(String tableName) {
+        return null;
+    }
 }

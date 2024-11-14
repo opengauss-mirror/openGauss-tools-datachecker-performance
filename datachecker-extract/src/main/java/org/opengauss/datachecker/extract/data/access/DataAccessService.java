@@ -25,6 +25,7 @@ import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.springframework.jdbc.core.RowMapper;
 
 import javax.sql.DataSource;
+
 import java.sql.Connection;
 import java.util.List;
 import java.util.Map;
@@ -111,7 +112,7 @@ public interface DataAccessService {
      * query table column min value
      *
      * @param connection connection
-     * @param param      param
+     * @param param param
      * @return min value of string
      */
     String min(Connection connection, DataAccessParam param);
@@ -120,7 +121,7 @@ public interface DataAccessService {
      * query table column max value
      *
      * @param connection connection
-     * @param param      param
+     * @param param param
      * @return max value of string
      */
     String max(Connection connection, DataAccessParam param);
@@ -136,10 +137,10 @@ public interface DataAccessService {
     /**
      * query row data by sql
      *
-     * @param sql       sql
-     * @param param     sql param
+     * @param sql sql
+     * @param param sql param
      * @param rowMapper row mapper
-     * @param <T>       data type
+     * @param <T> data type
      * @return data
      */
     <T> List<T> query(String sql, Map<String, Object> param, RowMapper<T> rowMapper);
@@ -147,10 +148,10 @@ public interface DataAccessService {
     /**
      * query data from csv file
      *
-     * @param table          table
-     * @param fileName       fileName
+     * @param table table
+     * @param fileName fileName
      * @param differenceList differenceList
-     * @return
+     * @return data
      */
     List<Map<String, String>> query(String table, String fileName, List<Difference> differenceList);
 
@@ -165,7 +166,7 @@ public interface DataAccessService {
      * query table check point list
      *
      * @param connection connection
-     * @param param      param
+     * @param param param
      * @return point list
      */
     List<Object> queryPointList(Connection connection, DataAccessParam param);
@@ -187,4 +188,15 @@ public interface DataAccessService {
      * @return value
      */
     LowerCaseTableNames queryLowerCaseTableNames();
+
+    /**
+     * query table unique columns
+     * <pre>
+     *     唯一性约束与唯一性索引
+     * </pre>
+     *
+     * @param tableName table
+     * @return unique columns
+     */
+    List<PrimaryColumnBean> queryTableUniqueColumns(String tableName);
 }
