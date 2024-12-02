@@ -16,6 +16,7 @@
 package org.opengauss.datachecker.extract.slice;
 
 import com.alibaba.fastjson.JSONObject;
+
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.PartitionInfo;
@@ -56,7 +57,7 @@ public class ExtractPointSwapManager {
     private KafkaConsumerConfig kafkaConsumerConfig;
 
     public ExtractPointSwapManager(KafkaTemplate<String, String> kafkaTemplate,
-                                   KafkaConsumerConfig kafkaConsumerConfig) {
+        KafkaConsumerConfig kafkaConsumerConfig) {
         this.kafkaTemplate = kafkaTemplate;
         this.endpoint = ConfigCache.getEndPoint();
         this.endpoint = ConfigCache.getEndPoint();
@@ -77,6 +78,7 @@ public class ExtractPointSwapManager {
             ConsumerRecords<String, String> records;
             AtomicInteger deliveredCount = new AtomicInteger();
             LogUtils.info(log, "pollSwapPoint thread started");
+            int retryTimesWait = 0;
             while (!isCompletedSwapTablePoint) {
                 try {
                     records = kafkaConsumer.poll(Duration.ofSeconds(1));
@@ -87,11 +89,13 @@ public class ExtractPointSwapManager {
                                 tableCheckPointCache.put(pointData.getTableName(), translateDigitPoint(pointData));
                                 deliveredCount.getAndIncrement();
                                 LogUtils.info(log, "swap summarized checkpoint of table [{}]:[{}] ", deliveredCount,
-                                        pointData);
+                                    pointData.toString());
                             }
                         });
+                        ThreadUtil.sleepHalfSecond();
                     } else {
-                        ThreadUtil.sleepOneSecond();
+                        LogUtils.info(log, "wait swap summarized checkpoint of table {}...", ++retryTimesWait);
+                        ThreadUtil.sleepCircle(retryTimesWait);
                     }
                 } catch (Exception ex) {
                     if (Objects.equals("java.lang.InterruptedException", ex.getMessage())) {
@@ -102,17 +106,16 @@ public class ExtractPointSwapManager {
                 }
             }
             LogUtils.warn(log, "close check point swap consumer {} :{}", checkPointSwapTopicName,
-                    kafkaConsumer.groupMetadata()
-                            .groupId());
+                kafkaConsumer.groupMetadata().groupId());
             kafkaConsumerConfig.closeConsumer(kafkaConsumer);
         });
     }
 
     private List<Object> translateDigitPoint(CheckPointData pointData) {
         return pointData.isDigit() ? pointData.getCheckPointList()
-                .stream()
-                .map(obj -> Long.parseLong((String) obj))
-                .collect(Collectors.toList()) : pointData.getCheckPointList();
+            .stream()
+            .map(obj -> Long.parseLong((String) obj))
+            .collect(Collectors.toList()) : pointData.getCheckPointList();
     }
 
     private void trySubscribe() {

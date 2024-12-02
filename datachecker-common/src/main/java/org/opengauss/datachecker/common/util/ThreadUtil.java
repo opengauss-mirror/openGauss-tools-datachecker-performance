@@ -16,17 +16,14 @@
 package org.opengauss.datachecker.common.util;
 
 import org.apache.commons.lang3.RandomUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.apache.logging.log4j.Logger;
 
-import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * ThreadUtil
@@ -59,6 +56,19 @@ public class ThreadUtil {
     public static void sleepSecond(int second) {
         try {
             TimeUnit.SECONDS.sleep(second);
+        } catch (InterruptedException ie) {
+            LogUtils.warn(log, "thread sleep interrupted exception ");
+        }
+    }
+
+    /**
+     * sleep circle,max sleep time is 5 seconds (sleep 1-5 sec)
+     *
+     * @param times current circle times
+     */
+    public static void sleepCircle(int times) {
+        try {
+            TimeUnit.SECONDS.sleep(times / 5 + 1);
         } catch (InterruptedException ie) {
             LogUtils.warn(log, "thread sleep interrupted exception ");
         }
@@ -104,46 +114,11 @@ public class ThreadUtil {
     }
 
     /**
-     * kill thread by thread name
-     *
-     * @param name thread name
-     */
-    public static void killThreadByName(String name) {
-        AtomicInteger threadCount = new AtomicInteger(0);
-        do {
-            ThreadGroup currentGroup = Thread.currentThread().getThreadGroup();
-            int noThreads = currentGroup.activeCount();
-            Thread[] lstThreads = new Thread[noThreads];
-            currentGroup.enumerate(lstThreads);
-            threadCount.set(0);
-            Arrays.stream(lstThreads)
-                    .filter(thread -> {
-                        if (StringUtils.containsIgnoreCase(thread.getName(), name)) {
-                            threadCount.incrementAndGet();
-                            return true;
-                        }
-                        return false;
-                    })
-                    .forEach(thread -> {
-                        if (thread.getState().equals(Thread.State.WAITING)) {
-                            log.warn("thread [{}] :[{} ] has interrupted", thread.getName(), thread.getState());
-                            thread.interrupt();
-                        } else {
-                            threadCount.decrementAndGet();
-                            log.warn("thread [{}] :[{} ]  has stop", thread.getName(), thread.getState());
-                            thread.stop();
-                        }
-                    });
-        } while (threadCount.get() > 0);
-
-    }
-
-    /**
      * Custom thread pool construction
      *
      * @return thread pool
      */
-    @SuppressWarnings({"all"})
+    @SuppressWarnings( {"all"} )
     public static ExecutorService newSingleThreadExecutor() {
         return Executors.newFixedThreadPool(1, Executors.defaultThreadFactory());
     }
@@ -154,14 +129,11 @@ public class ThreadUtil {
      * @return Scheduled task single thread
      */
     public static ScheduledExecutorService newSingleThreadScheduledExecutor() {
-        return new ScheduledThreadPoolExecutor(1, new BasicThreadFactory.Builder().daemon(true)
-                .build());
+        return new ScheduledThreadPoolExecutor(1, new BasicThreadFactory.Builder().daemon(true).build());
     }
 
     public static ScheduledExecutorService newSingleThreadScheduledExecutor(String name) {
-        return new ScheduledThreadPoolExecutor(1, new BasicThreadFactory.
-                Builder().namingPattern(name)
-                .build());
+        return new ScheduledThreadPoolExecutor(1, new BasicThreadFactory.Builder().namingPattern(name).build());
     }
 
 }

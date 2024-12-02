@@ -6,11 +6,11 @@ logging:
 spring:
   check:
     server-uri: http://127.0.0.1:9000
-    core-pool-size: 5
-    maximum-pool-size: 10
+    core-pool-size: 3
+    maximum-pool-size: 3
     maximum-topic-size: 1
-    maximum-table-slice-size: 100000
-    extend-maximum-pool-size: 5
+    maximum-table-slice-size: 10000
+    extend-maximum-pool-size: 3
   extract:
     schema: test
     databaseType: MS # For MySQL
@@ -32,7 +32,7 @@ spring:
     bootstrap-servers: localhost:9092
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://127.0.0.1:3306/mysql?useSSL=false&useUnicode=true&characterEncoding=utf-8&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://127.0.0.1:3306/mysql?useSSL=false&useUnicode=true&characterEncoding=utf-8&serverTimezone=UTC&allowPublicKeyRetrieval=true&dontAutoCommit=true
     # driver-class-name: org.opengauss.Driver # For openGauss
     # url: # jdbc:opengauss://127.0.0.1:5432/postgres?useSSL=false&useUnicode=true&characterEncoding=utf-8&serverTimezone=UTC&bitToString=true # For openGauss
     # driver-class-name: oracle.jdbc.OracleDriver

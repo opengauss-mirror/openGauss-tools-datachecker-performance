@@ -18,6 +18,7 @@ package org.opengauss.datachecker.common.entry.extract;
 import lombok.Data;
 import lombok.ToString;
 import lombok.experimental.Accessors;
+
 import org.opengauss.datachecker.common.entry.enums.DataBaseType;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.springframework.util.CollectionUtils;
@@ -84,8 +85,7 @@ public class TableMetadata {
         if (primaryMetas == null || primaryMetas.size() != 1) {
             return false;
         }
-        return primaryMetas.get(0)
-                           .isAutoIncrementColumn();
+        return primaryMetas.get(0).isAutoIncrementColumn();
     }
 
     /**
@@ -97,6 +97,20 @@ public class TableMetadata {
         return !CollectionUtils.isEmpty(primaryMetas) && primaryMetas.size() == 1;
     }
 
+    /**
+     * judge if this table is union primary key table.
+     *
+     * @return true if primary is union primary key
+     */
+    public boolean isUnionPrimary() {
+        return !CollectionUtils.isEmpty(primaryMetas) && primaryMetas.size() > 1;
+    }
+
+    /**
+     * judge if this table is single col primary key table.
+     *
+     * @return true if primary is union primary key
+     */
     public ColumnsMetaData getSinglePrimary() {
         if (hasPrimary()) {
             return primaryMetas.get(0);
@@ -134,8 +148,6 @@ public class TableMetadata {
 
     public static TableMetadata parse(ResultSet rs, String schema, Endpoint endpoint, DataBaseType databaseType)
         throws SQLException {
-        return parse(rs).setSchema(schema)
-                        .setEndpoint(endpoint)
-                        .setDataBaseType(databaseType);
+        return parse(rs).setSchema(schema).setEndpoint(endpoint).setDataBaseType(databaseType);
     }
 }

@@ -77,58 +77,59 @@ public class SliceCheckEventHandler {
             }
         } else {
             LogUtils.info(log, "slice check event , table structure diff [{}][{} : {}]", checkEvent.getCheckName(),
-                checkEvent.getSource()
-                          .getTableHash(), checkEvent.getSink()
-                                                     .getTableHash());
+                checkEvent.getSource().getTableHash(), checkEvent.getSink().getTableHash());
             handleTableStructureDiff(checkEvent);
-            registerCenter.refreshCheckedTableCompleted(checkEvent.getSlice()
-                                                                  .getTable());
+            registerCenter.refreshCheckedTableCompleted(checkEvent.getSlice().getTable());
         }
     }
 
     /**
      * 添加校验失败分片事件处理流程
      *
-     * @param checkEvent
+     * @param checkEvent checkEvent
      */
     public void handleFailed(SliceCheckEvent checkEvent) {
         LogUtils.warn(log, "slice check event , table slice has unknown error [{}][{} : {}]", checkEvent.getCheckName(),
-                checkEvent.getSource(), checkEvent.getSink());
+            checkEvent.getSource(), checkEvent.getSink());
         long count = getCheckSliceCount(checkEvent);
         sliceCheckContext.refreshSliceCheckProgress(checkEvent.getSlice(), count);
-        CheckDiffResult result = buildSliceDiffResult(checkEvent.getSlice(), (int) count, true, "slice has unknown error");
+        CheckDiffResult result = buildSliceDiffResult(checkEvent.getSlice(), (int) count, true,
+            "slice has unknown error");
         sliceCheckContext.addCheckResult(checkEvent.getSlice(), result);
-        registerCenter.refreshCheckedTableCompleted(checkEvent.getSlice()
-                .getTable());
+        registerCenter.refreshCheckedTableCompleted(checkEvent.getSlice().getTable());
     }
 
     private static long getCheckSliceCount(SliceCheckEvent checkEvent) {
         SliceExtend source = checkEvent.getSource();
         SliceExtend sink = checkEvent.getSink();
-        long count = Math.max(source.getCount(), sink.getCount());
-        return count;
+        if (Objects.nonNull(sink) && Objects.nonNull(source)) {
+            return Math.max(source.getCount(), sink.getCount());
+        } else {
+            return Objects.nonNull(sink) ? sink.getCount() : Objects.nonNull(source) ? source.getCount() : 0;
+        }
     }
 
     private void handleTableStructureDiff(SliceCheckEvent checkEvent) {
         long count = getCheckSliceCount(checkEvent);
         sliceCheckContext.refreshSliceCheckProgress(checkEvent.getSlice(), count);
-        CheckDiffResult result = buildSliceDiffResult(checkEvent.getSlice(), (int) count, false, "table structure diff");
+        CheckDiffResult result = buildSliceDiffResult(checkEvent.getSlice(), (int) count, false,
+            "table structure diff");
         sliceCheckContext.addTableStructureDiffResult(checkEvent.getSlice(), result);
     }
 
     private CheckDiffResult buildSliceDiffResult(SliceVo slice, int count, boolean isTableStructure, String message) {
         CheckDiffResultBuilder builder = CheckDiffResultBuilder.builder();
         builder.checkMode(ConfigCache.getCheckMode())
-                .process(ConfigCache.getValue(ConfigConstants.PROCESS_NO))
-                .schema(slice.getSchema())
-                .table(slice.getTable())
-                .sno(slice.getNo())
-                .startTime(LocalDateTime.now())
-                .endTime(LocalDateTime.now())
-                .isTableStructureEquals(isTableStructure)
-                .isExistTableMiss(false, null)
-                .rowCount(count)
-                .error(message);
+            .process(ConfigCache.getValue(ConfigConstants.PROCESS_NO))
+            .schema(slice.getSchema())
+            .table(slice.getTable())
+            .sno(slice.getNo())
+            .startTime(LocalDateTime.now())
+            .endTime(LocalDateTime.now())
+            .isTableStructureEquals(isTableStructure)
+            .isExistTableMiss(false, null)
+            .rowCount(count)
+            .error(message);
         return builder.build();
     }
 
@@ -141,25 +142,25 @@ public class SliceCheckEventHandler {
     /**
      * handleIgnoreTable
      *
-     * @param slice  slice
+     * @param slice slice
      * @param source source
-     * @param sink   sink
+     * @param sink sink
      */
     public void handleIgnoreTable(SliceVo slice, SliceExtend source, SliceExtend sink) {
         sliceCheckContext.refreshSliceCheckProgress(slice, 0);
         CheckDiffResultBuilder builder = CheckDiffResultBuilder.builder();
         Endpoint existEndpoint = Objects.nonNull(source) && Objects.isNull(sink) ? Endpoint.SOURCE : Endpoint.SINK;
         builder.checkMode(ConfigCache.getCheckMode())
-               .process(ConfigCache.getValue(ConfigConstants.PROCESS_NO))
-               .schema(slice.getSchema())
-               .table(slice.getTable())
-               .sno(slice.getNo())
-               .startTime(LocalDateTime.now())
-               .endTime(LocalDateTime.now())
-               .isTableStructureEquals(false)
-               .isExistTableMiss(true, existEndpoint)
-               .rowCount(0)
-               .error("table miss");
+            .process(ConfigCache.getValue(ConfigConstants.PROCESS_NO))
+            .schema(slice.getSchema())
+            .table(slice.getTable())
+            .sno(slice.getNo())
+            .startTime(LocalDateTime.now())
+            .endTime(LocalDateTime.now())
+            .isTableStructureEquals(false)
+            .isExistTableMiss(true, existEndpoint)
+            .rowCount(0)
+            .error("table miss");
         CheckDiffResult result = builder.build();
         sliceCheckContext.addTableStructureDiffResult(slice, result);
         registerCenter.refreshCheckedTableCompleted(slice.getTable());

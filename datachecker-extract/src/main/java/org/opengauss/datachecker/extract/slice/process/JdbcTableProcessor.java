@@ -38,8 +38,6 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 
 /**
  * JdbcTableProcessor
@@ -110,17 +108,16 @@ public class JdbcTableProcessor extends AbstractTableProcessor {
                     ResultSet resultSet = ps.executeQuery()) {
                     resultSet.setFetchSize(fetchSize);
                     ResultSetMetaData rsmd = resultSet.getMetaData();
-                    Map<String, String> result = new TreeMap<>();
                     int rowCount = 0;
                     while (resultSet.next()) {
                         rowCount++;
-                        batchFutures.add(sliceSender.resultSetTranslateAndSendSync(rsmd, resultSet, result, i));
+                        batchFutures.add(sliceSender.resultSetTranslateAndSendSync(rsmd, resultSet, i));
                         if (batchFutures.size() == FETCH_SIZE) {
                             offsetList.add(getBatchFutureRecordOffsetScope(batchFutures));
                             batchFutures.clear();
                         }
                     }
-                    if (batchFutures.size() > 0) {
+                    if (!batchFutures.isEmpty()) {
                         offsetList.add(getBatchFutureRecordOffsetScope(batchFutures));
                         batchFutures.clear();
                     }
@@ -162,16 +159,15 @@ public class JdbcTableProcessor extends AbstractTableProcessor {
                 ResultSet resultSet = ps.executeQuery()) {
                 resultSet.setFetchSize(fetchSize);
                 ResultSetMetaData rsmd = resultSet.getMetaData();
-                Map<String, String> result = new TreeMap<>();
                 while (resultSet.next()) {
                     tableRowCount++;
-                    batchFutures.add(sliceSender.resultSetTranslateAndSendSync(rsmd, resultSet, result, 0));
+                    batchFutures.add(sliceSender.resultSetTranslateAndSendSync(rsmd, resultSet, 0));
                     if (batchFutures.size() == FETCH_SIZE) {
                         offsetList.add(getBatchFutureRecordOffsetScope(batchFutures));
                         batchFutures.clear();
                     }
                 }
-                if (batchFutures.size() > 0) {
+                if (!batchFutures.isEmpty()) {
                     offsetList.add(getBatchFutureRecordOffsetScope(batchFutures));
                     batchFutures.clear();
                 }

@@ -75,28 +75,27 @@ public abstract class ResultSetHandler {
      * Convert the current query result set into map according to the metadata information of the result set
      *
      * @param tableName JDBC Data query table
-     * @param rsmd      JDBC Data query result set
+     * @param rsmd JDBC Data query result set
      * @param resultSet JDBC Data query result set
-     * @param values    values
      * @return JDBC Data encapsulation results
      */
-    public Map<String, String> putOneResultSetToMap(final String tableName, ResultSetMetaData rsmd, ResultSet resultSet,
-        Map<String, String> values) {
+    public Map<String, String> putOneResultSetToMap(final String tableName, ResultSetMetaData rsmd,
+        ResultSet resultSet) {
+        Map<String, String> result = new TreeMap<>();
         try {
-            IntStream.rangeClosed(1, rsmd.getColumnCount())
-                     .forEach(columnIdx -> {
-                         String columnLabel = null;
-                         try {
-                             columnLabel = rsmd.getColumnLabel(columnIdx);
-                             values.put(columnLabel, convert(resultSet, columnIdx, rsmd));
-                         } catch (SQLException ex) {
-                             LOG.error(" Convert data [{}:{}] {} error ", tableName, columnLabel, ex.getMessage(), ex);
-                         }
-                     });
+            IntStream.rangeClosed(1, rsmd.getColumnCount()).forEach(columnIdx -> {
+                String columnLabel = null;
+                try {
+                    columnLabel = rsmd.getColumnLabel(columnIdx);
+                    result.put(columnLabel, convert(resultSet, columnIdx, rsmd));
+                } catch (SQLException ex) {
+                    LOG.error(" Convert data [{}:{}] {} error ", tableName, columnLabel, ex.getMessage(), ex);
+                }
+            });
         } catch (SQLException ex) {
             LOG.error(" parse data metadata information exception", ex);
         }
-        return values;
+        return result;
     }
 
     /**
@@ -108,7 +107,7 @@ public abstract class ResultSetHandler {
     public Map<String, String> putOneResultSetToMap(ResultSet resultSet) throws SQLException {
         final ResultSetMetaData rsmd = resultSet.getMetaData();
         String tableName = rsmd.getTableName(1);
-        return putOneResultSetToMap(tableName, rsmd, resultSet, new TreeMap<>());
+        return putOneResultSetToMap(tableName, rsmd, resultSet);
     }
 
     /**
@@ -116,7 +115,7 @@ public abstract class ResultSetHandler {
      *
      * @param resultSet resultSet
      * @param columnIdx columnIdx
-     * @param rsmd      rsmd
+     * @param rsmd rsmd
      * @return result
      * @throws SQLException SQLException
      */

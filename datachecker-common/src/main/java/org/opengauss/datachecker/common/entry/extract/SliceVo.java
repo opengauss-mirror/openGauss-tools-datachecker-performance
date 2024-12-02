@@ -78,6 +78,6 @@ public class SliceVo extends BaseSlice {
             return super.getName() + " total=" + super.getTotal() + " no=" + super.getNo() + ", [ fetch full ]";
         }
         return super.getName() + " total=" + super.getTotal() + " no=" + super.getNo() + ", [" + super.getBeginIdx()
-            + " , " + super.getEndIdx() + " ]" + " fetchSize=" + super.getFetchSize();
+            + " , " + super.getEndIdx() + " ]";
     }
 }

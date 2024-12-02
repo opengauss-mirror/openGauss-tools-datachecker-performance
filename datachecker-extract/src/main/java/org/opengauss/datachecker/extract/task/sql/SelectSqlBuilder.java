@@ -16,6 +16,7 @@
 package org.opengauss.datachecker.extract.task.sql;
 
 import lombok.Getter;
+
 import org.apache.commons.lang3.StringUtils;
 import org.opengauss.datachecker.common.entry.enums.DataBaseType;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
@@ -50,35 +51,35 @@ import static org.opengauss.datachecker.extract.task.sql.QuerySqlTemplate.TABLE_
  * @since 11
  **/
 public class SelectSqlBuilder {
+    private static final String QUERY_WHERE_BETWEEN
+        = "SELECT :columnsList FROM :schema.:tableName where :pkCondition :orderBy ";
     private static final Map<DataBaseType, SqlGenerate> SQL_GENERATE = new HashMap<>();
-    private static final SqlGenerateTemplate GENERATE_TEMPLATE =
-        (template, sqlGenerateMeta) -> template.replace(COLUMN, sqlGenerateMeta.getColumns())
-                                               .replace(SCHEMA, sqlGenerateMeta.getSchema())
-                                               .replace(TABLE_NAME, sqlGenerateMeta.getTableName())
-                                               .replace(ORDER_BY, sqlGenerateMeta.getOrder())
-                                               .replace(START, String.valueOf(sqlGenerateMeta.getStart()))
-                                               .replace(OFFSET, String.valueOf(sqlGenerateMeta.getOffset()));
-    private static final SqlGenerateTemplate NO_OFFSET_SQL_GENERATE_TEMPLATE =
-        (template, sqlGenerateMeta) -> template.replace(COLUMN, sqlGenerateMeta.getColumns())
-                                               .replace(SCHEMA, sqlGenerateMeta.getSchema())
-                                               .replace(TABLE_NAME, sqlGenerateMeta.getTableName());
-    private static final SqlGenerate OFFSET_GENERATE =
-        (sqlGenerateMeta) -> GENERATE_TEMPLATE.replace(QuerySqlTemplate.QUERY_OFF_SET, sqlGenerateMeta);
-    private static final SqlGenerate NO_OFFSET_GENERATE =
-        (sqlGenerateMeta) -> NO_OFFSET_SQL_GENERATE_TEMPLATE.replace(QuerySqlTemplate.QUERY_NO_OFF_SET,
-            sqlGenerateMeta);
+    private static final SqlGenerateTemplate GENERATE_TEMPLATE = (template, sqlGenerateMeta) -> template.replace(COLUMN,
+            sqlGenerateMeta.getColumns())
+        .replace(SCHEMA, sqlGenerateMeta.getSchema())
+        .replace(TABLE_NAME, sqlGenerateMeta.getTableName())
+        .replace(ORDER_BY, sqlGenerateMeta.getOrder())
+        .replace(START, String.valueOf(sqlGenerateMeta.getStart()))
+        .replace(OFFSET, String.valueOf(sqlGenerateMeta.getOffset()));
+    private static final SqlGenerateTemplate NO_OFFSET_SQL_GENERATE_TEMPLATE
+        = (template, sqlGenerateMeta) -> template.replace(COLUMN, sqlGenerateMeta.getColumns())
+        .replace(SCHEMA, sqlGenerateMeta.getSchema())
+        .replace(TABLE_NAME, sqlGenerateMeta.getTableName());
+    private static final SqlGenerate OFFSET_GENERATE = (sqlGenerateMeta) -> GENERATE_TEMPLATE.replace(
+        QuerySqlTemplate.QUERY_OFF_SET, sqlGenerateMeta);
+    private static final SqlGenerate NO_OFFSET_GENERATE = (sqlGenerateMeta) -> NO_OFFSET_SQL_GENERATE_TEMPLATE.replace(
+        QuerySqlTemplate.QUERY_NO_OFF_SET, sqlGenerateMeta);
 
-    private static final SqlGenerateTemplate QUERY_BETWEEN_TEMPLATE =
-        (template, sqlGenerateMeta) -> template.replace(COLUMN, sqlGenerateMeta.getColumns())
-                                               .replace(SCHEMA, sqlGenerateMeta.getSchema())
-                                               .replace(TABLE_NAME, sqlGenerateMeta.getTableName())
-                                               .replace(ORDER_BY, sqlGenerateMeta.getOrder())
-                                               .replace(PRIMARY_KEY, sqlGenerateMeta.getPrimaryKey())
-                                               .replace(START, String.valueOf(sqlGenerateMeta.getStart()))
-                                               .replace(OFFSET, String.valueOf(
-                                                   sqlGenerateMeta.getStart() + sqlGenerateMeta.getOffset() - 1));
-    private static final SqlGenerate QUERY_BETWEEN_GENERATE =
-        (sqlGenerateMeta -> QUERY_BETWEEN_TEMPLATE.replace(QUERY_BETWEEN_SET, sqlGenerateMeta));
+    private static final SqlGenerateTemplate QUERY_BETWEEN_TEMPLATE = (template, sqlGenerateMeta) -> template.replace(
+            COLUMN, sqlGenerateMeta.getColumns())
+        .replace(SCHEMA, sqlGenerateMeta.getSchema())
+        .replace(TABLE_NAME, sqlGenerateMeta.getTableName())
+        .replace(ORDER_BY, sqlGenerateMeta.getOrder())
+        .replace(PRIMARY_KEY, sqlGenerateMeta.getPrimaryKey())
+        .replace(START, String.valueOf(sqlGenerateMeta.getStart()))
+        .replace(OFFSET, String.valueOf(sqlGenerateMeta.getStart() + sqlGenerateMeta.getOffset() - 1));
+    private static final SqlGenerate QUERY_BETWEEN_GENERATE = (sqlGenerateMeta -> QUERY_BETWEEN_TEMPLATE.replace(
+        QUERY_BETWEEN_SET, sqlGenerateMeta));
 
     static {
         SQL_GENERATE.put(DataBaseType.MS, OFFSET_GENERATE);
@@ -99,6 +100,7 @@ public class SelectSqlBuilder {
     private boolean isFirst = false;
     private boolean isEnd = false;
     private boolean isCsvMode = false;
+    private String countSnippet = "count(1)";
 
     /**
      * Table fragment query SQL Statement Builder
@@ -114,7 +116,7 @@ public class SelectSqlBuilder {
     /**
      * Table fragment query SQL Statement Builder
      *
-     * @param start  start
+     * @param start start
      * @param offset offset
      * @return builder
      */
@@ -172,6 +174,7 @@ public class SelectSqlBuilder {
         this.isCsvMode = isCsvMode;
         return this;
     }
+
     /**
      * Table fragment query SQL Statement Builder
      *
@@ -183,25 +186,41 @@ public class SelectSqlBuilder {
         Assert.notEmpty(columnsMetas, Message.COLUMN_METADATA_EMPTY_NOT_TO_BUILD_SQL);
         final ConditionLimit conditionLimit = tableMetadata.getConditionLimit();
         if (Objects.nonNull(conditionLimit)) {
-            return buildSelectSqlConditionLimit(tableMetadata, conditionLimit);
+            return buildSelectSqlConditionLimit(tableMetadata, conditionLimit, null);
         } else if (isDivisions) {
-            return buildSelectSqlWherePrimary(tableMetadata);
+            return buildSelectSqlWherePrimary(tableMetadata, null);
         } else {
-            return buildSelectSqlOffsetZero(columnsMetas, tableMetadata.getTableName());
+            return buildSelectSqlOffsetZero(columnsMetas, tableMetadata.getTableName(), null);
         }
     }
 
-    String QUERY_WHERE_BETWEEN = "SELECT :columnsList FROM :schema.:tableName where :pkCondition :orderBy ";
+    /**
+     * select row count sql builder
+     *
+     * @return sql
+     */
+    public String countBuilder() {
+        Assert.isTrue(Objects.nonNull(tableMetadata), Message.TABLE_METADATA_NULL_NOT_TO_BUILD_SQL);
+        List<ColumnsMetaData> columnsMetas = tableMetadata.getColumnsMetas();
+        Assert.notEmpty(columnsMetas, Message.COLUMN_METADATA_EMPTY_NOT_TO_BUILD_SQL);
+        final ConditionLimit conditionLimit = tableMetadata.getConditionLimit();
+        if (Objects.nonNull(conditionLimit)) {
+            return buildSelectSqlConditionLimit(tableMetadata, conditionLimit, countSnippet);
+        } else if (isDivisions) {
+            return buildSelectSqlWherePrimary(tableMetadata, countSnippet);
+        } else {
+            return buildSelectSqlOffsetZero(columnsMetas, tableMetadata.getTableName(), countSnippet);
+        }
+    }
 
-    private String buildSelectSqlWherePrimary(TableMetadata tableMetadata) {
+    private String buildSelectSqlWherePrimary(TableMetadata tableMetadata, String countSnippet) {
         List<ColumnsMetaData> columnsMetas = tableMetadata.getColumnsMetas();
         String schemaEscape = escape(schema, dataBaseType);
         String tableName = escape(tableMetadata.getTableName(), dataBaseType);
-        String columnNames = getColumnNameList(columnsMetas, dataBaseType);
-        String primaryKey = escape(tableMetadata.getPrimaryMetas()
-                                                .get(0)
-                                                .getColumnName(), dataBaseType);
-        final String orderBy = getOrderBy(tableMetadata.getPrimaryMetas(), dataBaseType);
+        boolean isCountSnippet = StringUtils.isNotEmpty(countSnippet);
+        String columnNames = isCountSnippet ? countSnippet : getColumnNameList(columnsMetas, dataBaseType);
+        String primaryKey = escape(tableMetadata.getPrimaryMetas().get(0).getColumnName(), dataBaseType);
+        final String orderBy = isCountSnippet ? "" : getOrderBy(tableMetadata.getPrimaryMetas(), dataBaseType);
         String pkCondition;
         if (StringUtils.isNotEmpty(seqStart) && StringUtils.isNotEmpty(seqEnd)) {
             pkCondition = getPkCondition(primaryKey);
@@ -209,10 +228,10 @@ public class SelectSqlBuilder {
             pkCondition = getNumberPkCondition(primaryKey);
         }
         return QUERY_WHERE_BETWEEN.replace(COLUMN, columnNames)
-                                  .replace(SCHEMA, schemaEscape)
-                                  .replace(TABLE_NAME, tableName)
-                                  .replace(PK_CONDITION, pkCondition)
-                                  .replace(ORDER_BY, orderBy);
+            .replace(SCHEMA, schemaEscape)
+            .replace(TABLE_NAME, tableName)
+            .replace(PK_CONDITION, pkCondition)
+            .replace(ORDER_BY, orderBy);
     }
 
     private String getNumberPkCondition(String primaryKey) {
@@ -265,23 +284,24 @@ public class SelectSqlBuilder {
         }
     }
 
-    private String buildSelectSqlConditionLimit(TableMetadata tableMetadata, ConditionLimit conditionLimit) {
+    private String buildSelectSqlConditionLimit(TableMetadata tableMetadata, ConditionLimit conditionLimit,
+        String countSnippet) {
         List<ColumnsMetaData> columnsMetas = tableMetadata.getColumnsMetas();
-        String columnNames = getColumnNameList(columnsMetas, dataBaseType);
+        boolean isCountSnippet = StringUtils.isNotEmpty(countSnippet);
+        String columnNames = isCountSnippet ? countSnippet : getColumnNameList(columnsMetas, dataBaseType);
         final String schemaEscape = escape(schema, dataBaseType);
         final String tableName = escape(tableMetadata.getTableName(), dataBaseType);
-        final String orderBy = getOrderBy(tableMetadata.getPrimaryMetas(), dataBaseType);
-        SqlGenerateMeta sqlGenerateMeta =
-            new SqlGenerateMeta(schemaEscape, tableName, columnNames, orderBy, conditionLimit.getStart(),
-                conditionLimit.getOffset());
+        final String orderBy = isCountSnippet ? "" : getOrderBy(tableMetadata.getPrimaryMetas(), dataBaseType);
+        SqlGenerateMeta sqlGenerateMeta = new SqlGenerateMeta(schemaEscape, tableName, columnNames, orderBy,
+            conditionLimit.getStart(), conditionLimit.getOffset());
         return getSqlGenerate(dataBaseType).replace(sqlGenerateMeta);
     }
 
     private String getOrderBy(List<ColumnsMetaData> primaryMetas, DataBaseType dataBaseType) {
         return "order by " + primaryMetas.stream()
-                                         .map(ColumnsMetaData::getColumnName)
-                                         .map(key -> escape(key, dataBaseType) + " asc")
-                                         .collect(Collectors.joining(DELIMITER));
+            .map(ColumnsMetaData::getColumnName)
+            .map(key -> escape(key, dataBaseType) + " asc")
+            .collect(Collectors.joining(DELIMITER));
     }
 
     public String buildSelectSqlOffset(TableMetadata tableMetadata, long start, long offset) {
@@ -295,11 +315,9 @@ public class SelectSqlBuilder {
             sqlGenerateMeta = new SqlGenerateMeta(schemaEscape, tableName, columnNames, orderBy, start, offset);
             return getSqlGenerate(dataBaseType).replace(sqlGenerateMeta);
         } else {
-            String primaryKey = escape(tableMetadata.getPrimaryMetas()
-                                                    .get(0)
-                                                    .getColumnName(), dataBaseType);
-            sqlGenerateMeta =
-                new SqlGenerateMeta(schemaEscape, tableName, columnNames, orderBy, start, offset, primaryKey);
+            String primaryKey = escape(tableMetadata.getPrimaryMetas().get(0).getColumnName(), dataBaseType);
+            sqlGenerateMeta = new SqlGenerateMeta(schemaEscape, tableName, columnNames, orderBy, start, offset,
+                primaryKey);
             return QUERY_BETWEEN_GENERATE.replace(sqlGenerateMeta);
         }
     }
@@ -311,19 +329,20 @@ public class SelectSqlBuilder {
         return SqlUtil.escape(content, dataBaseType);
     }
 
-    private String buildSelectSqlOffsetZero(List<ColumnsMetaData> columnsMetas, String tableName) {
-        String columnNames = getColumnNameList(columnsMetas, dataBaseType);
+    private String buildSelectSqlOffsetZero(List<ColumnsMetaData> columnsMetas, String tableName, String countSnippet) {
+        boolean isCountSnippet = StringUtils.isNotEmpty(countSnippet);
+        String columnNames = isCountSnippet ? countSnippet : getColumnNameList(columnsMetas, dataBaseType);
         String schemaEscape = escape(schema, dataBaseType);
-        SqlGenerateMeta sqlGenerateMeta =
-            new SqlGenerateMeta(schemaEscape, escape(tableName, dataBaseType), columnNames);
+        SqlGenerateMeta sqlGenerateMeta = new SqlGenerateMeta(schemaEscape, escape(tableName, dataBaseType),
+            columnNames);
         return NO_OFFSET_GENERATE.replace(sqlGenerateMeta);
     }
 
     private String getColumnNameList(@NonNull List<ColumnsMetaData> columnsMetas, DataBaseType dataBaseType) {
         return columnsMetas.stream()
-                           .map(ColumnsMetaData::getColumnName)
-                           .map(column -> escape(column, dataBaseType))
-                           .collect(Collectors.joining(DELIMITER));
+            .map(ColumnsMetaData::getColumnName)
+            .map(column -> escape(column, dataBaseType))
+            .collect(Collectors.joining(DELIMITER));
     }
 
     private SqlGenerate getSqlGenerate(DataBaseType dataBaseType) {
@@ -397,7 +416,7 @@ public class SelectSqlBuilder {
         /**
          * Generate SQL statement according to SQL generator metadata object
          *
-         * @param template        SQL template
+         * @param template SQL template
          * @param sqlGenerateMeta SQL generator metadata
          * @return sql
          */

@@ -16,6 +16,7 @@
 package org.opengauss.datachecker.check.modules.check;
 
 import lombok.Getter;
+
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.entry.check.Difference;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
@@ -40,7 +41,8 @@ import java.util.stream.Collectors;
  * @since ：11
  */
 @Getter
-public abstract class AbstractCheckDiffResultBuilder<C extends CheckDiffResult, B extends AbstractCheckDiffResultBuilder<C, B>> {
+public abstract class AbstractCheckDiffResultBuilder<C extends CheckDiffResult,
+    B extends AbstractCheckDiffResultBuilder<C, B>> {
     private static final Logger log = LogUtils.getLogger();
     private static final int MAX_DIFF_REPAIR_SIZE = 5000;
 
@@ -173,7 +175,7 @@ public abstract class AbstractCheckDiffResultBuilder<C extends CheckDiffResult, 
     /**
      * isExistTableMiss
      *
-     * @param isExistTableMiss  table is miss
+     * @param isExistTableMiss table is miss
      * @param onlyExistEndpoint only exist endpoint
      * @return builder
      */
@@ -248,12 +250,18 @@ public abstract class AbstractCheckDiffResultBuilder<C extends CheckDiffResult, 
     }
 
     public B keyDiff(List<Difference> insert, List<Difference> update, List<Difference> delete) {
-        this.keyInsert.addAll(insert);
-        this.keyUpdate.addAll(update);
-        this.keyDelete.addAll(delete);
-        this.keyInsertSet.addAll(insert.stream().map(Difference::getKey).collect(Collectors.toSet()));
-        this.keyUpdateSet.addAll(update.stream().map(Difference::getKey).collect(Collectors.toSet()));
-        this.keyDeleteSet.addAll(delete.stream().map(Difference::getKey).collect(Collectors.toSet()));
+        if (Objects.nonNull(insert)) {
+            this.keyInsert.addAll(insert);
+            this.keyInsertSet.addAll(insert.stream().map(Difference::getKey).collect(Collectors.toSet()));
+        }
+        if (Objects.nonNull(update)) {
+            this.keyUpdate.addAll(update);
+            this.keyUpdateSet.addAll(update.stream().map(Difference::getKey).collect(Collectors.toSet()));
+        }
+        if (Objects.nonNull(delete)) {
+            this.keyDelete.addAll(delete);
+            this.keyDeleteSet.addAll(delete.stream().map(Difference::getKey).collect(Collectors.toSet()));
+        }
         diffSort.sort(this.keyInsert);
         diffSort.sort(this.keyUpdate);
         diffSort.sort(this.keyDelete);

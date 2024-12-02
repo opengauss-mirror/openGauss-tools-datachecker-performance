@@ -15,12 +15,15 @@
 
 package org.opengauss.datachecker.extract.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.AsyncConfigurer;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+
+import javax.annotation.PreDestroy;
 
 /**
  * AsyncConfig
@@ -29,10 +32,15 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
  * @date 2022/5/8 19:17
  * @since 11
  **/
-@EnableAsync
 @EnableScheduling
 @Configuration
+@EnableAsync(proxyTargetClass = true)
 public class AsyncConfig implements AsyncConfigurer {
+    private ThreadPoolTaskExecutor executor;
+    @Value("${spring.check.core-pool-size}")
+    private int corePoolSize;
+    @Value("${spring.check.maximum-pool-size}")
+    private int maxPoolSize;
 
     /**
      * Asynchronous processing scenario for data extraction non-core business
@@ -40,14 +48,22 @@ public class AsyncConfig implements AsyncConfigurer {
      * @return ThreadPoolTaskExecutor
      */
     @Override
-    @Bean(name = "taskAsyncExecutor")
+    @Bean(name = "sliceSendExecutor")
     public ThreadPoolTaskExecutor getAsyncExecutor() {
-        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(1);
-        executor.setMaxPoolSize(5);
-        executor.setQueueCapacity(1000);
-        executor.setThreadNamePrefix("TaskAsyncExecutor-");
+        executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(corePoolSize);
+        executor.setMaxPoolSize(maxPoolSize);
+        executor.setQueueCapacity(10000);
+        executor.setThreadNamePrefix("slice-send-executor-");
         executor.initialize();
         return executor;
+    }
+
+    /**
+     * destroy executor
+     */
+    @PreDestroy
+    public void closeExecutor() {
+        executor.shutdown();
     }
 }

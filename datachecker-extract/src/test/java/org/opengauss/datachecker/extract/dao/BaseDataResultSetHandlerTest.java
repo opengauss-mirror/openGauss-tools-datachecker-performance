@@ -39,7 +39,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
@@ -129,10 +128,8 @@ public class BaseDataResultSetHandlerTest {
             preparedStatement = connection.prepareStatement(executeQueryStatement);
             resultSet = preparedStatement.executeQuery();
             ResultSetMetaData rsmd = resultSet.getMetaData();
-            Map<String, String> values = new TreeMap<>();
             while (resultSet.next()) {
-                resultSetHandler.putOneResultSetToMap(tableName, rsmd, resultSet, values);
-                result.add(new HashMap<>(values));
+                result.add(resultSetHandler.putOneResultSetToMap(tableName, rsmd, resultSet));
             }
         } catch (SQLException sqlErr) {
             log.error("test table [{}] error", tableName, sqlErr);

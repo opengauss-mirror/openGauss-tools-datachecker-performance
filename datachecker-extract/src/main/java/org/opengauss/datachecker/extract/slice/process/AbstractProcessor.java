@@ -40,7 +40,7 @@ public abstract class AbstractProcessor implements SliceProcessor {
     /**
      * JDBC fetch size
      */
-    protected static final int FETCH_SIZE = 10000;
+    protected static final int FETCH_SIZE = 200;
 
     /**
      * log
