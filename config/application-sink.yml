@@ -5,11 +5,11 @@ logging:
 spring:
   check:
     server-uri: http://127.0.0.1:9000
-    core-pool-size: 5
-    maximum-pool-size: 10
+    core-pool-size: 3
+    maximum-pool-size: 3
     maximum-topic-size: 1
-    maximum-table-slice-size: 100000
-    extend-maximum-pool-size: 5
+    maximum-table-slice-size: 10000
+    extend-maximum-pool-size: 3
   extract:
     schema: test
     databaseType: OG
@@ -27,7 +27,7 @@ spring:
     # driver-class-name: com.mysql.cj.jdbc.Driver
     # url: jdbc:mysql://127.0.0.1:3306/test?useSSL=false&useUnicode=true&characterEncoding=utf-8&serverTimezone=UTC&allowPublicKeyRetrieval=true
     driver-class-name: org.opengauss.Driver
-    url: jdbc:opengauss://127.0.0.1:5432/postgres?useSSL=false&useUnicode=true&characterEncoding=utf-8&serverTimezone=UTC&bitToString=true
+    url: jdbc:opengauss://127.0.0.1:5432/postgres?useSSL=false&useUnicode=true&characterEncoding=utf-8&serverTimezone=UTC&bitToString=true&loggerLevel=OFF&autocommit=false
     # driver-class-name: oracle.jdbc.OracleDriver
     # url: jdbc:oracle:thin:@127.0.0.1:1521/TEST
     username:

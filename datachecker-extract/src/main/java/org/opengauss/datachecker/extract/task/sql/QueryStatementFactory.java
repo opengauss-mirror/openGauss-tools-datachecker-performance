@@ -31,9 +31,9 @@ public class QueryStatementFactory {
     /**
      * create SliceQueryStatement
      *
-     * @param checkPoint    checkPoint
+     * @param checkPoint checkPoint
      * @param tableMetadata tableMetadata
-     * @return SliceQueryStatement
+     * @return A new AutoSliceQueryStatement instance.
      */
     public AutoSliceQueryStatement createSliceQueryStatement(CheckPoint checkPoint, TableMetadata tableMetadata) {
         return new SinglePrimaryAutoSliceQueryStatement(checkPoint);
@@ -42,10 +42,19 @@ public class QueryStatementFactory {
     /**
      * create slice query statement of single primary slice
      *
-     * @return SliceQueryStatement
+     * @return A new SinglePrimarySliceQueryStatement instance.
      */
     public SliceQueryStatement createSliceQueryStatement() {
         return new SinglePrimarySliceQueryStatement();
+    }
+
+    /**
+     * create slice query statement of union primary slice
+     *
+     * @return A new UnionPrimarySliceQueryStatement instance.
+     */
+    public UnionPrimarySliceQueryStatement createSlicePageQueryStatement() {
+        return new UnionPrimarySliceQueryStatement();
     }
 
     /**
@@ -56,8 +65,7 @@ public class QueryStatementFactory {
     public FullQueryStatement createFullQueryStatement() {
         return tableMetadata -> {
             final SelectSqlBuilder sqlBuilder = new SelectSqlBuilder(tableMetadata);
-            String fullSql = sqlBuilder.isDivisions(false).isCsvMode(ConfigCache.isCsvMode())
-                                       .builder();
+            String fullSql = sqlBuilder.isDivisions(false).isCsvMode(ConfigCache.isCsvMode()).builder();
             return new QuerySqlEntry(tableMetadata.getTableName(), fullSql, 0, tableMetadata.getTableRows());
         };
     }

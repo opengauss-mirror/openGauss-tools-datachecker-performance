@@ -17,6 +17,7 @@ package org.opengauss.datachecker.common.entry.common;
 
 import lombok.Data;
 import lombok.experimental.Accessors;
+
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 
 import java.util.List;
@@ -33,4 +34,10 @@ public class CheckPointData {
     private String tableName;
     private boolean isDigit;
     private List<Object> checkPointList;
+
+    @Override
+    public String toString() {
+        return "endpoint=" + endpoint + ", tableName=" + tableName + ", isDigit=" + isDigit + ", checkPointList="
+            + checkPointList.size();
+    }
 }

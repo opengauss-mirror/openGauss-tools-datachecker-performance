@@ -31,12 +31,16 @@ import org.opengauss.datachecker.extract.task.sql.AutoSliceQueryStatement;
 import org.opengauss.datachecker.extract.task.sql.FullQueryStatement;
 import org.opengauss.datachecker.extract.task.sql.QueryStatementFactory;
 import org.opengauss.datachecker.extract.task.sql.SliceQueryStatement;
+import org.opengauss.datachecker.extract.task.sql.UnionPrimarySliceQueryStatement;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PreDestroy;
 import javax.annotation.Resource;
+
 import java.util.Objects;
+import java.util.concurrent.Future;
 
 /**
  * SliceProcessorContext
@@ -60,12 +64,23 @@ public class SliceProcessorContext {
     private KafkaConsumerConfig kafkaConsumerConfig;
     @Resource
     private CheckingFeignClient checkingFeignClient;
+    @Resource
+    private ThreadPoolTaskExecutor sliceSendExecutor;
     private SliceStatusFeedbackService sliceStatusFeedbackService;
 
     public void saveProcessing(SliceVo slice) {
         processLogService.saveProcessHistoryLogging(slice.getTable(), slice.getNo());
     }
 
+    /**
+     * async thread add threadPool
+     *
+     * @param sliceSendRunnable sliceSendRunnable
+     * @return future
+     */
+    public Future<?> asyncSendSlice(Runnable sliceSendRunnable) {
+        return sliceSendExecutor.submit(sliceSendRunnable);
+    }
 
     /**
      * 销毁kafkaTemplate
@@ -79,7 +94,7 @@ public class SliceProcessorContext {
      * 创建分片kafka代理
      *
      * @param topicName topic 名称
-     * @param groupId   GroupID
+     * @param groupId GroupID
      * @return 分片kafka代理
      */
     public SliceKafkaAgents createSliceFixedKafkaAgents(String topicName, String groupId) {
@@ -121,6 +136,15 @@ public class SliceProcessorContext {
      */
     public SliceQueryStatement createSliceQueryStatement() {
         return factory.createSliceQueryStatement();
+    }
+
+    /**
+     * create slice query statement of union primary slice
+     *
+     * @return UnionPrimarySliceQueryStatement
+     */
+    public UnionPrimarySliceQueryStatement createSlicePageQueryStatement() {
+        return factory.createSlicePageQueryStatement();
     }
 
     public AutoSliceQueryStatement createAutoSliceQueryStatement(TableMetadata tableMetadata) {

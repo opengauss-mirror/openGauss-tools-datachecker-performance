@@ -16,13 +16,13 @@
 package org.opengauss.datachecker.extract.util;
 
 import net.openhft.hashing.LongHashFunction;
+
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.stream.Collectors;
 
 import static org.opengauss.datachecker.extract.constants.ExtConstants.PRIMARY_DELIMITER;
 
@@ -46,24 +46,35 @@ public class HashHandler {
      * find the corresponding value of the field in the map, and splice the found value.
      *
      * @param columnsValueMap Field corresponding query data
-     * @param columns         List of field names
+     * @param columns List of field names
      * @return Hash calculation result corresponding to the current row
      */
     public long xx3Hash(Map<String, String> columnsValueMap, List<String> columns) {
         if (CollectionUtils.isEmpty(columns)) {
             return 0L;
         }
-        String colValue =
-            columnsValueMap.entrySet().stream().filter(entry -> columns.contains(entry.getKey())).map(Entry::getValue)
-                           .collect(Collectors.joining());
-        return XX_3_HASH.hashChars(colValue);
+        StringBuilder valueBuffer = new StringBuilder();
+        for (String column : columns) {
+            valueBuffer.append(columnsValueMap.getOrDefault(column, ""));
+        }
+        return XX_3_HASH.hashChars(valueBuffer);
+    }
+
+    /**
+     * Hash calculation of a single field
+     *
+     * @param value field value
+     * @return hash result
+     */
+    public long xx3Hash(String value) {
+        return XX_3_HASH.hashChars(value);
     }
 
     /**
      * column hash result
      *
      * @param columnsValueMap columns value
-     * @param columns         column names
+     * @param columns column names
      * @return column hash result
      */
     public String value(Map<String, String> columnsValueMap, List<String> columns) {
@@ -71,11 +82,17 @@ public class HashHandler {
             return "";
         }
         List<String> values = new ArrayList<>();
-        columns.forEach(column -> {
-            if (columnsValueMap.containsKey(column)) {
-                values.add(columnsValueMap.get(column));
-            }
-        });
-        return values.stream().map(String::valueOf).collect(Collectors.joining(PRIMARY_DELIMITER));
+        if (columns.size() == 1) {
+            return columnsValueMap.getOrDefault(columns.get(0), "");
+        } else if (columns.size() == 2) {
+            return columnsValueMap.get(columns.get(0)) + PRIMARY_DELIMITER + columnsValueMap.get(columns.get(1));
+        } else {
+            columns.forEach(column -> {
+                if (columnsValueMap.containsKey(column)) {
+                    values.add(columnsValueMap.get(column));
+                }
+            });
+            return StringUtils.join(values, PRIMARY_DELIMITER);
+        }
     }
 }

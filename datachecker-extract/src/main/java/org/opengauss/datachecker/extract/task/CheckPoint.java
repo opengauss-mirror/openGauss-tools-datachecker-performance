@@ -17,6 +17,7 @@ package org.opengauss.datachecker.extract.task;
 
 import com.alibaba.druid.pool.DruidDataSource;
 import com.alibaba.druid.pool.DruidPooledConnection;
+
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
@@ -66,7 +67,7 @@ public class CheckPoint {
      * init table CheckPoint List
      *
      * @param tableMetadata tableMetadata
-     * @param slice         slice
+     * @param slice slice
      * @return check point
      */
     public List<Object> initCheckPointList(TableMetadata tableMetadata, int slice) {
@@ -80,16 +81,14 @@ public class CheckPoint {
         stopWatch.start();
         DataBaseType dataBaseType = ConfigCache.getValue(ConfigConstants.DATA_BASE_TYPE, DataBaseType.class);
         DataAccessParam param = new DataAccessParam().setSchema(SqlUtil.escape(schema, dataBaseType))
-                                                     .setName(SqlUtil.escape(tableName, dataBaseType))
-                                                     .setColName(SqlUtil.escape(pkName, dataBaseType));
+            .setName(SqlUtil.escape(tableName, dataBaseType))
+            .setColName(SqlUtil.escape(pkName, dataBaseType));
         Connection connection = getConnection();
         param.setOffset(slice);
         Object maxPoint = dataAccessService.max(connection, param);
         List<Object> checkPointList = dataAccessService.queryPointList(connection, param);
         checkPointList.add(maxPoint);
-        checkPointList = checkPointList.stream()
-                                       .distinct()
-                                       .collect(Collectors.toList());
+        checkPointList = checkPointList.stream().distinct().collect(Collectors.toList());
         stopWatch.stop();
         LogUtils.info(log, "init check-point-list table [{}]:[{}] ", tableName, stopWatch.shortSummary());
         ConnectionMgr.close(connection);
@@ -112,15 +111,12 @@ public class CheckPoint {
     }
 
     public boolean checkPkNumber(TableMetadata tableMetadata) {
-        ColumnsMetaData pkColumn = tableMetadata.getPrimaryMetas()
-                                                .get(0);
+        ColumnsMetaData pkColumn = tableMetadata.getPrimaryMetas().get(0);
         return MetaDataUtil.isDigitPrimaryKey(pkColumn);
     }
 
     private String getPkName(TableMetadata tableMetadata) {
-        return tableMetadata.getPrimaryMetas()
-                            .get(0)
-                            .getColumnName();
+        return tableMetadata.getPrimaryMetas().get(0).getColumnName();
     }
 
     public Long[][] translateBetween(List<Object> checkPointList) {
@@ -128,8 +124,8 @@ public class CheckPoint {
         for (int i = 0; i < between.length; i++) {
             String value = (String) checkPointList.get(i);
             String value2 = (String) checkPointList.get(i + 1);
-            between[i][0] = Long.parseLong(value);
-            between[i][1] = Long.parseLong(value2);
+            between[i][0] = Objects.isNull(value) ? null : Long.parseLong(value);
+            between[i][1] = Objects.isNull(value2) ? null : Long.parseLong(value2);
         }
         return between;
     }
@@ -150,8 +146,8 @@ public class CheckPoint {
     public long queryMaxIdOfAutoIncrementTable(TableMetadata tableMetadata) {
         DataAccessParam param = new DataAccessParam();
         param.setSchema(tableMetadata.getSchema())
-             .setName(tableMetadata.getTableName())
-             .setColName(getPkName(tableMetadata));
+            .setName(tableMetadata.getTableName())
+            .setColName(getPkName(tableMetadata));
         Connection connection = ConnectionMgr.getConnection();
         String maxId = dataAccessService.max(connection, param);
         ConnectionMgr.close(connection, null, null);

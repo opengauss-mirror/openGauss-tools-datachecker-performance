@@ -35,6 +35,8 @@ public class ShutdownService {
     @Resource
     private DynamicThreadPoolManager dynamicThreadPoolManager;
     @Resource
+    private ThreadPoolTaskExecutor sliceSendExecutor;
+    @Resource
     private ProcessLogService processLogService;
 
     @Async
@@ -50,6 +52,7 @@ public class ShutdownService {
         processLogService.saveStopProcessLog();
         threadExecutorList.forEach(ExecutorConfigurationSupport::shutdown);
         executorServiceList.forEach(ExecutorService::shutdownNow);
+        sliceSendExecutor.shutdown();
         System.exit(SpringApplication.exit(SpringUtil.getApplicationContext()));
     }
 

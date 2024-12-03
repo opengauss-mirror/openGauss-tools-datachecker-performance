@@ -55,7 +55,7 @@ public class SliceResultSetSender {
      * constructor
      *
      * @param tableMetadata tableMetadata
-     * @param kafkaOperate  kafkaOperate
+     * @param kafkaOperate kafkaOperate
      */
     public SliceResultSetSender(@NonNull TableMetadata tableMetadata, SliceKafkaAgents kafkaOperate) {
         this.resultSetHandler = new ResultSetHandlerFactory().createHandler(tableMetadata.getDataBaseType());
@@ -69,14 +69,13 @@ public class SliceResultSetSender {
     /**
      * resultSetTranslateAndSendSync
      *
-     * @param rsmd   rsmd
-     * @param rs     rs
-     * @param result result
-     * @param sNo    sNo
+     * @param rsmd rsmd
+     * @param rs rs
+     * @param sNo sNo
      */
     public ListenableFuture<SendResult<String, String>> resultSetTranslateAndSendSync(ResultSetMetaData rsmd,
-        ResultSet rs, Map<String, String> result, int sNo) {
-        RowDataHash dataHash = resultSetTranslate(rsmd, rs, result, sNo);
+        ResultSet rs, int sNo) {
+        RowDataHash dataHash = resultSetTranslate(rsmd, rs, sNo);
         return kafkaOperate.sendRowDataSync(dataHash);
     }
 
@@ -93,17 +92,38 @@ public class SliceResultSetSender {
     /**
      * resultSetTranslate
      *
-     * @param rsmd   rsmd
-     * @param rs     rs
-     * @param result result
-     * @param sNo    sNo
+     * @param rsmd rsmd
+     * @param rs rs
+     * @param sNo sNo
      */
-    public RowDataHash resultSetTranslate(ResultSetMetaData rsmd, ResultSet rs, Map<String, String> result, int sNo) {
-        resultSetHandler.putOneResultSetToMap(tableName, rsmd, rs, result);
-        RowDataHash dataHash = handler(primary, columns, result);
+    public RowDataHash resultSetTranslate(ResultSetMetaData rsmd, ResultSet rs, int sNo) {
+        RowDataHash dataHash = handler(primary, columns, resultSetHandler.putOneResultSetToMap(tableName, rsmd, rs));
         dataHash.setSNo(sNo);
-        result.clear();
         return dataHash;
+    }
+
+    /**
+     * translate result set and send row kafka
+     *
+     * @param values result set
+     * @param sNo sn
+     * @return result
+     */
+    public ListenableFuture<SendResult<String, String>> resultSetTranslate(Map<String, String> values, int sNo) {
+        RowDataHash dataHash = handler(primary, columns, values);
+        dataHash.setSNo(sNo);
+        return kafkaOperate.sendRowDataSync(dataHash);
+    }
+
+    /**
+     * resultSet read and parse
+     *
+     * @param rsmd rsmd
+     * @param resultSet rs
+     * @return parse result
+     */
+    public Map<String, String> resultSet(ResultSetMetaData rsmd, ResultSet resultSet) {
+        return resultSetHandler.putOneResultSetToMap(tableName, rsmd, resultSet);
     }
 
     /**
@@ -138,12 +158,9 @@ public class SliceResultSetSender {
     private RowDataHash handler(List<String> primary, List<String> columns, Map<String, String> rowData) {
         long rowHash = HASH_HANDLER.xx3Hash(rowData, columns);
         String primaryValue = HASH_HANDLER.value(rowData, primary);
-        long primaryHash = HASH_HANDLER.xx3Hash(rowData, primary);
+        long primaryHash = HASH_HANDLER.xx3Hash(primaryValue);
         RowDataHash hashData = new RowDataHash();
-        hashData.setKey(primaryValue)
-                .setKHash(primaryHash)
-                .setSliceKey(sliceKey)
-                .setVHash(rowHash);
+        hashData.setKey(primaryValue).setKHash(primaryHash).setSliceKey(sliceKey).setVHash(rowHash);
         return hashData;
     }
 
@@ -158,9 +175,9 @@ public class SliceResultSetSender {
      * csv mode, translate next line data to map and send it to kafka topic
      *
      * @param nextLine next line
-     * @param result   temp map
-     * @param rowIdx   row idx of csv file
-     * @param sNo      sNo
+     * @param result temp map
+     * @param rowIdx row idx of csv file
+     * @param sNo sNo
      */
     public void csvTranslateAndSend(String[] nextLine, Map<String, String> result, int rowIdx, int sNo) {
         RowDataHash dataHash = csvTranslate(nextLine, result, rowIdx, sNo);
@@ -171,9 +188,9 @@ public class SliceResultSetSender {
      * csv mode, translate next line data to map and send it to kafka topic
      *
      * @param nextLine next line
-     * @param result   temp map
-     * @param rowIdx   row idx of csv file
-     * @param sNo      sNo
+     * @param result temp map
+     * @param rowIdx row idx of csv file
+     * @param sNo sNo
      */
     public ListenableFuture<SendResult<String, String>> csvTranslateAndSendSync(String[] nextLine,
         Map<String, String> result, int rowIdx, int sNo) {

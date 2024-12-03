@@ -17,6 +17,7 @@ package org.opengauss.datachecker.extract.task;
 
 import com.alibaba.druid.pool.DruidDataSource;
 import com.alibaba.fastjson.JSON;
+
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.logging.log4j.Logger;
@@ -47,6 +48,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.lang.NonNull;
 
 import javax.sql.DataSource;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -92,13 +94,13 @@ public class ExtractTaskRunnable implements Runnable {
      * Thread Constructor
      *
      * @param processNo processNo
-     * @param task      task information
-     * @param support   Thread helper class
+     * @param task task information
+     * @param support Thread helper class
      */
     public ExtractTaskRunnable(String processNo, ExtractTask task, ExtractThreadSupport support) {
         this.task = task;
-        JdbcDataExtractionOperations jdbcOperate =
-            new JdbcDataExtractionOperations(support.getDataSource(), support.getResourceManager());
+        JdbcDataExtractionOperations jdbcOperate = new JdbcDataExtractionOperations(support.getDataSource(),
+            support.getResourceManager());
         this.jdbcOperation = new AtomicReference<>(jdbcOperate);
         this.checkingFeignClient = support.getCheckingFeignClient();
         this.dynamicThreadPoolManager = support.getDynamicThreadPoolManager();
@@ -122,15 +124,13 @@ public class ExtractTaskRunnable implements Runnable {
                 executeMultiTaskOffset(context);
             }
             checkingFeignClient.refreshTableExtractStatus(task.getTableName(), extractContext.getEndpoint(),
-                extractContext.getEndpoint()
-                              .getCode());
+                extractContext.getEndpoint().getCode());
             log.info("refresh table {} extract status success", task.getTableName());
         } catch (Exception ex) {
             checkingFeignClient.refreshTableExtractStatus(task.getTableName(), extractContext.getEndpoint(), -1);
             log.error("extract", ex);
         } finally {
-            Runtime.getRuntime()
-                   .gc();
+            Runtime.getRuntime().gc();
         }
     }
 
@@ -141,19 +141,15 @@ public class ExtractTaskRunnable implements Runnable {
         try {
             FullQueryStatement fullQueryStatement = factory.createFullQueryStatement();
             QuerySqlEntry querySqlEntry = fullQueryStatement.builderByTaskOffset(context.getTableMetadata());
-            connection = jdbcOperation.get()
-                                      .tryConnectionAndClosedAutoCommit(context.evaluateMemorySize());
-            rowCount = jdbcOperation.get()
-                                    .resultSetHandler(connection, querySqlEntry, context, FETCH_SIZE);
+            connection = jdbcOperation.get().tryConnectionAndClosedAutoCommit(context.evaluateMemorySize());
+            rowCount = jdbcOperation.get().resultSetHandler(connection, querySqlEntry, context, FETCH_SIZE);
         } catch (SQLException ex) {
             log.error("jdbc query  {} error : {}", context.getTableName(), ex.getMessage());
             throw new ExtractDataAccessException();
         } finally {
-            jdbcOperation.get()
-                         .releaseConnection(connection);
+            jdbcOperation.get().releaseConnection(connection);
             log.info("query table [{}] row-count [{}] cost [{}] milliseconds", context.getTableName(), rowCount,
-                Duration.between(start, LocalDateTime.now())
-                        .toMillis());
+                Duration.between(start, LocalDateTime.now()).toMillis());
             logNumberOfGlobalTasks(context.getTableName(), null,
                 dynamicThreadPoolManager.getExecutor(DynamicTpConstant.EXTRACT_EXECUTOR));
         }
@@ -164,8 +160,8 @@ public class ExtractTaskRunnable implements Runnable {
         int slice = extractContext.getMaximumTableSliceSize();
         long totalRows = 0;
         try {
-            AutoSliceQueryStatement sliceStatement =
-                factory.createSliceQueryStatement(checkPoint, context.getTableMetadata());
+            AutoSliceQueryStatement sliceStatement = factory.createSliceQueryStatement(checkPoint,
+                context.getTableMetadata());
             List<QuerySqlEntry> querySqlList = sliceStatement.builderByTaskOffset(context.getTableMetadata(), slice);
             if (CollectionUtils.isNotEmpty(querySqlList)) {
                 totalRows = executeParallelTask(querySqlList, context);
@@ -176,8 +172,7 @@ public class ExtractTaskRunnable implements Runnable {
             throw new ExtractDataAccessException();
         } finally {
             log.info("table [{}] execution [{}] rows completed, taking a total of {} milliseconds",
-                context.getTableName(), totalRows, Duration.between(start, LocalDateTime.now())
-                                                           .toMillis());
+                context.getTableName(), totalRows, Duration.between(start, LocalDateTime.now()).toMillis());
         }
     }
 
@@ -194,25 +189,23 @@ public class ExtractTaskRunnable implements Runnable {
                 Connection connection = null;
                 try {
                     connection = jdbcOperation.get()
-                                              .tryConnectionAndClosedAutoCommit(context.evaluateMemorySize(sliceSize));
+                        .tryConnectionAndClosedAutoCommit(context.evaluateMemorySize(sliceSize));
                     totalRowCount.addAndGet(jdbcOperation.get()
-                                                         .resultSetHandlerParallelContext(connection, queryEntry,
-                                                             context, FETCH_SIZE));
+                        .resultSetHandlerParallelContext(connection, queryEntry, context, FETCH_SIZE));
                 } catch (SQLException ex) {
                     exceptionCount.incrementAndGet();
                     log.error("jdbc parallel query [{}] error : {}", queryEntry.getSql(), ex.getMessage());
                     throw new ExtractDataAccessException();
                 } finally {
                     countDown(context.getTableName(), countDownLatch, executor);
-                    jdbcOperation.get()
-                                 .releaseConnection(connection);
+                    jdbcOperation.get().releaseConnection(connection);
                 }
             });
         });
         countDownLatch.await();
         if (exceptionCount.get() > 0) {
-            String msg =
-                "Table " + context.getTableName() + " parallel query has " + exceptionCount.get() + " task exception";
+            String msg = "Table " + context.getTableName() + " parallel query has " + exceptionCount.get()
+                + " task exception";
             log.error(msg);
             throw new ExtractDataAccessException(msg);
         }
@@ -221,30 +214,26 @@ public class ExtractTaskRunnable implements Runnable {
 
     private void seekExtractTableInfo(TableMetadata tableMetadata) {
         log.info("table [{}] isAutoIncrement=[{}] , column=[{}] , avgRowLength=[{}] , tableRows=[{}] ",
-            tableMetadata.getTableName(), tableMetadata.isAutoIncrement(), tableMetadata.getColumnsMetas()
-                                                                                        .size(),
+            tableMetadata.getTableName(), tableMetadata.isAutoIncrement(), tableMetadata.getColumnsMetas().size(),
             tableMetadata.getAvgRowLength(), tableMetadata.getTableRows());
         log.info("table [{}] table column metadata -> {}", tableMetadata.getTableName(),
             getTableColumnInformation(tableMetadata));
     }
 
     private void enableParallelQueryDop(int taskOffset) throws SQLException {
-        int dop = Math.min(taskOffset, jdbcOperation.get()
-                                                    .getParallelQueryDop());
-        jdbcOperation.get()
-                     .enableDatabaseParallelQuery(dop);
+        int dop = Math.min(taskOffset, jdbcOperation.get().getParallelQueryDop());
+        jdbcOperation.get().enableDatabaseParallelQuery(dop);
     }
 
     private String getTableColumnInformation(TableMetadata tableMetadata) {
         return tableMetadata.getColumnsMetas()
-                            .stream()
-                            .map(ColumnsMetaData::getColumnMsg)
-                            .collect(Collectors.joining(" , "));
+            .stream()
+            .map(ColumnsMetaData::getColumnMsg)
+            .collect(Collectors.joining(" , "));
     }
 
     private boolean isNotSlice() {
-        return taskUtilHelper.noTableSlice() || jdbcOperation.get()
-                                                             .getParallelQueryDop() == 1;
+        return taskUtilHelper.noTableSlice() || jdbcOperation.get().getParallelQueryDop() == 1;
     }
 
     private void countDown(String tableName, CountDownLatch countDownLatch, ThreadPoolExecutor executor) {
@@ -277,7 +266,7 @@ public class ExtractTaskRunnable implements Runnable {
         /**
          * constructor
          *
-         * @param jdbcDataSource  datasource
+         * @param jdbcDataSource datasource
          * @param resourceManager resourceManager
          */
         public JdbcDataExtractionOperations(DataSource jdbcDataSource, ResourceManager resourceManager) {
@@ -334,9 +323,9 @@ public class ExtractTaskRunnable implements Runnable {
          * use a jdbc connection to query sql ,and parse and hash query result.then hash result send kafka topic
          *
          * @param connection connection
-         * @param sqlEntry   sqlEntry
-         * @param context    context
-         * @param fetchSize  fetchSize
+         * @param sqlEntry sqlEntry
+         * @param context context
+         * @param fetchSize fetchSize
          * @return resultSize
          * @throws SQLException SQLException
          */
@@ -352,13 +341,13 @@ public class ExtractTaskRunnable implements Runnable {
                 Map<String, String> result = new TreeMap<>();
                 if (kafkaOperate.isMultiplePartitions()) {
                     while (resultSet.next()) {
-                        context.resultSetMultiplePartitionsHandler(rsmd, resultSet, result);
+                        context.resultSetMultiplePartitionsHandler(rsmd, resultSet);
                         rowCount++;
                         logProcessTableRowNum(context, sqlEntry, rowCount);
                     }
                 } else {
                     while (resultSet.next()) {
-                        context.resultSetSinglePartitionHandler(rsmd, resultSet, result);
+                        context.resultSetSinglePartitionHandler(rsmd, resultSet);
                         rowCount++;
                         logProcessTableRowNum(context, sqlEntry, rowCount);
                     }
@@ -372,10 +361,8 @@ public class ExtractTaskRunnable implements Runnable {
         private void logSliceQueryInfo(QuerySqlEntry sqlEntry, LocalDateTime start, int rowCount,
             LocalDateTime endQuery, LocalDateTime end) {
             log.info(" extract table {} , row-count=[{}] completed , cost=[ query={} send={} all={} ]",
-                sqlEntry.toString(), rowCount, Duration.between(start, endQuery)
-                                                       .toMillis(), Duration.between(endQuery, end)
-                                                                            .toMillis(), Duration.between(start, end)
-                                                                                                 .toMillis());
+                sqlEntry.toString(), rowCount, Duration.between(start, endQuery).toMillis(),
+                Duration.between(endQuery, end).toMillis(), Duration.between(start, end).toMillis());
         }
 
         private void logProcessTableRowNum(QueryTableRowContext context, QuerySqlEntry sqlEntry, int rowCount) {
@@ -389,9 +376,9 @@ public class ExtractTaskRunnable implements Runnable {
          * use a jdbc connection to query sql ,and parse and hash query result.then hash result send kafka topic
          *
          * @param connection connection
-         * @param sqlEntry   sqlEntry
-         * @param context    context
-         * @param fetchSize  fetchSize
+         * @param sqlEntry sqlEntry
+         * @param context context
+         * @param fetchSize fetchSize
          * @return resultSize
          * @throws SQLException SQLException
          */
@@ -551,7 +538,7 @@ public class ExtractTaskRunnable implements Runnable {
          * constructor
          *
          * @param tableMetadata tableMetadata
-         * @param kafkaOperate  kafkaOperate
+         * @param kafkaOperate kafkaOperate
          */
         QueryTableRowContext(@NonNull TableMetadata tableMetadata, KafkaOperations kafkaOperate) {
             this.resultSetHandler = new ResultSetHandlerFactory().createHandler(tableMetadata.getDataBaseType());
@@ -566,11 +553,9 @@ public class ExtractTaskRunnable implements Runnable {
          *
          * @param rs rs
          */
-        public void resultSetMultiplePartitionsHandler(ResultSetMetaData rsmd, ResultSet rs,
-            Map<String, String> result) {
-            resultSetHandler.putOneResultSetToMap(getTableName(), rsmd, rs, result);
-            RowDataHash dataHash = handler(primary, columns, result);
-            result.clear();
+        public void resultSetMultiplePartitionsHandler(ResultSetMetaData rsmd, ResultSet rs) {
+            RowDataHash dataHash = handler(primary, columns,
+                resultSetHandler.putOneResultSetToMap(getTableName(), rsmd, rs));
             kafkaOperate.sendMultiplePartitionsRowData(dataHash);
         }
 
@@ -579,10 +564,9 @@ public class ExtractTaskRunnable implements Runnable {
          *
          * @param rs rs
          */
-        public void resultSetSinglePartitionHandler(ResultSetMetaData rsmd, ResultSet rs, Map<String, String> result) {
-            resultSetHandler.putOneResultSetToMap(getTableName(), rsmd, rs, result);
-            RowDataHash dataHash = handler(primary, columns, result);
-            result.clear();
+        public void resultSetSinglePartitionHandler(ResultSetMetaData rsmd, ResultSet rs) {
+            RowDataHash dataHash = handler(primary, columns,
+                resultSetHandler.putOneResultSetToMap(getTableName(), rsmd, rs));
             kafkaOperate.sendSinglePartitionRowData(dataHash);
         }
 
@@ -604,9 +588,7 @@ public class ExtractTaskRunnable implements Runnable {
             String primaryValue = hashHandler.value(rowData, primary);
             long primaryHash = hashHandler.xx3Hash(rowData, primary);
             RowDataHash hashData = new RowDataHash();
-            hashData.setKey(primaryValue)
-                    .setKHash(primaryHash)
-                    .setVHash(rowHash);
+            hashData.setKey(primaryValue).setKHash(primaryHash).setVHash(rowHash);
             return hashData;
         }
 
