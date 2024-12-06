@@ -144,4 +144,13 @@ public interface MetaDataMapper {
      * @return boolean
      */
     boolean checkDatabaseNotEmpty(@Param("schema") String schema);
+
+    /**
+     * check table is not empty
+     *
+     * @param schema scheam
+     * @param tableName table name
+     * @return is not empty
+     */
+    boolean tableExistsRows(@Param("schema") String schema, @Param("name") String tableName);
 }

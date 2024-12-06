@@ -16,6 +16,7 @@
 package org.opengauss.datachecker.common.entry.extract;
 
 import com.alibaba.fastjson.annotation.JSONType;
+
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -37,6 +38,7 @@ public class SliceVo extends BaseSlice {
      * sink update slice status 2
      */
     private int status = 0;
+    private boolean isExistTableRows;
 
     /**
      * table metadata hash value
@@ -76,6 +78,9 @@ public class SliceVo extends BaseSlice {
     public String toSimpleString() {
         if (super.getTotal() == 1) {
             return super.getName() + " total=" + super.getTotal() + " no=" + super.getNo() + ", [ fetch full ]";
+        }
+        if (super.getInIds() != null && !super.getInIds().isEmpty()) {
+            return super.getName() + " total=" + super.getTotal() + " no=" + super.getNo() + ", " + super.getInIds();
         }
         return super.getName() + " total=" + super.getTotal() + " no=" + super.getNo() + ", [" + super.getBeginIdx()
             + " , " + super.getEndIdx() + " ]";

@@ -73,7 +73,13 @@ public class CheckDatabaseLoader extends AbstractCheckLoader {
         ConfigCache.put(ConfigConstants.DATA_CHECK_SOURCE_DATABASE, sourceConfig.getDatabase());
         ConfigCache.put(ConfigConstants.DATA_CHECK_SINK_DATABASE, sinkConfig.getDatabase());
         ConfigCache.put(ConfigConstants.LOWER_CASE_TABLE_NAMES, sinkConfig.getDatabase().getLowercaseTableNames());
+        ConfigCache.put(ConfigConstants.MAXIMUM_TABLE_SLICE_SIZE, getMaxTableSliceConfig(sourceConfig, sinkConfig));
         LogUtils.info(log, "check service load database configuration success.");
+    }
+
+    private static int getMaxTableSliceConfig(ExtractConfig sourceConfig, ExtractConfig sinkConfig) {
+        int max = Math.max(sourceConfig.getMaxSliceSize(), sinkConfig.getMaxSliceSize());
+        return max == 0 ? ConfigConstants.MAXIMUM_TABLE_SLICE_DEFAULT_VALUE : max;
     }
 
     private void checkDatabaseLowerCaseTableNames(Database source, Database sink) {

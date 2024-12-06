@@ -27,6 +27,7 @@ import org.opengauss.datachecker.check.modules.bucket.BuilderBucketHandler;
 import org.opengauss.datachecker.check.modules.bucket.SliceTuple;
 import org.opengauss.datachecker.check.modules.check.AbstractCheckDiffResultBuilder.CheckDiffResultBuilder;
 import org.opengauss.datachecker.check.modules.check.CheckDiffResult;
+import org.opengauss.datachecker.check.modules.check.CheckResultConstants;
 import org.opengauss.datachecker.check.modules.check.KafkaConsumerHandler;
 import org.opengauss.datachecker.check.modules.merkle.MerkleTree;
 import org.opengauss.datachecker.check.modules.merkle.MerkleTree.Node;
@@ -54,6 +55,7 @@ import org.springframework.lang.NonNull;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
@@ -63,6 +65,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.stream.Collectors;
 
 /**
  * SliceCheckWorker
@@ -191,6 +194,9 @@ public class SliceCheckWorker implements Runnable {
 
     private void checkResult(String resultMsg) {
         CheckDiffResultBuilder builder = CheckDiffResultBuilder.builder();
+        int updateTotal = Objects.nonNull(difference.getDiffering()) ? difference.getDiffering().size() : 0;
+        int insertTotal = Objects.nonNull(difference.getOnlyOnLeft()) ? difference.getOnlyOnLeft().size() : 0;
+        int deleteTotal = Objects.nonNull(difference.getOnlyOnRight()) ? difference.getOnlyOnRight().size() : 0;
         builder.process(ConfigCache.getValue(ConfigConstants.PROCESS_NO))
             .table(slice.getTable())
             .sno(slice.getNo())
@@ -205,12 +211,21 @@ public class SliceCheckWorker implements Runnable {
             .endTime(LocalDateTime.now())
             .isExistTableMiss(false, null)
             .rowCount((int) sliceRowCount)
-            .errorRate(20)
+            .updateTotal(updateTotal)
+            .insertTotal(insertTotal)
+            .deleteTotal(deleteTotal)
             .checkMode(ConfigCache.getValue(ConfigConstants.CHECK_MODE, CheckMode.class))
-            .keyDiff(difference.getOnlyOnLeft(), difference.getDiffering(), difference.getOnlyOnRight());
+            .keyDiff(limit(difference.getOnlyOnLeft()), limit(difference.getDiffering()),
+                limit(difference.getOnlyOnRight()));
         CheckDiffResult result = builder.build();
         LogUtils.debug(LOGGER, "result {}", result);
         checkContext.addCheckResult(slice, result);
+    }
+
+    private List<Difference> limit(List<Difference> differences) {
+        return Objects.nonNull(differences)
+            ? differences.stream().limit(CheckResultConstants.MAX_DISPLAY_SIZE).collect(Collectors.toList())
+            : Collections.emptyList();
     }
 
     private String getConcatTableTopics() {
@@ -249,10 +264,6 @@ public class SliceCheckWorker implements Runnable {
         List<Difference> entriesOnlyOnLeft = collectorDeleteOrInsert(bucketDifference.entriesOnlyOnLeft());
         List<Difference> entriesOnlyOnRight = collectorDeleteOrInsert(bucketDifference.entriesOnlyOnRight());
         List<Difference> differing = collectorUpdate(bucketDifference.entriesDiffering());
-        LogUtils.debug(LOGGER, "diff slice {} insert {}", slice.getName(), bucketDifference.entriesOnlyOnLeft().size());
-        LogUtils.debug(LOGGER, "diff slice {} delete {}", slice.getName(),
-            bucketDifference.entriesOnlyOnRight().size());
-        LogUtils.debug(LOGGER, "diff slice {} update {}", slice.getName(), bucketDifference.entriesDiffering().size());
         return DifferencePair.of(entriesOnlyOnLeft, entriesOnlyOnRight, differing);
     }
 

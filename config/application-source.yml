@@ -51,6 +51,6 @@ spring:
       validation-query-timeout: 10000
       connection-error-retry-attempts: 0
       break-after-acquire-failure: true
-      max-wait: 6000
+      max-wait: 600000
       keep-alive: true
       min-evictable-idle-time-millis: 600000

@@ -42,7 +42,7 @@ public class ThreadPoolFactory {
     private static final double CPU_TIME = 1.0d;
     private static final double POOL_QUEUE_EXPANSION_RATIO = 1.2d;
     private static final double CORE_POOL_SIZE_RATIO = 2.0d;
-    private static final int DEFAULT_QUEUE_SIZE = 1000;
+    private static final int DEFAULT_QUEUE_SIZE = Integer.MAX_VALUE;
 
     /**
      * Initialize the extract service thread pool

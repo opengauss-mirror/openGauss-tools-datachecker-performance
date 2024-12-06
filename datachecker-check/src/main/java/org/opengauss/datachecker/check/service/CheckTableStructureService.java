@@ -109,7 +109,7 @@ public class CheckTableStructureService {
 
     private void checkTableStructureChanged(String processNo) {
         final List<String> checkTableList = endpointMetaDataManager.getCheckTableList();
-        checkTableList.parallelStream().forEach(tableName -> {
+        checkTableList.forEach(tableName -> {
             final TableMetadata sourceMeta = endpointMetaDataManager.getTableMetadata(Endpoint.SOURCE, tableName);
             final TableMetadata sinkMeta = endpointMetaDataManager.getTableMetadata(Endpoint.SINK, tableName);
             checkTableStructureChanged(processNo, tableName, sourceMeta, sinkMeta);
@@ -135,6 +135,7 @@ public class CheckTableStructureService {
     private void checkTableStructureChanged(String processNo, String tableName, TableMetadata sourceMeta,
         TableMetadata sinkMeta) {
         final boolean isTableStructureEquals = isTableStructureEquals(sourceMeta, sinkMeta);
+        log.info("compared the field names in table[{} {}] ", tableName, isTableStructureEquals);
         if (!isTableStructureEquals) {
             taskManagerService.refreshTableExtractStatus(tableName, Endpoint.CHECK, -1);
             LocalDateTime now = LocalDateTime.now();
@@ -191,8 +192,11 @@ public class CheckTableStructureService {
         if (isTableNotExist(sourceMeta, sinkMeta)) {
             return false;
         }
-        return tableStructureCompare.compare(sourceMeta.getPrimaryMetas(), sinkMeta.getPrimaryMetas())
-            && tableStructureCompare.compare(sourceMeta.getColumnsMetas(), sinkMeta.getColumnsMetas());
+        String tableName = sourceMeta.getTableName();
+        boolean isPrimary = tableStructureCompare.compare(sourceMeta.getPrimaryMetas(), sinkMeta.getPrimaryMetas());
+        boolean isColumn = tableStructureCompare.compare(sourceMeta.getColumnsMetas(), sinkMeta.getColumnsMetas());
+        log.info("compared the field names in table[{} {} {}] ", tableName, isPrimary, isColumn);
+        return isPrimary && isColumn;
     }
 
     @FunctionalInterface
@@ -206,7 +210,7 @@ public class CheckTableStructureService {
          * This is because the database itself determines the column case recognition pattern.
          *
          * @param source source
-         * @param sink   sink
+         * @param sink sink
          * @return Compare Results
          */
         boolean compare(List<ColumnsMetaData> source, List<ColumnsMetaData> sink);

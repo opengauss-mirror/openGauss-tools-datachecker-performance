@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2022 Huawei Technologies Co.,Ltd.
+ * Copyright (c) 2022-2022 Huawei Technologies Co.,Ltd.  All rights reserved.
  *
  * openGauss is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -18,6 +18,8 @@ package org.opengauss.datachecker.common.entry.extract;
 import lombok.Data;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.enums.SliceLogType;
+
+import java.util.List;
 
 /**
  * @author ：wangchao
@@ -48,6 +50,8 @@ public class BaseSlice {
      * slice of index end value
      */
     private String endIdx;
+    private List<String> inIds;
+    private long rowCountOfInIds;
 
     /**
      * number of records in the current slice obtaining table

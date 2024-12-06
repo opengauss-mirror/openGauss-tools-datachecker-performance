@@ -48,10 +48,10 @@ import static org.opengauss.datachecker.check.modules.check.CheckResultConstants
  * @since ：11
  */
 @Data
-@JSONType(
-    orders = {"process", "schema", "table", "topic", "checkMode", "result", "message", "error", "startTime", "endTime",
-        "keyInsertSet", "keyUpdateSet", "keyDeleteSet", "keyInsert", "keyUpdate", "keyDelete"},
-    ignores = {"sno", "partitions", "beginOffset", "totalRepair", "buildRepairDml", "isBuildRepairDml", "rowCondition"})
+@JSONType(orders = {
+    "process", "schema", "table", "topic", "checkMode", "result", "message", "error", "startTime", "endTime",
+    "keyInsertSet", "keyUpdateSet", "keyDeleteSet", "keyInsert", "keyUpdate", "keyDelete"
+}, ignores = {"sno", "partitions", "beginOffset", "totalRepair", "buildRepairDml", "isBuildRepairDml", "rowCondition"})
 public class CheckDiffResult {
     private String process;
     private String schema;
@@ -62,7 +62,10 @@ public class CheckDiffResult {
     private int partitions;
     private long beginOffset;
     private long rowCount;
-    private int totalRepair;
+    private long totalRepair;
+    private long insertTotal;
+    private long updateTotal;
+    private long deleteTotal;
     private boolean isTableStructureEquals;
     private CheckMode checkMode;
     private LocalDateTime startTime;
@@ -115,8 +118,10 @@ public class CheckDiffResult {
             keyInsert = builder.getKeyInsert();
             keyUpdate = builder.getKeyUpdate();
             keyDelete = builder.getKeyDelete();
-            totalRepair = keyUpdateSet.size() + keyInsertSet.size() + keyDeleteSet.size();
-            totalRepair = totalRepair + keyUpdate.size() + keyInsert.size() + this.keyDelete.size();
+            insertTotal = builder.getInsertTotal();
+            updateTotal = builder.getUpdateTotal();
+            deleteTotal = builder.getDeleteTotal();
+            totalRepair = builder.getTotalRepair();
             resultAnalysis(builder.isNotLargeDiffKeys());
         } else {
             initEmptyCollections();
@@ -142,8 +147,8 @@ public class CheckDiffResult {
 
     private void resultAnalysis(boolean isNotLargeDiffKeys) {
         if (Objects.nonNull(rowCondition)) {
-            message =
-                String.format(CHECKED_ROW_CONDITION, schema, table, rowCondition.getStart(), rowCondition.getOffset());
+            message = String.format(CHECKED_ROW_CONDITION, schema, table, rowCondition.getStart(),
+                rowCondition.getOffset());
         } else {
             message = String.format(CHECKED_PARTITIONS, schema, table, sno);
         }
@@ -158,8 +163,7 @@ public class CheckDiffResult {
             }
         } else {
             result = RESULT_FAILED;
-            message += String.format(FAILED_MESSAGE, keyInsertSet.size() + keyInsert.size(),
-                keyUpdateSet.size() + keyUpdate.size(), keyDeleteSet.size() + keyDelete.size());
+            message += String.format(FAILED_MESSAGE, insertTotal, updateTotal, deleteTotal);
             if (totalRepair > 0 && !isNotLargeDiffKeys) {
                 message += CHECKED_DIFF_TOO_LARGE;
             }

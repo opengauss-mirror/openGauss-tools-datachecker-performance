@@ -76,22 +76,26 @@ public class SliceStatusFeedbackService {
      */
     public void feedback() {
         feedbackSender.submit(() -> {
-            Thread.currentThread()
-                  .setName(FEEDBACK_THREAD_NAME);
+            Thread.currentThread().setName(FEEDBACK_THREAD_NAME);
             SliceExtend sliceExt = null;
             while (!isCompleted) {
                 try {
                     sliceExt = feedbackQueue.poll();
-                    if (Objects.isNull(sliceExt) && !isCompleted) {
-                        ThreadUtil.sleepHalfSecond();
-                        continue;
+                    if (Objects.isNull(sliceExt)) {
+                        if (isCompleted) {
+                            LogUtils.debug(log, "feedback slice status of is completed");
+                        } else {
+                            ThreadUtil.sleepOneSecond();
+                        }
+                    } else {
+                        LogUtils.debug(log, "feedback slice status of table [{}]", sliceExt);
+                        checkingClient.refreshRegisterSlice(sliceExt);
                     }
-                    checkingClient.refreshRegisterSlice(sliceExt);
-                    LogUtils.debug(log,"feedback slice status of table [{}]", sliceExt);
                 } catch (Exception ex) {
-                    LogUtils.error(log,"feedback slice status error {}", sliceExt, ex);
+                    LogUtils.error(log, "feedback slice status error {}", sliceExt, ex);
                 }
             }
+            LogUtils.debug(log, "feedback slice status of is completed and exited");
         });
     }
 }

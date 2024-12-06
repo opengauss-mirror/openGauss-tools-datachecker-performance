@@ -30,6 +30,7 @@ import org.opengauss.datachecker.common.entry.enums.DataLoad;
 @Accessors(chain = true)
 public class ExtractConfig {
     private boolean isDebeziumEnable = false;
+    private int maxSliceSize = 0;
     private Database database;
     private DataLoad dataLoadMode;
 }

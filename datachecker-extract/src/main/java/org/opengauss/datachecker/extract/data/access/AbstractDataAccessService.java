@@ -25,6 +25,7 @@ import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.check.Difference;
 import org.opengauss.datachecker.common.entry.common.Health;
+import org.opengauss.datachecker.common.entry.common.PointPair;
 import org.opengauss.datachecker.common.entry.enums.LowerCaseTableNames;
 import org.opengauss.datachecker.common.entry.extract.PrimaryColumnBean;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
@@ -84,11 +85,7 @@ public abstract class AbstractDataAccessService implements DataAccessService {
      * @return connection
      */
     protected Connection getConnection() {
-        try {
-            return druidDataSource.getConnection();
-        } catch (SQLException e) {
-            throw new ExtractDataAccessException(e);
-        }
+        return ConnectionMgr.getConnection();
     }
 
     /**
@@ -303,6 +300,25 @@ public abstract class AbstractDataAccessService implements DataAccessService {
             LogUtils.error(log, "adasQueryPointList error", esql);
         }
         LogUtils.debug(log, "adasQueryPointList [{}] cost [{}ms]", sql, DurationUtils.betweenSeconds(start));
+        return list;
+    }
+
+    /**
+     * query union point list
+     *
+     * @param connection conn
+     * @param sql sql
+     * @return point list
+     */
+    protected List<PointPair> adasQueryUnionPointList(Connection connection, String sql) {
+        List<PointPair> list = new LinkedList<>();
+        try (PreparedStatement ps = connection.prepareStatement(sql); ResultSet resultSet = ps.executeQuery()) {
+            while (resultSet.next()) {
+                list.add(new PointPair(resultSet.getString(1), resultSet.getLong(2)));
+            }
+        } catch (SQLException esql) {
+            LogUtils.error(log, "adasQueryPointList error", esql);
+        }
         return list;
     }
 

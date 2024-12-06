@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2022 Huawei Technologies Co.,Ltd.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2024-2024. All rights reserved.
  *
  * openGauss is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -20,25 +20,30 @@ import lombok.experimental.Accessors;
 
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 
-import java.util.List;
-
 /**
+ * CheckPointBean
+ *
  * @author ：wangchao
  * @date ：Created in 2023/11/16
  * @since ：11
  */
 @Data
 @Accessors(chain = true)
-public class CheckPointData {
+public class CheckPointBean {
     private Endpoint endpoint;
     private String tableName;
     private String colName;
     private boolean isDigit;
+
+    /**
+     * all of the check point list,that count is size
+     */
     private int size;
-    private List<PointPair> checkPointList;
+    private PointPair checkPoint;
 
     @Override
     public String toString() {
-        return endpoint + " [" + tableName + "." + colName + "] is digit=" + isDigit + ", checkPointSize=" + size;
+        return endpoint + "[" + tableName + "." + colName + "] is digit " + isDigit + ", size=" + size + ", checkPoint="
+            + checkPoint;
     }
 }

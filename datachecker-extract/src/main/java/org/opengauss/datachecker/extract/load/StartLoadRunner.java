@@ -55,9 +55,9 @@ public class StartLoadRunner implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         // if extract boot start finished,then running.
+        resourceManager.initMaxConnectionCount();
         configManagement.loadExtractProperties();
         memoryManagerService.startMemoryManager(ConfigCache.getBooleanValue(ConfigConstants.MEMORY_MONITOR));
-        resourceManager.initMaxConnectionCount();
         dynamicThreadPoolManager.dynamicThreadPoolMonitor();
         initExtractContextDataSource();
         sliceProcessorContext.startSliceStatusFeedbackService();

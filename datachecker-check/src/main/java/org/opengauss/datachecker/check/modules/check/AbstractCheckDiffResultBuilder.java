@@ -44,11 +44,15 @@ import java.util.stream.Collectors;
 public abstract class AbstractCheckDiffResultBuilder<C extends CheckDiffResult,
     B extends AbstractCheckDiffResultBuilder<C, B>> {
     private static final Logger log = LogUtils.getLogger();
-    private static final int MAX_DIFF_REPAIR_SIZE = 5000;
+    private static final int MAX_DIFF_REPAIR_SIZE = 100;
 
     private String table;
     private int partitions;
     private int rowCount;
+    private int totalRepair;
+    private int insertTotal;
+    private int updateTotal;
+    private int deleteTotal;
     private int errorRate;
     private int sno;
     private long beginOffset;
@@ -99,6 +103,42 @@ public abstract class AbstractCheckDiffResultBuilder<C extends CheckDiffResult,
      */
     public B table(String table) {
         this.table = table;
+        return self();
+    }
+
+    /**
+     * Set the insertTotal properties of the builder
+     *
+     * @param insertTotal insertTotal
+     * @return CheckDiffResultBuilder
+     */
+    public B insertTotal(int insertTotal) {
+        this.insertTotal = insertTotal;
+        this.totalRepair = insertTotal + updateTotal + deleteTotal;
+        return self();
+    }
+
+    /**
+     * Set the updateTotal properties of the builder
+     *
+     * @param updateTotal updateTotal
+     * @return CheckDiffResultBuilder
+     */
+    public B updateTotal(int updateTotal) {
+        this.updateTotal = updateTotal;
+        this.totalRepair = insertTotal + updateTotal + deleteTotal;
+        return self();
+    }
+
+    /**
+     * Set the deleteTotal properties of the builder
+     *
+     * @param deleteTotal deleteTotal
+     * @return CheckDiffResultBuilder
+     */
+    public B deleteTotal(int deleteTotal) {
+        this.deleteTotal = deleteTotal;
+        this.totalRepair = insertTotal + updateTotal + deleteTotal;
         return self();
     }
 
@@ -251,16 +291,19 @@ public abstract class AbstractCheckDiffResultBuilder<C extends CheckDiffResult,
 
     public B keyDiff(List<Difference> insert, List<Difference> update, List<Difference> delete) {
         if (Objects.nonNull(insert)) {
-            this.keyInsert.addAll(insert);
-            this.keyInsertSet.addAll(insert.stream().map(Difference::getKey).collect(Collectors.toSet()));
+            this.keyInsert.addAll(insert.stream().limit(MAX_DIFF_REPAIR_SIZE).collect(Collectors.toList()));
+            this.keyInsertSet.addAll(
+                insert.stream().map(Difference::getKey).limit(MAX_DIFF_REPAIR_SIZE).collect(Collectors.toSet()));
         }
         if (Objects.nonNull(update)) {
-            this.keyUpdate.addAll(update);
-            this.keyUpdateSet.addAll(update.stream().map(Difference::getKey).collect(Collectors.toSet()));
+            this.keyUpdate.addAll(update.stream().limit(MAX_DIFF_REPAIR_SIZE).collect(Collectors.toList()));
+            this.keyUpdateSet.addAll(
+                update.stream().map(Difference::getKey).limit(MAX_DIFF_REPAIR_SIZE).collect(Collectors.toSet()));
         }
         if (Objects.nonNull(delete)) {
-            this.keyDelete.addAll(delete);
-            this.keyDeleteSet.addAll(delete.stream().map(Difference::getKey).collect(Collectors.toSet()));
+            this.keyDelete.addAll(delete.stream().limit(MAX_DIFF_REPAIR_SIZE).collect(Collectors.toList()));
+            this.keyDeleteSet.addAll(
+                delete.stream().map(Difference::getKey).limit(MAX_DIFF_REPAIR_SIZE).collect(Collectors.toSet()));
         }
         diffSort.sort(this.keyInsert);
         diffSort.sort(this.keyUpdate);
@@ -331,14 +374,11 @@ public abstract class AbstractCheckDiffResultBuilder<C extends CheckDiffResult,
         if (Objects.equals(CheckMode.INCREMENT, checkMode)) {
             return true;
         }
-        int totalRepair = getKeySetSize(keyDeleteSet) + getKeySetSize(keyInsertSet) + getKeySetSize(keyUpdateSet);
-        totalRepair = totalRepair + getKeyListSize(keyDelete) + getKeyListSize(keyInsert) + getKeyListSize(keyUpdate);
-        int curErrorRate = rowCount > 0 ? (totalRepair * 100 / rowCount) : 0;
-        if (totalRepair <= MAX_DIFF_REPAIR_SIZE || curErrorRate <= errorRate) {
+        if (totalRepair <= MAX_DIFF_REPAIR_SIZE) {
             return true;
         } else {
-            log.info("check table[{}.{}] diff-count={},error-rate={}%, error is too large ,not to build repair dml",
-                schema, table, totalRepair, curErrorRate);
+            log.info("check table[{}.{}] diff-count={}, error is too large ,not to build repair dml", schema, table,
+                totalRepair);
             return false;
         }
     }

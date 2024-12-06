@@ -64,6 +64,8 @@ public class ConfigManagement {
     private int autoDeleteTopic;
     @Value("${data.check.sql_mode_pad_char_to_full_length}")
     private boolean sqlModePadCharToFullLength;
+    @Value("${data.check.create-repair-sql}")
+    private boolean isCreateRepairSql;
     @Value("${spring.check.maximum-pool-size}")
     private int maxPoolSize = 10;
     /**
@@ -81,6 +83,7 @@ public class ConfigManagement {
         ConfigCache.put(ConfigConstants.REST_API_PAGE_SIZE, restApiPageSize);
         ConfigCache.put(ConfigConstants.AUTO_DELETE_TOPIC, autoDeleteTopic);
         ConfigCache.put(ConfigConstants.MAXIMUM_POOL_SIZE, maxPoolSize);
+        ConfigCache.put(ConfigConstants.CREATE_REPAIR_SQL, isCreateRepairSql);
         initKafka();
     }
 

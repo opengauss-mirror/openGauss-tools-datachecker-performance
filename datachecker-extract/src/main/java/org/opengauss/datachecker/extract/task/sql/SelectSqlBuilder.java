@@ -98,9 +98,10 @@ public class SelectSqlBuilder {
     private boolean isFullCondition;
     private boolean isHalfOpenHalfClosed = true;
     private boolean isFirst = false;
+    private boolean isDigit = false;
     private boolean isEnd = false;
     private boolean isCsvMode = false;
-    private String countSnippet = "count(1)";
+    private List<String> inIds = null;
 
     /**
      * Table fragment query SQL Statement Builder
@@ -154,6 +155,17 @@ public class SelectSqlBuilder {
         return this;
     }
 
+    /**
+     * set current key  is digit
+     *
+     * @param isDigit is digit
+     * @return builder
+     */
+    public SelectSqlBuilder isDigit(boolean isDigit) {
+        this.isDigit = isDigit;
+        return this;
+    }
+
     public SelectSqlBuilder isFullCondition(boolean isFullCondition) {
         this.isFullCondition = isFullCondition;
         return this;
@@ -186,41 +198,42 @@ public class SelectSqlBuilder {
         Assert.notEmpty(columnsMetas, Message.COLUMN_METADATA_EMPTY_NOT_TO_BUILD_SQL);
         final ConditionLimit conditionLimit = tableMetadata.getConditionLimit();
         if (Objects.nonNull(conditionLimit)) {
-            return buildSelectSqlConditionLimit(tableMetadata, conditionLimit, null);
+            return buildSelectSqlConditionLimit(tableMetadata, conditionLimit);
         } else if (isDivisions) {
-            return buildSelectSqlWherePrimary(tableMetadata, null);
+            if (tableMetadata.isUnionPrimary()) {
+                return buildSelectSqlWhereInPrimary(tableMetadata);
+            } else {
+                return buildSelectSqlWherePrimary(tableMetadata);
+            }
         } else {
-            return buildSelectSqlOffsetZero(columnsMetas, tableMetadata.getTableName(), null);
+            return buildSelectSqlOffsetZero(columnsMetas, tableMetadata.getTableName());
         }
     }
 
-    /**
-     * select row count sql builder
-     *
-     * @return sql
-     */
-    public String countBuilder() {
-        Assert.isTrue(Objects.nonNull(tableMetadata), Message.TABLE_METADATA_NULL_NOT_TO_BUILD_SQL);
-        List<ColumnsMetaData> columnsMetas = tableMetadata.getColumnsMetas();
-        Assert.notEmpty(columnsMetas, Message.COLUMN_METADATA_EMPTY_NOT_TO_BUILD_SQL);
-        final ConditionLimit conditionLimit = tableMetadata.getConditionLimit();
-        if (Objects.nonNull(conditionLimit)) {
-            return buildSelectSqlConditionLimit(tableMetadata, conditionLimit, countSnippet);
-        } else if (isDivisions) {
-            return buildSelectSqlWherePrimary(tableMetadata, countSnippet);
-        } else {
-            return buildSelectSqlOffsetZero(columnsMetas, tableMetadata.getTableName(), countSnippet);
-        }
-    }
-
-    private String buildSelectSqlWherePrimary(TableMetadata tableMetadata, String countSnippet) {
+    private String buildSelectSqlWhereInPrimary(TableMetadata tableMetadata) {
         List<ColumnsMetaData> columnsMetas = tableMetadata.getColumnsMetas();
         String schemaEscape = escape(schema, dataBaseType);
         String tableName = escape(tableMetadata.getTableName(), dataBaseType);
-        boolean isCountSnippet = StringUtils.isNotEmpty(countSnippet);
-        String columnNames = isCountSnippet ? countSnippet : getColumnNameList(columnsMetas, dataBaseType);
+        String columnNames = getColumnNameList(columnsMetas, dataBaseType);
         String primaryKey = escape(tableMetadata.getPrimaryMetas().get(0).getColumnName(), dataBaseType);
-        final String orderBy = isCountSnippet ? "" : getOrderBy(tableMetadata.getPrimaryMetas(), dataBaseType);
+        final String orderBy = getOrderBy(tableMetadata.getPrimaryMetas(), dataBaseType);
+        String pkCondition = primaryKey + "in (" + inIds.stream()
+            .map(id -> isDigit ? id : "'" + id + "'")
+            .collect(Collectors.joining(",")) + ")";
+        return QUERY_WHERE_BETWEEN.replace(COLUMN, columnNames)
+            .replace(SCHEMA, schemaEscape)
+            .replace(TABLE_NAME, tableName)
+            .replace(PK_CONDITION, pkCondition)
+            .replace(ORDER_BY, orderBy);
+    }
+
+    private String buildSelectSqlWherePrimary(TableMetadata tableMetadata) {
+        List<ColumnsMetaData> columnsMetas = tableMetadata.getColumnsMetas();
+        String schemaEscape = escape(schema, dataBaseType);
+        String tableName = escape(tableMetadata.getTableName(), dataBaseType);
+        String columnNames = getColumnNameList(columnsMetas, dataBaseType);
+        String primaryKey = escape(tableMetadata.getPrimaryMetas().get(0).getColumnName(), dataBaseType);
+        final String orderBy = getOrderBy(tableMetadata.getPrimaryMetas(), dataBaseType);
         String pkCondition;
         if (StringUtils.isNotEmpty(seqStart) && StringUtils.isNotEmpty(seqEnd)) {
             pkCondition = getPkCondition(primaryKey);
@@ -235,6 +248,9 @@ public class SelectSqlBuilder {
     }
 
     private String getNumberPkCondition(String primaryKey) {
+        if (start == offset) {
+            return primaryKey + " = " + start;
+        }
         if (isFullCondition) {
             return getNumberPkConditionFull(primaryKey);
         }
@@ -264,6 +280,9 @@ public class SelectSqlBuilder {
     }
 
     private String getPkCondition(String primaryKey) {
+        if (StringUtils.equalsIgnoreCase(seqStart, seqEnd)) {
+            return primaryKey + " = '" + seqStart + "'";
+        }
         if (isFullCondition) {
             return getPkConditionFull(primaryKey);
         }
@@ -284,14 +303,12 @@ public class SelectSqlBuilder {
         }
     }
 
-    private String buildSelectSqlConditionLimit(TableMetadata tableMetadata, ConditionLimit conditionLimit,
-        String countSnippet) {
+    private String buildSelectSqlConditionLimit(TableMetadata tableMetadata, ConditionLimit conditionLimit) {
         List<ColumnsMetaData> columnsMetas = tableMetadata.getColumnsMetas();
-        boolean isCountSnippet = StringUtils.isNotEmpty(countSnippet);
-        String columnNames = isCountSnippet ? countSnippet : getColumnNameList(columnsMetas, dataBaseType);
+        String columnNames = getColumnNameList(columnsMetas, dataBaseType);
         final String schemaEscape = escape(schema, dataBaseType);
         final String tableName = escape(tableMetadata.getTableName(), dataBaseType);
-        final String orderBy = isCountSnippet ? "" : getOrderBy(tableMetadata.getPrimaryMetas(), dataBaseType);
+        final String orderBy = getOrderBy(tableMetadata.getPrimaryMetas(), dataBaseType);
         SqlGenerateMeta sqlGenerateMeta = new SqlGenerateMeta(schemaEscape, tableName, columnNames, orderBy,
             conditionLimit.getStart(), conditionLimit.getOffset());
         return getSqlGenerate(dataBaseType).replace(sqlGenerateMeta);
@@ -329,9 +346,8 @@ public class SelectSqlBuilder {
         return SqlUtil.escape(content, dataBaseType);
     }
 
-    private String buildSelectSqlOffsetZero(List<ColumnsMetaData> columnsMetas, String tableName, String countSnippet) {
-        boolean isCountSnippet = StringUtils.isNotEmpty(countSnippet);
-        String columnNames = isCountSnippet ? countSnippet : getColumnNameList(columnsMetas, dataBaseType);
+    private String buildSelectSqlOffsetZero(List<ColumnsMetaData> columnsMetas, String tableName) {
+        String columnNames = getColumnNameList(columnsMetas, dataBaseType);
         String schemaEscape = escape(schema, dataBaseType);
         SqlGenerateMeta sqlGenerateMeta = new SqlGenerateMeta(schemaEscape, escape(tableName, dataBaseType),
             columnNames);
@@ -355,6 +371,17 @@ public class SelectSqlBuilder {
 
     public void isEndCondition(boolean end) {
         this.isEnd = end;
+    }
+
+    /**
+     * union key table set slice key for sql select where in
+     *
+     * @param inIds ids
+     * @param isDigit is Digit
+     */
+    public void inIds(List<String> inIds, boolean isDigit) {
+        this.inIds = inIds;
+        this.isDigit = isDigit;
     }
 
     @Getter

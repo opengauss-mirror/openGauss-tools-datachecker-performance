@@ -58,6 +58,16 @@ public class QueryStatementFactory {
     }
 
     /**
+     * create UnionPrimaryAutoSliceQueryStatement
+     *
+     * @param checkPoint checkPoint
+     * @return A new AutoSliceQueryStatement instance.
+     */
+    public AutoSliceQueryStatement createUnionPrimarySliceQueryStatement(CheckPoint checkPoint) {
+        return new UnionPrimaryAutoSliceQueryStatement(checkPoint);
+    }
+
+    /**
      * create FullQueryStatement
      *
      * @return FullQueryStatement

@@ -27,6 +27,12 @@ public interface CheckResultConstants {
     String FAILED_LOG_NAME = "failed.log";
     String CSV_FAILED_DETAIL_NAME = "failed_detail.log";
     String RESULT_SUCCESS = "success";
+
+    /**
+     * The display quantity of the verification result failure records
+     */
+    int MAX_DISPLAY_SIZE = 100;
+
     String FAILED_MESSAGE = " failed (insert=%d update=%d delete=%d)";
     String STRUCTURE_NOT_EQUALS = "table structure is not equals , please check the database sync !";
     String TABLE_NOT_EXISTS = "table [%s] , only exist in %s !";

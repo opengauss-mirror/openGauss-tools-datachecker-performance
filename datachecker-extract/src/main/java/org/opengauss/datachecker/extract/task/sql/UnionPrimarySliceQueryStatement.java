@@ -44,28 +44,6 @@ public class UnionPrimarySliceQueryStatement implements SliceQueryStatement {
         this.isHalfOpenHalfClosed = !Objects.equals(ConfigCache.getCheckMode(), CheckMode.CSV);
     }
 
-    /**
-     * build slice count sql entry
-     *
-     * @param tableMetadata tableMetadata
-     * @param slice slice
-     * @return sql entry
-     */
-    public QuerySqlEntry buildSliceCount(TableMetadata tableMetadata, SliceVo slice) {
-        final SelectSqlBuilder sqlBuilder = new SelectSqlBuilder(tableMetadata);
-        sqlBuilder.isDivisions(slice.getTotal() > 1);
-        sqlBuilder.isFirstCondition(slice.getNo() == 1);
-        sqlBuilder.isEndCondition(slice.getNo() == slice.getTotal());
-        sqlBuilder.isHalfOpenHalfClosed(isHalfOpenHalfClosed);
-        sqlBuilder.isCsvMode(ConfigCache.isCsvMode());
-        ColumnsMetaData primaryKey = tableMetadata.getSinglePrimary();
-        boolean isDigit = MetaDataUtil.isDigitPrimaryKey(primaryKey);
-        Object offset = translateOffset(isDigit, slice.getBeginIdx());
-        Object endOffset = translateOffset(isDigit, slice.getEndIdx());
-        sqlBuilder.offset(offset, endOffset);
-        return new QuerySqlEntry(slice.getTable(), sqlBuilder.countBuilder(), offset, endOffset);
-    }
-
     @Override
     public QuerySqlEntry buildSlice(TableMetadata tableMetadata, SliceVo slice) {
         final SelectSqlBuilder sqlBuilder = new SelectSqlBuilder(tableMetadata);
@@ -77,9 +55,8 @@ public class UnionPrimarySliceQueryStatement implements SliceQueryStatement {
         ColumnsMetaData primaryKey = tableMetadata.getSinglePrimary();
         boolean isDigit = MetaDataUtil.isDigitPrimaryKey(primaryKey);
         Object offset = translateOffset(isDigit, slice.getBeginIdx());
-        Object endOffset = translateOffset(isDigit, slice.getEndIdx());
-        sqlBuilder.offset(offset, endOffset);
-        return new QuerySqlEntry(slice.getTable(), sqlBuilder.builder(), offset, endOffset);
+        sqlBuilder.inIds(slice.getInIds(), isDigit);
+        return new QuerySqlEntry(slice.getTable(), sqlBuilder.builder(), offset, offset);
     }
 
     private Object translateOffset(boolean isDigit, String beginIdx) {

@@ -17,6 +17,7 @@ package org.opengauss.datachecker.extract.data.access;
 
 import org.opengauss.datachecker.common.entry.common.DataAccessParam;
 import org.opengauss.datachecker.common.entry.common.Health;
+import org.opengauss.datachecker.common.entry.common.PointPair;
 import org.opengauss.datachecker.common.entry.enums.LowerCaseTableNames;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.PrimaryColumnBean;
@@ -119,6 +120,11 @@ public class OracleDataAccessService extends AbstractDataAccessService {
     }
 
     @Override
+    public boolean tableExistsRows(String tableName) {
+        return oracleMetaDataMapper.tableExistsRows(properties.getSchema(), tableName);
+    }
+
+    @Override
     public String min(Connection connection, DataAccessParam param) {
         return oracleMetaDataMapper.min(param);
     }
@@ -136,6 +142,12 @@ public class OracleDataAccessService extends AbstractDataAccessService {
     @Override
     public List<Object> queryPointList(Connection connection, DataAccessParam param) {
         return oracleMetaDataMapper.queryPointList(param);
+    }
+
+    @Override
+    public List<PointPair> queryUnionFirstPrimaryCheckPointList(Connection connection, DataAccessParam param) {
+        // oracle database`table,that is defined by union primary key
+        return null;
     }
 
     @Override

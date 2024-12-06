@@ -16,16 +16,16 @@
 package org.opengauss.datachecker.extract.task;
 
 import com.alibaba.druid.pool.DruidDataSource;
-import com.alibaba.druid.pool.DruidPooledConnection;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.common.DataAccessParam;
+import org.opengauss.datachecker.common.entry.common.PointPair;
 import org.opengauss.datachecker.common.entry.enums.DataBaseType;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
-import org.opengauss.datachecker.common.exception.ExtractDataAccessException;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.SqlUtil;
 import org.opengauss.datachecker.extract.data.access.DataAccessService;
@@ -34,7 +34,7 @@ import org.opengauss.datachecker.extract.util.MetaDataUtil;
 import org.springframework.util.StopWatch;
 
 import java.sql.Connection;
-import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
@@ -70,7 +70,7 @@ public class CheckPoint {
      * @param slice slice
      * @return check point
      */
-    public List<Object> initCheckPointList(TableMetadata tableMetadata, int slice) {
+    public List<PointPair> initCheckPointList(TableMetadata tableMetadata, int slice) {
         if (slice <= 0) {
             return new LinkedList<>();
         }
@@ -92,16 +92,11 @@ public class CheckPoint {
         stopWatch.stop();
         LogUtils.info(log, "init check-point-list table [{}]:[{}] ", tableName, stopWatch.shortSummary());
         ConnectionMgr.close(connection);
-        return checkPointList;
+        return checkPointList.stream().map(o -> new PointPair(o, 0)).collect(Collectors.toList());
     }
 
-    private DruidPooledConnection getConnection() {
-        try {
-            return dataSource.getConnection();
-        } catch (SQLException throwables) {
-            throwables.printStackTrace();
-            throw new ExtractDataAccessException("get connection error");
-        }
+    private Connection getConnection() {
+        return ConnectionMgr.getConnection();
     }
 
     private void addCheckList(List<Object> checkList, Object value) {
@@ -111,12 +106,11 @@ public class CheckPoint {
     }
 
     public boolean checkPkNumber(TableMetadata tableMetadata) {
-        ColumnsMetaData pkColumn = tableMetadata.getPrimaryMetas().get(0);
-        return MetaDataUtil.isDigitPrimaryKey(pkColumn);
+        return MetaDataUtil.isDigitPrimaryKey(tableMetadata.getSliceColumn());
     }
 
     private String getPkName(TableMetadata tableMetadata) {
-        return tableMetadata.getPrimaryMetas().get(0).getColumnName();
+        return tableMetadata.getSliceColumn().getColumnName();
     }
 
     public Long[][] translateBetween(List<Object> checkPointList) {
@@ -152,5 +146,64 @@ public class CheckPoint {
         String maxId = dataAccessService.max(connection, param);
         ConnectionMgr.close(connection, null, null);
         return Long.parseLong(maxId);
+    }
+
+    /**
+     * 初始化联合主键表检查点
+     *
+     * @param tableMetadata tableMetadata
+     * @return 检查点列表
+     */
+    public List<PointPair> initUnionPrimaryCheckPointList(TableMetadata tableMetadata) {
+        List<PointPair> checkPointList = new ArrayList<>();
+        List<ColumnsMetaData> primaryList = tableMetadata.getPrimaryMetas();
+        for (ColumnsMetaData unionKey : primaryList) {
+            List<PointPair> tmp = queryUnionKeyList(unionKey);
+            if (CollectionUtils.isEmpty(tmp)) {
+                tableMetadata.setSliceColumn(unionKey);
+                break;
+            }
+            if (CollectionUtils.isEmpty(checkPointList)) {
+                checkPointList = tmp;
+                tableMetadata.setSliceColumn(unionKey);
+            } else {
+                if (checkPointList.size() > tmp.size()) {
+                    checkPointList = tmp;
+                    tableMetadata.setSliceColumn(unionKey);
+                }
+            }
+        }
+        return checkPointList;
+    }
+
+    private List<PointPair> queryUnionKeyList(ColumnsMetaData unionKey) {
+        String colName = unionKey.getColumnName();
+        String schema = unionKey.getSchema();
+        String tableName = unionKey.getTableName();
+        DataBaseType dataBaseType = ConfigCache.getValue(ConfigConstants.DATA_BASE_TYPE, DataBaseType.class);
+        DataAccessParam param = new DataAccessParam().setSchema(SqlUtil.escape(schema, dataBaseType))
+            .setName(SqlUtil.escape(tableName, dataBaseType))
+            .setColName(SqlUtil.escape(colName, dataBaseType));
+        try (Connection connection = getConnection()) {
+            return dataAccessService.queryUnionFirstPrimaryCheckPointList(connection, param);
+        } catch (Exception e) {
+            log.error("query union primary check point list error {}", e.getMessage());
+        }
+        return new LinkedList<>();
+    }
+
+    /**
+     * 获取分片列名
+     *
+     * @param tableMetadata 表元数据
+     * @return 分片列名
+     */
+    public String getSliceColumnName(TableMetadata tableMetadata) {
+        ColumnsMetaData sliceColumn = tableMetadata.getSliceColumn();
+        if (Objects.nonNull(sliceColumn)) {
+            return sliceColumn.getColumnName();
+        } else {
+            return "";
+        }
     }
 }

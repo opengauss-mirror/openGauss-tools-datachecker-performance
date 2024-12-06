@@ -69,6 +69,9 @@
         select count(1) from ${schema}.${name};
     </select>
 
+    <select id="tableExistsRows" resultType="boolean">
+        select exists (select 1 from ${schema}.${name} limit 1) ;
+    </select>
     <select id="min" resultType="string">
          select min(${param.colName}) from ${param.schema}.${param.name}
     </select>

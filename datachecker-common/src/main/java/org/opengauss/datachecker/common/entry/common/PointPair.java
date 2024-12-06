@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2022 Huawei Technologies Co.,Ltd.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2024-2024. All rights reserved.
  *
  * openGauss is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -16,29 +16,36 @@
 package org.opengauss.datachecker.common.entry.common;
 
 import lombok.Data;
-import lombok.experimental.Accessors;
-
-import org.opengauss.datachecker.common.entry.enums.Endpoint;
-
-import java.util.List;
 
 /**
+ * PointPair
+ *
  * @author ：wangchao
  * @date ：Created in 2023/11/16
  * @since ：11
  */
 @Data
-@Accessors(chain = true)
-public class CheckPointData {
-    private Endpoint endpoint;
-    private String tableName;
-    private String colName;
-    private boolean isDigit;
-    private int size;
-    private List<PointPair> checkPointList;
+public class PointPair {
+    private Object checkPoint;
+
+    /**
+     * current checkpoint of table ,contains how manny rows
+     */
+    private long rowCount;
+    private int sliceIdx;
+
+    public PointPair(Object checkPoint, long rowCount) {
+        this(checkPoint, rowCount, 0);
+    }
+
+    public PointPair(Object checkPoint, long rowCount, int sliceIdx) {
+        this.checkPoint = checkPoint;
+        this.rowCount = rowCount;
+        this.sliceIdx = sliceIdx;
+    }
 
     @Override
     public String toString() {
-        return endpoint + " [" + tableName + "." + colName + "] is digit=" + isDigit + ", checkPointSize=" + size;
+        return "[ " + checkPoint + " , " + rowCount + " idx: " + sliceIdx + " ]";
     }
 }

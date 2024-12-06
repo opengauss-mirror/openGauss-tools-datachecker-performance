@@ -23,12 +23,12 @@ import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 
 import javax.sql.PooledConnection;
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -43,7 +43,7 @@ import java.util.concurrent.locks.ReentrantLock;
 public class ConnectionMgr {
     private static final Logger log = LogUtils.getLogger(ConnectionMgr.class);
     private static final Lock LOCK = new ReentrantLock();
-    private static final int CREATE_CONNECTION_RETRY_TIMES = 30;
+    private static final int MAX_RETRY_TIMES = 60;
 
     private static String driverClassName = "";
     private static String url = "";
@@ -54,9 +54,9 @@ public class ConnectionMgr {
     /**
      * 获取JDBC链接
      *
-     * @return Connection
+     * @return jdbc Connection
      */
-    public static Connection getConnection() {
+    public static synchronized Connection getConnection() {
         if (isFirstLoad.get()) {
             driverClassName = getPropertyValue(ConfigConstants.DRIVER_CLASS_NAME);
             url = getPropertyValue(ConfigConstants.DS_URL);
@@ -73,18 +73,8 @@ public class ConnectionMgr {
         Connection conn = null;
         LOCK.lock();
         try {
-            conn = tryToCreateConnection();
             int retry = 0;
-            while (Objects.isNull(conn) && retry < CREATE_CONNECTION_RETRY_TIMES) {
-                ThreadUtil.sleepMaxHalfSecond();
-                conn = tryToCreateConnection();
-                retry++;
-            }
-            if (Objects.isNull(conn)) {
-                throw new ExtractDataAccessException("create connection failed " + CREATE_CONNECTION_RETRY_TIMES + " times");
-            }
-            conn.setAutoCommit(false);
-            LogUtils.debug(log, "Connection succeed !");
+            conn = retryToGetConnection(retry);
         } catch (Exception ignore) {
             LogUtils.error(log, "create connection failed , [{},{}]:[{}][{}]", username, databasePassport, url,
                 ignore.getMessage());
@@ -94,14 +84,19 @@ public class ConnectionMgr {
         return conn;
     }
 
-    private static Connection tryToCreateConnection() throws SQLException {
-        Connection conn = null;
+    private static Connection retryToGetConnection(int retry) throws SQLException {
+        Connection conn;
         try {
-            ThreadUtil.sleepOneSecond();
             conn = DriverManager.getConnection(url, username, databasePassport);
-            LogUtils.debug(log, "Connection succeed !");
+            conn.setAutoCommit(false);
         } catch (Exception exp) {
-            LogUtils.error(log, "create connection failed , [{},{}]:[{}]", username, databasePassport, url, exp);
+            if (retry <= MAX_RETRY_TIMES) {
+                LogUtils.error(log, "retry to get connection cause by {}", exp.getMessage());
+                ThreadUtil.sleepCircle(retry);
+                conn = retryToGetConnection(++retry);
+            } else {
+                throw exp;
+            }
         }
         return conn;
     }
@@ -114,8 +109,8 @@ public class ConnectionMgr {
      * 关闭数据库链接及 PreparedStatement、ResultSet结果集
      *
      * @param connection connection
-     * @param ps         PreparedStatement
-     * @param resultSet  resultSet
+     * @param ps PreparedStatement
+     * @param resultSet resultSet
      */
     public static void close(Connection connection, PreparedStatement ps, ResultSet resultSet) {
         if (resultSet != null) {

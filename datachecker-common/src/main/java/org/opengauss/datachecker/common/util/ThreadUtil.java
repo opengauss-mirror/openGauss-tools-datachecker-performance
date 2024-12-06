@@ -62,6 +62,19 @@ public class ThreadUtil {
     }
 
     /**
+     * sleep circle,max sleep time is 100 -1000 mill seconds
+     *
+     * @param times current circle times
+     */
+    public static void sleepMillsCircle(int times) {
+        try {
+            TimeUnit.MILLISECONDS.sleep((times / 10 + 1) * 100L);
+        } catch (InterruptedException ie) {
+            LogUtils.warn(log, "thread sleep interrupted exception ");
+        }
+    }
+
+    /**
      * sleep circle,max sleep time is 5 seconds (sleep 1-5 sec)
      *
      * @param times current circle times
@@ -69,6 +82,19 @@ public class ThreadUtil {
     public static void sleepCircle(int times) {
         try {
             TimeUnit.SECONDS.sleep(times / 5 + 1);
+        } catch (InterruptedException ie) {
+            LogUtils.warn(log, "thread sleep interrupted exception ");
+        }
+    }
+
+    /**
+     * sleep circle,max sleep time is 5 seconds (sleep 1-60 sec)
+     *
+     * @param times current circle times
+     */
+    public static void sleepLongCircle(int times) {
+        try {
+            TimeUnit.SECONDS.sleep(times / 60 + 1);
         } catch (InterruptedException ie) {
             LogUtils.warn(log, "thread sleep interrupted exception ");
         }
@@ -118,7 +144,7 @@ public class ThreadUtil {
      *
      * @return thread pool
      */
-    @SuppressWarnings( {"all"} )
+    @SuppressWarnings( {"all"})
     public static ExecutorService newSingleThreadExecutor() {
         return Executors.newFixedThreadPool(1, Executors.defaultThreadFactory());
     }

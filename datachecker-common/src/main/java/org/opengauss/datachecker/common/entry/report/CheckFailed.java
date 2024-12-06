@@ -20,7 +20,6 @@ import lombok.Data;
 import lombok.experimental.Accessors;
 
 import java.time.LocalDateTime;
-import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -30,9 +29,10 @@ import java.util.Set;
  */
 @Data
 @Accessors(chain = true)
-@JSONType(
-    orders = {"process", "schema", "table", "fileName", "topic", "partition", "beginOffset", "rowCount", "diffCount",
-        "cost", "startTime", "endTime", "message", "keyInsertSet", "keyUpdateSet", "keyDeleteSet", "hasMore"})
+@JSONType(orders = {
+    "process", "schema", "table", "fileName", "beginOffset", "rowCount", "diffCount", "insertTotal", "updateTotal",
+    "deleteTotal", "cost", "startTime", "endTime", "message", "keyInsertSet", "keyUpdateSet", "keyDeleteSet", "hasMore"
+})
 public class CheckFailed {
     private String process;
     private String schema;
@@ -43,6 +43,9 @@ public class CheckFailed {
     private int partition;
     private long rowCount;
     private long diffCount;
+    private long insertTotal;
+    private long updateTotal;
+    private long deleteTotal;
     private long cost;
     private String message;
     private LocalDateTime startTime;
@@ -51,16 +54,4 @@ public class CheckFailed {
     private Set<String> keyUpdateSet;
     private Set<String> keyDeleteSet;
     private String hasMore;
-
-    public int getKeyInsertSize() {
-        return Objects.nonNull(keyInsertSet) ? keyInsertSet.size() : 0;
-    }
-
-    public int getKeyUpdateSize() {
-        return Objects.nonNull(keyUpdateSet) ? keyUpdateSet.size() : 0;
-    }
-
-    public int getKeyDeleteSize() {
-        return Objects.nonNull(keyDeleteSet) ? keyDeleteSet.size() : 0;
-    }
 }

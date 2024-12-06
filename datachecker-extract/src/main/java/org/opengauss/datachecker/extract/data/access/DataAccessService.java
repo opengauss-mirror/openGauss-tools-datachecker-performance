@@ -18,6 +18,7 @@ package org.opengauss.datachecker.extract.data.access;
 import org.opengauss.datachecker.common.entry.check.Difference;
 import org.opengauss.datachecker.common.entry.common.DataAccessParam;
 import org.opengauss.datachecker.common.entry.common.Health;
+import org.opengauss.datachecker.common.entry.common.PointPair;
 import org.opengauss.datachecker.common.entry.enums.LowerCaseTableNames;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.PrimaryColumnBean;
@@ -107,6 +108,14 @@ public interface DataAccessService {
      * @return row count
      */
     long rowCount(String tableName);
+
+    /**
+     * query table is empty
+     *
+     * @param tableName tableName
+     * @return true or false
+     */
+    boolean tableExistsRows(String tableName);
 
     /**
      * query table column min value
@@ -199,4 +208,13 @@ public interface DataAccessService {
      * @return unique columns
      */
     List<PrimaryColumnBean> queryTableUniqueColumns(String tableName);
+
+    /**
+     * query table check point list
+     *
+     * @param connection connection
+     * @param param param
+     * @return point list
+     */
+    List<PointPair> queryUnionFirstPrimaryCheckPointList(Connection connection, DataAccessParam param);
 }

@@ -15,6 +15,7 @@
 
 package org.opengauss.datachecker.extract.task.sql;
 
+import org.opengauss.datachecker.common.entry.common.PointPair;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 
 import java.util.List;
@@ -52,5 +53,5 @@ public interface AutoSliceQueryStatement extends QueryStatement {
      * @param slice slice
      * @return list checkPoint list
      */
-    List<Object> getCheckPoint(TableMetadata tableMetadata, int slice);
+    List<PointPair> getCheckPoint(TableMetadata tableMetadata, int slice);
 }

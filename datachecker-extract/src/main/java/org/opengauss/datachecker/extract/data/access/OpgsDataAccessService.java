@@ -19,6 +19,7 @@ import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.common.DataAccessParam;
 import org.opengauss.datachecker.common.entry.common.Health;
+import org.opengauss.datachecker.common.entry.common.PointPair;
 import org.opengauss.datachecker.common.entry.enums.LowerCaseTableNames;
 import org.opengauss.datachecker.common.entry.enums.OgCompatibility;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
@@ -169,6 +170,11 @@ public class OpgsDataAccessService extends AbstractDataAccessService {
     }
 
     @Override
+    public boolean tableExistsRows(String tableName) {
+        return opgsMetaDataMapper.tableExistsRows(properties.getSchema(), tableName);
+    }
+
+    @Override
     public String min(Connection connection, DataAccessParam param) {
         String sql = " select min(" + param.getColName() + ") from " + param.getSchema() + "." + param.getName() + ";";
         return adasQueryOnePoint(connection, sql);
@@ -192,6 +198,13 @@ public class OpgsDataAccessService extends AbstractDataAccessService {
         sql = String.format(sql, param.getColName(), param.getColName(), param.getColName(), param.getSchema(),
             param.getName(), param.getOffset());
         return adasQueryPointList(connection, sql);
+    }
+
+    @Override
+    public List<PointPair> queryUnionFirstPrimaryCheckPointList(Connection connection, DataAccessParam param) {
+        String sqlTmp = "select %s,count(1) from %s.%s group by %s";
+        String sql = String.format(sqlTmp, param.getColName(), param.getSchema(), param.getName(), param.getColName());
+        return adasQueryUnionPointList(connection, sql);
     }
 
     @Override

@@ -17,6 +17,8 @@ package org.opengauss.datachecker.extract.slice.process;
 
 import com.alibaba.druid.pool.DruidDataSource;
 
+import lombok.Getter;
+
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
@@ -42,8 +44,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
@@ -60,6 +62,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class JdbcSliceProcessor extends AbstractSliceProcessor {
     private static final Logger log = LogUtils.getLogger(JdbcSliceProcessor.class);
+    private static final int MAX_RETRY_TIMES = 60;
+
     private final JdbcDataOperations jdbcOperation;
     private final AtomicInteger rowCount = new AtomicInteger(0);
     private final DruidDataSource dataSource;
@@ -96,7 +100,7 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
             sliceExtend.setStatus(-1);
             LogUtils.error(log, "table slice [{}] is error", slice.toSimpleString(), ex);
         } finally {
-            LogUtils.info(log, "table slice [{}] is finally  ", slice.toSimpleString());
+            LogUtils.info(log, "table slice [{} count {}] is finally   ", slice.toSimpleString(), rowCount.get());
             feedbackStatus(sliceExtend);
             context.saveProcessing(slice);
         }
@@ -119,8 +123,10 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
     private void executeSliceQueryStatementPage(TableMetadata tableMetadata, SliceExtend sliceExtend) {
         // 分片数据统计
         UnionPrimarySliceQueryStatement sliceStatement = context.createSlicePageQueryStatement();
-        QuerySqlEntry sliceCountSql = sliceStatement.buildSliceCount(tableMetadata, slice);
-        int sliceCount = querySliceRowTotalCount(sliceExtend, sliceCountSql);
+        int sliceCount = (int) slice.getRowCountOfInIds();
+        if (slice.getRowCountOfInIds() == 0) {
+            return;
+        }
         QuerySqlEntry baseSliceSql = sliceStatement.buildSlice(tableMetadata, slice);
         List<String> pageStatementList = sliceStatement.buildPageStatement(baseSliceSql, sliceCount,
             slice.getFetchSize());
@@ -128,9 +134,9 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
         Connection connection = null;
         try {
             // 申请数据库链接
-            long estimatedRowCount = slice.isSlice() ? slice.getFetchSize() : tableMetadata.getTableRows();
+            long estimatedRowCount = Math.min(sliceCount, slice.getFetchSize());
             long estimatedMemorySize = estimatedMemorySize(tableMetadata.getAvgRowLength(), estimatedRowCount);
-            connection = jdbcOperation.tryConnectionAndClosedAutoCommit(estimatedMemorySize, dataSource);
+            connection = jdbcOperation.tryConnectionAndClosedAutoCommit(estimatedMemorySize);
             // 获取连接，准备查询分片数据： 并开启数据异步处理线程
             sliceSender = createSliceResultSetSender(tableMetadata);
             sliceSender.setRecordSendKey(slice.getName());
@@ -142,50 +148,95 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
             // 开始查询数据，并将结果推送到异步处理线程中。
             boolean isFirstStatement = true;
             long startOffset = 0L;
+            int idx = 0;
             for (String pageStatement : pageStatementList) {
+                log.debug("executeSliceQueryStatementPage : {} : {}", ++idx, maskQuery(pageStatement));
+                QueryParameters queryParameters = new QueryParameters(0, 0);
                 if (isFirstStatement) {
                     // only use first page statement's start offset
-                    startOffset = pageQueryUnionPrimarySlice(pageStatement, connection, sliceSender, asyncHandler);
+                    startOffset = statementQuery(pageStatement, connection, sliceSender, asyncHandler, queryParameters);
                 } else {
                     // other page statement's start offset is ignored
-                    pageQueryUnionPrimarySlice(pageStatement, connection, sliceSender, asyncHandler);
+                    statementQuery(pageStatement, connection, sliceSender, asyncHandler, queryParameters);
                 }
                 isFirstStatement = false;
             }
+            log.info("executeSliceQueryStatementPage : {} execute statement end", slice.getName());
             sliceExtend.setStartOffset(startOffset);
             waitToStopAsyncHandlerAndResources(asyncHandler);
             updateExtendSliceOffsetAndCount(sliceExtend, rowCount.get(), offsetList);
+            log.info("executeSliceQueryStatementPage : {} async send end", slice.getName());
         } catch (Exception ex) {
             LogUtils.error(log, "slice [{}] has exception :", slice.getName(), ex);
             throw new ExtractDataAccessException(ex.getMessage());
         } finally {
-            ConnectionMgr.close(connection, null, null);
             if (sliceSender != null) {
                 sliceSender.agentsClosed();
             }
             jdbcOperation.releaseConnection(connection);
-            LogUtils.info(log, "query union primary slice and send data {} Count:{}", sliceExtend.getName(),
-                rowCount.get());
         }
     }
 
-    private long pageQueryUnionPrimarySlice(String pageStatement, Connection connection,
-        SliceResultSetSender sliceSender, AsyncDataHandler asyncHandler) throws SQLException, InterruptedException {
-        long startOffset;
-        PreparedStatement ps = connection.prepareStatement(pageStatement);
-        ps.setFetchSize(FETCH_SIZE);
-        ResultSet resultSet = ps.executeQuery();
-        startOffset = sliceSender.checkOffsetEnd();
-        ResultSetMetaData rsmd = resultSet.getMetaData();
-        while (resultSet.next()) {
-            this.rowCount.incrementAndGet();
-            if (asyncHandler.isSenderBusy()) {
-                Thread.sleep(100);
+    /**
+     * only used by log print
+     *
+     * @param pageStatement sql statement
+     * @return mask statement
+     */
+    private String maskQuery(String pageStatement) {
+        String[] split = pageStatement.toLowerCase(Locale.ROOT).split(" from ");
+        return "select * from " + split[1];
+    }
+
+    private long statementQuery(String pageStatement, Connection connection, SliceResultSetSender sliceSender,
+        AsyncDataHandler asyncHandler, QueryParameters queryParameters) {
+        long startOffset = -1L;
+        ExecutionStage executionStage = ExecutionStage.PREPARE;
+        PreparedStatement ps = null;
+        ResultSet resultSet = null;
+        int rsIdx = 0;
+        try {
+            executionStage = ExecutionStage.EXECUTE;
+            ps = connection.prepareStatement(pageStatement);
+            ps.setFetchSize(FETCH_SIZE);
+            resultSet = ps.executeQuery();
+            startOffset = sliceSender.checkOffsetEnd();
+            ResultSetMetaData rsmd = resultSet.getMetaData();
+            executionStage = ExecutionStage.FETCH;
+            while (resultSet.next()) {
+                if (rsIdx >= queryParameters.getResultSetIdx()) {
+                    this.rowCount.incrementAndGet();
+                    if (asyncHandler.isSenderBusy()) {
+                        Thread.sleep(100);
+                    }
+                    asyncHandler.addRow(sliceSender.resultSet(rsmd, resultSet));
+                }
+                rsIdx++;
             }
-            asyncHandler.addRow(sliceSender.resultSet(rsmd, resultSet));
+            executionStage = ExecutionStage.CLOSE;
+            // 数据发送到异步处理线程中，关闭ps与rs
+            ConnectionMgr.close(null, ps, resultSet);
+        } catch (Exception ex) {
+            log.error("execute query {}  executionStage: {} error,retry cause : {}", slice.toSimpleString(),
+                executionStage, ex.getMessage());
+            if (Objects.equals(executionStage, ExecutionStage.CLOSE)) {
+                ConnectionMgr.close(null, ps, resultSet);
+            } else {
+                ConnectionMgr.close(connection, ps, resultSet);
+                if (queryParameters.getRetryTimes() <= MAX_RETRY_TIMES) {
+                    connection = jdbcOperation.tryConnectionAndClosedAutoCommit(0);
+                    ++queryParameters.retryTimes;
+                    queryParameters.resultSetIdx = rsIdx;
+                    startOffset = statementQuery(pageStatement, connection, sliceSender, asyncHandler, queryParameters);
+                } else {
+                    log.error("execute query {} retry {} times error ,cause by ", maskQuery(pageStatement),
+                        queryParameters.getRetryTimes(), ex);
+                    throw new ExtractDataAccessException(
+                        "execute query " + maskQuery(pageStatement) + " retry " + MAX_RETRY_TIMES
+                            + " times error ,cause by " + ex.getMessage());
+                }
+            }
         }
-        // 数据发送到异步处理线程中，关闭ps与rs
-        ConnectionMgr.close(null, ps, resultSet);
         return startOffset;
     }
 
@@ -197,33 +248,12 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
             throw new ExtractDataAccessException("slice data async handler is interrupted");
         }
     }
-
-    private int querySliceRowTotalCount(SliceExtend sliceExtend, QuerySqlEntry sliceCountSql) {
-        int sliceCount = 0;
-        try (Connection connection = jdbcOperation.tryConnectionAndClosedAutoCommit(1L, dataSource);
-            PreparedStatement ps = connection.prepareStatement(sliceCountSql.getSql());
-            ResultSet resultSet = ps.executeQuery();) {
-            if (resultSet.next()) {
-                sliceCount = resultSet.getInt(1);
-            }
-        } catch (SQLException ex) {
-            log.error("execute slice count query error ", ex);
-            throw new ExtractDataAccessException("execute slice count query error");
-        }
-        log.info("query union primary table slice {} Count:{}", sliceExtend.getName(), sliceCount);
-        return sliceCount;
-    }
-
     private void executeQueryStatement(QuerySqlEntry sqlEntry, TableMetadata tableMetadata, SliceExtend sliceExtend) {
         SliceResultSetSender sliceSender = null;
         Connection connection = null;
         PreparedStatement ps = null;
         ResultSet resultSet = null;
         try {
-            // 申请数据库链接
-            long estimatedRowCount = slice.isSlice() ? slice.getFetchSize() : tableMetadata.getTableRows();
-            long estimatedMemorySize = estimatedMemorySize(tableMetadata.getAvgRowLength(), estimatedRowCount);
-            connection = jdbcOperation.tryConnectionAndClosedAutoCommit(estimatedMemorySize, dataSource);
             // 获取连接，准备查询分片数据： 并开启数据异步处理线程
             List<long[]> offsetList = new CopyOnWriteArrayList<>();
             List<ListenableFuture<SendResult<String, String>>> batchFutures = new CopyOnWriteArrayList<>();
@@ -232,27 +262,16 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
             AsyncDataHandler asyncHandler = new AsyncDataHandler(batchFutures, sliceSender, offsetList);
             asyncHandler.start();
             context.asyncSendSlice(asyncHandler);
+            // 申请数据库链接
+            long estimatedRowCount = slice.isSlice() ? slice.getFetchSize() : tableMetadata.getTableRows();
+            long estimatedMemorySize = estimatedMemorySize(tableMetadata.getAvgRowLength(), estimatedRowCount);
+            connection = jdbcOperation.tryConnectionAndClosedAutoCommit(estimatedMemorySize);
             // 开始查询数据，并将结果推送到异步处理线程中。
-            ps = connection.prepareStatement(sqlEntry.getSql());
-            ps.setFetchSize(FETCH_SIZE);
-            resultSet = ps.executeQuery();
-            sliceExtend.setStartOffset(sliceSender.checkOffsetEnd());
-            ResultSetMetaData rsmd = resultSet.getMetaData();
-            while (resultSet.next()) {
-                this.rowCount.incrementAndGet();
-                if (asyncHandler.isSenderBusy()) {
-                    Thread.sleep(100);
-                }
-                // 数据发送到异步处理线程
-                asyncHandler.addRow(sliceSender.resultSet(rsmd, resultSet));
-            }
-            // 全部分片查询处理完成，关闭数据库连接，并关闭异步数据处理线程 ，关闭ps与rs
-            try {
-                ConnectionMgr.close(null, ps, resultSet);
-                asyncHandler.waitToStop();
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
+            QueryParameters parameters = new QueryParameters(0, 0);
+            long startOffset = statementQuery(sqlEntry.getSql(), connection, sliceSender, asyncHandler, parameters);
+            sliceExtend.setStartOffset(startOffset);
+            // 等待分片查询处理完成，关闭数据库连接，并关闭异步数据处理线程 ，关闭ps与rs
+            waitToStopAsyncHandlerAndResources(asyncHandler);
             updateExtendSliceOffsetAndCount(sliceExtend, rowCount.get(), offsetList);
         } catch (Exception ex) {
             LogUtils.error(log, "slice [{}] has exception :", slice.getName(), ex);
@@ -264,6 +283,26 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
             }
             jdbcOperation.releaseConnection(connection);
             LogUtils.info(log, "query slice and send data count {}", rowCount.get());
+        }
+    }
+
+    /**
+     * statement query parameters
+     */
+    @Getter
+    class QueryParameters {
+        private int retryTimes;
+        private int resultSetIdx;
+
+        /**
+         * build statement query paramters
+         *
+         * @param retryTimes retry times
+         * @param resultSetIdx result set idx
+         */
+        public QueryParameters(int retryTimes, int resultSetIdx) {
+            this.retryTimes = retryTimes;
+            this.resultSetIdx = resultSetIdx;
         }
     }
 
@@ -358,4 +397,26 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
         sliceExtend.setEndOffset(getMaxOffset(offsetList));
         sliceExtend.setCount(rowCount);
     }
+}
+
+/**
+ * execution stage
+ */
+enum ExecutionStage {
+    /**
+     * prepare
+     */
+    PREPARE,
+    /**
+     * execute
+     */
+    EXECUTE,
+    /**
+     * fetch
+     */
+    FETCH,
+    /**
+     * close
+     */
+    CLOSE
 }
