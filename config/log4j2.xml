@@ -20,6 +20,9 @@
         <Property name="LOG_HOME">logs</Property>
         <Property name="LOG_LEVEL">INFO</Property>
         <Property name="LOG_NAME">${sys:logName}</Property>
+        <Property name="KAFKA_SERVER">${sys:kafka.bootstrapServers:-127.0.0.1:9092}</Property>
+        <Property name="KAFKA_TOPIC">${sys:kafka.topic}</Property>
+        <Property name="KAFKA_KEY">${sys:kafka.key}</Property>
         <property name="LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%c{1.}] - %msg%n"/>
     </Properties>
     <Appenders>
@@ -41,6 +44,15 @@
                 <ThresholdFilter level="${LOG_LEVEL}" onMatch="ACCEPT" onMismatch="DENY"/>
             </Filters>
         </RollingRandomAccessFile>
+
+        <Kafka name="kafka" topic="${KAFKA_TOPIC}" key="${KAFKA_KEY}">
+            <Filters>
+                <ThresholdFilter level="ERROR" onMatch="NEUTRAL" onMismatch="DENY"/>
+                <RegexFilter regex="&lt;CODE:\d{4}> [\s\S]+" onMatch="ACCEPT" onMismatch="DENY"/>
+            </Filters>
+            <Property name="bootstrap.servers">${KAFKA_SERVER}</Property>
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %c{1.}:() - %msg%n"/>
+        </Kafka>
     </Appenders>
 
     <Loggers>
@@ -51,8 +63,9 @@
             -->
             <!--<AppenderRef ref="console_out_appender"/> -->
             <AppenderRef ref="progress"/>
+            <AppenderRef ref="kafka"/>
         </Root>
-        <logger name="org.apache.kafka" level="off" />
+        <logger name="org.apache.kafka" level="error" />
         <logger name="oshi.util" level="off" />
         <logger name="org.hibernate.validator" level="off" />
         <logger name="org.springframework" level="error" />
