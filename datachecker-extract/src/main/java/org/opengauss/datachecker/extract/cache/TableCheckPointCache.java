@@ -15,13 +15,10 @@
 
 package org.opengauss.datachecker.extract.cache;
 
-import org.apache.logging.log4j.Logger;
-import org.opengauss.datachecker.common.util.LogUtils;
+import org.opengauss.datachecker.common.entry.common.PointPair;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -35,39 +32,63 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Component
 public class TableCheckPointCache {
-    private static final Logger log = LogUtils.getLogger();
-    private static final Map<String, List<Object>> TABLE_CHECKPOINT_CACHE = new ConcurrentHashMap<>();
+    private static final Map<String, List<PointPair>> TABLE_CHECKPOINT_CACHE = new ConcurrentHashMap<>();
+
+    private int tableSize;
 
     /**
      * Save to the Cache k v
      *
-     * @param key   Metadata key
+     * @param key Metadata key
      * @param value Metadata value of table
      */
-    public void put(@NonNull String key, List<Object> value) {
-        try {
-            TABLE_CHECKPOINT_CACHE.put(key, value);
-        } catch (NumberFormatException exception) {
-            log.error("put in cache exception ", exception);
+    public void put(@NonNull String key, List<PointPair> value) {
+        count(key);
+        TABLE_CHECKPOINT_CACHE.put(key, value);
+    }
+
+    private void count(String key) {
+        if (!TABLE_CHECKPOINT_CACHE.containsKey(key)) {
+            tableSize++;
         }
     }
 
     /**
-     * Get all table checkPointList relationship
+     * remove table check point cache
      *
-     * @return map table checkPointList map
+     * @param key key
      */
-    public Map<String, List<Object>> getAll() {
-        try {
-            return TABLE_CHECKPOINT_CACHE;
-        } catch (NumberFormatException exception) {
-            log.error("put in cache exception ", exception);
+    public void remove(String key) {
+        TABLE_CHECKPOINT_CACHE.remove(key);
+    }
+
+    /**
+     * add point in cache
+     *
+     * @param key key
+     * @param value value
+     */
+    public void add(@NonNull String key, List<PointPair> value) {
+        count(key);
+        if (TABLE_CHECKPOINT_CACHE.containsKey(key)) {
+            TABLE_CHECKPOINT_CACHE.get(key).addAll(value);
+        } else {
+            TABLE_CHECKPOINT_CACHE.put(key, value);
         }
-        return new HashMap<>();
+    }
+
+    /**
+     * contains key
+     *
+     * @param key key
+     * @return boolean
+     */
+    public boolean contains(String key) {
+        return TABLE_CHECKPOINT_CACHE.containsKey(key);
     }
 
     public int tableCount() {
-        return TABLE_CHECKPOINT_CACHE.size();
+        return tableSize;
     }
 
     /**
@@ -76,12 +97,7 @@ public class TableCheckPointCache {
      * @param key table name as cached key
      * @return list the checkPoint list
      */
-    public List<Object> get(String key) {
-        try {
-            return TABLE_CHECKPOINT_CACHE.get(key);
-        } catch (NumberFormatException exception) {
-            log.error("get cache exception", exception);
-            return new ArrayList<>();
-        }
+    public List<PointPair> get(String key) {
+        return TABLE_CHECKPOINT_CACHE.get(key);
     }
 }

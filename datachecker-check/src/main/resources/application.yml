@@ -72,6 +72,7 @@ data:
     check-with-sync-extracting: true
     retry-fetch-record-times: 5
     error-rate: 30
+    create-repair-sql: false
     max-retry-times: 1000
     retry-interval-times: 2000
     # auto-delete-topic :  Configure whether to automatically delete topic.

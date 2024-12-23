@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2022 Huawei Technologies Co.,Ltd.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2024-2024. All rights reserved.
  *
  * openGauss is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -22,22 +22,22 @@ import org.opengauss.datachecker.extract.task.CheckPoint;
 import java.util.List;
 
 /**
- * single primary slice query statement
+ * Union primary slice query statement
  *
  * @author ：wangchao
  * @date ：Created in 2023/8/9
  * @since ：11
  */
-public class SinglePrimaryAutoSliceQueryStatement implements AutoSliceQueryStatement {
-    private final CheckPoint singlePrimaryCheckPoint;
+public class UnionPrimaryAutoSliceQueryStatement implements AutoSliceQueryStatement {
+    private final CheckPoint primaryCheckPoint;
 
     /**
      * create SinglePrimarySliceQueryStatement
      *
      * @param checkPoint checkPoint
      */
-    public SinglePrimaryAutoSliceQueryStatement(CheckPoint checkPoint) {
-        this.singlePrimaryCheckPoint = checkPoint;
+    public UnionPrimaryAutoSliceQueryStatement(CheckPoint checkPoint) {
+        this.primaryCheckPoint = checkPoint;
     }
 
     @Override
@@ -52,6 +52,6 @@ public class SinglePrimaryAutoSliceQueryStatement implements AutoSliceQueryState
 
     @Override
     public List<PointPair> getCheckPoint(TableMetadata tableMetadata, int slice) {
-        return singlePrimaryCheckPoint.initCheckPointList(tableMetadata, slice);
+        return primaryCheckPoint.initUnionPrimaryCheckPointList(tableMetadata);
     }
 }

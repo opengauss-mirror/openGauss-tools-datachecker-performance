@@ -129,6 +129,11 @@ public interface ConfigConstants {
     String MAXIMUM_TABLE_SLICE_SIZE = "spring.check.maximum-table-slice-size";
 
     /**
+     * spring.check.maximum-table-slice-size default value 10000
+     */
+    int MAXIMUM_TABLE_SLICE_DEFAULT_VALUE = 10000;
+
+    /**
      * spring.check.maximum-topic-size
      */
     String MAXIMUM_TOPIC_SIZE = "spring.check.maximum-topic-size";
@@ -312,4 +317,9 @@ public interface ConfigConstants {
      * lower_case_table_names
      */
     String LOWER_CASE_TABLE_NAMES = "lower_case_table_names";
+
+    /**
+     * data.check.create-repair-sql
+     */
+    String CREATE_REPAIR_SQL = "data.check.create-repair-sql";
 }

@@ -17,6 +17,7 @@ package org.opengauss.datachecker.check.modules.report;
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
+
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.check.client.FeignClientService;
@@ -46,6 +47,7 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import javax.validation.constraints.NotEmpty;
+
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.LinkedList;
@@ -73,7 +75,7 @@ public class SliceCheckResultManager {
     private static final String SUMMARY_LOG_NAME = "summary.log";
     private static final String SUCCESS_LOG_NAME = "success.log";
     private static final String REPAIR_LOG_TEMPLATE = "repair_%s_%s_%s.txt";
-    private static final int MAX_DISPLAY_SIZE = 200;
+    private static final int MAX_DISPLAY_SIZE = CheckResultConstants.MAX_DISPLAY_SIZE;
 
     private final Map<String, Integer> tableSliceCountMap = new ConcurrentHashMap<>();
     private final Map<String, List<CheckDiffResult>> checkResult = new ConcurrentHashMap<>();
@@ -83,7 +85,7 @@ public class SliceCheckResultManager {
     private FeignClientService feignClient;
     private int successTableCount = 0;
     private int failedTableCount = 0;
-    private int rowCount = 0;
+    private long rowCount = 0L;
     private boolean isCsvMode = false;
     private boolean ogCompatibility = false;
     private boolean hasInitSliceResultEnvironment = true;
@@ -92,7 +94,7 @@ public class SliceCheckResultManager {
     /**
      * add slice check result
      *
-     * @param slice  slice
+     * @param slice slice
      * @param result result
      */
     public void addResult(SliceVo slice, CheckDiffResult result) {
@@ -127,7 +129,7 @@ public class SliceCheckResultManager {
     /**
      * add table check result
      *
-     * @param table           table name
+     * @param table table name
      * @param checkDiffResult check result
      */
     public void addResult(String table, CheckDiffResult checkDiffResult) {
@@ -140,14 +142,13 @@ public class SliceCheckResultManager {
             completedSliceSize.set(listValue.size());
             return listValue;
         });
-        boolean immediatelyRenameCheckSuccessFile =
-            Objects.equals(checkDiffResult.getResult(), CheckResultConstants.RESULT_SUCCESS);
-        notifyCsvShardingCompleted(checkDiffResult, immediatelyRenameCheckSuccessFile);
+        // is Immediately Rename Check Success File
+        boolean isImmediately = Objects.equals(checkDiffResult.getResult(), CheckResultConstants.RESULT_SUCCESS);
+        notifyCsvShardingCompleted(checkDiffResult, isImmediately);
         if (completedSliceSize.get() == tableSliceCountMap.get(table)) {
             List<CheckDiffResult> results = checkResult.get(table);
             Map<String, List<CheckDiffResult>> resultMap;
-            resultMap = results.stream()
-                               .collect(Collectors.groupingBy(CheckDiffResult::getResult));
+            resultMap = results.stream().collect(Collectors.groupingBy(CheckDiffResult::getResult));
             String checkResultPath = ConfigCache.getCheckResult();
             if (resultMap.containsKey(CheckResultConstants.RESULT_FAILED)) {
                 List<CheckDiffResult> tableFiledList = resultMap.get(CheckResultConstants.RESULT_FAILED);
@@ -179,12 +180,10 @@ public class SliceCheckResultManager {
         if (CollectionUtils.isEmpty(csvFailedList)) {
             return;
         }
-        csvFailedList.stream()
-                     .filter(CheckCsvFailed::isNotEmpty)
-                     .forEach(csvFailed -> {
-                         FileUtils.writeAppendFile(csvFailedLogPath, JsonObjectUtil.formatSimple(csvFailed) + ",");
-                         FileUtils.writeAppendFile(csvFailedLogPath, System.lineSeparator());
-                     });
+        csvFailedList.stream().filter(CheckCsvFailed::isNotEmpty).forEach(csvFailed -> {
+            FileUtils.writeAppendFile(csvFailedLogPath, JsonObjectUtil.formatSimple(csvFailed) + ",");
+            FileUtils.writeAppendFile(csvFailedLogPath, System.lineSeparator());
+        });
     }
 
     private void notifyCsvShardingCompleted(CheckDiffResult checkDiffResult, boolean immediately) {
@@ -200,10 +199,9 @@ public class SliceCheckResultManager {
 
     private List<CheckCsvFailed> translateCheckCsvFaileds(List<CheckDiffResult> results) {
         return results.stream()
-                      .map(result -> new CheckCsvFailed().setTable(result.getTable())
-                                                         .build(result.getFileName(), result.getKeyInsert(),
-                                                             result.getKeyUpdate(), result.getKeyDelete()))
-                      .collect(Collectors.toList());
+            .map(result -> new CheckCsvFailed().setTable(result.getTable())
+                .build(result.getFileName(), result.getKeyInsert(), result.getKeyUpdate(), result.getKeyDelete()))
+            .collect(Collectors.toList());
     }
 
     /**
@@ -234,27 +232,31 @@ public class SliceCheckResultManager {
         Set<String> deleteKeySet = fetchDeleteDiffKeys.fetchKey(tableFailedList);
         Set<String> updateKeySet = fetchUpdateDiffKeys.fetchKey(tableFailedList);
         failed.setTopic(new String[] {tableFailedList.get(0).getTopic()})
-              .setStartTime(fetchMinStartTime(tableFailedList))
-              .setEndTime(fetchMaxEndTime(tableFailedList))
-              .setKeyInsertSet(getKeyList(insertKeySet, hasMore, "insert key has more;"))
-              .setKeyDeleteSet(getKeyList(deleteKeySet, hasMore, "delete key has more;"))
-              .setKeyUpdateSet(getKeyList(updateKeySet, hasMore, "update key has more;"));
-        failed.setDiffCount(failed.getKeyInsertSize() + failed.getKeyUpdateSize() + failed.getKeyDeleteSize());
-        String message = String.format(FAILED_MESSAGE, failed.getKeyInsertSize(), failed.getKeyUpdateSize(),
-                failed.getKeyDeleteSize()) + resultCommon.getError();
+            .setStartTime(fetchMinStartTime(tableFailedList))
+            .setEndTime(fetchMaxEndTime(tableFailedList))
+            .setInsertTotal(fetchTotal(tableFailedList, CheckDiffResult::getInsertTotal))
+            .setUpdateTotal(fetchTotal(tableFailedList, CheckDiffResult::getUpdateTotal))
+            .setDeleteTotal(fetchTotal(tableFailedList, CheckDiffResult::getDeleteTotal))
+            .setKeyInsertSet(getKeyList(insertKeySet, hasMore, "insert key has more;"))
+            .setKeyDeleteSet(getKeyList(deleteKeySet, hasMore, "delete key has more;"))
+            .setKeyUpdateSet(getKeyList(updateKeySet, hasMore, "update key has more;"));
+        long diffSum = tableFailedList.stream().peek(msg -> {
+            log.warn("table slice failed info  {} diffSum: {}", msg.getMessage(), msg.getTotalRepair());
+        }).mapToLong(CheckDiffResult::getTotalRepair).sum();
+        log.warn("result table {} diffSum: {}", resultCommon.getTable(), diffSum);
+        failed.setDiffCount(diffSum);
+        String message =
+            String.format(FAILED_MESSAGE, failed.getInsertTotal(), failed.getUpdateTotal(), failed.getDeleteTotal())
+                + resultCommon.getError();
         if (resultCommon.isTableStructureEquals()) {
             failed.setMessage(message);
         }
         failed.setHasMore(hasMore.toString())
-              .setRowCount(fetchRowCount.fetchCount(tableFailedList) + fetchRowCount.fetchCount(successList))
-              .setCost(calcCheckTaskCost(failed.getStartTime(), failed.getEndTime()));
+            .setRowCount(fetchTotal(tableFailedList, CheckDiffResult::getRowCount) + fetchTotal(successList,
+                CheckDiffResult::getRowCount))
+            .setCost(calcCheckTaskCost(failed.getStartTime(), failed.getEndTime()));
         return failed;
     }
-
-    private FetchRowCount fetchRowCount = list -> Objects.isNull(list) ? 0 : list.stream()
-                                                                                 .mapToLong(
-                                                                                     CheckDiffResult::getRowCount)
-                                                                                 .sum();
 
     private FetchDiffKeys fetchInsertDiffKeys = tableFiledList -> {
         Set<String> diffKey = new TreeSet<>();
@@ -263,10 +265,7 @@ public class SliceCheckResultManager {
                 diffKey.addAll(tableFiled.getKeyInsertSet());
             }
             if (CollectionUtils.isNotEmpty(tableFiled.getKeyInsert())) {
-                diffKey.addAll(tableFiled.getKeyInsert()
-                                         .stream()
-                                         .map(Difference::getKey)
-                                         .collect(Collectors.toList()));
+                diffKey.addAll(tableFiled.getKeyInsert().stream().map(Difference::getKey).collect(Collectors.toList()));
             }
         });
         return diffKey;
@@ -278,10 +277,7 @@ public class SliceCheckResultManager {
                 diffKey.addAll(tableFiled.getKeyDeleteSet());
             }
             if (CollectionUtils.isNotEmpty(tableFiled.getKeyDelete())) {
-                diffKey.addAll(tableFiled.getKeyDelete()
-                                         .stream()
-                                         .map(Difference::getKey)
-                                         .collect(Collectors.toList()));
+                diffKey.addAll(tableFiled.getKeyDelete().stream().map(Difference::getKey).collect(Collectors.toList()));
             }
         });
         return diffKey;
@@ -293,10 +289,7 @@ public class SliceCheckResultManager {
                 diffKey.addAll(tableFiled.getKeyUpdateSet());
             }
             if (CollectionUtils.isNotEmpty(tableFiled.getKeyUpdate())) {
-                diffKey.addAll(tableFiled.getKeyUpdate()
-                                         .stream()
-                                         .map(Difference::getKey)
-                                         .collect(Collectors.toList()));
+                diffKey.addAll(tableFiled.getKeyUpdate().stream().map(Difference::getKey).collect(Collectors.toList()));
             }
         });
         return diffKey;
@@ -311,15 +304,12 @@ public class SliceCheckResultManager {
         Set<String> fetchKey(List<CheckDiffResult> tableFiledList);
     }
 
-    @FunctionalInterface
-    protected interface FetchRowCount {
-        long fetchCount(List<CheckDiffResult> tableFiledList);
-    }
-
-    private long fetchTotalRepair(List<CheckDiffResult> tableFiled) {
-        return tableFiled.stream()
-                         .mapToLong(CheckDiffResult::getTotalRepair)
-                         .sum();
+    private long fetchTotal(List<CheckDiffResult> tableFiled,
+        java.util.function.ToLongFunction<? super CheckDiffResult> mapper) {
+        if (Objects.isNull(tableFiled)) {
+            return 0L;
+        }
+        return tableFiled.stream().mapToLong(mapper).sum();
     }
 
     private Set<String> getKeyList(Set<String> keySet, StringBuilder hasMore, String message) {
@@ -336,10 +326,9 @@ public class SliceCheckResultManager {
         result.setTopic(new String[] {tableSuccessList.get(0).getTopic()});
         result.setStartTime(fetchMinStartTime(tableSuccessList));
         result.setEndTime(fetchMaxEndTime(tableSuccessList));
-        result.setRowCount(fetchRowCount.fetchCount(tableSuccessList));
+        result.setRowCount(fetchTotal(tableSuccessList, CheckDiffResult::getRowCount));
         result.setCost(calcCheckTaskCost(result.getStartTime(), result.getEndTime()));
-        result.setPartition(tableSuccessList.get(0)
-                                            .getPartitions());
+        result.setPartition(tableSuccessList.get(0).getPartitions());
         result.setMessage(fetchMessage(tableSuccessList));
         return result;
     }
@@ -348,48 +337,47 @@ public class SliceCheckResultManager {
      * Calculation and verification time
      *
      * @param start start
-     * @param end   end
-     * @return
+     * @param end end
+     * @return Calculation and verification time
      */
     protected long calcCheckTaskCost(LocalDateTime start, LocalDateTime end) {
         if (Objects.nonNull(start) && Objects.nonNull(end)) {
-            return Duration.between(start, end)
-                           .toSeconds();
+            return Duration.between(start, end).toSeconds();
         }
         return 0;
     }
 
     private LocalDateTime fetchMaxEndTime(@NotEmpty List<CheckDiffResult> tableResultList) {
-        return tableResultList.stream()
-                              .map(CheckDiffResult::getEndTime)
-                              .max(LocalDateTime::compareTo)
-                              .get();
+        return tableResultList.stream().map(CheckDiffResult::getEndTime).max(LocalDateTime::compareTo).get();
     }
 
     private String fetchMessage(@NotEmpty List<CheckDiffResult> tableResultList) {
-        return tableResultList.stream()
-                              .map(CheckDiffResult::getMessage)
-                              .collect(Collectors.toList())
-                              .toString();
+        return tableResultList.stream().map(CheckDiffResult::getMessage).collect(Collectors.toList()).toString();
     }
 
     private LocalDateTime fetchMinStartTime(@NotEmpty List<CheckDiffResult> tableResultList) {
-        return tableResultList.stream()
-                              .map(CheckDiffResult::getStartTime)
-                              .min(LocalDateTime::compareTo)
-                              .get();
+        return tableResultList.stream().map(CheckDiffResult::getStartTime).min(LocalDateTime::compareTo).get();
     }
 
     private void reduceFailedRepair(String logFilePath, List<CheckDiffResult> failedList) {
-        failedList.forEach(tableFailed -> {
-            final String repairFile = logFilePath + getRepairFileName(tableFailed);
-            repairDeleteDiff(repairFile, tableFailed);
-            repairInsertDiff(repairFile, tableFailed);
-            repairUpdateDiff(repairFile, tableFailed);
-            boolean immediatelyRenameCheckFailedFile =
-                Objects.equals(tableFailed.getResult(), CheckResultConstants.RESULT_FAILED);
-            notifyCsvShardingCompleted(tableFailed, immediatelyRenameCheckFailedFile);
-        });
+        boolean isCreateRepairSql = ConfigCache.getBooleanValue(ConfigConstants.CREATE_REPAIR_SQL);
+        if (isCreateRepairSql) {
+            failedList.forEach(tableFailed -> {
+                final String repairFile = logFilePath + getRepairFileName(tableFailed);
+                repairDeleteDiff(repairFile, tableFailed);
+                repairInsertDiff(repairFile, tableFailed);
+                repairUpdateDiff(repairFile, tableFailed);
+                // immediately Rename Check Failed File
+                boolean isImmediately = Objects.equals(tableFailed.getResult(), CheckResultConstants.RESULT_FAILED);
+                notifyCsvShardingCompleted(tableFailed, isImmediately);
+            });
+        } else {
+            if (CollectionUtils.isNotEmpty(failedList)) {
+                CheckDiffResult tableFailed = failedList.get(0);
+                final String repairFile = logFilePath + getRepairFileName(tableFailed);
+                appendLogFile(repairFile, List.of());
+            }
+        }
     }
 
     private void repairUpdateDiff(String repairFile, CheckDiffResult tableFailed) {
@@ -398,8 +386,12 @@ public class SliceCheckResultManager {
         if (CheckResultUtils.isNotEmptyDiff(updateDiffs, keyUpdate)) {
             RepairEntry update = translateRepairEntry(tableFailed, updateDiffs, keyUpdate);
             update.setType(DML.REPLACE);
-            final List<String> updateRepairs = feignClient.buildRepairStatementUpdateDml(Endpoint.SOURCE, update);
-            appendLogFile(repairFile, updateRepairs);
+            try {
+                final List<String> updateRepairs = feignClient.buildRepairStatementUpdateDml(Endpoint.SOURCE, update);
+                appendLogFile(repairFile, updateRepairs);
+            } catch (Exception ex) {
+                log.error("build table {} update repair file {}", tableFailed.getTable(), ex.getMessage());
+            }
         }
     }
 
@@ -411,9 +403,7 @@ public class SliceCheckResultManager {
         if (Objects.nonNull(sinkDatabase)) {
             repairEntry.setSchema(sinkDatabase.getSchema());
         }
-        repairEntry.setDiffSet(diffsSet)
-                   .setOgCompatibility(ogCompatibility)
-                   .setDiffList(keyDifference);
+        repairEntry.setDiffSet(diffsSet).setOgCompatibility(ogCompatibility).setDiffList(keyDifference);
         return repairEntry;
     }
 
@@ -423,8 +413,12 @@ public class SliceCheckResultManager {
         if (CheckResultUtils.isNotEmptyDiff(insertDiffs, keyInsert)) {
             RepairEntry insert = translateRepairEntry(tableFailed, insertDiffs, keyInsert);
             insert.setType(DML.INSERT);
-            final List<String> insertRepairs = feignClient.buildRepairStatementInsertDml(Endpoint.SOURCE, insert);
-            appendLogFile(repairFile, insertRepairs);
+            try {
+                final List<String> insertRepairs = feignClient.buildRepairStatementInsertDml(Endpoint.SOURCE, insert);
+                appendLogFile(repairFile, insertRepairs);
+            } catch (Exception ex) {
+                log.error("build table {} insert repair file {}", tableFailed.getTable(), ex.getMessage());
+            }
         }
     }
 
@@ -434,8 +428,12 @@ public class SliceCheckResultManager {
         if (CheckResultUtils.isNotEmptyDiff(deleteDiffs, keyDelete)) {
             RepairEntry delete = translateRepairEntry(tableFailed, deleteDiffs, keyDelete);
             delete.setType(DML.DELETE);
-            final List<String> deleteRepairs = feignClient.buildRepairStatementDeleteDml(Endpoint.SOURCE, delete);
-            appendLogFile(repairFile, deleteRepairs);
+            try {
+                final List<String> deleteRepairs = feignClient.buildRepairStatementDeleteDml(Endpoint.SOURCE, delete);
+                appendLogFile(repairFile, deleteRepairs);
+            } catch (Exception ex) {
+                log.error("build table {} delete repair file {}", tableFailed.getTable(), ex.getMessage());
+            }
         }
     }
 

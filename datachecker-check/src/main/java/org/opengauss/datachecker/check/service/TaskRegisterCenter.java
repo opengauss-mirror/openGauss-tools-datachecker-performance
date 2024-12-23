@@ -28,6 +28,7 @@ import org.opengauss.datachecker.common.util.MapUtils;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -64,6 +65,7 @@ public class TaskRegisterCenter {
     private SliceCheckEventHandler sliceCheckEventHandler;
     private Map<String, String> sourceIgnoreMap = new HashMap<>();
     private Map<String, String> sinkIgnoreMap = new HashMap<>();
+    private Map<String, Integer> tableSliceChangeMap = new ConcurrentHashMap<>();
 
     /**
      * register slice info to register center
@@ -122,9 +124,11 @@ public class TaskRegisterCenter {
                 if (curStatus == STATUS_UPDATED_ALL) {
                     sliceCheckEventHandler.handle(new SliceCheckEvent(slice, source, sink));
                     remove(slice);
-                }else if (curStatus == STATUS_FAILED) {
+                } else if (curStatus == STATUS_FAILED) {
                     sliceCheckEventHandler.handleFailed(new SliceCheckEvent(slice, source, sink));
                     remove(slice);
+                } else {
+                    log.debug("slice data is extracting {}", slice.getName());
                 }
             }
         } finally {
@@ -135,28 +139,23 @@ public class TaskRegisterCenter {
     private void notifyIgnoreSliceCheckHandle(String table) {
         removeIgnoreTables(table);
         List<Entry<String, SliceVo>> tableSliceList = center.entrySet()
-                                                            .stream()
-                                                            .filter(entry -> entry.getValue()
-                                                                                  .getTable()
-                                                                                  .equals(table))
-                                                            .collect(Collectors.toList());
-        Optional.of(tableSliceList)
-                .ifPresent(list -> {
-                    Entry<String, SliceVo> firstSlice = list.get(0);
-                    String sliceName = firstSlice.getValue()
-                                                 .getName();
-                    SliceExtend source = MapUtils.get(sliceExtendMap, sliceName, Endpoint.SOURCE);
-                    SliceExtend sink = MapUtils.get(sliceExtendMap, sliceName, Endpoint.SINK);
-                    sliceCheckEventHandler.handleIgnoreTable(firstSlice.getValue(), source, sink);
-                    String csvDataPath = ConfigCache.getCsvData();
-                    list.forEach(entry -> {
-                        if (FileUtils.renameTo(csvDataPath, entry.getKey())) {
-                            LogUtils.debug(log, "rename csv sharding completed [{}] by {}", entry.getKey(),
-                                "table miss");
-                        }
-                        remove(entry.getKey());
-                    });
-                });
+            .stream()
+            .filter(entry -> entry.getValue().getTable().equals(table))
+            .collect(Collectors.toList());
+        Optional.of(tableSliceList).ifPresent(list -> {
+            Entry<String, SliceVo> firstSlice = list.get(0);
+            String sliceName = firstSlice.getValue().getName();
+            SliceExtend source = MapUtils.get(sliceExtendMap, sliceName, Endpoint.SOURCE);
+            SliceExtend sink = MapUtils.get(sliceExtendMap, sliceName, Endpoint.SINK);
+            sliceCheckEventHandler.handleIgnoreTable(firstSlice.getValue(), source, sink);
+            String csvDataPath = ConfigCache.getCsvData();
+            list.forEach(entry -> {
+                if (FileUtils.renameTo(csvDataPath, entry.getKey())) {
+                    LogUtils.debug(log, "rename csv sharding completed [{}] by {}", entry.getKey(), "table miss");
+                }
+                remove(entry.getKey());
+            });
+        });
     }
 
     /**
@@ -198,19 +197,30 @@ public class TaskRegisterCenter {
         // 处理csv场景已经忽略的表
         if (!(sourceIgnoreMap.isEmpty() && sinkIgnoreMap.isEmpty())) {
             sliceTableCounter.entrySet()
-                             .stream()
-                             .filter(tableEntry -> tableEntry.getValue() > 0 && (
-                                 sourceIgnoreMap.containsKey(tableEntry.getKey()) || sinkIgnoreMap.containsKey(
-                                     tableEntry.getKey())))
-                             .forEach(ignoreTable -> {
-                                 notifyIgnoreSliceCheckHandle(ignoreTable.getKey());
-                                 LogUtils.warn(log, "ignore table {} ===add ignore table to result===",
-                                     ignoreTable.getKey());
-                             });
+                .stream()
+                .filter(tableEntry -> tableEntry.getValue() > 0 && (sourceIgnoreMap.containsKey(tableEntry.getKey())
+                    || sinkIgnoreMap.containsKey(tableEntry.getKey())))
+                .forEach(ignoreTable -> {
+                    notifyIgnoreSliceCheckHandle(ignoreTable.getKey());
+                    LogUtils.warn(log, "ignore table {} ===add ignore table to result===", ignoreTable.getKey());
+                });
         }
-        return sliceTableCounter.values()
-                                .stream()
-                                .allMatch(count -> count == 0) && sliceTableCounter.size() == tableCount;
+        sliceTableCounter.entrySet().stream().filter(tableEntry -> tableEntry.getValue() > 0).forEach((entry) -> {
+            if (tableSliceChangeMap.containsKey(entry.getKey())) {
+                if (!Objects.equals(tableSliceChangeMap.get(entry.getKey()), entry.getValue())) {
+                    tableSliceChangeMap.put(entry.getKey(), entry.getValue());
+                    log.info("check complete release table {} slice {}", entry.getKey(), entry.getValue());
+                }
+                if (entry.getValue() == 0) {
+                    tableSliceChangeMap.remove(entry.getKey());
+                }
+            } else {
+                tableSliceChangeMap.put(entry.getKey(), entry.getValue());
+                log.info("check complete release table {} slice {}", entry.getKey(), entry.getValue());
+            }
+        });
+        return sliceTableCounter.values().stream().allMatch(count -> count == 0)
+            && sliceTableCounter.size() == tableCount;
     }
 
     /**
@@ -241,8 +251,8 @@ public class TaskRegisterCenter {
      * addCheckIgnoreTable
      *
      * @param endpoint endpoint
-     * @param table    table
-     * @param reason   reason
+     * @param table table
+     * @param reason reason
      */
     public void addCheckIgnoreTable(Endpoint endpoint, String table, String reason) {
         if (Objects.equals(endpoint, Endpoint.SOURCE)) {

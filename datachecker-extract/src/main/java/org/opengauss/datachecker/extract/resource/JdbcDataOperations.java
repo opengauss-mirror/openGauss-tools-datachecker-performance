@@ -16,6 +16,7 @@
 package org.opengauss.datachecker.extract.resource;
 
 import com.alibaba.druid.pool.DruidDataSource;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.config.ConfigCache;
@@ -27,6 +28,7 @@ import org.opengauss.datachecker.common.util.ThreadUtil;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Objects;
 
@@ -97,11 +99,11 @@ public class JdbcDataOperations {
      * try to get a jdbc connection and close auto commit.
      *
      * @param allocMemory allocMemory
-     * @param dataSource  dataSource
+     * @param dataSource dataSource
      * @return Connection
      */
-    public synchronized Connection tryConnectionAndClosedAutoCommit(long allocMemory,
-        DruidDataSource dataSource) throws SQLException {
+    public synchronized Connection tryConnectionAndClosedAutoCommit(long allocMemory, DruidDataSource dataSource)
+        throws SQLException {
         takeConnection(allocMemory);
         return getConnectionAndClosedAutoCommit(dataSource);
     }
@@ -184,8 +186,20 @@ public class JdbcDataOperations {
      * @param connection connection
      */
     public synchronized void releaseConnection(Connection connection) {
-        resourceManager.release();
         ConnectionMgr.close(connection, null, null);
+        resourceManager.release();
+    }
+
+    /**
+     * release connection resource,and close ps & rs
+     *
+     * @param connection connect
+     * @param ps ps
+     * @param rs rs
+     */
+    public synchronized void releaseConnection(Connection connection, PreparedStatement ps, ResultSet rs) {
+        ConnectionMgr.close(connection, ps, rs);
+        resourceManager.release();
     }
 
     /**

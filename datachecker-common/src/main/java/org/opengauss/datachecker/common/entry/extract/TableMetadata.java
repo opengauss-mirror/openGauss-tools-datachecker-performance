@@ -57,6 +57,7 @@ public class TableMetadata {
      * If config count_row this will be true.
      */
     private boolean realRows;
+    private boolean isExistTableRows;
 
     private long avgRowLength;
 
@@ -67,6 +68,7 @@ public class TableMetadata {
      * Primary key column properties
      */
     private List<ColumnsMetaData> primaryMetas;
+    private ColumnsMetaData sliceColumn;
 
     /**
      * Table column properties
@@ -86,6 +88,18 @@ public class TableMetadata {
             return false;
         }
         return primaryMetas.get(0).isAutoIncrementColumn();
+    }
+
+    /**
+     * 增加联合主键选择机制
+     *
+     * @return ColumnsMetaData
+     */
+    public ColumnsMetaData getSliceColumn() {
+        if (isSinglePrimary()) {
+            sliceColumn = primaryMetas.get(0);
+        }
+        return sliceColumn;
     }
 
     /**

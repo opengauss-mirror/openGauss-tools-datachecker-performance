@@ -141,8 +141,8 @@ public class ConfigCache {
      * @param key config key
      * @return config value
      */
-    public static Boolean getBooleanValue(String key) {
-        return getValue(key, Boolean.class);
+    public static boolean getBooleanValue(String key) {
+        return Boolean.TRUE.equals(getValue(key, Boolean.class));
     }
 
     /**

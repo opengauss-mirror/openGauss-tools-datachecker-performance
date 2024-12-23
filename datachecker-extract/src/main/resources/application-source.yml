@@ -50,3 +50,5 @@ spring:
       useGlobalDataSourceStat: true
       connectionProperties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=500
       maxAllowedPacketSize: 1073741824
+      validation-query-timeout: 30
+      break-after-acquire-failure: false

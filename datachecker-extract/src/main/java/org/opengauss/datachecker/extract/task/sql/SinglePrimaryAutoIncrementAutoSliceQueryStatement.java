@@ -15,6 +15,7 @@
 
 package org.opengauss.datachecker.extract.task.sql;
 
+import org.opengauss.datachecker.common.entry.common.PointPair;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.util.TaskUtilHelper;
 import org.opengauss.datachecker.extract.task.CheckPoint;
@@ -62,7 +63,7 @@ public class SinglePrimaryAutoIncrementAutoSliceQueryStatement implements AutoSl
     }
 
     @Override
-    public List<Object> getCheckPoint(TableMetadata tableMetadata, int slice) {
+    public List<PointPair> getCheckPoint(TableMetadata tableMetadata, int slice) {
         return null;
     }
 

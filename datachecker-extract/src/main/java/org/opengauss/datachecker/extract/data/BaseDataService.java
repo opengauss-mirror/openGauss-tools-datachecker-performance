@@ -110,6 +110,7 @@ public class BaseDataService {
             if (isChecking) {
                 tableNameList.add(meta.getTableName());
             }
+            meta.setExistTableRows(dataAccessService.tableExistsRows(meta.getTableName()));
             return isChecking;
         }).collect(Collectors.toList());
     }
@@ -179,6 +180,7 @@ public class BaseDataService {
         if (Objects.isNull(tableMetadata)) {
             return tableMetadata;
         }
+        tableMetadata.setExistTableRows(dataAccessService.tableExistsRows(tableName));
         updateTableColumnMetaData(tableMetadata, null);
         LogUtils.debug(log, "query table metadata {} -- {} ", tableName, tableMetadata);
         MetaDataCache.put(tableName, tableMetadata);
@@ -208,6 +210,7 @@ public class BaseDataService {
         if (CollectionUtils.isNotEmpty(tempPrimaryColumnBeans)) {
             List<String> primaryColumnNameList = getPrimaryColumnNames(tempPrimaryColumnBeans);
             for (ColumnsMetaData column : columns) {
+                column.setSchema(tableMetadata.getSchema());
                 if (primaryColumnNameList.contains(column.getLowerCaseColumnName())) {
                     column.setColumnKey(ColumnKey.PRI);
                 }

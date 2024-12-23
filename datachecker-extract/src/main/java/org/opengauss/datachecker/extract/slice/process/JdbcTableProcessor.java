@@ -150,7 +150,7 @@ public class JdbcTableProcessor extends AbstractTableProcessor {
         int fetchSize = getFetchSize();
         try {
             long estimatedSize = estimatedMemorySize(tableMetadata.getAvgRowLength(), fetchSize);
-            connection = jdbcOperation.tryConnectionAndClosedAutoCommit(estimatedSize, dataSource);
+            connection = jdbcOperation.tryConnectionAndClosedAutoCommit(estimatedSize);
             QuerySqlEntry sqlEntry = getFullQuerySqlEntry();
             log.info(" {} , {}", table, sqlEntry.toString());
             List<long[]> offsetList = new LinkedList<>();

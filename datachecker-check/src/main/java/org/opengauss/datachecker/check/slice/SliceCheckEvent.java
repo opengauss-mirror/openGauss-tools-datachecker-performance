@@ -19,6 +19,8 @@ import lombok.Data;
 import org.opengauss.datachecker.common.entry.extract.SliceExtend;
 import org.opengauss.datachecker.common.entry.extract.SliceVo;
 
+import java.util.Objects;
+
 /**
  * SliceCheckEvent
  *
@@ -35,9 +37,9 @@ public class SliceCheckEvent {
     /**
      * slice check event
      *
-     * @param slice  slice
+     * @param slice slice
      * @param source source extend of extract
-     * @param sink   sink extend of extract
+     * @param sink sink extend of extract
      */
     public SliceCheckEvent(SliceVo slice, SliceExtend source, SliceExtend sink) {
         this.slice = slice;
@@ -51,5 +53,11 @@ public class SliceCheckEvent {
 
     public String getCheckName() {
         return slice.getName();
+    }
+
+    @Override
+    public String toString() {
+        return "checked event : " + slice.getName() + (Objects.nonNull(source) ? source.toString() : " source is null")
+            + (Objects.nonNull(sink) ? sink.toString() : " sink is null");
     }
 }
