@@ -24,6 +24,7 @@ import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
+import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.common.entry.extract.ExtractTask;
 import org.opengauss.datachecker.common.entry.extract.PageExtract;
 import org.opengauss.datachecker.common.exception.CheckingException;
@@ -35,6 +36,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
 import javax.annotation.Resource;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
@@ -69,8 +71,7 @@ public class CheckServiceImpl implements CheckService {
     @Override
     public String start(CheckMode checkMode) {
         Assert.isTrue(checkEnvironment.isLoadMetaSuccess(), "current meta data is loading, please wait a moment");
-        LogUtils.info(log, CheckMessage.CHECK_SERVICE_STARTING, checkEnvironment.getCheckMode()
-                                                                                .getCode());
+        LogUtils.info(log, CheckMessage.CHECK_SERVICE_STARTING, checkEnvironment.getCheckMode().getCode());
         Assert.isTrue(Objects.equals(CheckMode.FULL, checkEnvironment.getCheckMode()),
             "current check mode is " + CheckMode.INCREMENT.getDescription() + " , not start full check.");
         if (STARTED.compareAndSet(false, true)) {
@@ -82,7 +83,7 @@ public class CheckServiceImpl implements CheckService {
             }
         } else {
             String message = String.format(CheckMessage.CHECK_SERVICE_START_ERROR, checkMode.getDescription());
-            LogUtils.error(log, message);
+            LogUtils.error(log, "{}" + message, ErrorCode.CHECK_START_ERROR);
             cleanCheck();
             throw new CheckingException(message);
         }

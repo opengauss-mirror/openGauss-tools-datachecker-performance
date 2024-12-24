@@ -16,6 +16,7 @@
 package org.opengauss.datachecker.extract.task;
 
 import org.apache.logging.log4j.Logger;
+import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.extract.task.functional.SimpleTypeHandler;
 import org.opengauss.datachecker.extract.task.functional.SimpleTypeHandlerFactory;
@@ -89,11 +90,12 @@ public abstract class ResultSetHandler {
                     columnLabel = rsmd.getColumnLabel(columnIdx);
                     result.put(columnLabel, convert(resultSet, columnIdx, rsmd));
                 } catch (SQLException ex) {
-                    LOG.error(" Convert data [{}:{}] {} error ", tableName, columnLabel, ex.getMessage(), ex);
+                    LOG.error("{} Convert data [{}:{}] {} error ", ErrorCode.EXECUTE_QUERY_SQL, tableName, columnLabel,
+                        ex.getMessage(), ex);
                 }
             });
         } catch (SQLException ex) {
-            LOG.error(" parse data metadata information exception", ex);
+            LOG.error("{} parse data metadata information exception", ErrorCode.EXECUTE_QUERY_SQL, ex);
         }
         return result;
     }

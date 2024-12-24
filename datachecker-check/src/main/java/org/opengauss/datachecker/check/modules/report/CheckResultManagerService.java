@@ -29,6 +29,7 @@ import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.check.CheckPartition;
 import org.opengauss.datachecker.common.entry.common.RepairEntry;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
+import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.common.entry.report.CheckProgress;
 import org.opengauss.datachecker.common.entry.report.CheckSummary;
 import org.opengauss.datachecker.common.util.FileUtils;
@@ -41,6 +42,7 @@ import org.springframework.context.ApplicationContextAware;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
+
 import java.io.File;
 import java.time.LocalDateTime;
 import java.util.LinkedList;
@@ -77,7 +79,7 @@ public class CheckResultManagerService implements ApplicationContextAware {
     /**
      * Add Merkel verification result
      *
-     * @param checkPartition  checkPartition
+     * @param checkPartition checkPartition
      * @param checkDiffResult checkDiffResult
      */
     public void addResult(CheckPartition checkPartition, CheckDiffResult checkDiffResult) {
@@ -92,7 +94,7 @@ public class CheckResultManagerService implements ApplicationContextAware {
     /**
      * Summary of verification results
      *
-     * @param tableName       tableName
+     * @param tableName tableName
      * @param checkDiffResult checkDiffResult
      */
     public void addNoCheckedResult(String tableName, CheckDiffResult checkDiffResult) {
@@ -115,7 +117,7 @@ public class CheckResultManagerService implements ApplicationContextAware {
             reduceFailedRepair(logFilePath, failedList, isOgCompatibility);
             reduceSummary(successList, failedList);
         } catch (Exception exception) {
-            log.error("summaryCheckResult ", exception);
+            log.error("{}summaryCheckResult ", ErrorCode.SUMMARY_CHECK_RESULT, exception);
         } finally {
             checkResultCache.clear();
             noCheckedCache.clear();

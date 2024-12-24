@@ -95,7 +95,7 @@ public class ConnectionMgr {
                 ThreadUtil.sleepCircle(retry);
                 conn = retryToGetConnection(++retry);
             } else {
-                throw exp;
+                throw new ExtractDataAccessException("get connection failed");
             }
         }
         return conn;

@@ -16,6 +16,7 @@
 package org.opengauss.datachecker.extract.task.functional;
 
 import org.apache.logging.log4j.Logger;
+import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.common.util.DateTimeFormatterMap;
 import org.opengauss.datachecker.common.util.HexUtil;
 import org.opengauss.datachecker.common.util.LogUtils;
@@ -623,7 +624,7 @@ public class SimpleTypeHandlerFactory {
                     sb.append(line);
                 }
             } catch (IOException io) {
-                LOG.error("read clobToString error");
+                LOG.error("{}read clobToString error", ErrorCode.EXECUTE_QUERY_SQL);
             } finally {
                 closeBufferedReader(bf);
                 closeReader(reader);
@@ -638,7 +639,7 @@ public class SimpleTypeHandlerFactory {
                 bf.close();
             }
         } catch (IOException e) {
-            LOG.error("close BufferedReader error");
+            LOG.error("{}close BufferedReader error", ErrorCode.EXECUTE_QUERY_SQL);
         }
     }
 
@@ -648,7 +649,7 @@ public class SimpleTypeHandlerFactory {
                 reader.close();
             }
         } catch (IOException e) {
-            LOG.error("close Reader error");
+            LOG.error("{}close Reader error", ErrorCode.EXECUTE_QUERY_SQL);
         }
     }
 

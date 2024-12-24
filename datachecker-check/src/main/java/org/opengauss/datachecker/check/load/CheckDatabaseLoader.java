@@ -19,6 +19,7 @@ import org.opengauss.datachecker.check.client.FeignClientService;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
+import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.common.entry.enums.LowerCaseTableNames;
 import org.opengauss.datachecker.common.entry.extract.Database;
 import org.opengauss.datachecker.common.entry.extract.ExtractConfig;
@@ -55,7 +56,7 @@ public class CheckDatabaseLoader extends AbstractCheckLoader {
         while (retry <= maxRetryTimes && (sourceConfig == null || sinkConfig == null)) {
             sourceConfig = feignClient.getEndpointConfig(Endpoint.SOURCE);
             sinkConfig = feignClient.getEndpointConfig(Endpoint.SINK);
-            LogUtils.error(log, "load database configuration ,retry={}", retry);
+            LogUtils.error(log, "{}load database configuration ,retry={}", ErrorCode.LOAD_DATABASE_CONFIG, retry);
             ThreadUtil.sleepOneSecond();
             retry++;
         }

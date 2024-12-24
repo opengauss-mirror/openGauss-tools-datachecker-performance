@@ -16,6 +16,7 @@
 package org.opengauss.datachecker.extract.config;
 
 import org.apache.logging.log4j.Logger;
+import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.common.entry.enums.ResultEnum;
 import org.opengauss.datachecker.common.exception.*;
 import org.opengauss.datachecker.common.util.LogUtils;
@@ -34,12 +35,13 @@ import javax.servlet.http.HttpServletRequest;
  */
 @RestControllerAdvice
 public class GlobalExtractExceptionHandler extends GlobalCommonExceptionHandler {
-    private static final String MESSAGE_TEMPLATE = "path:{}, queryParam:[{}] , error:";
+    private static final String MESSAGE_TEMPLATE = "{}path:{}, queryParam:[{}] , error:";
     private static final Logger log = LogUtils.getLogger();
+
     /**
      * service ExtractException exception handing
      *
-     * @param request   request
+     * @param request request
      * @param exception exception
      * @return request result
      */
@@ -128,6 +130,6 @@ public class GlobalExtractExceptionHandler extends GlobalCommonExceptionHandler 
     }
 
     private void logError(HttpServletRequest request, ExtractException exception) {
-        log.error(MESSAGE_TEMPLATE, request.getRequestURI(), request.getQueryString(), exception);
+        log.error(MESSAGE_TEMPLATE, ErrorCode.UNKNOWN, request.getRequestURI(), request.getQueryString(), exception);
     }
 }

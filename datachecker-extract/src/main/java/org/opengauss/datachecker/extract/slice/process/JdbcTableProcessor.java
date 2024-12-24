@@ -17,6 +17,7 @@ package org.opengauss.datachecker.extract.slice.process;
 
 import com.alibaba.druid.pool.DruidDataSource;
 import org.apache.logging.log4j.Logger;
+import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.common.entry.extract.SliceExtend;
 import org.opengauss.datachecker.common.exception.ExtractDataAccessException;
 import org.opengauss.datachecker.common.util.LogUtils;
@@ -79,7 +80,7 @@ public class JdbcTableProcessor extends AbstractTableProcessor {
             tableSliceExtend.setCount(tableRowCount);
             feedbackStatus(tableSliceExtend);
         } catch (Exception ex) {
-            log.error("extract", ex);
+            log.error("{}extract table processor error", ErrorCode.EXECUTE_SLICE_PROCESSOR, ex);
             tableSliceExtend.setStatus(-1);
             feedbackStatus(tableSliceExtend);
         } finally {
@@ -132,7 +133,7 @@ public class JdbcTableProcessor extends AbstractTableProcessor {
             tableSliceExtend.setEndOffset(getMaxMaxOffset(maxOffsetList));
             tableSliceExtend.setCount(tableRowCount);
         } catch (SQLException ex) {
-            log.error("jdbc query  {} error : {}", table, ex.getMessage());
+            log.error("{}jdbc query  {} error : {}", ErrorCode.EXECUTE_QUERY_SQL, table, ex.getMessage());
             throw new ExtractDataAccessException();
         } finally {
             jdbcOperation.releaseConnection(connection);
@@ -177,7 +178,7 @@ public class JdbcTableProcessor extends AbstractTableProcessor {
                 log.info("finish {} , {}", table, tableRowCount);
             }
         } catch (SQLException ex) {
-            log.error("jdbc query  {} error : {}", table, ex.getMessage());
+            log.error("{}jdbc query  {} error : {}", ErrorCode.EXECUTE_QUERY_SQL, table, ex.getMessage());
             throw new ExtractDataAccessException();
         } finally {
             jdbcOperation.releaseConnection(connection);

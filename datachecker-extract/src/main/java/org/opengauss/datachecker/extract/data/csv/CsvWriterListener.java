@@ -17,6 +17,7 @@ package org.opengauss.datachecker.extract.data.csv;
 
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.parser.Feature;
+
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.io.input.Tailer;
 import org.apache.commons.io.input.TailerListenerAdapter;
@@ -26,6 +27,7 @@ import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.csv.SliceIndexVo;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
+import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.common.entry.enums.SliceIndexStatus;
 import org.opengauss.datachecker.common.entry.enums.SliceLogType;
 import org.opengauss.datachecker.common.entry.extract.SliceVo;
@@ -97,7 +99,6 @@ public class CsvWriterListener implements CsvListener {
                         return;
                     }
                     logDuplicateCheck.add(contentHash);
-
                     JSONObject writeLog = JSONObject.parseObject(line);
                     if (skipNoInvalidSlice(writeLog)) {
                         LogUtils.warn(log, "writer skip no invalid slice log : {}", line);
@@ -123,7 +124,7 @@ public class CsvWriterListener implements CsvListener {
                     }
                     LogUtils.debug(log, "writer add log : {}", line);
                 } catch (Exception ex) {
-                    LogUtils.error(log, "writer log listener error : {}", line, ex);
+                    LogUtils.error(log, "{}writer log listener error : {}", ErrorCode.CSV_WRITER_LISTENER, line, ex);
                 }
             }
         }, ConfigCache.getCsvLogMonitorInterval(), false);

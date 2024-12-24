@@ -16,6 +16,7 @@
 package org.opengauss.datachecker.common.exception;
 
 import org.apache.logging.log4j.Logger;
+import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.common.util.LogUtils;
 
 import java.util.concurrent.ThreadFactory;
@@ -72,8 +73,9 @@ public class CheckThreadFactory implements ThreadFactory {
  */
 class CheckUncaughtExceptionHandler implements Thread.UncaughtExceptionHandler {
     private static final Logger log = LogUtils.getLogger();
+
     @Override
     public void uncaughtException(Thread thread, Throwable throwable) {
-        log.error("{} exception: ", thread.getName(), throwable);
+        log.error("{}{} exception: ", ErrorCode.UNKNOWN, thread.getName(), throwable);
     }
 }

@@ -26,6 +26,7 @@ import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.check.Difference;
 import org.opengauss.datachecker.common.entry.common.Health;
 import org.opengauss.datachecker.common.entry.common.PointPair;
+import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.common.entry.enums.LowerCaseTableNames;
 import org.opengauss.datachecker.common.entry.extract.PrimaryColumnBean;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
@@ -169,7 +170,7 @@ public abstract class AbstractDataAccessService implements DataAccessService {
                 list.add(resultSet.getString(RS_COL_TABLE_NAME));
             }
         } catch (SQLException esql) {
-            LogUtils.error(log, "adasQueryTableNameList error ", esql);
+            LogUtils.error(log, "{}adasQueryTableNameList error ", ErrorCode.EXECUTE_QUERY_SQL, esql);
         } finally {
             closeConnection(connection);
         }
@@ -198,7 +199,7 @@ public abstract class AbstractDataAccessService implements DataAccessService {
                 list.add(metadata);
             }
         } catch (SQLException esql) {
-            LogUtils.error(log, "adasQueryTablePrimaryColumns error:", esql);
+            LogUtils.error(log, "{}adasQueryTablePrimaryColumns error:", ErrorCode.EXECUTE_QUERY_SQL, esql);
         } finally {
             closeConnection(connection);
         }
@@ -228,7 +229,7 @@ public abstract class AbstractDataAccessService implements DataAccessService {
                 list.add(metadata);
             }
         } catch (SQLException esql) {
-            LogUtils.error(log, "adasQueryTablePrimaryColumns error:", esql);
+            LogUtils.error(log, "{}adasQueryTablePrimaryColumns error:", ErrorCode.EXECUTE_QUERY_SQL, esql);
         } finally {
             closeConnection(connection);
         }
@@ -273,7 +274,7 @@ public abstract class AbstractDataAccessService implements DataAccessService {
                 list.add(metadata);
             }
         } catch (SQLException esql) {
-            LogUtils.error(log, "adasQueryTableMetadataList error: ", esql);
+            LogUtils.error(log, "{}adasQueryTableMetadataList error: ", ErrorCode.EXECUTE_QUERY_SQL, esql);
         } finally {
             closeConnection(connection);
         }
@@ -297,7 +298,7 @@ public abstract class AbstractDataAccessService implements DataAccessService {
                 list.add(resultSet.getString(1));
             }
         } catch (SQLException esql) {
-            LogUtils.error(log, "adasQueryPointList error", esql);
+            LogUtils.error(log, "{}adasQueryPointList error", ErrorCode.EXECUTE_QUERY_SQL, esql);
         }
         LogUtils.debug(log, "adasQueryPointList [{}] cost [{}ms]", sql, DurationUtils.betweenSeconds(start));
         return list;
@@ -317,7 +318,7 @@ public abstract class AbstractDataAccessService implements DataAccessService {
                 list.add(new PointPair(resultSet.getString(1), resultSet.getLong(2)));
             }
         } catch (SQLException esql) {
-            LogUtils.error(log, "adasQueryPointList error", esql);
+            LogUtils.error(log, "{}adasQueryPointList error", ErrorCode.EXECUTE_QUERY_SQL, esql);
         }
         return list;
     }
@@ -337,7 +338,7 @@ public abstract class AbstractDataAccessService implements DataAccessService {
                 result = resultSet.getString(1);
             }
         } catch (SQLException esql) {
-            LogUtils.error(log, "adasQueryOnePoint error", esql);
+            LogUtils.error(log, "{}adasQueryOnePoint error", ErrorCode.EXECUTE_QUERY_SQL, esql);
         }
         LogUtils.debug(log, "adasQueryPointList [{}] cost [{}ms]", sql, DurationUtils.betweenSeconds(start));
         return result;

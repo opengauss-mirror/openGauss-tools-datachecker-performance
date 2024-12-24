@@ -23,6 +23,7 @@ import org.opengauss.datachecker.common.constant.Constants;
 import org.opengauss.datachecker.common.entry.common.CheckPointData;
 import org.opengauss.datachecker.common.entry.common.PointPair;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
+import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.common.entry.enums.SliceStatus;
 import org.opengauss.datachecker.common.entry.extract.BaseSlice;
 import org.opengauss.datachecker.common.entry.extract.Database;
@@ -351,7 +352,8 @@ public class DataExtractServiceImpl implements DataExtractService {
             }
             tableCheckPointCache.remove(tableName);
         } catch (Exception ex) {
-            LogUtils.error(log, "async exec extract tables error {}:{} ", task.getTableName(), ex.getMessage(), ex);
+            LogUtils.error(log, "{}async exec extract tables error {}:{} ", ErrorCode.ASYNC_EXTRACT_TABLE,
+                task.getTableName(), ex.getMessage(), ex);
         }
     }
 
@@ -514,7 +516,7 @@ public class DataExtractServiceImpl implements DataExtractService {
         try {
             checkPointList = autoSliceStatement.getCheckPoint(metadata, sliceSize);
         } catch (Exception ex) {
-            LogUtils.error(log, "getCheckPoint error:", ex);
+            LogUtils.error(log, "{}getCheckPoint error:", ErrorCode.BUILD_SLICE_POINT, ex);
             return new ArrayList<>();
         }
         if (CollectionUtils.isEmpty(checkPointList)) {
@@ -564,7 +566,7 @@ public class DataExtractServiceImpl implements DataExtractService {
                 tableCheckPointCache.put(tableName, List.of());
             }
         } catch (Exception e) {
-            log.error("register check point failed ", e);
+            log.error("{}register check point failed ", ErrorCode.REGISTER_SLICE_POINT, e);
         }
     }
 

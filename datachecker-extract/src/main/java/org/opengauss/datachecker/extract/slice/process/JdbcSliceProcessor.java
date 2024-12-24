@@ -23,6 +23,7 @@ import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.enums.DataBaseType;
+import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.common.entry.extract.SliceExtend;
 import org.opengauss.datachecker.common.entry.extract.SliceVo;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
@@ -98,7 +99,7 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
             }
         } catch (Exception | Error ex) {
             sliceExtend.setStatus(-1);
-            LogUtils.error(log, "table slice [{}] is error", slice.toSimpleString(), ex);
+            LogUtils.error(log, "{}table slice [{}] is error", ErrorCode.EXECUTE_SLICE_PROCESSOR,slice.toSimpleString(), ex);
         } finally {
             LogUtils.info(log, "table slice [{} count {}] is finally   ", slice.toSimpleString(), rowCount.get());
             feedbackStatus(sliceExtend);
@@ -167,7 +168,7 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
             updateExtendSliceOffsetAndCount(sliceExtend, rowCount.get(), offsetList);
             log.info("executeSliceQueryStatementPage : {} async send end", slice.getName());
         } catch (Exception ex) {
-            LogUtils.error(log, "slice [{}] has exception :", slice.getName(), ex);
+            LogUtils.error(log, "{}slice [{}] has exception :",ErrorCode.EXECUTE_SLICE_QUERY, slice.getName(), ex);
             throw new ExtractDataAccessException(ex.getMessage());
         } finally {
             if (sliceSender != null) {
@@ -217,7 +218,7 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
             // 数据发送到异步处理线程中，关闭ps与rs
             ConnectionMgr.close(null, ps, resultSet);
         } catch (Exception ex) {
-            log.error("execute query {}  executionStage: {} error,retry cause : {}", slice.toSimpleString(),
+            log.error("{}execute query {}  executionStage: {} error,retry cause : {}", ErrorCode.EXECUTE_SLICE_QUERY, slice.toSimpleString(),
                 executionStage, ex.getMessage());
             if (Objects.equals(executionStage, ExecutionStage.CLOSE)) {
                 ConnectionMgr.close(null, ps, resultSet);
@@ -229,7 +230,7 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
                     queryParameters.resultSetIdx = rsIdx;
                     startOffset = statementQuery(pageStatement, connection, sliceSender, asyncHandler, queryParameters);
                 } else {
-                    log.error("execute query {} retry {} times error ,cause by ", maskQuery(pageStatement),
+                    log.error("{}execute query {} retry {} times error ,cause by ", ErrorCode.EXECUTE_QUERY_SQL, maskQuery(pageStatement),
                         queryParameters.getRetryTimes(), ex);
                     throw new ExtractDataAccessException(
                         "execute query " + maskQuery(pageStatement) + " retry " + MAX_RETRY_TIMES
@@ -274,7 +275,7 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
             waitToStopAsyncHandlerAndResources(asyncHandler);
             updateExtendSliceOffsetAndCount(sliceExtend, rowCount.get(), offsetList);
         } catch (Exception ex) {
-            LogUtils.error(log, "slice [{}] has exception :", slice.getName(), ex);
+            LogUtils.error(log, "{}slice [{}] has exception :",ErrorCode.EXECUTE_SLICE_QUERY, slice.getName(), ex);
             throw new ExtractDataAccessException(ex.getMessage());
         } finally {
             ConnectionMgr.close(connection, ps, resultSet);

@@ -16,6 +16,7 @@
 package org.opengauss.datachecker.common.exception;
 
 import org.apache.logging.log4j.Logger;
+import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.common.entry.enums.ResultEnum;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.web.Result;
@@ -35,6 +36,7 @@ import javax.servlet.http.HttpServletRequest;
  */
 public class GlobalCommonExceptionHandler {
     private static final Logger log = LogUtils.getLogger();
+
     /**
      * Missing required parameters
      *
@@ -132,10 +134,10 @@ public class GlobalCommonExceptionHandler {
      * Log errors
      *
      * @param request request
-     * @param exp     exception
+     * @param exp exception
      */
     protected void logError(HttpServletRequest request, Exception exp) {
-        log.error("path:{}, queryParam:{}, errorMessage:{}", request.getRequestURI(), request.getQueryString(),
-            exp.getMessage(), exp);
+        log.error("{}path:{}, queryParam:{}, errorMessage:{}", ErrorCode.UNKNOWN, request.getRequestURI(),
+            request.getQueryString(), exp.getMessage(), exp);
     }
 }

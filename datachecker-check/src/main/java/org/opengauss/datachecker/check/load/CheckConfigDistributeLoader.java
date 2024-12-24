@@ -26,6 +26,7 @@ import org.opengauss.datachecker.common.entry.common.GlobalConfig;
 import org.opengauss.datachecker.common.entry.common.Rule;
 import org.opengauss.datachecker.common.entry.csv.CsvPathConfig;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
+import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.common.entry.enums.RuleType;
 import org.opengauss.datachecker.common.entry.extract.Database;
 import org.opengauss.datachecker.common.exception.CheckingException;
@@ -34,6 +35,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -85,8 +87,8 @@ public class CheckConfigDistributeLoader extends AbstractCheckLoader {
             }
             checkEnvironment.addRules(rules);
             LogUtils.info(log, "check service distribute config success.");
-        } catch (Exception ignore) {
-            LogUtils.error(log, "distribute config error: ", ignore);
+        } catch (Exception ex) {
+            LogUtils.error(log, "{}distribute config error: ", ErrorCode.DISPATCH_CONFIG, ex);
             throw new CheckingException("distribute config error");
         }
     }
@@ -96,7 +98,6 @@ public class CheckConfigDistributeLoader extends AbstractCheckLoader {
         globalConfig.setRules(rules);
         globalConfig.setCheckMode(checkMode);
         globalConfig.setProcessPath(checkProperties.getDataPath());
-
         globalConfig.addProperties(ConfigConstants.PROCESS_NO);
         globalConfig.addIntProperties(ConfigConstants.REST_API_PAGE_SIZE);
         globalConfig.addIntProperties(ConfigConstants.MAXIMUM_TOPIC_SIZE);

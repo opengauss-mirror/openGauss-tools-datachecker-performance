@@ -17,6 +17,7 @@ package org.opengauss.datachecker.check;
 
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.check.cmd.CheckCommandLine;
+import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.common.service.CommonCommandLine.CmdOption;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.boot.SpringApplication;
@@ -51,7 +52,7 @@ public class CheckApplication {
                 application.run(args);
             }
         } catch (Throwable er) {
-            log.error("server start has unknown error", er);
+            log.error("{}server start has unknown error", ErrorCode.CHECK_START_ERROR, er);
         }
     }
 }

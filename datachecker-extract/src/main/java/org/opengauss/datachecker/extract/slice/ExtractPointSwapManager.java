@@ -30,6 +30,7 @@ import org.opengauss.datachecker.common.entry.common.CheckPointBean;
 import org.opengauss.datachecker.common.entry.common.CheckPointData;
 import org.opengauss.datachecker.common.entry.common.PointPair;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
+import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.common.util.IdGenerator;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.ThreadUtil;
@@ -108,7 +109,8 @@ public class ExtractPointSwapManager {
             kafkaTemplate.send(topic, key, JSONObject.toJSONString(tmpBean));
         } catch (TimeoutException ex) {
             if (reTryTimes > MAX_RETRY_TIMES) {
-                log.error("send msg to kafka timeout, topic: {} key: {} reTryTimes: {}", topic, key, reTryTimes);
+                log.error("{}send msg to kafka timeout, topic: {} key: {} reTryTimes: {}",
+                    ErrorCode.SEND_SLICE_POINT_TIMEOUT, topic, key, reTryTimes);
             }
             ThreadUtil.sleepLongCircle(++reTryTimes);
             sendMsg(topic, key, tmpBean, reTryTimes);
