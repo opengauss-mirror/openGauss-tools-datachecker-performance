@@ -169,7 +169,7 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
             updateExtendSliceOffsetAndCount(sliceExtend, rowCount.get(), offsetList);
             log.info("executeSliceQueryStatementPage : {} async send end", slice.getName());
         } catch (Exception ex) {
-            LogUtils.error(log, "{}slice [{}] has exception :",ErrorCode.EXECUTE_SLICE_QUERY, slice.getName(), ex);
+            LogUtils.error(log, "{}slice [{}] has exception :", ErrorCode.EXECUTE_SLICE_QUERY, slice.getName(), ex);
             throw new ExtractDataAccessException(ex.getMessage());
         } finally {
             if (sliceSender != null) {
