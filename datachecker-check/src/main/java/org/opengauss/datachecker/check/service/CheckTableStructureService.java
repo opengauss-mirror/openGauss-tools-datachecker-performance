@@ -177,7 +177,7 @@ public class CheckTableStructureService {
                                         .build();
         taskManagerService.refreshTableExtractStatus(tableName, Endpoint.CHECK, -1);
         sliceCheckResultManager.addTableStructureDiffResult(tableName, result);
-        LogUtils.error(log, "compared the field names in table[{}](case ignored) and the result is not match",
+        LogUtils.warn(log, "compared the field names in table[{}](case ignored) and the result is not match",
             tableName);
         return onlyExistEndpoint;
     }

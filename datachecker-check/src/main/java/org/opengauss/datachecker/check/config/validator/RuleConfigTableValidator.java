@@ -19,6 +19,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.check.annotation.TableRule;
 import org.opengauss.datachecker.common.entry.common.Rule;
+import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.common.util.LogUtils;
 
 import javax.validation.ConstraintValidatorContext;
@@ -54,7 +55,8 @@ public class RuleConfigTableValidator implements RuleConfigValidator<TableRule> 
         List<Rule> whiteKeyList = fetchRuleByPredicate(values, rule -> rule.getName().equalsIgnoreCase(RULE_WHITE));
         List<Rule> blackKeyList = fetchRuleByPredicate(values, rule -> rule.getName().equalsIgnoreCase(RULE_BLACK));
         if (CollectionUtils.isNotEmpty(whiteKeyList) && CollectionUtils.isNotEmpty(blackKeyList)) {
-            log.error("RuleConfig of table rule , black rule ={} is invalid rule", blackKeyList);
+            log.error("{}RuleConfig of table rule , black rule ={} is invalid rule", ErrorCode.RULE_CONFIG_ERROR,
+                blackKeyList);
             values.removeAll(blackKeyList);
         }
         List<Rule> rules = filterRepeatBy(values, Rule::getText);

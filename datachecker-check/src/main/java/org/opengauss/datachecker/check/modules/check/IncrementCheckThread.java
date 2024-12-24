@@ -17,6 +17,7 @@ package org.opengauss.datachecker.check.modules.check;
 
 import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
+
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.check.cache.CheckRateCache;
@@ -35,6 +36,7 @@ import org.opengauss.datachecker.common.entry.check.IncrementDataCheckParam;
 import org.opengauss.datachecker.common.entry.check.Pair;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
+import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.common.entry.extract.RowDataHash;
 import org.opengauss.datachecker.common.entry.extract.SourceDataLog;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
@@ -78,7 +80,7 @@ public class IncrementCheckThread extends Thread {
     private final List<Bucket> sourceBucketList = new ArrayList<>();
     private final List<Bucket> sinkBucketList = new ArrayList<>();
     private final DifferencePair<Map<String, RowDataHash>, Map<String, RowDataHash>, Map<String, Pair<Node, Node>>>
-            difference = DifferencePair.of(new HashMap<>(), new HashMap<>(), new HashMap<>());
+        difference = DifferencePair.of(new HashMap<>(), new HashMap<>(), new HashMap<>());
     private final Map<Integer, Pair<Integer, Integer>> bucketNumberDiffMap = new HashMap<>();
     private final QueryRowDataWapper queryRowDataWapper;
     private final CheckResultManagerService checkResultManagerService;
@@ -157,7 +159,7 @@ public class IncrementCheckThread extends Thread {
             checkRateCache.add(buildCheckTable());
             stopWatch.stop();
         } catch (Exception ex) {
-            log.error("check error", ex);
+            log.error("{}check error", ErrorCode.INCREMENT_CHECK_ERROR, ex);
         } finally {
             log.info(" {} check {} ", process, stopWatch.shortSummary());
         }

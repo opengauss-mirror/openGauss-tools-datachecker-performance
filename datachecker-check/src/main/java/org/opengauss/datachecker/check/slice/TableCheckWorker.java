@@ -38,6 +38,7 @@ import org.opengauss.datachecker.common.entry.check.DifferencePair;
 import org.opengauss.datachecker.common.entry.check.Pair;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
+import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.common.entry.extract.*;
 import org.opengauss.datachecker.common.exception.BucketNumberInconsistentException;
 import org.opengauss.datachecker.common.exception.CheckConsumerPollEmptyException;
@@ -104,9 +105,9 @@ public class TableCheckWorker implements Runnable {
             setTableFixedTopic();
             log.info("check table of {}", slice.getName());
             checkedTableSliceByTopicPartition(source, sink);
-        } catch (Exception ignore) {
-            log.error("check table has some error,", ignore);
-            errorMsg = ignore.getMessage();
+        } catch (Exception ex) {
+            log.error("{}check table has some error,", ErrorCode.CHECK_TABLE_EXCEPTION, ex);
+            errorMsg = ex.getMessage();
         } finally {
             refreshSliceCheckProgress();
             checkResult(errorMsg);
@@ -360,14 +361,6 @@ public class TableCheckWorker implements Runnable {
     private void sortBuckets(@NonNull List<Bucket> bucketList) {
         bucketList.sort(Comparator.comparingInt(Bucket::getNumber));
     }
-
-//    private void getSliceDataFromTopicPartition(TopicPartition topicPartition, List<RowDataHash> dataList) {
-//        KafkaConsumerHandler consumer = checkContext.buildKafkaHandler(slice.getTable());
-//        logKafka.debug("create consumer of topic, [{}] : [{}] ", slice.getTable(), topicPartition.toString());
-//        consumer.poolTopicPartitionsData(topicPartition.topic(), topicPartition.partition(), dataList);
-//        consumer.closeConsumer();
-//        logKafka.debug("close consumer of topic, [{}] : [{}] ", slice.getTable(), topicPartition.toString());
-//    }
 
     /**
      * <pre>

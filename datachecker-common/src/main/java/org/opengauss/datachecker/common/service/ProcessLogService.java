@@ -1,12 +1,30 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2024-2024. All rights reserved.
+ *
+ * openGauss is licensed under Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *
+ *           http://license.coscl.org.cn/MulanPSL2
+ *
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+ * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+ * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
+ */
+
 package org.opengauss.datachecker.common.service;
 
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.annotation.JSONType;
+
 import lombok.Data;
 import lombok.experimental.Accessors;
+
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
+import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.common.util.FileUtils;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.stereotype.Service;
@@ -17,6 +35,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
+ * ProcessLogService
+ *
  * @author ：wangchao
  * @date ：Created in 2023/11/17
  * @since ：11
@@ -47,9 +67,9 @@ public class ProcessLogService {
 
     public void saveProcessHistoryLogging(String tableName, int order) {
         ProcessingLog processingLog = new ProcessingLog().setEndpoint(ConfigCache.getEndPoint())
-                                                         .setTable(tableName)
-                                                         .setOrder(order)
-                                                         .setFinishedTime(LocalDateTime.now());
+            .setTable(tableName)
+            .setOrder(order)
+            .setFinishedTime(LocalDateTime.now());
         if (logRootPath == null) {
             logRootPath = ConfigCache.getCheckResult();
         }
@@ -63,19 +83,18 @@ public class ProcessLogService {
 
     private void saveProcessLog(String event) {
         try {
-            String name = ManagementFactory.getRuntimeMXBean()
-                                           .getName();
+            String name = ManagementFactory.getRuntimeMXBean().getName();
             String pid = name.split("@")[0];
             ProcessLog logProcess = new ProcessLog().setEndpoint(ConfigCache.getEndPoint())
-                                                    .setPid(pid)
-                                                    .setEvent(event)
-                                                    .setExecTime(LocalDateTime.now());
+                .setPid(pid)
+                .setEvent(event)
+                .setExecTime(LocalDateTime.now());
             if (logPath == null) {
                 logPath = ConfigCache.getCheckResult() + processLog;
             }
             FileUtils.writeAppendFile(logPath, JSONObject.toJSONString(logProcess) + System.lineSeparator());
         } catch (Exception ex) {
-            log.error("save process log error: {} ", ex.getMessage());
+            log.error("{}save process log error: {} ", ErrorCode.PROCESS_LOG, ex.getMessage());
         }
     }
 

@@ -16,9 +16,11 @@
 package org.opengauss.datachecker.extract.slice.process;
 
 import com.opencsv.CSVReader;
+
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.config.ConfigCache;
+import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.common.entry.extract.SliceExtend;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.exception.ExtractDataAccessException;
@@ -73,7 +75,7 @@ public class CsvTableProcessor extends AbstractTableProcessor {
             sliceExtend.setCount(tableRowCount);
             feedbackStatus(sliceExtend);
         } catch (Exception ex) {
-            log.error("csv table processor ,{} : ", table, ex);
+            log.error("{}csv table processor ,{} : ", ErrorCode.CSV_TABLE_PROCESSOR, table, ex);
             sliceExtend.setStatus(-1);
             feedbackStatus(sliceExtend);
         } finally {
@@ -88,7 +90,8 @@ public class CsvTableProcessor extends AbstractTableProcessor {
         return tableSliceExtend;
     }
 
-    private long executeQueryStatement(TableMetadata tableMetadata, List<Path> tablePaths, SliceExtend tableSliceExtend) throws IOException {
+    private long executeQueryStatement(TableMetadata tableMetadata, List<Path> tablePaths, SliceExtend tableSliceExtend)
+        throws IOException {
         final LocalDateTime start = LocalDateTime.now();
         long tableRowCount = 0;
         SliceKafkaAgents kafkaAgents = context.createSliceFixedKafkaAgents(topic, table);
@@ -129,12 +132,12 @@ public class CsvTableProcessor extends AbstractTableProcessor {
                         minOffsetList.add(getMinOffset(offsetList));
                         maxOffsetList.add(getMaxOffset(offsetList));
                     } catch (Exception ex) {
-                        log.error("csvTranslateAndSend error: ", ex);
+                        log.error("{}csvTranslateAndSend error: ", ErrorCode.CSV_TABLE_PROCESSOR, ex);
                     }
                     tableRowCount += rowCount;
                     log.info("finish [{}-{}] {} , [{} : {}]", tableFileCount, i, slicePath, rowCount, tableRowCount);
                 } catch (Exception ex) {
-                    log.error("CSVReader exception: ", ex);
+                    log.error("{}CSVReader exception: ", ErrorCode.CSV_TABLE_PROCESSOR, ex);
                 }
                 memoryOperations.release();
             }
@@ -142,7 +145,7 @@ public class CsvTableProcessor extends AbstractTableProcessor {
             tableSliceExtend.setEndOffset(getMaxMaxOffset(maxOffsetList));
             tableSliceExtend.setCount(tableRowCount);
         } catch (Exception ex) {
-            log.error("jdbc query  {} error : {}", table, ex.getMessage());
+            log.error("{}jdbc query  {} error : {}", ErrorCode.CSV_TABLE_PROCESSOR, table, ex.getMessage());
             throw new ExtractDataAccessException();
         } finally {
             log.info("query slice [{}] cost [{}] milliseconds", table,

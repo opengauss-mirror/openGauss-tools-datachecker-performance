@@ -16,6 +16,7 @@
 package org.opengauss.datachecker.common.thread;
 
 import org.apache.logging.log4j.Logger;
+import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicLong;
@@ -47,9 +48,10 @@ public class DiscardOldestPolicy extends ThreadPoolExecutor.DiscardOldestPolicy 
         final long rejectedSum = discard.incrementAndGet();
         if (rejectedSum == 1 || rejectedSum % 100 == 0) {
             logger.error(
-                "DiscardOldest worker, had discard {}, taskCount {}, completedTaskCount {}, largestPoolSize {},"
-                    + "getPoolSize {}, getActiveCount {}, getThreadName {}", rejectedSum, e.getTaskCount(),
-                e.getCompletedTaskCount(), e.getLargestPoolSize(), e.getPoolSize(), e.getActiveCount(), threadName);
+                "{}DiscardOldest worker, had discard {}, taskCount {}, completedTaskCount {}, largestPoolSize {},"
+                    + "getPoolSize {}, getActiveCount {}, getThreadName {}", ErrorCode.UNKNOWN, rejectedSum,
+                e.getTaskCount(), e.getCompletedTaskCount(), e.getLargestPoolSize(), e.getPoolSize(),
+                e.getActiveCount(), threadName);
         }
     }
 }

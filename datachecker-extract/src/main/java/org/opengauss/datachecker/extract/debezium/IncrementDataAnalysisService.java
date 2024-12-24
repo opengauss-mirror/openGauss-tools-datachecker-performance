@@ -19,6 +19,7 @@ import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.Logger;
+import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.common.entry.extract.SourceDataLog;
 import org.opengauss.datachecker.common.exception.ExtractException;
 import org.opengauss.datachecker.common.service.ShutdownService;
@@ -118,11 +119,11 @@ public class IncrementDataAnalysisService {
                 dataNumAnalysis();
                 dataTimeAnalysis();
             } catch (FeignException ex) {
-                log.error("check service has an error occurred. {}", ex.getMessage());
+                log.error("{}check service has an error occurred. {}", ErrorCode.INCREMENT_LISTENER, ex.getMessage());
             } catch (ExtractException ex) {
-                log.error("peek debezium topic record offset has an error occurred,", ex);
+                log.error("{}peek debezium topic record has an error occurred", ErrorCode.INCREMENT_LISTENER, ex);
             } catch (Exception ex) {
-                log.error("unkown error occurred,", ex);
+                log.error("{}unkown error occurred,", ErrorCode.INCREMENT_LISTENER, ex);
             }
         };
     }

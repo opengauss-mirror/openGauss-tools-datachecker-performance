@@ -24,6 +24,7 @@ import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.common.DataAccessParam;
 import org.opengauss.datachecker.common.entry.common.PointPair;
 import org.opengauss.datachecker.common.entry.enums.DataBaseType;
+import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.util.LogUtils;
@@ -187,7 +188,7 @@ public class CheckPoint {
         try (Connection connection = getConnection()) {
             return dataAccessService.queryUnionFirstPrimaryCheckPointList(connection, param);
         } catch (Exception e) {
-            log.error("query union primary check point list error {}", e.getMessage());
+            log.error("{}query union primary check point list error {}", ErrorCode.BUILD_SLICE_POINT, e.getMessage());
         }
         return new LinkedList<>();
     }

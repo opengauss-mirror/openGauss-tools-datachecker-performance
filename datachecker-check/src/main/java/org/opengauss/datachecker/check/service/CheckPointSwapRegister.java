@@ -31,6 +31,7 @@ import org.opengauss.datachecker.common.entry.common.CheckPointBean;
 import org.opengauss.datachecker.common.entry.common.CheckPointData;
 import org.opengauss.datachecker.common.entry.common.PointPair;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
+import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -133,7 +134,7 @@ public class CheckPointSwapRegister {
                                 sendCheckPointData.getTableName(), sendCheckPointData.getCheckPointList().size());
                         }
                     } catch (Exception ex) {
-                        log.error("checkPointSender error {}", table, ex);
+                        log.error("{}checkPointSender error {}", ErrorCode.DISPATCH_SLICE_POINT, table, ex);
                     }
                 }
             }
@@ -145,7 +146,8 @@ public class CheckPointSwapRegister {
             kafkaTemplate.send(topic, key, JSONObject.toJSONString(tmpBean));
         } catch (TimeoutException ex) {
             if (reTryTimes > MAX_RETRY_TIMES) {
-                log.error("send msg to kafka timeout, topic: {} key: {} reTryTimes: {}", topic, key, reTryTimes);
+                log.error("{}send msg to kafka timeout, topic: {} key: {} reTryTimes: {}",
+                    ErrorCode.SEND_SLICE_POINT_TIMEOUT, topic, key, reTryTimes);
             }
             ThreadUtil.sleepLongCircle(++reTryTimes);
             sendMsg(topic, key, tmpBean, reTryTimes);
@@ -176,7 +178,7 @@ public class CheckPointSwapRegister {
                     if (Objects.equals("java.lang.InterruptedException", ex.getMessage())) {
                         LogUtils.warn(log, "kafka consumer stop by Interrupted");
                     } else {
-                        LogUtils.error(log, "pollSwapPoint ", ex);
+                        LogUtils.error(log, "{}pollSwapPoint ", ErrorCode.POLL_SLICE_POINT, ex);
                     }
                 }
             }

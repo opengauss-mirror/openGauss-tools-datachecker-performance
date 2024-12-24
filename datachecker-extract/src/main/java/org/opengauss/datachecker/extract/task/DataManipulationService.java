@@ -19,6 +19,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.constant.Constants.InitialCapacity;
 import org.opengauss.datachecker.common.entry.enums.DataBaseType;
+import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.RowDataHash;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
@@ -218,7 +219,7 @@ public class DataManipulationService {
                     (rs, rowNum) -> resultSetHashHandler.handler(MetaDataUtil.getTablePrimaryColumns(tableMetadata),
                             MetaDataUtil.getTableColumns(tableMetadata), handler.putOneResultSetToMap(rs)));
         } catch (Exception e) {
-            log.error("Failed to query data", e);
+            log.error("{}Failed to query data", ErrorCode.EXECUTE_QUERY_SQL, e);
             throw new ExtractDataAccessException("Failed to query data " + e.getMessage());
         }
     }

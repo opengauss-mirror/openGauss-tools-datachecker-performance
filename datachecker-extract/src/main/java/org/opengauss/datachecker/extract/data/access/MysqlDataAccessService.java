@@ -18,6 +18,7 @@ package org.opengauss.datachecker.extract.data.access;
 import org.opengauss.datachecker.common.entry.common.DataAccessParam;
 import org.opengauss.datachecker.common.entry.common.Health;
 import org.opengauss.datachecker.common.entry.common.PointPair;
+import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.common.entry.enums.LowerCaseTableNames;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.PrimaryColumnBean;
@@ -176,7 +177,7 @@ public class MysqlDataAccessService extends AbstractDataAccessService {
                 return LowerCaseTableNames.codeOf(value);
             }
         } catch (SQLException ex) {
-            log.error("queryLowerCaseTableNames error", ex);
+            log.error("{}queryLowerCaseTableNames error", ErrorCode.EXECUTE_QUERY_SQL, ex);
         } finally {
             closeConnection(connection);
         }

@@ -27,6 +27,7 @@ import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.check.config.KafkaConsumerConfig;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
+import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.common.util.IdGenerator;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.kafka.KafkaException;
@@ -35,6 +36,7 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.PreDestroy;
 import javax.annotation.Resource;
+
 import java.time.Duration;
 import java.util.Collection;
 import java.util.HashMap;
@@ -108,7 +110,7 @@ public class KafkaServiceManager {
             LogUtils.info(log, "init and listTopics  admin client [{}]",
                 ConfigCache.getValue(ConfigConstants.KAFKA_SERVERS));
         } catch (ExecutionException | InterruptedException ex) {
-            log.error("kafka Client link exception: ", ex);
+            log.error("{}kafka Client link exception: ", ErrorCode.KAFKA_INIT_CONFIG, ex);
             throw new KafkaException("kafka Client link exception");
         }
         kafkaConsumerConfig.initConsumerPool();
@@ -130,7 +132,7 @@ public class KafkaServiceManager {
             LogUtils.info(log, "create topic success , name= [{}] numPartitions = [{}]", topic, partitions);
             return true;
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
-            LogUtils.error(log, "create tioic error : ", e);
+            LogUtils.error(log, "{}create topic error : ", ErrorCode.KAFKA_CREATE_TOPIC, e);
             return false;
         }
     }

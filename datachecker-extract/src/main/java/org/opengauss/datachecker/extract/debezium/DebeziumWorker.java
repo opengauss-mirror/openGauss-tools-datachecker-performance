@@ -20,6 +20,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.constant.WorkerSwitch;
+import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.opengauss.datachecker.extract.config.KafkaConsumerConfig;
@@ -89,7 +90,8 @@ public class DebeziumWorker implements Runnable {
                 try {
                     debeziumConsumerListener.listen(record);
                 } catch (Exception ex) {
-                    log.error("DebeziumWorker unknown error, message,{},{}", record.toString(), ex);
+                    log.error("{}DebeziumWorker unknown error, message,{},{}", ErrorCode.DEBEZIUM_WORKER,
+                        record.toString(), ex);
                 }
             }
             POLL_BATCH_COUNT.addAndGet(records.count());

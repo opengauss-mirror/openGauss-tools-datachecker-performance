@@ -20,6 +20,7 @@ import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.common.DataAccessParam;
 import org.opengauss.datachecker.common.entry.common.Health;
 import org.opengauss.datachecker.common.entry.common.PointPair;
+import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.common.entry.enums.LowerCaseTableNames;
 import org.opengauss.datachecker.common.entry.enums.OgCompatibility;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
@@ -224,7 +225,7 @@ public class OpgsDataAccessService extends AbstractDataAccessService {
                 result.put(name, setting);
             }
         } catch (SQLException ex) {
-            log.error("queryLowerCaseTableNames error", ex);
+            log.error("{}queryLowerCaseTableNames error", ErrorCode.EXECUTE_QUERY_SQL, ex);
         } finally {
             closeConnection(connection);
         }

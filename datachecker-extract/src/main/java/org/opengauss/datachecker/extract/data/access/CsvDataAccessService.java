@@ -18,6 +18,7 @@ package org.opengauss.datachecker.extract.data.access;
 import com.alibaba.fastjson.JSONObject;
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
+
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.config.ConfigCache;
@@ -28,6 +29,7 @@ import org.opengauss.datachecker.common.entry.common.PointPair;
 import org.opengauss.datachecker.common.entry.csv.CsvTableColumnMeta;
 import org.opengauss.datachecker.common.entry.csv.CsvTableMeta;
 import org.opengauss.datachecker.common.entry.enums.ColumnKey;
+import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.common.entry.enums.LowerCaseTableNames;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.PrimaryColumnBean;
@@ -39,6 +41,7 @@ import org.opengauss.datachecker.extract.util.CsvUtil;
 import org.springframework.jdbc.core.RowMapper;
 
 import javax.sql.DataSource;
+
 import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -80,7 +83,7 @@ public class CsvDataAccessService implements DataAccessService {
         Path pathOfTables = ConfigCache.getCsvMetadataTablesPath();
         try {
             if (Files.notExists(pathOfTables)) {
-                log.error("csv metadata info does not exist {}", pathOfTables);
+                log.error("{}csv metadata info does not exist {}", ErrorCode.CSV_METADATA_NOT_EXIST, pathOfTables);
                 throw new CsvDataAccessException("csv metadata load failed");
             }
             Path reader = Path.of(ConfigCache.getReader());
@@ -94,7 +97,7 @@ public class CsvDataAccessService implements DataAccessService {
                     .map(CsvTableMeta::getTable)
                     .collect(Collectors.toList());
         } catch (IOException e) {
-            log.error("load table name of csv exception : ", e);
+            log.error("{}load table name of csv exception : ", ErrorCode.CSV_LOAD_METADATA_ERROR, e);
             throw new ExtractDataAccessException("load table name of csv exception");
         }
     }
@@ -109,7 +112,8 @@ public class CsvDataAccessService implements DataAccessService {
             throw new CsvDataAccessException("file " + reader.toString() + " is not exist");
         }
         if (!CsvUtil.checkExistAndWait(pathOfTables) || !CsvUtil.checkExistAndWait(pathOfColumns)) {
-            log.error("csv metadata info does not exist {} or {}", pathOfTables, pathOfColumns);
+            log.error("{}csv metadata info does not exist {} or {}", ErrorCode.CSV_METADATA_NOT_EXIST, pathOfTables,
+                pathOfColumns);
             throw new CsvDataAccessException("file " + reader.toString() + " is not exist");
         }
         try {
@@ -137,7 +141,7 @@ public class CsvDataAccessService implements DataAccessService {
                                 .collect(Collectors.toList()));
                     });
         } catch (IOException e) {
-            log.error("load table name of csv exception : ", e);
+            log.error("{}load table name of csv exception : ", ErrorCode.CSV_LOAD_METADATA_ERROR, e);
             throw new ExtractDataAccessException("load table name of csv exception");
         }
         return new ArrayList<>(tableMetadataMap.values());

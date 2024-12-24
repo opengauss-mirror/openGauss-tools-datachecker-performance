@@ -23,6 +23,7 @@ import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.enums.ColumnKey;
+import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.PrimaryColumnBean;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
@@ -197,7 +198,7 @@ public class BaseDataService {
         String tableName = tableMetadata.getTableName();
         final List<ColumnsMetaData> columns = dataAccessService.queryTableColumnsMetaData(tableName);
         if (CollectionUtils.isEmpty(columns)) {
-            LogUtils.error(log, "table columns metadata is null ,{}", tableName);
+            LogUtils.error(log, "{}table columns metadata is null ,{}", ErrorCode.TABLE_COL_NULL, tableName);
             return;
         }
         List<PrimaryColumnBean> tempPrimaryColumnBeans = primaryColumnBeans;

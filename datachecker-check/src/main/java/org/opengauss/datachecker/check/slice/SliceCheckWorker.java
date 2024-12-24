@@ -40,6 +40,7 @@ import org.opengauss.datachecker.common.entry.check.DifferencePair;
 import org.opengauss.datachecker.common.entry.check.Pair;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
+import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.common.entry.extract.ConditionLimit;
 import org.opengauss.datachecker.common.entry.extract.RowDataHash;
 import org.opengauss.datachecker.common.entry.extract.SliceExtend;
@@ -140,9 +141,9 @@ public class SliceCheckWorker implements Runnable {
             } else {
                 compareNoMerkleTree(sourceTuple, sinkTuple);
             }
-        } catch (Exception ignore) {
-            LogUtils.error(LOGGER, "check table has some error,", ignore);
-            errorMsg = ignore.getMessage();
+        } catch (Exception ex) {
+            LogUtils.error(LOGGER, "{}check table has some error,", ErrorCode.CHECK_SLICE_EXCEPTION, ex);
+            errorMsg = ex.getMessage();
         } finally {
             try {
                 refreshSliceCheckProgress();
@@ -150,7 +151,8 @@ public class SliceCheckWorker implements Runnable {
                 cleanCheckThreadEnvironment();
                 finishedSliceCheck(slice);
             } catch (Exception exception) {
-                LogUtils.error(LOGGER, "refresh check {} error:", slice.getName(), exception);
+                LogUtils.error(LOGGER, "{}refresh check {} error:", ErrorCode.CHECK_SLICE_EXCEPTION, slice.getName(),
+                    exception);
             }
             LogUtils.info(LOGGER, "check slice of {} end.", slice.getName());
         }
