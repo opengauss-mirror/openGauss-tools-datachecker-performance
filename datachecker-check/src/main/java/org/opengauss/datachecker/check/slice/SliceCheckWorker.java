@@ -141,9 +141,9 @@ public class SliceCheckWorker implements Runnable {
             } else {
                 compareNoMerkleTree(sourceTuple, sinkTuple);
             }
-        } catch (Exception ignore) {
-            LogUtils.error(LOGGER, "{}check table has some error,", ErrorCode.CHECK_SLICE_EXCEPTION, ignore);
-            errorMsg = ignore.getMessage();
+        } catch (Exception ex) {
+            LogUtils.error(LOGGER, "{}check table has some error,", ErrorCode.CHECK_SLICE_EXCEPTION, ex);
+            errorMsg = ex.getMessage();
         } finally {
             try {
                 refreshSliceCheckProgress();
@@ -151,7 +151,8 @@ public class SliceCheckWorker implements Runnable {
                 cleanCheckThreadEnvironment();
                 finishedSliceCheck(slice);
             } catch (Exception exception) {
-                LogUtils.error(LOGGER, "{}refresh check {} error:",ErrorCode.CHECK_SLICE_EXCEPTION, slice.getName(), exception);
+                LogUtils.error(LOGGER, "{}refresh check {} error:", ErrorCode.CHECK_SLICE_EXCEPTION, slice.getName(),
+                    exception);
             }
             LogUtils.info(LOGGER, "check slice of {} end.", slice.getName());
         }

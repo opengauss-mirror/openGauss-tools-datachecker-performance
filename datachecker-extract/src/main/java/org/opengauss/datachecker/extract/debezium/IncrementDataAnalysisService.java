@@ -121,9 +121,9 @@ public class IncrementDataAnalysisService {
             } catch (FeignException ex) {
                 log.error("{}check service has an error occurred. {}", ErrorCode.INCREMENT_LISTENER, ex.getMessage());
             } catch (ExtractException ex) {
-                log.error("{}peek debezium topic record offset has an error occurred,",ErrorCode.INCREMENT_LISTENER, ex);
+                log.error("{}peek debezium topic record has an error occurred", ErrorCode.INCREMENT_LISTENER, ex);
             } catch (Exception ex) {
-                log.error("{}unkown error occurred,", ErrorCode.INCREMENT_LISTENER,ex);
+                log.error("{}unkown error occurred,", ErrorCode.INCREMENT_LISTENER, ex);
             }
         };
     }

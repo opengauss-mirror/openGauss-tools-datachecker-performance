@@ -391,7 +391,8 @@ public class SliceCheckResultManager {
                 final List<String> updateRepairs = feignClient.buildRepairStatementUpdateDml(Endpoint.SOURCE, update);
                 appendLogFile(repairFile, updateRepairs);
             } catch (Exception ex) {
-                log.error("{}build table {} update repair file {}", ErrorCode.BUILD_DIFF_STATEMENT, tableFailed.getTable(), ex.getMessage());
+                log.error("{}build table {} update repair file {}", ErrorCode.BUILD_DIFF_STATEMENT,
+                    tableFailed.getTable(), ex.getMessage());
             }
         }
     }
@@ -418,7 +419,8 @@ public class SliceCheckResultManager {
                 final List<String> insertRepairs = feignClient.buildRepairStatementInsertDml(Endpoint.SOURCE, insert);
                 appendLogFile(repairFile, insertRepairs);
             } catch (Exception ex) {
-                log.error("{}build table {} insert repair file {}", ErrorCode.BUILD_DIFF_STATEMENT, tableFailed.getTable(), ex.getMessage());
+                log.error("{}build table {} insert repair file {}", ErrorCode.BUILD_DIFF_STATEMENT,
+                    tableFailed.getTable(), ex.getMessage());
             }
         }
     }
@@ -433,7 +435,8 @@ public class SliceCheckResultManager {
                 final List<String> deleteRepairs = feignClient.buildRepairStatementDeleteDml(Endpoint.SOURCE, delete);
                 appendLogFile(repairFile, deleteRepairs);
             } catch (Exception ex) {
-                log.error("{}build table {} delete repair file {}", ErrorCode.BUILD_DIFF_STATEMENT, tableFailed.getTable(), ex.getMessage());
+                log.error("{}build table {} delete repair file {}", ErrorCode.BUILD_DIFF_STATEMENT,
+                    tableFailed.getTable(), ex.getMessage());
             }
         }
     }

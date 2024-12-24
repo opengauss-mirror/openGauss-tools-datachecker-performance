@@ -106,7 +106,7 @@ public class TableCheckWorker implements Runnable {
             log.info("check table of {}", slice.getName());
             checkedTableSliceByTopicPartition(source, sink);
         } catch (Exception ex) {
-            log.error("{}check table has some error,", ErrorCode.CHECK_TABLE_EXCEPTION,ex);
+            log.error("{}check table has some error,", ErrorCode.CHECK_TABLE_EXCEPTION, ex);
             errorMsg = ex.getMessage();
         } finally {
             refreshSliceCheckProgress();

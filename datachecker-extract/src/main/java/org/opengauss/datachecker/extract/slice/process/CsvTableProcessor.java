@@ -132,7 +132,7 @@ public class CsvTableProcessor extends AbstractTableProcessor {
                         minOffsetList.add(getMinOffset(offsetList));
                         maxOffsetList.add(getMaxOffset(offsetList));
                     } catch (Exception ex) {
-                        log.error("{}csvTranslateAndSend error: ",ErrorCode.CSV_TABLE_PROCESSOR, ex);
+                        log.error("{}csvTranslateAndSend error: ", ErrorCode.CSV_TABLE_PROCESSOR, ex);
                     }
                     tableRowCount += rowCount;
                     log.info("finish [{}-{}] {} , [{} : {}]", tableFileCount, i, slicePath, rowCount, tableRowCount);
@@ -145,7 +145,7 @@ public class CsvTableProcessor extends AbstractTableProcessor {
             tableSliceExtend.setEndOffset(getMaxMaxOffset(maxOffsetList));
             tableSliceExtend.setCount(tableRowCount);
         } catch (Exception ex) {
-            log.error("{}jdbc query  {} error : {}",ErrorCode.CSV_TABLE_PROCESSOR,table, ex.getMessage());
+            log.error("{}jdbc query  {} error : {}", ErrorCode.CSV_TABLE_PROCESSOR, table, ex.getMessage());
             throw new ExtractDataAccessException();
         } finally {
             log.info("query slice [{}] cost [{}] milliseconds", table,

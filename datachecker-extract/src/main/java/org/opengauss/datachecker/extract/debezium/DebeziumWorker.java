@@ -90,7 +90,8 @@ public class DebeziumWorker implements Runnable {
                 try {
                     debeziumConsumerListener.listen(record);
                 } catch (Exception ex) {
-                    log.error("{}DebeziumWorker unknown error, message,{},{}", ErrorCode.DEBEZIUM_WORKER, record.toString(), ex);
+                    log.error("{}DebeziumWorker unknown error, message,{},{}", ErrorCode.DEBEZIUM_WORKER,
+                        record.toString(), ex);
                 }
             }
             POLL_BATCH_COUNT.addAndGet(records.count());

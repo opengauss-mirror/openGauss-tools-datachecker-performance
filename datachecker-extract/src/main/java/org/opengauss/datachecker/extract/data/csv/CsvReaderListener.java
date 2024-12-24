@@ -95,7 +95,8 @@ public class CsvReaderListener implements CsvListener {
                     MapUtils.put(readerSliceMap, slice.getTable(), slice);
                     LogUtils.debug(log,"reader add log : {}", line);
                 } catch (Exception ex) {
-                    LogUtils.error(log,"{}reader log listener error : " , ErrorCode.CSV_READER_LISTENER, ex.getMessage());
+                    LogUtils.error(log, "{}reader log listener error : ", ErrorCode.CSV_READER_LISTENER,
+                        ex.getMessage());
                 }
             }
         }, ConfigCache.getCsvLogMonitorInterval(), false);

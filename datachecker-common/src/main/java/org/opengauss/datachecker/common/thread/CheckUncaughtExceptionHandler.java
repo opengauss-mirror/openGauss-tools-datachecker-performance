@@ -39,7 +39,7 @@ public class CheckUncaughtExceptionHandler implements Thread.UncaughtExceptionHa
 
     @Override
     public void uncaughtException(Thread t, Throwable e) {
-        String msg = String.format("getException from thread: %s,exceptionName:%s", t.getName(), e.getMessage());
-        logger.error("{}"+msg, ErrorCode.UNKNOWN, e);
+        String msg = String.format("{}getException from thread: %s,exceptionName:%s", t.getName(), e.getMessage());
+        logger.error(msg, ErrorCode.UNKNOWN, e);
     }
 }
