@@ -16,14 +16,12 @@
 package org.opengauss.datachecker.extract.dao;
 
 import lombok.extern.slf4j.Slf4j;
-
 import org.apache.ibatis.datasource.unpooled.UnpooledDataSource;
 import org.apache.ibatis.executor.Executor;
 import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.session.TransactionIsolationLevel;
 import org.apache.ibatis.transaction.Transaction;
 import org.apache.ibatis.transaction.jdbc.JdbcTransaction;
-import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.extract.data.mapper.MysqlMetaDataMapper;
 import org.springframework.core.env.PropertySource;
 import org.springframework.core.io.ClassPathResource;
