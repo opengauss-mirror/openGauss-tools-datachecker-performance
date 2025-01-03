@@ -172,7 +172,11 @@ public class OpgsDataAccessService extends AbstractDataAccessService {
 
     @Override
     public boolean tableExistsRows(String tableName) {
-        return opgsMetaDataMapper.tableExistsRows(properties.getSchema(), tableName);
+        return opgsMetaDataMapper.tableExistsRows(properties.getSchema(), compatibilityEscape(tableName));
+    }
+
+    private String compatibilityEscape(String tableName) {
+        return isOgCompatibilityB ? "`" + tableName + "`" : "\"" + tableName + "\"";
     }
 
     @Override

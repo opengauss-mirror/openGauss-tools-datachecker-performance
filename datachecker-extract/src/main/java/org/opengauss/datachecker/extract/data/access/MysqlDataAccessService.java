@@ -126,7 +126,11 @@ public class MysqlDataAccessService extends AbstractDataAccessService {
 
     @Override
     public boolean tableExistsRows(String tableName) {
-        return mysqlMetaDataMapper.tableExistsRows(properties.getSchema(), tableName);
+        return mysqlMetaDataMapper.tableExistsRows(properties.getSchema(), escape(tableName));
+    }
+
+    private String escape(String tableName) {
+        return "`" + tableName + "`";
     }
 
     @Override

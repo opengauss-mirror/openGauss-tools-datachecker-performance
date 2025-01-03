@@ -127,8 +127,13 @@ public class SliceCheckContext {
         sliceCheckResultManager.addTableStructureDiffResult(slice, result);
     }
 
+    /**
+     * save process history logging
+     *
+     * @param slice slice
+     */
     public void saveProcessHistoryLogging(SliceVo slice) {
-        processLogService.saveProcessHistoryLogging(slice.getTable(), slice.getNo());
+        processLogService.saveProcessHistoryLogging(slice.getTable(), slice.getTotal(), slice.getNo());
     }
 
     /**

@@ -18,7 +18,9 @@ package org.opengauss.datachecker.extract.load;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
+import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.common.entry.extract.MetadataLoadProcess;
+import org.opengauss.datachecker.common.exception.ExtractException;
 import org.opengauss.datachecker.common.service.ShutdownService;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.ThreadUtil;
@@ -57,20 +59,25 @@ public class ExtractEnvironmentContext {
      */
     @Async
     public void loadDatabaseMetaData() {
-        LogUtils.info(log,"extract database loader start");
-        metaDataService.loadMetaDataOfSchemaCache();
-        ThreadUtil.sleepHalfSecond();
-        MetadataLoadProcess metadataLoadProcess = metaDataService.getMetadataLoadProcess();
-        while (!metadataLoadProcess.isLoadSuccess()) {
-            LogUtils.info(log,"extract service load  table meta ={}", metadataLoadProcess.getLoadCount());
-            ThreadUtil.sleepOneSecond();
-            metadataLoadProcess = metaDataService.getMetadataLoadProcess();
+        LogUtils.info(log, "extract database loader start");
+        try {
+            metaDataService.loadMetaDataOfSchemaCache();
+            ThreadUtil.sleepHalfSecond();
+            MetadataLoadProcess metadataLoadProcess = metaDataService.getMetadataLoadProcess();
+            while (!metadataLoadProcess.isLoadSuccess()) {
+                LogUtils.info(log, "extract service load  table meta ={}", metadataLoadProcess.getLoadCount());
+                ThreadUtil.sleepOneSecond();
+                metadataLoadProcess = metaDataService.getMetadataLoadProcess();
+            }
+            Endpoint endPoint = ConfigCache.getEndPoint();
+            checkingFeignClient.refreshLoadMetadataCompleted(endPoint);
+            if (metaDataService.mdsIsCheckTableEmpty(false)) {
+                shutdownService.shutdown("load table metadata cache is empty!");
+            }
+            LogUtils.info(log, "extract service load table meta ={} , success", metadataLoadProcess.getLoadCount());
+        } catch (ExtractException ex) {
+            LogUtils.error(log, "{}extract database loader error", ErrorCode.CHECK_START_ERROR, ex);
+            shutdownService.shutdown("extract database loader error!");
         }
-        Endpoint endPoint = ConfigCache.getEndPoint();
-        checkingFeignClient.refreshLoadMetadataCompleted(endPoint);
-        if (metaDataService.mdsIsCheckTableEmpty(false)) {
-            shutdownService.shutdown("load table metadata cache is empty!");
-        }
-        LogUtils.info(log,"extract service load table meta ={} , success", metadataLoadProcess.getLoadCount());
     }
 }
