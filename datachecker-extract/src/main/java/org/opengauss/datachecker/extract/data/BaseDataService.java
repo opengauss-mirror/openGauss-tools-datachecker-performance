@@ -27,11 +27,13 @@ import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.PrimaryColumnBean;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
+import org.opengauss.datachecker.common.exception.ExtractException;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.LongHashFunctionWrapper;
 import org.opengauss.datachecker.extract.cache.MetaDataCache;
 import org.opengauss.datachecker.extract.data.access.DataAccessService;
 import org.opengauss.datachecker.extract.service.RuleAdapterService;
+import org.springframework.jdbc.BadSqlGrammarException;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -105,15 +107,20 @@ public class BaseDataService {
      * @return table name list
      */
     public List<TableMetadata> bdsQueryTableMetadataList() {
-        List<TableMetadata> metadataList = dataAccessService.dasQueryTableMetadataList();
-        return metadataList.stream().filter(meta -> {
-            boolean isChecking = ruleAdapterService.filterTableByRule(meta.getTableName());
-            if (isChecking) {
-                tableNameList.add(meta.getTableName());
-            }
-            meta.setExistTableRows(dataAccessService.tableExistsRows(meta.getTableName()));
-            return isChecking;
-        }).collect(Collectors.toList());
+        try {
+            List<TableMetadata> metadataList = dataAccessService.dasQueryTableMetadataList();
+            return metadataList.stream().filter(meta -> {
+                boolean isChecking = ruleAdapterService.filterTableByRule(meta.getTableName());
+                if (isChecking) {
+                    tableNameList.add(meta.getTableName());
+                }
+                meta.setExistTableRows(dataAccessService.tableExistsRows(meta.getTableName()));
+                return isChecking;
+            }).collect(Collectors.toList());
+        } catch (BadSqlGrammarException ex) {
+            log.error("{}query table metadata list error {}", ErrorCode.EXECUTE_QUERY_SQL, ex.getMessage());
+            throw new ExtractException("query table metadata list error " + ex.getMessage());
+        }
     }
 
     /**

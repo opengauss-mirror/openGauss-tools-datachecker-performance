@@ -65,9 +65,17 @@ public class ProcessLogService {
 
     }
 
-    public void saveProcessHistoryLogging(String tableName, int order) {
+    /**
+     * save process history logging
+     *
+     * @param tableName table name
+     * @param size slice size
+     * @param order slice order
+     */
+    public void saveProcessHistoryLogging(String tableName, int size, int order) {
         ProcessingLog processingLog = new ProcessingLog().setEndpoint(ConfigCache.getEndPoint())
             .setTable(tableName)
+            .setSize(size)
             .setOrder(order)
             .setFinishedTime(LocalDateTime.now());
         if (logRootPath == null) {
@@ -110,11 +118,12 @@ public class ProcessLogService {
 
     @Data
     @Accessors(chain = true)
-    @JSONType(orders = {"endpoint", "table", "order", "finishedTime"})
+    @JSONType(orders = {"endpoint", "table", "size", "order", "finishedTime"})
     class ProcessingLog {
         Endpoint endpoint;
         String table;
         int order;
+        int size;
         LocalDateTime finishedTime;
     }
 }

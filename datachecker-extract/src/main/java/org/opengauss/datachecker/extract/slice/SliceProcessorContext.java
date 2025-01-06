@@ -68,8 +68,13 @@ public class SliceProcessorContext {
     private ThreadPoolTaskExecutor sliceSendExecutor;
     private SliceStatusFeedbackService sliceStatusFeedbackService;
 
+    /**
+     * save processing
+     *
+     * @param slice slice
+     */
     public void saveProcessing(SliceVo slice) {
-        processLogService.saveProcessHistoryLogging(slice.getTable(), slice.getNo());
+        processLogService.saveProcessHistoryLogging(slice.getTable(), slice.getTotal(), slice.getNo());
     }
 
     /**
