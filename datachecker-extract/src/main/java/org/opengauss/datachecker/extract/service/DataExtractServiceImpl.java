@@ -536,8 +536,8 @@ public class DataExtractServiceImpl implements DataExtractService {
                 registerCheckPoint(task, endpoint);
             });
             LogUtils.info(log, "tableRegisterCheckPoint finished");
-            long count = taskList.stream().filter(task -> task.getTableMetadata().isExistTableRows()).count();
-            while (tableCheckPointCache.tableCount() != count) {
+            // 该出增加空表过滤逻辑，导致检查点注册线程不能终止。迁移失败，导致目标端数据为空，或者源端表迁移完成后，数据清空
+            while (tableCheckPointCache.tableCount() != taskList.size()) {
                 ThreadUtil.sleepHalfSecond();
             }
             checkPointManager.close();

@@ -99,10 +99,18 @@ public class SliceCheckEventHandler {
         sliceCheckContext.addCheckResult(checkEvent.getSlice(), result);
     }
 
+    /**
+     * check table is empty
+     * source or sink any one is not empty, then table is not empty;
+     * source and sink both are empty, then table is empty
+     *
+     * @param tableName table name
+     * @return table has any rows
+     */
     private boolean checkTableHasRows(String tableName) {
         TableMetadata sourceMeta = metaDataManager.getTableMetadata(Endpoint.SOURCE, tableName);
         TableMetadata sinkMeta = metaDataManager.getTableMetadata(Endpoint.SINK, tableName);
-        return sourceMeta.isExistTableRows() && sinkMeta.isExistTableRows();
+        return sourceMeta.isExistTableRows() || sinkMeta.isExistTableRows();
     }
 
     /**
