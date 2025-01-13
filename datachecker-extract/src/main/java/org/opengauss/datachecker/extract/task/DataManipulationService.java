@@ -36,7 +36,6 @@ import org.opengauss.datachecker.extract.util.MetaDataUtil;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
-import org.springframework.util.StopWatch;
 
 import javax.annotation.Resource;
 import java.util.Comparator;
@@ -236,27 +235,20 @@ public class DataManipulationService {
      * @return Table structure hash
      */
     public TableMetadataHash queryTableMetadataHash(String tableName) {
-        StopWatch stopWatch = new StopWatch("TableMetadataHash");
-        stopWatch.start(tableName);
         final TableMetadataHash tableMetadataHash = new TableMetadataHash();
-        final List<String> allTableNames = metaDataService.queryAllTableNames();
         tableMetadataHash.setTableName(tableName);
-        allTableNames.stream()
-                .filter(table -> table.equalsIgnoreCase(tableName))
-                .findFirst()
-                .ifPresentOrElse(table -> {
-                    List<ColumnsMetaData> columnsMetaData = metaDataService.queryTableColumnMetaDataOfSchema(tableName);
-                    StringBuffer buffer = new StringBuffer();
-                    columnsMetaData.sort(Comparator.comparing(ColumnsMetaData::getOrdinalPosition));
-                    columnsMetaData.forEach(column -> {
-                        buffer.append(column.getColumnName()).append(column.getOrdinalPosition());
-                    });
-                    tableMetadataHash.setTableHash(HASH_UTIL.hashBytes(buffer.toString()));
-                }, () -> {
-                    tableMetadataHash.setTableHash(-1L);
-                });
-        stopWatch.stop();
-        LogUtils.debug(log, stopWatch.prettyPrint());
+        TableMetadata tableMetadata = dataAccessService.queryTableMetadata(tableName);
+        if (Objects.nonNull(tableMetadata)) {
+            List<ColumnsMetaData> columnsMetaData = metaDataService.queryTableColumnMetaDataOfSchema(tableName);
+            StringBuffer buffer = new StringBuffer();
+            columnsMetaData.sort(Comparator.comparing(ColumnsMetaData::getOrdinalPosition));
+            columnsMetaData.forEach(column -> {
+                buffer.append(column.getColumnName()).append(column.getOrdinalPosition());
+            });
+            tableMetadataHash.setTableHash(HASH_UTIL.hashBytes(buffer.toString()));
+        } else {
+            tableMetadataHash.setTableHash(-1L);
+        }
         return tableMetadataHash;
     }
 }
