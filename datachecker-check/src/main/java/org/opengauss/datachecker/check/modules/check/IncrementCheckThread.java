@@ -554,6 +554,9 @@ public class IncrementCheckThread extends Thread {
             builder.keyDeleteSet(difference.getOnlyOnRight().keySet());
         }
         CheckDiffResult result = builder.build();
+        if (!isTableStructureEquals) {
+            log.error("{}checked table structure failed, [{}]", ErrorCode.TABLE_STRUCTURE, tableName);
+        }
         checkResultManagerService.addResult(new CheckPartition(tableName, 0), result);
     }
 
