@@ -115,10 +115,17 @@ public class SliceCheckResultManager {
         addTableStructureDiffResult(slice.getTable(), result);
     }
 
+    /**
+     * add table structure diff result
+     *
+     * @param table table
+     * @param result result
+     */
     public void addTableStructureDiffResult(String table, CheckDiffResult result) {
         if (tableStructureResult.containsKey(table)) {
             return;
         }
+        log.error("{}checked table structure failed, [{}]", ErrorCode.TABLE_STRUCTURE, table);
         tableStructureResult.put(table, result);
         failedTableCount++;
         CheckFailed failed = translateCheckFailed(List.of(), List.of(result));
