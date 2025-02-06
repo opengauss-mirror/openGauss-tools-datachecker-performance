@@ -16,6 +16,7 @@
 package org.opengauss.datachecker.extract.slice;
 
 import org.apache.logging.log4j.Logger;
+import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.common.entry.extract.SliceExtend;
 import org.opengauss.datachecker.common.util.LogUtils;
@@ -89,7 +90,8 @@ public class SliceStatusFeedbackService {
                             ThreadUtil.sleepOneSecond();
                         }
                     } else {
-                        LogUtils.debug(log, "feedback slice status of table [{}]", sliceExt);
+                        sliceExt.setEndpoint(ConfigCache.getEndPoint());
+                        LogUtils.info(log, "feedback slice status of table [{}]", sliceExt);
                         checkingClient.refreshRegisterSlice(sliceExt);
                     }
                 } catch (Exception ex) {

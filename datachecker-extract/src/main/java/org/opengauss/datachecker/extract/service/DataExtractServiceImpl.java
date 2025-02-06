@@ -371,7 +371,6 @@ public class DataExtractServiceImpl implements DataExtractService {
         slice.setExistTableRows(tableMetadata.isExistTableRows());
         sliceRegister.batchRegister(List.of(slice));
         BeanUtils.copyProperties(slice, sliceExtend);
-        ThreadUtil.sleepOneSecond();
         sliceProcessorContext.feedbackStatus(sliceExtend);
         log.info("add empty table slice task feedback status: {}->{}", tableName, sliceExtend.getStatus());
     }
