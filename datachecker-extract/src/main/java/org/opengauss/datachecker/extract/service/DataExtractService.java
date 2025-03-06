@@ -43,7 +43,7 @@ public interface DataExtractService {
      * @param processNo processNo
      * @return Specify the construction extraction task set under processno
      * @throws ProcessMultipleException The current instance is executing the data extraction service
-     *                                  and cannot restart the new verification.
+     * and cannot restart the new verification.
      */
     PageExtract buildExtractTaskAllTables(String processNo) throws ProcessMultipleException;
 
@@ -60,7 +60,7 @@ public interface DataExtractService {
      *
      * @param taskList taskList
      * @throws ProcessMultipleException The current instance is executing the data extraction service
-     *                                  and cannot restart the new verification.
+     * and cannot restart the new verification.
      */
     void dispatchSinkExtractTaskPage(List<ExtractTask> taskList) throws ProcessMultipleException;
 
@@ -88,7 +88,7 @@ public interface DataExtractService {
     /**
      * Query table data
      *
-     * @param tableName       tableName
+     * @param tableName tableName
      * @param compositeKeySet compositeKeySet
      * @return Primary key corresponds to table data
      */
@@ -106,9 +106,25 @@ public interface DataExtractService {
      * PK list data is specified in the query table, and hash is used for secondary verification data query
      *
      * @param dataLog dataLog
-     * @return row data hash
+     * @return queryId
      */
-    List<RowDataHash> querySecondaryCheckRowData(SourceDataLog dataLog);
+    String querySecondaryCheckRowDataAsync(SourceDataLog dataLog);
+
+    /**
+     * Query the data of the secondary check task by queryId
+     *
+     * @param queryId queryId
+     * @return RowDataHash
+     */
+    List<RowDataHash> querySecondaryCheckRowDataByQueryId(String queryId);
+
+    /**
+     * Query the status of the secondary check task by queryId
+     *
+     * @param queryId queryId
+     * @return true or false
+     */
+    boolean querySecondaryCheckRowDataStatusByQueryId(String queryId);
 
     /**
      * Get the current endpoint configuration information

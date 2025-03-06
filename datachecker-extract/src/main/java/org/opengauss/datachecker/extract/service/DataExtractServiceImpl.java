@@ -36,6 +36,7 @@ import org.opengauss.datachecker.common.entry.extract.SliceVo;
 import org.opengauss.datachecker.common.entry.extract.SourceDataLog;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.entry.extract.TableMetadataHash;
+import org.opengauss.datachecker.common.exception.ExtractException;
 import org.opengauss.datachecker.common.exception.ProcessMultipleException;
 import org.opengauss.datachecker.common.exception.TableNotExistException;
 import org.opengauss.datachecker.common.exception.TaskNotFoundException;
@@ -64,9 +65,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.lang.NonNull;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StopWatch;
 
+import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 
 import java.util.ArrayList;
@@ -78,7 +80,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -95,7 +101,7 @@ import static org.opengauss.datachecker.common.constant.DynamicTpConstant.EXTRAC
 @Service
 public class DataExtractServiceImpl implements DataExtractService {
     private static final Logger log = LogUtils.getLogger(DataExtractService.class);
-
+    private static final int INC_QUERY_PAGE_SIE = 200;
     /**
      * Maximum number of sleeps of threads executing data extraction tasks
      */
@@ -107,6 +113,9 @@ public class DataExtractServiceImpl implements DataExtractService {
     private static final String PROCESS_NO_RESET = "0";
     private static final String TASK_NAME_PREFIX = "extract_task_";
     private static final int SINGLE_SLICE_NUM = 1;
+
+    private final Map<String, List<RowDataHash>> rowDataHashMap = new ConcurrentHashMap<>();
+    private final BlockingQueue<String> fetchedRowDataQueue = new LinkedBlockingQueue<>();
 
     /**
      * After the service is started, the {code atomicProcessNo} attribute will be initialized,
@@ -135,6 +144,8 @@ public class DataExtractServiceImpl implements DataExtractService {
     private TableCheckPointCache tableCheckPointCache;
     @Resource
     private DynamicThreadPoolManager dynamicThreadPoolManager;
+    @Resource
+    private ThreadPoolTaskExecutor sliceSendExecutor;
     @Resource
     private SliceRegister sliceRegister;
     @Resource
@@ -600,28 +611,65 @@ public class DataExtractServiceImpl implements DataExtractService {
         return dataManipulationService.queryTableMetadataHash(tableName);
     }
 
-    /**
-     * PK list data is specified in the query table, and hash is used for secondary verification data query
-     *
-     * @param dataLog data log
-     * @return row data hash
-     */
+    @PostConstruct
+    private void incrementRowDataHashCacheMonitor() {
+        sliceSendExecutor.submit(() -> {
+            Thread.currentThread().setName("IncFetchedMonitor");
+            String queryId = "";
+            try {
+                queryId = fetchedRowDataQueue.take();
+                ThreadUtil.sleep(1000);
+                rowDataHashMap.remove(queryId);
+                log.info("queryId:{} rowDataHashCache size:{}", queryId, rowDataHashMap.size());
+            } catch (InterruptedException e) {
+                log.debug("ignore queryId:{} InterruptedException ", queryId);
+            }
+        });
+    }
+
     @Override
-    public List<RowDataHash> querySecondaryCheckRowData(SourceDataLog dataLog) {
-        final String tableName = dataLog.getTableName();
-        StopWatch stopWatch = new StopWatch("endpoint - query row data");
-        final List<String> compositeKeys = dataLog.getCompositePrimaryValues();
-        stopWatch.start("query " + tableName + " metadata");
-        final TableMetadata metadata = metaDataService.getMetaDataOfSchemaByCache(tableName);
-        stopWatch.stop();
-        if (Objects.isNull(metadata)) {
-            throw new TableNotExistException(tableName);
-        }
-        stopWatch.start("query " + tableName + " " + compositeKeys.size());
-        List<RowDataHash> result = dataManipulationService.queryColumnHashValues(tableName, compositeKeys, metadata);
-        stopWatch.stop();
-        log.debug("endpoint - query row data - {}", stopWatch.prettyPrint());
-        return result;
+    public String querySecondaryCheckRowDataAsync(SourceDataLog dataLog) {
+        String queryId = UUID.randomUUID().toString();
+        sliceSendExecutor.submit(() -> {
+            Thread.currentThread().setName("IncAsyncQuery");
+            final String tableName = dataLog.getTableName();
+            log.info("queryId:{} start async check data query | table:{}", queryId, tableName);
+            try {
+                final List<String> compositeKeys = dataLog.getCompositePrimaryValues();
+                final TableMetadata metadata = metaDataService.getMetaDataOfSchemaByCache(tableName);
+                if (Objects.isNull(metadata)) {
+                    throw new TableNotExistException(tableName);
+                }
+                List<RowDataHash> result = new ArrayList<>();
+                for (int i = 0; i < compositeKeys.size(); i += INC_QUERY_PAGE_SIE) {
+                    int toIndex = Math.min(i + INC_QUERY_PAGE_SIE, compositeKeys.size());
+                    List<String> pageKeys = compositeKeys.subList(i, toIndex);
+                    List<RowDataHash> pageResult = dataManipulationService.queryColumnHashValues(tableName, pageKeys,
+                        metadata);
+                    result.addAll(pageResult);
+                    log.debug("queryId:{} processed {}/{} records", queryId, toIndex, compositeKeys.size());
+                }
+                rowDataHashMap.put(queryId, result);
+            } catch (ExtractException e) {
+                log.error("queryId:[{}] Async check data query failed | table:{} | keys:{} | error: ", queryId,
+                    tableName, dataLog.getCompositePrimaryValues(), e);
+            }
+        });
+        return queryId;
+    }
+
+    @Override
+    public List<RowDataHash> querySecondaryCheckRowDataByQueryId(String queryId) {
+        List<RowDataHash> rowDataHashes = rowDataHashMap.get(queryId);
+        fetchedRowDataQueue.add(queryId);
+        log.info("queryId:{} fetched check row data ", queryId);
+        return rowDataHashes;
+    }
+
+    @Override
+    public boolean querySecondaryCheckRowDataStatusByQueryId(String queryId) {
+        log.info("queryId:{} status {}", queryId, rowDataHashMap.containsKey(queryId));
+        return rowDataHashMap.containsKey(queryId);
     }
 
     @Override

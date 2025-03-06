@@ -170,46 +170,36 @@ public class ExtractFallbackFactory implements FallbackFactory<ExtractFeignClien
         }
 
         /**
-         * querySourceCheckRowData
+         * Query the hash value of the row data of the table;
+         * query is async, and the result is returned query id
          *
-         * @param dataLog data Log
-         * @return error
+         * @param dataLog dataLog
+         * @return query id
          */
         @Override
-        public Result<List<RowDataHash>> querySourceCheckRowData(SourceDataLog dataLog) {
+        public Result<String> queryCheckRowDataAsync(SourceDataLog dataLog) {
             return Result.error("Remote call failed");
         }
 
         /**
-         * querySinkCheckRowData
+         * query check row data async status
          *
-         * @param dataLog data Log
-         * @return error
+         * @param queryId query id
+         * @return query status
          */
         @Override
-        public Result<List<RowDataHash>> querySinkCheckRowData(SourceDataLog dataLog) {
+        public Result<Boolean> queryCheckRowDataAsyncStatus(String queryId) {
             return Result.error("Remote call failed");
         }
 
         /**
-         * querySourceSecondaryCheckRowData
+         * query check row data async data
          *
-         * @param dataLog data Log
-         * @return error
+         * @param queryId query id
+         * @return row data list
          */
         @Override
-        public Result<List<RowDataHash>> querySourceSecondaryCheckRowData(SourceDataLog dataLog) {
-            return Result.error("Remote call failed");
-        }
-
-        /**
-         * querySinkSecondaryCheckRowData
-         *
-         * @param dataLog data Log
-         * @return error
-         */
-        @Override
-        public Result<List<RowDataHash>> querySinkSecondaryCheckRowData(SourceDataLog dataLog) {
+        public Result<List<RowDataHash>> queryCheckRowDataAsyncData(String queryId) {
             return Result.error("Remote call failed");
         }
 

@@ -185,40 +185,32 @@ public interface ExtractFeignClient {
     Result<TableMetadataHash> querySinkTableMetadataHash(@RequestParam(name = "tableName") String tableName);
 
     /**
-     * Extract incremental log data records
+     * Query the hash value of the row data of the table;
+     * query is async, and the result is returned query id
      *
-     * @param dataLog data Log
-     * @return Return extraction results
+     * @param dataLog dataLog
+     * @return query id
      */
-    @PostMapping("/extract/source/data/row/hash")
-    Result<List<RowDataHash>> querySourceCheckRowData(@RequestBody SourceDataLog dataLog);
+    @PostMapping("/extract/data/row/hash/async")
+    Result<String> queryCheckRowDataAsync(@RequestBody SourceDataLog dataLog);
 
     /**
-     * Extract incremental log data records
+     * query check row data async status
      *
-     * @param dataLog data Log
-     * @return Return extraction results
+     * @param queryId query id
+     * @return query status
      */
-    @PostMapping("/extract/sink/data/row/hash")
-    Result<List<RowDataHash>> querySinkCheckRowData(@RequestBody SourceDataLog dataLog);
+    @PostMapping("/extract/data/row/hash/async/status")
+    Result<Boolean> queryCheckRowDataAsyncStatus(@RequestParam(name = "queryId") String queryId);
 
     /**
-     * Extract incremental log data records
+     * query check row data async data
      *
-     * @param dataLog data Log
-     * @return Return extraction results
+     * @param queryId query id
+     * @return row data list
      */
-    @PostMapping("/extract/source/secondary/data/row/hash")
-    Result<List<RowDataHash>> querySourceSecondaryCheckRowData(@RequestBody SourceDataLog dataLog);
-
-    /**
-     * Extract incremental log data records
-     *
-     * @param dataLog data Log
-     * @return Return extraction results
-     */
-    @PostMapping("/extract/sink/secondary/data/row/hash")
-    Result<List<RowDataHash>> querySinkSecondaryCheckRowData(@RequestBody SourceDataLog dataLog);
+    @PostMapping("/extract/data/row/hash/async/data")
+    Result<List<RowDataHash>> queryCheckRowDataAsyncData(@RequestParam(name = "queryId") String queryId);
 
     /**
      * Get the current endpoint configuration information
