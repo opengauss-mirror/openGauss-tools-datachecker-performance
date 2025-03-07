@@ -438,7 +438,7 @@ public class IncrementCheckThread extends Thread {
     private void buildSecondaryCheckBucket(Endpoint endpoint, SourceDataLog dataLog, List<Bucket> bucketList) {
         StopWatch rowDataSecQueryWatch = new StopWatch("check sec query row data " + endpoint);
         rowDataSecQueryWatch.start(dataLog.getTableName() + " " + dataLog.getCompositePrimaryValues().size());
-        List<RowDataHash> dataList = queryRowDataWapper.querySecondaryCheckRowData(endpoint, dataLog);
+        List<RowDataHash> dataList = queryRowDataWapper.queryCheckRowData(endpoint, dataLog);
         rowDataSecQueryWatch.stop();
         LogUtils.debug(log, "query sec row data cost: {}", rowDataSecQueryWatch.shortSummary());
         buildBucket(dataList, endpoint, bucketList);

@@ -218,51 +218,37 @@ public class ExtractController {
     }
 
     /**
-     * queries data corresponding to a specified primary key value in a table
-     * and performs hash for verification data query.
+     * Query the hash value of the row data of the table;
+     * query is async, and the result is returned query id
      *
-     * @param dataLog data change logs
-     * @return row data hash
+     * @param dataLog dataLog
+     * @return query id
      */
-    @PostMapping("/extract/source/data/row/hash")
-    Result<List<RowDataHash>> querySourceCheckRowData(@RequestBody SourceDataLog dataLog) {
-        return Result.success(dataExtractService.querySecondaryCheckRowData(dataLog));
+    @PostMapping("/extract/data/row/hash/async")
+    Result<String> queryCheckRowDataAsync(@RequestBody SourceDataLog dataLog) {
+        return Result.success(dataExtractService.querySecondaryCheckRowDataAsync(dataLog));
     }
 
     /**
-     * queries data corresponding to a specified primary key value in a table
-     * and performs hash for verification data query.
+     * query check row data async status
      *
-     * @param dataLog data change logs
-     * @return row data hash
+     * @param queryId query id
+     * @return query status
      */
-    @PostMapping("/extract/sink/data/row/hash")
-    Result<List<RowDataHash>> querySinkCheckRowData(@RequestBody SourceDataLog dataLog) {
-        return Result.success(dataExtractService.querySecondaryCheckRowData(dataLog));
+    @PostMapping("/extract/data/row/hash/async/status")
+    Result<Boolean> queryCheckRowDataAsyncStatus(@RequestParam(name = "queryId") String queryId) {
+        return Result.success(dataExtractService.querySecondaryCheckRowDataStatusByQueryId(queryId));
     }
 
     /**
-     * queries data corresponding to a specified primary key value in a table
-     * and performs hash for secondary verification data query.
+     * query check row data async data
      *
-     * @param dataLog data change logs
-     * @return row data hash
+     * @param queryId query id
+     * @return row data list
      */
-    @PostMapping("/extract/source/secondary/data/row/hash")
-    Result<List<RowDataHash>> querySourceSecondaryCheckRowData(@RequestBody SourceDataLog dataLog) {
-        return Result.success(dataExtractService.querySecondaryCheckRowData(dataLog));
-    }
-
-    /**
-     * queries data corresponding to a specified primary key value in a table
-     * and performs hash for secondary verification data query.
-     *
-     * @param dataLog data change logs
-     * @return row data hash
-     */
-    @PostMapping("/extract/sink/secondary/data/row/hash")
-    Result<List<RowDataHash>> querySinkSecondaryCheckRowData(@RequestBody SourceDataLog dataLog) {
-        return Result.success(dataExtractService.querySecondaryCheckRowData(dataLog));
+    @PostMapping("/extract/data/row/hash/async/data")
+    Result<List<RowDataHash>> queryCheckRowDataAsyncData(@RequestParam(name = "queryId") String queryId) {
+        return Result.success(dataExtractService.querySecondaryCheckRowDataByQueryId(queryId));
     }
 
     /**

@@ -155,7 +155,7 @@ public class IncrementManagerService {
             if (INC_LOG_QUEUE.isEmpty()) {
                 feignClientService.resumeIncrementMonitor();
                 LogUtils.warn(log, "resume increment monitor, because the inc-log-queue is empty !");
-                ThreadUtil.sleepSecond(60);
+                ThreadUtil.sleepSecond(5);
             } else {
                 feignClientService.pauseIncrementMonitor();
                 LogUtils.warn(log, "pause increment monitor, because the inc-log-queue is not empty !");

@@ -15,6 +15,8 @@
 
 package org.opengauss.datachecker.extract.task;
 
+import cn.hutool.core.util.ArrayUtil;
+
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.constant.Constants.InitialCapacity;
@@ -24,13 +26,14 @@ import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.RowDataHash;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.entry.extract.TableMetadataHash;
-import org.opengauss.datachecker.common.exception.ExtractDataAccessException;
+import org.opengauss.datachecker.common.exception.ExtractException;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.LongHashFunctionWrapper;
 import org.opengauss.datachecker.extract.config.ExtractProperties;
 import org.opengauss.datachecker.extract.data.access.DataAccessService;
 import org.opengauss.datachecker.extract.dml.DmlBuilder;
 import org.opengauss.datachecker.extract.dml.SelectDmlBuilder;
+import org.opengauss.datachecker.extract.resource.ConnectionMgr;
 import org.opengauss.datachecker.extract.service.MetaDataService;
 import org.opengauss.datachecker.extract.util.MetaDataUtil;
 import org.springframework.beans.factory.annotation.Value;
@@ -38,11 +41,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
 import javax.annotation.Resource;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * DML  Data operation service realizes dynamic query of data
@@ -70,32 +80,36 @@ public class DataManipulationService {
     /**
      * queryColumnValues
      *
-     * @param tableName     tableName
+     * @param tableName tableName
      * @param compositeKeys compositeKeys
      * @param tableMetadata tableMetadata
      * @return query result
      */
     public List<RowDataHash> queryColumnHashValues(String tableName, List<String> compositeKeys,
-                                                   TableMetadata tableMetadata) {
+        TableMetadata tableMetadata) {
         Assert.isTrue(Objects.nonNull(tableMetadata), "Abnormal table metadata , failed to build select SQL");
         final List<ColumnsMetaData> primaryMetas = tableMetadata.getPrimaryMetas();
-
         Assert.isTrue(!CollectionUtils.isEmpty(primaryMetas),
-                "The metadata of the table primary is abnormal, , failed to build select SQL");
+            "The metadata of the table primary is abnormal, , failed to build select SQL");
         final SelectDmlBuilder dmlBuilder = new SelectDmlBuilder(databaseType, tableMetadata.isOgCompatibilityB());
         // Single primary key table data query
         if (primaryMetas.size() == 1) {
             final ColumnsMetaData primaryData = primaryMetas.get(0);
-            String querySql = dmlBuilder.dataBaseType(databaseType).schema(extractProperties.getSchema())
-                    .columns(tableMetadata.getColumnsMetas()).tableName(tableName)
-                    .conditionPrimary(primaryData).build();
+            String querySql = dmlBuilder.dataBaseType(databaseType)
+                .schema(extractProperties.getSchema())
+                .columns(tableMetadata.getColumnsMetas())
+                .tableName(tableName)
+                .conditionPrimary(primaryData)
+                .build();
             return queryColumnValuesSinglePrimaryKey(querySql, compositeKeys, tableMetadata);
         } else {
             // Compound primary key table data query
-
-            String querySql = dmlBuilder.dataBaseType(databaseType).schema(extractProperties.getSchema())
-                    .columns(tableMetadata.getColumnsMetas()).tableName(tableName)
-                    .conditionCompositePrimary(primaryMetas).build();
+            String querySql = dmlBuilder.dataBaseType(databaseType)
+                .schema(extractProperties.getSchema())
+                .columns(tableMetadata.getColumnsMetas())
+                .tableName(tableName)
+                .conditionCompositePrimary(primaryMetas)
+                .build();
             List<Object[]> batchParam = dmlBuilder.conditionCompositePrimaryValue(primaryMetas, compositeKeys);
             return queryColumnValuesByCompositePrimary(querySql, batchParam, tableMetadata);
         }
@@ -104,31 +118,35 @@ public class DataManipulationService {
     /**
      * queryColumnValues
      *
-     * @param tableName     tableName
+     * @param tableName tableName
      * @param compositeKeys compositeKeys
-     * @param metadata      tableMetadata
+     * @param metadata tableMetadata
      * @return query result
      */
     public List<Map<String, String>> queryColumnValues(String tableName, List<String> compositeKeys,
-                                                       TableMetadata metadata) {
-        Assert.isTrue(Objects.nonNull(metadata),
-                "Abnormal table metadata information, failed to build select SQL");
+        TableMetadata metadata) {
+        Assert.isTrue(Objects.nonNull(metadata), "Abnormal table metadata information, failed to build select SQL");
         final List<ColumnsMetaData> primaryMetas = metadata.getPrimaryMetas();
-
         Assert.isTrue(!CollectionUtils.isEmpty(primaryMetas),
-                "The metadata of the table primary is abnormal, failed to build select SQL");
+            "The metadata of the table primary is abnormal, failed to build select SQL");
         final SelectDmlBuilder dmlBuilder = new SelectDmlBuilder(databaseType, metadata.isOgCompatibilityB());
         List<Map<String, String>> resultMap;
         // Single primary key table data query
         if (primaryMetas.size() == 1) {
             final ColumnsMetaData primaryData = primaryMetas.get(0);
-            String querySql = dmlBuilder.schema(extractProperties.getSchema()).columns(metadata.getColumnsMetas())
-                    .tableName(tableName).conditionPrimary(primaryData).build();
+            String querySql = dmlBuilder.schema(extractProperties.getSchema())
+                .columns(metadata.getColumnsMetas())
+                .tableName(tableName)
+                .conditionPrimary(primaryData)
+                .build();
             resultMap = queryColumnValuesSinglePrimaryKey(querySql, compositeKeys);
         } else {
             // Compound primary key table data query
-            String querySql = dmlBuilder.schema(extractProperties.getSchema()).columns(metadata.getColumnsMetas())
-                    .tableName(tableName).conditionCompositePrimary(primaryMetas).build();
+            String querySql = dmlBuilder.schema(extractProperties.getSchema())
+                .columns(metadata.getColumnsMetas())
+                .tableName(tableName)
+                .conditionCompositePrimary(primaryMetas)
+                .build();
             List<Object[]> batchParam = dmlBuilder.conditionCompositePrimaryValue(primaryMetas, compositeKeys);
             resultMap = queryColumnValuesByCompositePrimary(querySql, batchParam);
         }
@@ -139,17 +157,17 @@ public class DataManipulationService {
     /**
      * Compound primary key table data query
      *
-     * @param selectDml     Query SQL
-     * @param batchParam    Compound PK query parameters
+     * @param statement Query SQL
+     * @param batchParam Compound PK query parameters
      * @param tableMetadata tableMetadata
      * @return Query data results
      */
-    private List<RowDataHash> queryColumnValuesByCompositePrimary(String selectDml, List<Object[]> batchParam,
-                                                                  TableMetadata tableMetadata) {
-        // Query the current task data and organize the data
-        HashMap<String, Object> paramMap = new HashMap<>(InitialCapacity.CAPACITY_1);
-        paramMap.put(DmlBuilder.PRIMARY_KEYS, batchParam);
-        return queryColumnValues(selectDml, paramMap, tableMetadata);
+    private List<RowDataHash> queryColumnValuesByCompositePrimary(String statement, List<Object[]> batchParam,
+        TableMetadata tableMetadata) {
+        String compositeKeyValues = batchParam.stream()
+            .map(arr -> "(" + ArrayUtil.join(arr, ",") + ")")
+            .collect(Collectors.joining(","));
+        return statementQuery(statement.replace(":primaryKeys", compositeKeyValues), tableMetadata);
     }
 
     private void rectifyValue(TableMetadata metadata, List<Map<String, String>> resultMap) {
@@ -180,17 +198,14 @@ public class DataManipulationService {
     /**
      * Single primary key table data query
      *
-     * @param selectDml     Query SQL
-     * @param primaryKeys   Query primary key collection
+     * @param statement Query SQL
+     * @param primaryKeys Query primary key collection
      * @param tableMetadata tableMetadata
      * @return Query data results
      */
-    private List<RowDataHash> queryColumnValuesSinglePrimaryKey(String selectDml, List<String> primaryKeys,
-                                                                TableMetadata tableMetadata) {
-        // Query the current task data and organize the data
-        HashMap<String, Object> paramMap = new HashMap<>(InitialCapacity.CAPACITY_1);
-        paramMap.put(DmlBuilder.PRIMARY_KEYS, primaryKeys);
-        return queryColumnValues(selectDml, paramMap, tableMetadata);
+    private List<RowDataHash> queryColumnValuesSinglePrimaryKey(String statement, List<String> primaryKeys,
+        TableMetadata tableMetadata) {
+        return statementQuery(statement.replace(":primaryKeys", String.join(",", primaryKeys)), tableMetadata);
     }
 
     private List<Map<String, String>> queryColumnValuesSinglePrimaryKey(String selectDml, List<String> primaryKeys) {
@@ -200,27 +215,46 @@ public class DataManipulationService {
         return queryColumnValues(selectDml, paramMap);
     }
 
+    private List<RowDataHash> statementQuery(String pageStatement, Map<String, Object> paramMap,
+        TableMetadata tableMetadata) {
+        Object primaryKeys = paramMap.get("primaryKeys");
+        String sqlParam = "";
+        try {
+            if (primaryKeys instanceof List) {
+                List<String> primaryKeyList = (List<String>) primaryKeys;
+                sqlParam = String.join(",", primaryKeyList);
+            } else {
+                throw new IllegalArgumentException("primaryKeys must be List");
+            }
+        } catch (ClassCastException ex) {
+            log.error("{}Failed to query data {}", ErrorCode.EXECUTE_QUERY_SQL, pageStatement, ex);
+            throw new IllegalArgumentException("paramMap must be List");
+        }
+        return statementQuery(pageStatement.replace(":primaryKeys", sqlParam), tableMetadata);
+    }
 
-    /**
-     * Primary key table data query
-     *
-     * @param selectDml Query SQL
-     * @param paramMap  query parameters
-     * @return query result
-     */
-    private List<RowDataHash> queryColumnValues(String selectDml, Map<String, Object> paramMap,
-                                                TableMetadata tableMetadata) {
-        // Use JDBC to query the current task to extract data
+    private List<RowDataHash> statementQuery(String pageStatement, TableMetadata tableMetadata) {
+        List<RowDataHash> result = new ArrayList<>();
+        Connection connection = null;
+        PreparedStatement ps = null;
+        ResultSet resultSet = null;
         try {
             ResultSetHandler handler = resultSetFactory.createHandler(databaseType);
-            log.debug("row data : {} param {}", selectDml, paramMap);
-            return dataAccessService.query(selectDml, paramMap,
-                    (rs, rowNum) -> resultSetHashHandler.handler(MetaDataUtil.getTablePrimaryColumns(tableMetadata),
-                            MetaDataUtil.getTableColumns(tableMetadata), handler.putOneResultSetToMap(rs)));
-        } catch (Exception e) {
-            log.error("{}Failed to query data", ErrorCode.EXECUTE_QUERY_SQL, e);
-            throw new ExtractDataAccessException("Failed to query data " + e.getMessage());
+            List<String> tablePrimaryColumns = MetaDataUtil.getTablePrimaryColumns(tableMetadata);
+            List<String> tableColumns = MetaDataUtil.getTableColumns(tableMetadata);
+            connection = dataAccessService.getDataSource().getConnection();
+            ps = connection.prepareStatement(pageStatement);
+            resultSet = ps.executeQuery();
+            while (resultSet.next()) {
+                Map<String, String> rowResult = handler.putOneResultSetToMap(resultSet);
+                result.add(resultSetHashHandler.handler(tablePrimaryColumns, tableColumns, rowResult));
+            }
+        } catch (SQLException | ExtractException ex) {
+            log.error("execute query error, sql:{}", pageStatement, ex);
+        } finally {
+            ConnectionMgr.close(connection, ps, resultSet);
         }
+        return result;
     }
 
     private List<Map<String, String>> queryColumnValues(String selectDml, Map<String, Object> paramMap) {
