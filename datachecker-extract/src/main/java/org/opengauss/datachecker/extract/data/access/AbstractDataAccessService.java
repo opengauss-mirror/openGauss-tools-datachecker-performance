@@ -284,6 +284,32 @@ public abstract class AbstractDataAccessService implements DataAccessService {
     }
 
     /**
+     * query table metadata
+     *
+     * @param executeQueryStatement executeQueryStatement
+     * @return metadata
+     */
+    public TableMetadata adasQueryTableMetadata(String executeQueryStatement) {
+        Connection connection = getConnection();
+        TableMetadata metadata = null;
+        try (PreparedStatement ps = connection.prepareStatement(executeQueryStatement);
+            ResultSet resultSet = ps.executeQuery()) {
+            while (resultSet.next()) {
+                metadata = new TableMetadata();
+                metadata.setSchema(resultSet.getString(RS_COL_SCHEMA));
+                metadata.setTableName(resultSet.getString(RS_COL_TABLE_NAME));
+                metadata.setTableRows(resultSet.getLong(RS_COL_TABLE_ROWS));
+                metadata.setAvgRowLength(resultSet.getLong(RS_COL_AVG_ROW_LENGTH));
+            }
+        } catch (SQLException esql) {
+            LogUtils.error(log, "{}adasQueryTableMetadata error: ", ErrorCode.EXECUTE_QUERY_SQL, esql);
+        } finally {
+            closeConnection(connection);
+        }
+        return metadata;
+    }
+
+    /**
      * 查询表数据抽样检查点清单
      *
      * @param connection connection

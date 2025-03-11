@@ -37,6 +37,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
@@ -149,7 +150,15 @@ public class OpgsDataAccessService extends AbstractDataAccessService {
 
     @Override
     public TableMetadata queryTableMetadata(String tableName) {
-        return wrapperTableMetadata(opgsMetaDataMapper.queryTableMetadata(properties.getSchema(), tableName));
+        LowerCaseTableNames lowerCaseTableNames = getLowerCaseTableNames();
+        boolean isSensitive = Objects.equals(LowerCaseTableNames.SENSITIVE, lowerCaseTableNames);
+        String colTableName = isSensitive ? "c.relname tableName" : "lower(c.relname) tableName";
+        String queryTable = isSensitive ? tableName : tableName.toLowerCase(Locale.ROOT);
+        String sql = " select n.nspname tableSchema, " + colTableName + ",c.reltuples tableRows, "
+            + " case when c.reltuples>0 then pg_table_size(c.oid)/c.reltuples else 0 end as avgRowLength "
+            + " from pg_class c LEFT JOIN pg_namespace n on n.oid = c.relnamespace where n.nspname='"
+            + properties.getSchema() + "' and c.relkind ='r' and c.relname='" + queryTable + "';";
+        return wrapperTableMetadata(adasQueryTableMetadata(sql));
     }
 
     @Override
