@@ -17,6 +17,8 @@ package org.opengauss.datachecker.extract.data;
 
 import com.alibaba.druid.pool.DruidDataSource;
 
+import cn.hutool.core.collection.CollectionUtil;
+
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.logging.log4j.Logger;
@@ -46,6 +48,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -252,6 +255,21 @@ public class BaseDataService {
      */
     public List<ColumnsMetaData> queryTableColumnsMetaData(String tableName) {
         final List<ColumnsMetaData> columns = dataAccessService.queryTableColumnsMetaData(tableName);
+        List<PrimaryColumnBean> pkColList = dataAccessService.queryTablePrimaryColumns(tableName);
+        List<PrimaryColumnBean> ukColList = dataAccessService.queryTableUniqueColumns(tableName);
+        if (CollectionUtil.isNotEmpty(ukColList)) {
+            if (CollectionUtil.isNotEmpty(ukColList)) {
+                pkColList.addAll(ukColList);
+            }
+        }
+        Set<String> pkOrUkSet = pkColList.stream()
+            .map(PrimaryColumnBean::getColumnName)
+            .collect(Collectors.toUnmodifiableSet());
+        columns.forEach(meta -> {
+            if (pkOrUkSet.contains(meta.getColumnName())) {
+                meta.setColumnKey(ColumnKey.PRI);
+            }
+        });
         return ruleAdapterService.executeColumnRule(columns);
     }
 
