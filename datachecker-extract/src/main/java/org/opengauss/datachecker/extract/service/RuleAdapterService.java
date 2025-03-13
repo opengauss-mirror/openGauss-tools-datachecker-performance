@@ -17,7 +17,9 @@ package org.opengauss.datachecker.extract.service;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.Logger;
+import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.entry.common.Rule;
+import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.entry.enums.RuleType;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
@@ -25,9 +27,11 @@ import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * RuleAdapterService
@@ -55,7 +59,14 @@ public class RuleAdapterService {
      */
     public void init(Map<RuleType, List<Rule>> rules) {
         RULES.clear();
-        RULES.putAll(rules);
+        CheckMode checkMode = ConfigCache.getCheckMode();
+        if (Objects.equals(CheckMode.FULL, checkMode)) {
+            RULES.putAll(rules);
+        } else if (Objects.equals(CheckMode.INCREMENT, checkMode)) {
+            RULES.put(RuleType.COLUMN, rules.get(RuleType.COLUMN));
+        } else {
+            log.warn("check mode {} is not support rules", checkMode);
+        }
     }
 
     /**
