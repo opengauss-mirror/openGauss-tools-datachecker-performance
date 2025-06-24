@@ -29,6 +29,7 @@ import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.SqlUtil;
+import org.opengauss.datachecker.extract.cache.MetaDataCache;
 import org.opengauss.datachecker.extract.data.access.DataAccessService;
 import org.opengauss.datachecker.extract.resource.ConnectionMgr;
 import org.opengauss.datachecker.extract.util.MetaDataUtil;
@@ -67,17 +68,17 @@ public class CheckPoint {
     /**
      * init table CheckPoint List
      *
-     * @param tableMetadata tableMetadata
+     * @param tableName tableName
      * @param slice slice
      * @return check point
      */
-    public List<PointPair> initCheckPointList(TableMetadata tableMetadata, int slice) {
+    public List<PointPair> initCheckPointList(String tableName, int slice) {
         if (slice <= 0) {
             return new LinkedList<>();
         }
+        TableMetadata tableMetadata = MetaDataCache.get(tableName);
         String pkName = getPkName(tableMetadata);
         String schema = tableMetadata.getSchema();
-        String tableName = tableMetadata.getTableName();
         StopWatch stopWatch = new StopWatch("table check point " + tableName);
         stopWatch.start();
         DataBaseType dataBaseType = ConfigCache.getValue(ConfigConstants.DATA_BASE_TYPE, DataBaseType.class);
@@ -152,11 +153,12 @@ public class CheckPoint {
     /**
      * 初始化联合主键表检查点
      *
-     * @param tableMetadata tableMetadata
+     * @param tableName tableName
      * @return 检查点列表
      */
-    public List<PointPair> initUnionPrimaryCheckPointList(TableMetadata tableMetadata) {
+    public List<PointPair> initUnionPrimaryCheckPointList(String tableName) {
         List<PointPair> checkPointList = new ArrayList<>();
+        TableMetadata tableMetadata = MetaDataCache.get(tableName);
         List<ColumnsMetaData> primaryList = tableMetadata.getPrimaryMetas();
         for (ColumnsMetaData unionKey : primaryList) {
             List<PointPair> tmp = queryUnionKeyList(unionKey);

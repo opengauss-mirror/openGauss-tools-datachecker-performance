@@ -45,7 +45,6 @@ public class SinglePrimaryAutoIncrementAutoSliceQueryStatement implements AutoSl
         }
         updateAutoIncrement(tableMetadata);
         final int[][] taskOffset = new TaskUtilHelper(tableMetadata, slice).calcAutoTaskOffset();
-
         List<QuerySqlEntry> querySqlList = new LinkedList<>();
         final SelectSqlBuilder sqlBuilder = new SelectSqlBuilder(tableMetadata);
         sqlBuilder.isDivisions(taskOffset.length > 1);
@@ -63,7 +62,7 @@ public class SinglePrimaryAutoIncrementAutoSliceQueryStatement implements AutoSl
     }
 
     @Override
-    public List<PointPair> getCheckPoint(TableMetadata tableMetadata, int slice) {
+    public List<PointPair> getCheckPoint(String tableName, int slice) {
         return null;
     }
 

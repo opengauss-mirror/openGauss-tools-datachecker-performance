@@ -161,7 +161,7 @@ public class ExtractTaskRunnable implements Runnable {
         long totalRows = 0;
         try {
             AutoSliceQueryStatement sliceStatement = factory.createSliceQueryStatement(checkPoint,
-                context.getTableMetadata());
+                context.getTableName());
             List<QuerySqlEntry> querySqlList = sliceStatement.builderByTaskOffset(context.getTableMetadata(), slice);
             if (CollectionUtils.isNotEmpty(querySqlList)) {
                 totalRows = executeParallelTask(querySqlList, context);

@@ -49,9 +49,9 @@ public interface AutoSliceQueryStatement extends QueryStatement {
     /**
      * get table checkPoint list
      *
-     * @param tableMetadata tableMetadata
+     * @param tableName tableName
      * @param slice slice
      * @return list checkPoint list
      */
-    List<PointPair> getCheckPoint(TableMetadata tableMetadata, int slice);
+    List<PointPair> getCheckPoint(String tableName, int slice);
 }

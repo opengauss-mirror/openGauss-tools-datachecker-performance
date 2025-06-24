@@ -16,7 +16,6 @@
 package org.opengauss.datachecker.extract.task.sql;
 
 import org.opengauss.datachecker.common.config.ConfigCache;
-import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.extract.task.CheckPoint;
 
 /**
@@ -32,10 +31,10 @@ public class QueryStatementFactory {
      * create SliceQueryStatement
      *
      * @param checkPoint checkPoint
-     * @param tableMetadata tableMetadata
+     * @param tableName tableName
      * @return A new AutoSliceQueryStatement instance.
      */
-    public AutoSliceQueryStatement createSliceQueryStatement(CheckPoint checkPoint, TableMetadata tableMetadata) {
+    public AutoSliceQueryStatement createSliceQueryStatement(CheckPoint checkPoint, String tableName) {
         return new SinglePrimaryAutoSliceQueryStatement(checkPoint);
     }
 

@@ -346,7 +346,7 @@ public class DataExtractServiceImpl implements DataExtractService {
                     tableName);
                 return;
             }
-            TableMetadata tableMetadata = task.getTableMetadata();
+            TableMetadata tableMetadata = MetaDataCache.get(tableName);
             if (!tableMetadata.isExistTableRows()) {
                 emptyTableSliceProcessor(tableMetadata);
             } else {
@@ -514,17 +514,18 @@ public class DataExtractServiceImpl implements DataExtractService {
         return sliceTaskList;
     }
 
-    private List<PointPair> getCheckPoint(CheckPoint checkPoint, TableMetadata metadata) {
+    private List<PointPair> getCheckPoint(CheckPoint checkPoint, String tableName) {
         List<PointPair> checkPointList;
         int sliceSize = ConfigCache.getIntValue(ConfigConstants.MAXIMUM_TABLE_SLICE_SIZE);
         AutoSliceQueryStatement autoSliceStatement;
+        TableMetadata metadata = MetaDataCache.get(tableName);
         if (metadata.isUnionPrimary()) {
             autoSliceStatement = factory.createUnionPrimarySliceQueryStatement(checkPoint);
         } else {
-            autoSliceStatement = factory.createSliceQueryStatement(checkPoint, metadata);
+            autoSliceStatement = factory.createSliceQueryStatement(checkPoint, tableName);
         }
         try {
-            checkPointList = autoSliceStatement.getCheckPoint(metadata, sliceSize);
+            checkPointList = autoSliceStatement.getCheckPoint(tableName, sliceSize);
         } catch (Exception ex) {
             LogUtils.error(log, "{}getCheckPoint error:", ErrorCode.BUILD_SLICE_POINT, ex);
             return new ArrayList<>();
@@ -559,10 +560,10 @@ public class DataExtractServiceImpl implements DataExtractService {
         try {
             String tableName = task.getTableName();
             CheckPoint checkPoint = new CheckPoint(dataAccessService);
-            TableMetadata tableMetadata = task.getTableMetadata();
+            TableMetadata tableMetadata = MetaDataCache.get(tableName);
             if (tableMetadata.isExistTableRows()) {
                 LogUtils.info(log, "register check point [{}][{}]", endpoint, tableName);
-                List<PointPair> checkPointList = getCheckPoint(checkPoint, tableMetadata);
+                List<PointPair> checkPointList = getCheckPoint(checkPoint, tableName);
                 if (checkPointList == null || checkPointList.size() <= 2) {
                     checkPointList = List.of();
                     tableCheckPointCache.put(tableName, checkPointList);
