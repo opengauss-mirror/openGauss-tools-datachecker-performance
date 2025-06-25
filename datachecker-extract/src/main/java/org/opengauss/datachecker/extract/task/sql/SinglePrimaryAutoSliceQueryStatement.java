@@ -51,7 +51,7 @@ public class SinglePrimaryAutoSliceQueryStatement implements AutoSliceQueryState
     }
 
     @Override
-    public List<PointPair> getCheckPoint(TableMetadata tableMetadata, int slice) {
-        return singlePrimaryCheckPoint.initCheckPointList(tableMetadata, slice);
+    public List<PointPair> getCheckPoint(String tableName, int slice) {
+        return singlePrimaryCheckPoint.initCheckPointList(tableName, slice);
     }
 }

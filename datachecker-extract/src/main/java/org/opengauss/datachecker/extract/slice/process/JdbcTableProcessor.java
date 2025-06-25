@@ -16,6 +16,7 @@
 package org.opengauss.datachecker.extract.slice.process;
 
 import com.alibaba.druid.pool.DruidDataSource;
+
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.common.entry.extract.SliceExtend;
@@ -56,7 +57,7 @@ public class JdbcTableProcessor extends AbstractTableProcessor {
     /**
      * JdbcTableProcessor
      *
-     * @param table   table
+     * @param table table
      * @param context context
      */
     public JdbcTableProcessor(String table, SliceProcessorContext context, DruidDataSource dataSource) {
@@ -69,7 +70,7 @@ public class JdbcTableProcessor extends AbstractTableProcessor {
     public void run() {
         SliceExtend tableSliceExtend = createTableSliceExtend();
         try {
-            sliceSender = new SliceResultSetSender(tableMetadata,  context.createSliceFixedKafkaAgents(topic, table));
+            sliceSender = new SliceResultSetSender(tableMetadata, context.createSliceFixedKafkaAgents(topic, table));
             sliceSender.setRecordSendKey(table);
             long tableRowCount;
             if (noTableSlice()) {
@@ -138,8 +139,7 @@ public class JdbcTableProcessor extends AbstractTableProcessor {
         } finally {
             jdbcOperation.releaseConnection(connection);
             log.info("query table [{}] row-count [{}] cost [{}] milliseconds", table, tableRowCount,
-                Duration.between(start, LocalDateTime.now())
-                        .toMillis());
+                Duration.between(start, LocalDateTime.now()).toMillis());
         }
         return tableRowCount;
     }
@@ -183,8 +183,7 @@ public class JdbcTableProcessor extends AbstractTableProcessor {
         } finally {
             jdbcOperation.releaseConnection(connection);
             log.info("query table [{}] row-count [{}] cost [{}] milliseconds", table, tableRowCount,
-                Duration.between(start, LocalDateTime.now())
-                        .toMillis());
+                Duration.between(start, LocalDateTime.now()).toMillis());
         }
         return tableRowCount;
     }
@@ -196,7 +195,7 @@ public class JdbcTableProcessor extends AbstractTableProcessor {
 
     private List<QuerySqlEntry> getAutoSliceQuerySqlList() {
         // 单主键根据主键进行SQL分片，联合主键根据第一主键值进行SQL分片
-        AutoSliceQueryStatement statement = context.createAutoSliceQueryStatement(tableMetadata);
+        AutoSliceQueryStatement statement = context.createAutoSliceQueryStatement(tableMetadata.getTableName());
         return statement.builderByTaskOffset(tableMetadata, getMaximumTableSliceSize());
     }
 }

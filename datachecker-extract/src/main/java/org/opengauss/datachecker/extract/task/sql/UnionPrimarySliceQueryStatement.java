@@ -52,7 +52,7 @@ public class UnionPrimarySliceQueryStatement implements SliceQueryStatement {
         sqlBuilder.isEndCondition(slice.getNo() == slice.getTotal());
         sqlBuilder.isHalfOpenHalfClosed(isHalfOpenHalfClosed);
         sqlBuilder.isCsvMode(ConfigCache.isCsvMode());
-        ColumnsMetaData primaryKey = tableMetadata.getSinglePrimary();
+        ColumnsMetaData primaryKey = tableMetadata.getSliceColumn();
         boolean isDigit = MetaDataUtil.isDigitPrimaryKey(primaryKey);
         Object offset = translateOffset(isDigit, slice.getBeginIdx());
         sqlBuilder.inIds(slice.getInIds(), isDigit);

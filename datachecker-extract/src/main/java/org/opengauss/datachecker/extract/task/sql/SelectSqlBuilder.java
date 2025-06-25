@@ -51,6 +51,17 @@ import static org.opengauss.datachecker.extract.task.sql.QuerySqlTemplate.TABLE_
  * @since 11
  **/
 public class SelectSqlBuilder {
+    /**
+     * primary key condition :
+     * mysql     primaryKey>= '1' COLLATE  utf8mb4_bin and primaryKey <= '100' COLLATE utf8mb4_bin
+     * openGauss primaryKey>= '1' COLLATE  "C" and primaryKey <= '100' COLLATE "C"
+     */
+    private static final String TEMPLATE_PK_CONDITION_FULL = "%s >='%s' %s and %s <= '%s' %s ";
+    private static final String TEMPLATE_PK_CONDITION_HALF = "%s >='%s' %s and %s < '%s' %s ";
+    private static final String TEMPLATE_GREATER_THAN_OR_EQUAL_TO = "%s >='%s' %s ";
+    private static final String TEMPLATE_LESS_THAN_OR_EQUAL_TO = "%s <='%s' %s ";
+    private static final String TEMPLATE_LESS_THAN = "%s <'%s' %s ";
+    private static final String TEMPLATE_EQUAL_TO = "%s='%s' %s ";
     private static final String QUERY_WHERE_BETWEEN
         = "SELECT :columnsList FROM :schema.:tableName where :pkCondition :orderBy ";
     private static final Map<DataBaseType, SqlGenerate> SQL_GENERATE = new HashMap<>();
@@ -201,7 +212,7 @@ public class SelectSqlBuilder {
             return buildSelectSqlConditionLimit(tableMetadata, conditionLimit);
         } else if (isDivisions) {
             if (tableMetadata.isUnionPrimary()) {
-                return buildSelectSqlWhereInPrimary(tableMetadata);
+                return buildSelectSqlWhereInUnionPrimary(tableMetadata);
             } else {
                 return buildSelectSqlWherePrimary(tableMetadata);
             }
@@ -210,12 +221,13 @@ public class SelectSqlBuilder {
         }
     }
 
-    private String buildSelectSqlWhereInPrimary(TableMetadata tableMetadata) {
+    private String buildSelectSqlWhereInUnionPrimary(TableMetadata tableMetadata) {
         List<ColumnsMetaData> columnsMetas = tableMetadata.getColumnsMetas();
         String schemaEscape = escape(schema, dataBaseType);
         String tableName = escape(tableMetadata.getTableName(), dataBaseType);
         String columnNames = getColumnNameList(columnsMetas, dataBaseType);
-        String primaryKey = escape(tableMetadata.getPrimaryMetas().get(0).getColumnName(), dataBaseType);
+        ColumnsMetaData slicePrimaryColumn = tableMetadata.getSliceColumn();
+        String primaryKey = escape(slicePrimaryColumn.getColumnName(), dataBaseType);
         final String orderBy = getOrderBy(tableMetadata.getPrimaryMetas(), dataBaseType);
         String pkCondition = primaryKey + "in (" + inIds.stream()
             .map(id -> isDigit ? id : "'" + id + "'")
@@ -276,31 +288,49 @@ public class SelectSqlBuilder {
     }
 
     private String getPkConditionFull(String primaryKey) {
-        return primaryKey + ">= '" + seqStart + "' and " + primaryKey + " <= '" + seqEnd + "'";
+        return String.format(TEMPLATE_PK_CONDITION_FULL, primaryKey, seqStart, getCollate(), primaryKey, seqEnd,
+            getCollate());
     }
 
     private String getPkCondition(String primaryKey) {
         if (StringUtils.equalsIgnoreCase(seqStart, seqEnd)) {
-            return primaryKey + " = '" + seqStart + "'";
+            return String.format(TEMPLATE_EQUAL_TO, primaryKey, seqStart, getCollate());
         }
         if (isFullCondition) {
             return getPkConditionFull(primaryKey);
         }
         if (isFirst) {
             if (isCsvMode) {
-                return primaryKey + "<= '" + seqEnd + "'";
+                return String.format(TEMPLATE_LESS_THAN_OR_EQUAL_TO, primaryKey, seqEnd, getCollate());
             } else {
-                return primaryKey + "< '" + seqEnd + "'";
+                return String.format(TEMPLATE_LESS_THAN, primaryKey, seqEnd, getCollate());
             }
         }
         if (isEnd) {
-            return primaryKey + ">= '" + seqStart + "'";
+            return String.format(TEMPLATE_GREATER_THAN_OR_EQUAL_TO, primaryKey, seqStart, getCollate());
         }
         if (isHalfOpenHalfClosed) {
-            return primaryKey + ">= '" + seqStart + "' and " + primaryKey + " < '" + seqEnd + "'";
+            return String.format(TEMPLATE_PK_CONDITION_HALF, primaryKey, seqStart, getCollate(), primaryKey, seqEnd,
+                getCollate());
         } else {
-            return primaryKey + ">= '" + seqStart + "' and " + primaryKey + " <= '" + seqEnd + "'";
+            return String.format(TEMPLATE_PK_CONDITION_FULL, primaryKey, seqStart, getCollate(), primaryKey, seqEnd,
+                getCollate());
         }
+    }
+
+    private String getCollate() {
+        String collate = "";
+        switch (dataBaseType) {
+            case MS:
+                collate = " COLLATE utf8mb4_bin";
+                break;
+            case OG:
+                collate = " COLLATE \"C\"";
+                break;
+            default:
+                break;
+        }
+        return collate;
     }
 
     private String buildSelectSqlConditionLimit(TableMetadata tableMetadata, ConditionLimit conditionLimit) {

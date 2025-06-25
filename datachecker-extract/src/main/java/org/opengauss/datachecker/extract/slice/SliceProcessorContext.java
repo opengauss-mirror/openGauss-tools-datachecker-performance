@@ -19,6 +19,7 @@ import org.opengauss.datachecker.common.entry.extract.SliceExtend;
 import org.opengauss.datachecker.common.entry.extract.SliceVo;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.service.ProcessLogService;
+import org.opengauss.datachecker.extract.cache.MetaDataCache;
 import org.opengauss.datachecker.extract.client.CheckingFeignClient;
 import org.opengauss.datachecker.extract.config.KafkaConsumerConfig;
 import org.opengauss.datachecker.extract.data.BaseDataService;
@@ -113,7 +114,7 @@ public class SliceProcessorContext {
      * @return table metadata
      */
     public TableMetadata getTableMetaData(String table) {
-        return baseDataService.queryTableMetadata(table);
+        return MetaDataCache.get(table);
     }
 
     /**
@@ -152,9 +153,15 @@ public class SliceProcessorContext {
         return factory.createSlicePageQueryStatement();
     }
 
-    public AutoSliceQueryStatement createAutoSliceQueryStatement(TableMetadata tableMetadata) {
+    /**
+     * create AutoSliceQueryStatement instance
+     *
+     * @param tableName table name
+     * @return AutoSliceQueryStatement
+     */
+    public AutoSliceQueryStatement createAutoSliceQueryStatement(String tableName) {
         CheckPoint checkPoint = new CheckPoint(baseDataService.getDataAccessService());
-        return factory.createSliceQueryStatement(checkPoint, tableMetadata);
+        return factory.createSliceQueryStatement(checkPoint, tableName);
     }
 
     /**
