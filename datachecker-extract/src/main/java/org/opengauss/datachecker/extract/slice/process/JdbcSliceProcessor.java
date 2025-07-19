@@ -28,6 +28,7 @@ import org.opengauss.datachecker.common.entry.extract.SliceExtend;
 import org.opengauss.datachecker.common.entry.extract.SliceVo;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.exception.ExtractDataAccessException;
+import org.opengauss.datachecker.common.exception.ExtractException;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.extract.resource.ConnectionMgr;
 import org.opengauss.datachecker.extract.resource.JdbcDataOperations;
@@ -97,10 +98,15 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
                 LogUtils.debug(log, "table [{}] query statement :  {}", table, queryStatement.getSql());
                 executeQueryStatement(queryStatement, tableMetadata, sliceExtend);
             }
-        } catch (Exception | Error ex) {
+        } catch (ExtractException ex) {
             sliceExtend.setStatus(-1);
             LogUtils.error(log, "{}table slice [{}] is error", ErrorCode.EXECUTE_SLICE_PROCESSOR,
                 slice.toSimpleString(), ex);
+        } catch (OutOfMemoryError oom) {
+            sliceExtend.setStatus(-1);
+            LogUtils.error(log, "{}table slice [{}] is error", ErrorCode.OUT_OF_MEMORY_ERROR, slice.toSimpleString(),
+                oom);
+            throw oom;
         } finally {
             LogUtils.info(log, "table slice [{} count {}] is finally   ", slice.toSimpleString(), rowCount.get());
             feedbackStatus(sliceExtend);
