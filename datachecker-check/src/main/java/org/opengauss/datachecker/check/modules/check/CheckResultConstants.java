@@ -41,5 +41,14 @@ public interface CheckResultConstants {
     String CHECKED_DIFF_TOO_LARGE = " data error is too large , please check the database sync !";
     String LEFT_SQUARE_BRACKET = "[";
     String COMMA = ",";
+
+    /**
+     * Check result constants EmptyArray []
+     */
+    String EMPTY_ARRAY = "[]";
+
+    /**
+     * Check result constants right square  ]
+     */
     String RIGHT_SQUARE_BRACKET = "]";
 }
