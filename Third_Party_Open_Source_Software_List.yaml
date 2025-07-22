@@ -1,0 +1,625 @@
+jackson-datatype-jsr310:
+  groupId: com.fasterxml.jackson.datatype
+  artifactId: jackson-datatype-jsr310
+  version: 2.13.5
+  url: https://mvnrepository.com/artifact/com.fasterxml.jackson.datatype/jackson-datatype-jsr310/2.13.5
+spring-aop:
+  groupId: org.springframework
+  artifactId: spring-aop
+  version: 5.3.27
+  url: https://mvnrepository.com/artifact/org.springframework/spring-aop/5.3.27
+springdoc-openapi-webmvc-core:
+  groupId: org.springdoc
+  artifactId: springdoc-openapi-webmvc-core
+  version: 1.6.8
+  url: https://mvnrepository.com/artifact/org.springdoc/springdoc-openapi-webmvc-core/1.6.8
+checker-qual:
+  groupId: org.checkerframework
+  artifactId: checker-qual
+  version: 3.33.0
+  url: https://mvnrepository.com/artifact/org.checkerframework/checker-qual/3.33.0
+jsr305:
+  groupId: com.google.code.findbugs
+  artifactId: jsr305
+  version: 3.0.2
+  url: https://mvnrepository.com/artifact/com.google.code.findbugs/jsr305/3.0.2
+sqlite-jdbc:
+  groupId: org.xerial
+  artifactId: sqlite-jdbc
+  version: 3.36.0.3
+  url: https://mvnrepository.com/artifact/org.xerial/sqlite-jdbc/3.36.0.3
+protobuf-java:
+  groupId: com.google.protobuf
+  artifactId: protobuf-java
+  version: 3.19.4
+  url: https://mvnrepository.com/artifact/com.google.protobuf/protobuf-java/3.19.4
+commons-collections4:
+  groupId: org.apache.commons
+  artifactId: commons-collections4
+  version: '4.4'
+  url: https://mvnrepository.com/artifact/org.apache.commons/commons-collections4/4.4
+guava:
+  groupId: com.google.guava
+  artifactId: guava
+  version: 32.0.0-jre
+  url: https://mvnrepository.com/artifact/com.google.guava/guava/32.0.0-jre
+lombok:
+  groupId: org.projectlombok
+  artifactId: lombok
+  version: 1.18.24
+  url: https://mvnrepository.com/artifact/org.projectlombok/lombok/1.18.24
+spring-data-commons:
+  groupId: org.springframework.data
+  artifactId: spring-data-commons
+  version: 2.6.10
+  url: https://mvnrepository.com/artifact/org.springframework.data/spring-data-commons/2.6.10
+commons-cli:
+  groupId: commons-cli
+  artifactId: commons-cli
+  version: '1.4'
+  url: https://mvnrepository.com/artifact/commons-cli/commons-cli/1.4
+commons-beanutils:
+  groupId: commons-beanutils
+  artifactId: commons-beanutils
+  version: 1.9.4
+  url: https://mvnrepository.com/artifact/commons-beanutils/commons-beanutils/1.9.4
+javax.annotation-api:
+  groupId: javax.annotation
+  artifactId: javax.annotation-api
+  version: 1.3.2
+  url: https://mvnrepository.com/artifact/javax.annotation/javax.annotation-api/1.3.2
+io.swagger.core.v3:swagger-models:
+  groupId: io.swagger.core.v3
+  artifactId: swagger-models
+  version: 2.2.0
+  url: https://mvnrepository.com/artifact/io.swagger.core.v3/swagger-models/2.2.0
+spring-core:
+  groupId: org.springframework
+  artifactId: spring-core
+  version: 5.3.27
+  url: https://mvnrepository.com/artifact/org.springframework/spring-core/5.3.27
+commons-compress:
+  groupId: org.apache.commons
+  artifactId: commons-compress
+  version: 1.26.1
+  url: https://mvnrepository.com/artifact/org.apache.commons/commons-compress/1.26.1
+io.swagger.core.v3:swagger-core:
+  groupId: io.swagger.core.v3
+  artifactId: swagger-core
+  version: 2.2.0
+  url: https://mvnrepository.com/artifact/io.swagger.core.v3/swagger-core/2.2.0
+mybatis-spring-boot-autoconfigure:
+  groupId: org.mybatis.spring.boot
+  artifactId: mybatis-spring-boot-autoconfigure
+  version: 2.2.2
+  url: https://mvnrepository.com/artifact/org.mybatis.spring.boot/mybatis-spring-boot-autoconfigure/2.2.2
+druid-spring-boot-starter:
+  groupId: com.alibaba
+  artifactId: druid-spring-boot-starter
+  version: 1.2.8
+  url: https://mvnrepository.com/artifact/com.alibaba/druid-spring-boot-starter/1.2.8
+commons-collections:
+  groupId: commons-collections
+  artifactId: commons-collections
+  version: 3.2.2
+  url: https://mvnrepository.com/artifact/commons-collections/commons-collections/3.2.2
+spring-boot-starter-aop:
+  groupId: org.springframework.boot
+  artifactId: spring-boot-starter-aop
+  version: 2.6.15
+  url: https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-aop/2.6.15
+spring-security-rsa:
+  groupId: org.springframework.security
+  artifactId: spring-security-rsa
+  version: 1.0.10.RELEASE
+  url: https://mvnrepository.com/artifact/org.springframework.security/spring-security-rsa/1.0.10.RELEASE
+jackson-datatype-jdk8:
+  groupId: com.fasterxml.jackson.datatype
+  artifactId: jackson-datatype-jdk8
+  version: 2.13.5
+  url: https://mvnrepository.com/artifact/com.fasterxml.jackson.datatype/jackson-datatype-jdk8/2.13.5
+tomcat-embed-websocket:
+  groupId: org.apache.tomcat.embed
+  artifactId: tomcat-embed-websocket
+  version: 9.0.75
+  url: https://mvnrepository.com/artifact/org.apache.tomcat.embed/tomcat-embed-websocket/9.0.75
+tomcat-embed-el:
+  groupId: org.apache.tomcat.embed
+  artifactId: tomcat-embed-el
+  version: 9.0.75
+  url: https://mvnrepository.com/artifact/org.apache.tomcat.embed/tomcat-embed-el/9.0.75
+zero-allocation-hashing:
+  groupId: net.openhft
+  artifactId: zero-allocation-hashing
+  version: '0.15'
+  url: https://mvnrepository.com/artifact/net.openhft/zero-allocation-hashing/0.15
+jakarta.activation-api:
+  groupId: jakarta.activation
+  artifactId: jakarta.activation-api
+  version: 1.2.2
+  url: https://mvnrepository.com/artifact/jakarta.activation/jakarta.activation-api/1.2.2
+snakeyaml:
+  groupId: org.yaml
+  artifactId: snakeyaml
+  version: '2.0'
+  url: https://mvnrepository.com/artifact/org.yaml/snakeyaml/2.0
+jna:
+  groupId: net.java.dev.jna
+  artifactId: jna
+  version: 5.14.0
+  url: https://mvnrepository.com/artifact/net.java.dev.jna/jna/5.14.0
+spring-data-relational:
+  groupId: org.springframework.data
+  artifactId: spring-data-relational
+  version: 2.3.10
+  url: https://mvnrepository.com/artifact/org.springframework.data/spring-data-relational/2.3.10
+aspectjweaver:
+  groupId: org.aspectj
+  artifactId: aspectjweaver
+  version: 1.9.7
+  url: https://mvnrepository.com/artifact/org.aspectj/aspectjweaver/1.9.7
+spring-webmvc:
+  groupId: org.springframework
+  artifactId: spring-webmvc
+  version: 5.3.27
+  url: https://mvnrepository.com/artifact/org.springframework/spring-webmvc/5.3.27
+feign-slf4j:
+  groupId: io.github.openfeign
+  artifactId: feign-slf4j
+  version: '11.7'
+  url: https://mvnrepository.com/artifact/io.github.openfeign/feign-slf4j/11.7
+kafka-schema-registry-client:
+  groupId: io.confluent
+  artifactId: kafka-schema-registry-client
+  version: 7.0.1
+  url: https://mvnrepository.com/artifact/io.confluent/kafka-schema-registry-client/7.0.1
+snappy-java:
+  groupId: org.xerial.snappy
+  artifactId: snappy-java
+  version: 1.1.10.5
+  url: https://mvnrepository.com/artifact/org.xerial.snappy/snappy-java/1.1.10.5
+spring-messaging:
+  groupId: org.springframework
+  artifactId: spring-messaging
+  version: 5.3.27
+  url: https://mvnrepository.com/artifact/org.springframework/spring-messaging/5.3.27
+springdoc-openapi-common:
+  groupId: org.springdoc
+  artifactId: springdoc-openapi-common
+  version: 1.6.8
+  url: https://mvnrepository.com/artifact/org.springdoc/springdoc-openapi-common/1.6.8
+spring-context:
+  groupId: org.springframework
+  artifactId: spring-context
+  version: 5.3.27
+  url: https://mvnrepository.com/artifact/org.springframework/spring-context/5.3.27
+jna-platform:
+  groupId: net.java.dev.jna
+  artifactId: jna-platform
+  version: 5.14.0
+  url: https://mvnrepository.com/artifact/net.java.dev.jna/jna-platform/5.14.0
+classgraph:
+  groupId: io.github.classgraph
+  artifactId: classgraph
+  version: 4.8.143
+  url: https://mvnrepository.com/artifact/io.github.classgraph/classgraph/4.8.143
+j2objc-annotations:
+  groupId: com.google.j2objc
+  artifactId: j2objc-annotations
+  version: '2.8'
+  url: https://mvnrepository.com/artifact/com.google.j2objc/j2objc-annotations/2.8
+bcutil-jdk15on:
+  groupId: org.bouncycastle
+  artifactId: bcutil-jdk15on
+  version: '1.70'
+  url: https://mvnrepository.com/artifact/org.bouncycastle/bcutil-jdk15on/1.70
+jackson-dataformat-yaml:
+  groupId: com.fasterxml.jackson.dataformat
+  artifactId: jackson-dataformat-yaml
+  version: 2.13.5
+  url: https://mvnrepository.com/artifact/com.fasterxml.jackson.dataformat/jackson-dataformat-yaml/2.13.5
+fastjson:
+  groupId: com.alibaba
+  artifactId: fastjson
+  version: 1.2.75
+  url: https://mvnrepository.com/artifact/com.alibaba/fastjson/1.2.75
+commons-lang3:
+  groupId: org.apache.commons
+  artifactId: commons-lang3
+  version: 3.12.0
+  url: https://mvnrepository.com/artifact/org.apache.commons/commons-lang3/3.12.0
+spring-beans:
+  groupId: org.springframework
+  artifactId: spring-beans
+  version: 5.3.27
+  url: https://mvnrepository.com/artifact/org.springframework/spring-beans/5.3.27
+classmate:
+  groupId: com.fasterxml
+  artifactId: classmate
+  version: 1.5.1
+  url: https://mvnrepository.com/artifact/com.fasterxml/classmate/1.5.1
+kafka-avro-serializer:
+  groupId: io.confluent
+  artifactId: kafka-avro-serializer
+  version: 7.0.1
+  url: https://mvnrepository.com/artifact/io.confluent/kafka-avro-serializer/7.0.1
+oshi-core:
+  groupId: com.github.oshi
+  artifactId: oshi-core
+  version: 6.5.0
+  url: https://mvnrepository.com/artifact/com.github.oshi/oshi-core/6.5.0
+spring-boot-starter-web:
+  groupId: org.springframework.boot
+  artifactId: spring-boot-starter-web
+  version: 2.6.15
+  url: https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-web/2.6.15
+feign-form-spring:
+  groupId: io.github.openfeign.form
+  artifactId: feign-form-spring
+  version: 3.8.0
+  url: https://mvnrepository.com/artifact/io.github.openfeign.form/feign-form-spring/3.8.0
+spring-jcl:
+  groupId: org.springframework
+  artifactId: spring-jcl
+  version: 5.3.27
+  url: https://mvnrepository.com/artifact/org.springframework/spring-jcl/5.3.27
+jackson-core:
+  groupId: com.fasterxml.jackson.core
+  artifactId: jackson-core
+  version: 2.13.5
+  url: https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-core/2.13.5
+spring-web:
+  groupId: org.springframework
+  artifactId: spring-web
+  version: 5.3.27
+  url: https://mvnrepository.com/artifact/org.springframework/spring-web/5.3.27
+druid:
+  groupId: com.alibaba
+  artifactId: druid
+  version: 1.2.8
+  url: https://mvnrepository.com/artifact/com.alibaba/druid/1.2.8
+avro:
+  groupId: org.apache.avro
+  artifactId: avro
+  version: 1.10.1
+  url: https://mvnrepository.com/artifact/org.apache.avro/avro/1.10.1
+bcpkix-jdk15on:
+  groupId: org.bouncycastle
+  artifactId: bcpkix-jdk15on
+  version: '1.70'
+  url: https://mvnrepository.com/artifact/org.bouncycastle/bcpkix-jdk15on/1.70
+spring-boot-starter-tomcat:
+  groupId: org.springframework.boot
+  artifactId: spring-boot-starter-tomcat
+  version: 2.6.15
+  url: https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-tomcat/2.6.15
+io.swagger:swagger-models:
+  groupId: io.swagger
+  artifactId: swagger-models
+  version: 1.6.2
+  url: https://mvnrepository.com/artifact/io.swagger/swagger-models/1.6.2
+opencsv:
+  groupId: com.opencsv
+  artifactId: opencsv
+  version: 5.7.1
+  url: https://mvnrepository.com/artifact/com.opencsv/opencsv/5.7.1
+jakarta.validation-api:
+  groupId: jakarta.validation
+  artifactId: jakarta.validation-api
+  version: 2.0.2
+  url: https://mvnrepository.com/artifact/jakarta.validation/jakarta.validation-api/2.0.2
+spring-retry:
+  groupId: org.springframework.retry
+  artifactId: spring-retry
+  version: 1.3.4
+  url: https://mvnrepository.com/artifact/org.springframework.retry/spring-retry/1.3.4
+slf4j-api:
+  groupId: org.slf4j
+  artifactId: slf4j-api
+  version: 1.7.36
+  url: https://mvnrepository.com/artifact/org.slf4j/slf4j-api/1.7.36
+spring-jdbc:
+  groupId: org.springframework
+  artifactId: spring-jdbc
+  version: 5.3.27
+  url: https://mvnrepository.com/artifact/org.springframework/spring-jdbc/5.3.27
+failureaccess:
+  groupId: com.google.guava
+  artifactId: failureaccess
+  version: 1.0.1
+  url: https://mvnrepository.com/artifact/com.google.guava/failureaccess/1.0.1
+disruptor:
+  groupId: com.lmax
+  artifactId: disruptor
+  version: 3.4.4
+  url: https://mvnrepository.com/artifact/com.lmax/disruptor/3.4.4
+swagger-ui:
+  groupId: org.webjars
+  artifactId: swagger-ui
+  version: 4.10.3
+  url: https://mvnrepository.com/artifact/org.webjars/swagger-ui/4.10.3
+spring-cloud-openfeign-core:
+  groupId: org.springframework.cloud
+  artifactId: spring-cloud-openfeign-core
+  version: 3.1.0
+  url: https://mvnrepository.com/artifact/org.springframework.cloud/spring-cloud-openfeign-core/3.1.0
+commons-codec:
+  groupId: commons-codec
+  artifactId: commons-codec
+  version: '1.15'
+  url: https://mvnrepository.com/artifact/commons-codec/commons-codec/1.15
+error_prone_annotations:
+  groupId: com.google.errorprone
+  artifactId: error_prone_annotations
+  version: 2.18.0
+  url: https://mvnrepository.com/artifact/com.google.errorprone/error_prone_annotations/2.18.0
+Artifact org.opengauss:opengauss-jdbc:
+  groupId: Artifact org.opengauss
+  artifactId: opengauss-jdbc
+  version: 5.1.0-og
+  url: https://mvnrepository.com/artifact/Artifact org.opengauss/opengauss-jdbc/5.1.0-og
+springdoc-openapi-ui:
+  groupId: org.springdoc
+  artifactId: springdoc-openapi-ui
+  version: 1.6.8
+  url: https://mvnrepository.com/artifact/org.springdoc/springdoc-openapi-ui/1.6.8
+mybatis:
+  groupId: org.mybatis
+  artifactId: mybatis
+  version: 3.5.9
+  url: https://mvnrepository.com/artifact/org.mybatis/mybatis/3.5.9
+io.swagger:swagger-core:
+  groupId: io.swagger
+  artifactId: swagger-core
+  version: 1.6.2
+  url: https://mvnrepository.com/artifact/io.swagger/swagger-core/1.6.2
+jboss-logging:
+  groupId: org.jboss.logging
+  artifactId: jboss-logging
+  version: 3.4.3.Final
+  url: https://mvnrepository.com/artifact/org.jboss.logging/jboss-logging/3.4.3.Final
+log4j-slf4j-impl:
+  groupId: org.apache.logging.log4j
+  artifactId: log4j-slf4j-impl
+  version: 2.23.1
+  url: https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-slf4j-impl/2.23.1
+spring-cloud-starter-openfeign:
+  groupId: org.springframework.cloud
+  artifactId: spring-cloud-starter-openfeign
+  version: 3.1.0
+  url: https://mvnrepository.com/artifact/org.springframework.cloud/spring-cloud-starter-openfeign/3.1.0
+log4j-api:
+  groupId: org.apache.logging.log4j
+  artifactId: log4j-api
+  version: 2.23.1
+  url: https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-api/2.23.1
+common-utils:
+  groupId: io.confluent
+  artifactId: common-utils
+  version: 7.0.1
+  url: https://mvnrepository.com/artifact/io.confluent/common-utils/7.0.1
+listenablefuture:
+  groupId: com.google.guava
+  artifactId: listenablefuture
+  version: 9999.0-empty-to-avoid-conflict-with-guava
+  url: https://mvnrepository.com/artifact/com.google.guava/listenablefuture/9999.0-empty-to-avoid-conflict-with-guava
+commons-logging:
+  groupId: commons-logging
+  artifactId: commons-logging
+  version: '1.2'
+  url: https://mvnrepository.com/artifact/commons-logging/commons-logging/1.2
+spring-boot:
+  groupId: org.springframework.boot
+  artifactId: spring-boot
+  version: 2.6.15
+  url: https://mvnrepository.com/artifact/org.springframework.boot/spring-boot/2.6.15
+jackson-annotations:
+  groupId: com.fasterxml.jackson.core
+  artifactId: jackson-annotations
+  version: 2.13.5
+  url: https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-annotations/2.13.5
+lz4-java:
+  groupId: org.lz4
+  artifactId: lz4-java
+  version: 1.7.1
+  url: https://mvnrepository.com/artifact/org.lz4/lz4-java/1.7.1
+mybatis-spring-boot-starter:
+  groupId: org.mybatis.spring.boot
+  artifactId: mybatis-spring-boot-starter
+  version: 2.2.2
+  url: https://mvnrepository.com/artifact/org.mybatis.spring.boot/mybatis-spring-boot-starter/2.2.2
+mybatis-spring:
+  groupId: org.mybatis
+  artifactId: mybatis-spring
+  version: 2.0.7
+  url: https://mvnrepository.com/artifact/org.mybatis/mybatis-spring/2.0.7
+mysql-connector-java:
+  groupId: mysql
+  artifactId: mysql-connector-java
+  version: 8.0.30
+  url: https://mvnrepository.com/artifact/mysql/mysql-connector-java/8.0.30
+commons-io:
+  groupId: commons-io
+  artifactId: commons-io
+  version: 2.11.0
+  url: https://mvnrepository.com/artifact/commons-io/commons-io/2.11.0
+log4j-core:
+  groupId: org.apache.logging.log4j
+  artifactId: log4j-core
+  version: 2.23.1
+  url: https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-core/2.23.1
+spring-security-crypto:
+  groupId: org.springframework.security
+  artifactId: spring-security-crypto
+  version: 5.6.10
+  url: https://mvnrepository.com/artifact/org.springframework.security/spring-security-crypto/5.6.10
+spring-data-jdbc:
+  groupId: org.springframework.data
+  artifactId: spring-data-jdbc
+  version: 2.3.10
+  url: https://mvnrepository.com/artifact/org.springframework.data/spring-data-jdbc/2.3.10
+spring-boot-starter-validation:
+  groupId: org.springframework.boot
+  artifactId: spring-boot-starter-validation
+  version: 2.6.15
+  url: https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-validation/2.6.15
+spring-tx:
+  groupId: org.springframework
+  artifactId: spring-tx
+  version: 5.3.27
+  url: https://mvnrepository.com/artifact/org.springframework/spring-tx/5.3.27
+spring-expression:
+  groupId: org.springframework
+  artifactId: spring-expression
+  version: 5.3.27
+  url: https://mvnrepository.com/artifact/org.springframework/spring-expression/5.3.27
+feign-core:
+  groupId: io.github.openfeign
+  artifactId: feign-core
+  version: '11.7'
+  url: https://mvnrepository.com/artifact/io.github.openfeign/feign-core/11.7
+zstd-jni:
+  groupId: com.github.luben
+  artifactId: zstd-jni
+  version: 1.5.0-2
+  url: https://mvnrepository.com/artifact/com.github.luben/zstd-jni/1.5.0-2
+HikariCP:
+  groupId: com.zaxxer
+  artifactId: HikariCP
+  version: 4.0.3
+  url: https://mvnrepository.com/artifact/com.zaxxer/HikariCP/4.0.3
+jackson-module-parameter-names:
+  groupId: com.fasterxml.jackson.module
+  artifactId: jackson-module-parameter-names
+  version: 2.13.5
+  url: https://mvnrepository.com/artifact/com.fasterxml.jackson.module/jackson-module-parameter-names/2.13.5
+kafka-clients:
+  groupId: org.apache.kafka
+  artifactId: kafka-clients
+  version: 3.0.2
+  url: https://mvnrepository.com/artifact/org.apache.kafka/kafka-clients/3.0.2
+spring-boot-starter-jdbc:
+  groupId: org.springframework.boot
+  artifactId: spring-boot-starter-jdbc
+  version: 2.6.15
+  url: https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-jdbc/2.6.15
+tomcat-embed-core:
+  groupId: org.apache.tomcat.embed
+  artifactId: tomcat-embed-core
+  version: 9.0.75
+  url: https://mvnrepository.com/artifact/org.apache.tomcat.embed/tomcat-embed-core/9.0.75
+webjars-locator-core:
+  groupId: org.webjars
+  artifactId: webjars-locator-core
+  version: '0.48'
+  url: https://mvnrepository.com/artifact/org.webjars/webjars-locator-core/0.48
+kafka-schema-serializer:
+  groupId: io.confluent
+  artifactId: kafka-schema-serializer
+  version: 7.0.1
+  url: https://mvnrepository.com/artifact/io.confluent/kafka-schema-serializer/7.0.1
+spring-cloud-commons:
+  groupId: org.springframework.cloud
+  artifactId: spring-cloud-commons
+  version: 3.1.0
+  url: https://mvnrepository.com/artifact/org.springframework.cloud/spring-cloud-commons/3.1.0
+org.opengauss:opengauss-jdbc:
+  groupId: org.opengauss
+  artifactId: opengauss-jdbc
+  version: 5.1.0-og
+  url: https://mvnrepository.com/artifact/org.opengauss/opengauss-jdbc/5.1.0-og
+bcprov-jdk15on:
+  groupId: org.bouncycastle
+  artifactId: bcprov-jdk15on
+  version: '1.70'
+  url: https://mvnrepository.com/artifact/org.bouncycastle/bcprov-jdk15on/1.70
+spring-boot-starter:
+  groupId: org.springframework.boot
+  artifactId: spring-boot-starter
+  version: 2.6.15
+  url: https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter/2.6.15
+spring-cloud-context:
+  groupId: org.springframework.cloud
+  artifactId: spring-cloud-context
+  version: 3.1.0
+  url: https://mvnrepository.com/artifact/org.springframework.cloud/spring-cloud-context/3.1.0
+hutool-all:
+  groupId: cn.hutool
+  artifactId: hutool-all
+  version: 5.7.8
+  url: https://mvnrepository.com/artifact/cn.hutool/hutool-all/5.7.8
+io.swagger.core.v3:swagger-annotations:
+  groupId: io.swagger.core.v3
+  artifactId: swagger-annotations
+  version: 2.2.0
+  url: https://mvnrepository.com/artifact/io.swagger.core.v3/swagger-annotations/2.2.0
+jackson-databind:
+  groupId: com.fasterxml.jackson.core
+  artifactId: jackson-databind
+  version: 2.13.5
+  url: https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-databind/2.13.5
+jakarta.annotation-api:
+  groupId: jakarta.annotation
+  artifactId: jakarta.annotation-api
+  version: 1.3.5
+  url: https://mvnrepository.com/artifact/jakarta.annotation/jakarta.annotation-api/1.3.5
+feign-form:
+  groupId: io.github.openfeign.form
+  artifactId: feign-form
+  version: 3.8.0
+  url: https://mvnrepository.com/artifact/io.github.openfeign.form/feign-form/3.8.0
+spring-boot-configuration-processor:
+  groupId: org.springframework.boot
+  artifactId: spring-boot-configuration-processor
+  version: 2.6.15
+  url: https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-configuration-processor/2.6.15
+spring-boot-starter-data-jdbc:
+  groupId: org.springframework.boot
+  artifactId: spring-boot-starter-data-jdbc
+  version: 2.6.15
+  url: https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-data-jdbc/2.6.15
+spring-boot-starter-json:
+  groupId: org.springframework.boot
+  artifactId: spring-boot-starter-json
+  version: 2.6.15
+  url: https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-json/2.6.15
+spring-boot-autoconfigure:
+  groupId: org.springframework.boot
+  artifactId: spring-boot-autoconfigure
+  version: 2.6.15
+  url: https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-autoconfigure/2.6.15
+commons-fileupload:
+  groupId: commons-fileupload
+  artifactId: commons-fileupload
+  version: '1.5'
+  url: https://mvnrepository.com/artifact/commons-fileupload/commons-fileupload/1.5
+jakarta.xml.bind-api:
+  groupId: jakarta.xml.bind
+  artifactId: jakarta.xml.bind-api
+  version: 2.3.3
+  url: https://mvnrepository.com/artifact/jakarta.xml.bind/jakarta.xml.bind-api/2.3.3
+hibernate-validator:
+  groupId: org.hibernate.validator
+  artifactId: hibernate-validator
+  version: 6.2.5.Final
+  url: https://mvnrepository.com/artifact/org.hibernate.validator/hibernate-validator/6.2.5.Final
+io.swagger:swagger-annotations:
+  groupId: io.swagger
+  artifactId: swagger-annotations
+  version: 1.6.2
+  url: https://mvnrepository.com/artifact/io.swagger/swagger-annotations/1.6.2
+commons-text:
+  groupId: org.apache.commons
+  artifactId: commons-text
+  version: 1.10.0
+  url: https://mvnrepository.com/artifact/org.apache.commons/commons-text/1.10.0
+spring-kafka:
+  groupId: org.springframework.kafka
+  artifactId: spring-kafka
+  version: 2.8.11
+  url: https://mvnrepository.com/artifact/org.springframework.kafka/spring-kafka/2.8.11
+spring-cloud-starter:
+  groupId: org.springframework.cloud
+  artifactId: spring-cloud-starter
+  version: 3.1.0
+  url: https://mvnrepository.com/artifact/org.springframework.cloud/spring-cloud-starter/3.1.0
