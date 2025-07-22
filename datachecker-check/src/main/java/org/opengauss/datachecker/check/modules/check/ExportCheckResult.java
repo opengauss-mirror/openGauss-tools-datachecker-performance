@@ -1,21 +1,20 @@
 /*
- * Copyright (c) 2022-2022 Huawei Technologies Co.,Ltd.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
  *
  * openGauss is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
  *
- *           http://license.coscl.org.cn/MulanPSL2
+ * http://license.coscl.org.cn/MulanPSL2
  *
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
  * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
- * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * MERCHANTABILITY OR FITFOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
 
 package org.opengauss.datachecker.check.modules.check;
 
-import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.util.FileUtils;
@@ -25,14 +24,17 @@ import org.opengauss.datachecker.common.util.TopicUtil;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
 import java.util.Objects;
 
-import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
+import cn.hutool.core.thread.ThreadUtil;
 
 /**
  * ExportCheckResult
@@ -46,13 +48,27 @@ public class ExportCheckResult {
     private static final DateTimeFormatter FORMATTER_DIR = DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS");
     private static final String CHECK_RESULT_BAK_DIR = File.separator + "result_bak" + File.separator;
     private static final String CHECK_RESULT_PATH = File.separator + "result" + File.separator;
+    private static final int MAX_RETRIES = 5;
+    private static final long INITIAL_WAIT_MS = 100L;
+    private static final long MAX_WAIT_MS = 5000L;
 
     private static String ROOT_PATH = "";
 
+    /**
+     * Export verification result
+     *
+     * @param result result
+     */
     public static void export(CheckDiffResult result) {
         String fileName = getCheckResultFileName(result);
         FileUtils.deleteFile(fileName);
-        FileUtils.writeFile(fileName, JsonObjectUtil.format(result));
+        try (FileChannel channel = FileChannel.open(Path.of(fileName), StandardOpenOption.CREATE,
+            StandardOpenOption.WRITE); FileLock lock = channel.lock()) {
+            FileUtils.writeFile(fileName, JsonObjectUtil.format(result));
+            lock.release();
+        } catch (IOException e) {
+            LogUtils.error(log, "Export file [{}] failed: {}", fileName, e.getMessage());
+        }
     }
 
     private static String getCheckResultFileName(CheckDiffResult result) {
@@ -80,23 +96,47 @@ public class ExportCheckResult {
         FileUtils.createDirectories(getResultBakRootDir());
     }
 
+    /**
+     * Backup verification result
+     */
     public static void backCheckResultDirectory() {
         String checkResultPath = getResultPath();
-        final List<Path> resultPaths = FileUtils.loadDirectory(checkResultPath);
-        if (CollectionUtils.isEmpty(resultPaths)) {
-            return;
-        }
-        final String backDir = getResultBakDir();
-        FileUtils.createDirectories(backDir);
-        resultPaths.forEach(file -> {
-            try {
-                Files.move(file, Path.of(concat(backDir, file.getFileName()
-                        .toString())), ATOMIC_MOVE);
-            } catch (IOException e) {
-                LogUtils.error(log, "back the verification result environment error");
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(Path.of(checkResultPath))) {
+            final String backDir = getResultBakDir();
+            FileUtils.createDirectories(backDir);
+            for (Path file : stream) {
+                Path target = Path.of(concat(backDir, file.getFileName().toString()));
+                moveFileWithRetry(file, target);
             }
-        });
-        LogUtils.info(log, "back the verification result.");
+            LogUtils.info(log, "Backup verification result completed.");
+        } catch (IOException e) {
+            LogUtils.error(log, "Directory stream error: {}", e.getMessage());
+        }
+    }
+
+    private static void moveFileWithRetry(Path source, Path target) {
+        int retryCount = 0;
+        long waitTime = INITIAL_WAIT_MS;
+        boolean isMoved = false;
+        while (!isMoved && retryCount < MAX_RETRIES) {
+            isMoved = handleMoveByCopy(source, target);
+            LogUtils.debug(log, "Moved file: retry->{}, {} -> {} {}", retryCount++, source, target, isMoved);
+            ThreadUtil.safeSleep(waitTime);
+            waitTime = Math.min(waitTime * 2, MAX_WAIT_MS);
+        }
+    }
+
+    private static boolean handleMoveByCopy(Path source, Path target) {
+        boolean isMoved = false;
+        try {
+            Files.copy(source, target);
+            Files.deleteIfExists(source);
+            LogUtils.warn(log, "Copied instead of moved: {} -> {}", source, target);
+            isMoved = true;
+        } catch (IOException e) {
+            LogUtils.error(log, "Failed to copy file as fallback: {}", source, e);
+        }
+        return isMoved;
     }
 
     public static String getResultPath() {

@@ -40,7 +40,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StopWatch;
 
 import javax.annotation.Resource;
+
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -54,8 +58,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.opengauss.datachecker.check.modules.check.CheckResultConstants.COMMA;
+import static org.opengauss.datachecker.check.modules.check.CheckResultConstants.EMPTY_ARRAY;
 import static org.opengauss.datachecker.check.modules.check.CheckResultConstants.FAILED_LOG_NAME;
 import static org.opengauss.datachecker.check.modules.check.CheckResultConstants.LEFT_SQUARE_BRACKET;
 import static org.opengauss.datachecker.check.modules.check.CheckResultConstants.RIGHT_SQUARE_BRACKET;
@@ -253,40 +259,42 @@ public class IncrementManagerService {
      * @return Analysis of last verification result
      */
     private Map<String, SourceDataLog> collectLastResults() {
-        final List<Path> checkResultFileList = FileUtils.loadDirectory(ExportCheckResult.getResultPath());
-        LogUtils.debug(log, "collect last results path {}", checkResultFileList);
-        if (CollectionUtils.isEmpty(checkResultFileList)) {
+        try {
+            try (Stream<Path> stream = Files.list(Paths.get(ExportCheckResult.getResultPath()))) {
+                List<Path> checkResultFileList = stream.collect(Collectors.toList());
+                LogUtils.debug(log, "collect last results path {}", checkResultFileList);
+                if (CollectionUtils.isEmpty(checkResultFileList)) {
+                    return new HashMap<>();
+                }
+                List<CheckFailed> historyFailedList = new ArrayList<>();
+                checkResultFileList.parallelStream()
+                    .filter(path -> FAILED_LOG_NAME.equals(path.getFileName().toString()))
+                    .forEach(path -> {
+                        try {
+                            String content = wrapperFailedResultArray(path);
+                            historyFailedList.addAll(JSONObject.parseArray(content, CheckFailed.class));
+                        } catch (CheckingException | JSONException ex) {
+                            log.error("load check result {} has error", path.getFileName(), ex);
+                        }
+                    });
+                LogUtils.debug(log, "collect last failed results {}", historyFailedList.size());
+                return parseCheckResult(historyFailedList);
+            }
+        } catch (IOException e) {
+            LogUtils.error(log, "Failed to list directory: {}", e.getMessage());
             return new HashMap<>();
         }
-        List<CheckFailed> historyFailedList = new ArrayList<>();
-        checkResultFileList.stream()
-                .filter(path -> FAILED_LOG_NAME.equals(path.getFileName()
-                        .toString()))
-                .forEach(path -> {
-                    try {
-                        String content = wrapperFailedResultArray(path);
-                        historyFailedList.addAll(JSONObject.parseArray(content, CheckFailed.class));
-                    } catch (CheckingException | JSONException ex) {
-                        log.error("load check result {} has error", path.getFileName());
-                    }
-                });
-
-        LogUtils.debug(log, "collect last failed results {}", historyFailedList.size());
-        return parseCheckResult(historyFailedList);
     }
 
     private String wrapperFailedResultArray(Path path) {
-        final String contents = FileUtils.readFileContents(path);
+        String contents = FileUtils.readFileContents(path);
         if (StringUtils.isEmpty(contents)) {
-            return contents;
+            return EMPTY_ARRAY;
         }
-        StringBuilder sb = new StringBuilder(LEFT_SQUARE_BRACKET);
-        sb.append(contents);
         if (contents.endsWith(COMMA)) {
-            sb.deleteCharAt(sb.length() - 1);
+            contents = contents.substring(0, contents.length() - 1);
         }
-        sb.append(RIGHT_SQUARE_BRACKET);
-        return sb.toString();
+        return LEFT_SQUARE_BRACKET.concat(contents).concat(RIGHT_SQUARE_BRACKET);
     }
 
     private Map<String, SourceDataLog> parseCheckResult(List<CheckFailed> historyDataList) {
