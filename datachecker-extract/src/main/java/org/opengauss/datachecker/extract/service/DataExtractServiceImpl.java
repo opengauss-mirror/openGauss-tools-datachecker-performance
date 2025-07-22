@@ -55,6 +55,7 @@ import org.opengauss.datachecker.extract.slice.ExtractPointSwapManager;
 import org.opengauss.datachecker.extract.slice.SliceProcessorContext;
 import org.opengauss.datachecker.extract.slice.SliceRegister;
 import org.opengauss.datachecker.extract.slice.factory.SliceFactory;
+import org.opengauss.datachecker.extract.slice.process.SliceProcessor;
 import org.opengauss.datachecker.extract.task.CheckPoint;
 import org.opengauss.datachecker.extract.task.DataManipulationService;
 import org.opengauss.datachecker.extract.task.ExtractTaskBuilder;
@@ -425,7 +426,15 @@ public class DataExtractServiceImpl implements DataExtractService {
                 }
                 ThreadUtil.sleepMillsCircle(++bussyWait);
             }
-            executor.submit(sliceFactory.createSliceProcessor(sliceVo));
+            SliceProcessor sliceProcessor = sliceFactory.createSliceProcessor(sliceVo);
+            executor.submit(() -> {
+                try {
+                    sliceProcessor.run();
+                } catch (OutOfMemoryError e) {
+                    log.error("slice process {} occ OOM error", sliceVo.getTable(), e);
+                    Runtime.getRuntime().halt(1);
+                }
+            });
             sliceCount.getAndDecrement();
             log.info("shard is added to executor. table {} has {} shards remaining and a total of " + "{} shards.",
                 table, sliceCount.get(), sliceVoList.size());

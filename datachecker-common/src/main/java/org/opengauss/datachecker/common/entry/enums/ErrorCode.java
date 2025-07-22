@@ -49,7 +49,8 @@ public enum ErrorCode {
     BUILD_SLICE_POINT(5032, "生成表分割点异常", "build slice point exception"),
     ASYNC_EXTRACT_TABLE(5033, "同步抽取表信息异常", "async extract table info exception"),
     FEEDBACK_SLICE_STATUS(5034, "反馈分片抽取状态异常", "feedback slice status exception"),
-    TABLE_STRUCTURE(5035, "表结构不一致", "table structure not equal");
+    TABLE_STRUCTURE(5035, "表结构不一致", "table structure not equal"),
+    OUT_OF_MEMORY_ERROR(5036, "内存溢出", "out of memory error");
 
     private final int code;
     private final String causeCn;

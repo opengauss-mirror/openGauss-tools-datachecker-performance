@@ -38,6 +38,8 @@ import javax.annotation.Resource;
 public class HeartBeatStartLoader extends AbstractCheckLoader {
     @Resource
     private EndpointManagerService endpointManagerService;
+    @Resource
+    private HeartBeatKeeper heartBeatKeeper;
     private int retryTimes = 0;
 
     @Override
@@ -63,6 +65,6 @@ public class HeartBeatStartLoader extends AbstractCheckLoader {
         isSourceHealth = endpointManagerService.checkEndpointHealth(Endpoint.SOURCE);
         isSinkHealth = endpointManagerService.checkEndpointHealth(Endpoint.SINK);
         LogUtils.info(log, "endpoint source={},sink={} health ", isSourceHealth, isSinkHealth);
-        endpointManagerService.stopHeartBeat();
+        heartBeatKeeper.backendKeeper();
     }
 }

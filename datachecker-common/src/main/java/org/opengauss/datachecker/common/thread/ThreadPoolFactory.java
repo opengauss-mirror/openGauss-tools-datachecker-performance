@@ -19,13 +19,9 @@ import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.util.LogUtils;
 
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * ThreadPoolFactory
@@ -101,9 +97,18 @@ public class ThreadPoolFactory {
             queueSize = DEFAULT_QUEUE_SIZE;
         }
         BlockingQueue<Runnable> blockingQueue = new LinkedBlockingQueue<>(queueSize);
-        ThreadPoolExecutor threadPoolExecutor =
-            new ThreadPoolExecutor(corePoolSize, threadNum, 60L, TimeUnit.SECONDS, blockingQueue,
-                new CheckThreadFactory("check", threadName, false), new DiscardOldestPolicy(log, threadName));
+        ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(corePoolSize, threadNum, 60L, TimeUnit.SECONDS,
+            blockingQueue, r -> {
+            Thread t = new Thread(r);
+            t.setUncaughtExceptionHandler((thread, throwable) -> {
+                if (throwable instanceof OutOfMemoryError) {
+                    LogUtils.error(log, "OOM in thread: {}", thread.getName());
+                    throwable.printStackTrace();
+                    Runtime.getRuntime().halt(1);
+                }
+            });
+            return t;
+        }, new DiscardOldestPolicy(log, threadName));
         threadPoolExecutor.allowCoreThreadTimeOut(true);
         LogUtils.debug(log, "Thread name is {},cpu={} corePoolSize is : {}, size is {}, queueSize is {}", threadName,
             getNumberOfCpu(), corePoolSize, threadNum, queueSize);
@@ -129,45 +134,5 @@ public class ThreadPoolFactory {
     private static int getNumberOfCpu() {
         return Runtime.getRuntime()
                       .availableProcessors();
-    }
-
-    public static class CheckThreadFactory implements ThreadFactory {
-        private static final ConcurrentHashMap<String, ThreadGroup> THREAD_GROUPS = new ConcurrentHashMap<>();
-
-        private static final AtomicInteger POOL_COUNTER = new AtomicInteger(0);
-
-        private final AtomicLong counter = new AtomicLong(0L);
-
-        private final int poolId;
-
-        private final ThreadGroup group;
-
-        private final String prefix;
-
-        private final boolean daemon;
-
-        public CheckThreadFactory(String groupName, String prefix, boolean daemon) {
-            this.poolId = POOL_COUNTER.incrementAndGet();
-            this.prefix = prefix;
-            this.daemon = daemon;
-            this.group = this.initThreadGroup(groupName);
-        }
-
-        @Override
-        public Thread newThread(Runnable r) {
-            String trName = String.format("pool-%d-%s-%d", this.poolId, this.prefix, this.counter.incrementAndGet());
-            Thread thread = new Thread(this.group, r);
-            thread.setName(trName);
-            thread.setDaemon(this.daemon);
-            thread.setUncaughtExceptionHandler(new CheckUncaughtExceptionHandler(log));
-            return thread;
-        }
-
-        private ThreadGroup initThreadGroup(String groupName) {
-            if (THREAD_GROUPS.get(groupName) == null) {
-                THREAD_GROUPS.putIfAbsent(groupName, new ThreadGroup(groupName));
-            }
-            return THREAD_GROUPS.get(groupName);
-        }
     }
 }
