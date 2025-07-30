@@ -17,10 +17,15 @@ package org.opengauss.datachecker.extract.config;
 
 import com.alibaba.druid.pool.DruidDataSource;
 import com.alibaba.druid.spring.boot.autoconfigure.DruidDataSourceBuilder;
+
+import cn.hutool.core.util.StrUtil;
+import lombok.extern.slf4j.Slf4j;
+
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.SqlSessionFactoryBean;
 import org.mybatis.spring.SqlSessionTemplate;
 import org.mybatis.spring.annotation.MapperScan;
+import org.opengauss.datachecker.extract.constants.ExtConstants;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -39,12 +44,12 @@ import javax.sql.DataSource;
  * @date ：Created in 2022/5/23
  * @since ：11
  */
+@Slf4j
 @Configuration
 @ConditionalOnProperty(prefix = "spring.extract", name = "dataLoadMode", havingValue = "jdbc")
 @ConditionalOnBean({ExtractProperties.class})
 @MapperScan(basePackages = "org.opengauss.datachecker.extract.data.mapper", sqlSessionFactoryRef = "sqlSessionFactory")
 public class DruidDataSourceConfig implements DataSourceConfig {
-
     /**
      * build extract DruidDataSource
      *
@@ -53,26 +58,43 @@ public class DruidDataSourceConfig implements DataSourceConfig {
     @Bean(name = "dataSource")
     @ConfigurationProperties(prefix = "spring.datasource.druid")
     public DataSource druidDataSource() {
-        DruidDataSource druidDataSource = DruidDataSourceBuilder.create()
-                .build();
+        DruidDataSource druidDataSource = DruidDataSourceBuilder.create().build();
         druidDataSource.setMaxPoolPreparedStatementPerConnectionSize(20);
         druidDataSource.setMaxActive(20);
         druidDataSource.setMinIdle(10);
+        String isEnableStdinPassword = System.getenv(ExtConstants.ENABLE_ENV_PASSWORD);
+        if (StrUtil.equalsIgnoreCase(isEnableStdinPassword, ExtConstants.ENABLE_TRUE)) {
+            druidDataSource.setPassword(System.getenv(ExtConstants.SPRING_DATASOURCE_PASSWORD));
+            log.info("enable system env password true");
+        }
         return druidDataSource;
     }
 
+    /**
+     * build extract SqlSessionFactory
+     *
+     * @param dataSource extract dataSource
+     * @return SqlSessionFactory
+     * @throws Exception build sqlSessionFactory exception
+     */
     @Bean(name = "sqlSessionFactory")
-    public SqlSessionFactory primarySqlSessionFactory(@Qualifier("dataSource") DataSource datasource) throws Exception {
+    public SqlSessionFactory primarySqlSessionFactory(@Qualifier("dataSource") DataSource dataSource) throws Exception {
         SqlSessionFactoryBean bean = new SqlSessionFactoryBean();
-        bean.setDataSource(datasource);
+        bean.setDataSource(dataSource);
         bean.setMapperLocations(new PathMatchingResourcePatternResolver().getResources("classpath*:mapper/*.xml"));
         return bean.getObject();
     }
 
+    /**
+     * build extract SqlSessionTemplate
+     *
+     * @param sessionFactory SqlSessionFactory
+     * @return SqlSessionTemplate
+     */
     @Bean("sqlSessionTemplate")
     public SqlSessionTemplate primarySqlSessionTemplate(
-            @Qualifier("sqlSessionFactory") SqlSessionFactory sessionfactory) {
-        return new SqlSessionTemplate(sessionfactory);
+        @Qualifier("sqlSessionFactory") SqlSessionFactory sessionFactory) {
+        return new SqlSessionTemplate(sessionFactory);
     }
 
     /**

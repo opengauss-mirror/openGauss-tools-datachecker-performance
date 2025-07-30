@@ -44,4 +44,19 @@ public interface ExtConstants {
     String PROFILE_SOURCE = "source";
     String CSV_LISTENER_END = "finished";
     int MIN_TOPIC_PTN_NUM = 1;
+
+    /**
+     * enable env password
+     */
+    String ENABLE_ENV_PASSWORD = "enable.env.password";
+
+    /**
+     * spring.datasource.password
+     */
+    String SPRING_DATASOURCE_PASSWORD = "spring.datasource.password";
+
+    /**
+     * enable env true
+     */
+    String ENABLE_TRUE = "true";
 }
