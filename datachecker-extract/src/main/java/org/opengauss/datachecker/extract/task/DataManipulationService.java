@@ -15,8 +15,6 @@
 
 package org.opengauss.datachecker.extract.task;
 
-import cn.hutool.core.util.ArrayUtil;
-
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.constant.Constants.InitialCapacity;
@@ -52,7 +50,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 /**
  * DML  Data operation service realizes dynamic query of data
@@ -164,10 +161,31 @@ public class DataManipulationService {
      */
     private List<RowDataHash> queryColumnValuesByCompositePrimary(String statement, List<Object[]> batchParam,
         TableMetadata tableMetadata) {
-        String compositeKeyValues = batchParam.stream()
-            .map(arr -> "(" + ArrayUtil.join(arr, ",") + ")")
-            .collect(Collectors.joining(","));
-        return statementQuery(statement.replace(":primaryKeys", compositeKeyValues), tableMetadata);
+        List<ColumnsMetaData> primaryMetas = tableMetadata.getPrimaryMetas();
+        StringBuilder compositeKeyBuilder = new StringBuilder();
+        for (int idx = 0; idx < batchParam.size(); idx++) {
+            Object[] priValues = batchParam.get(idx);
+            compositeKeyBuilder.append("(");
+            for (int i = 0; i < priValues.length; i++) {
+                Object value = priValues[i];
+                ColumnsMetaData meta = primaryMetas.get(i);
+                if (MetaDataUtil.isDigitPrimaryKey(meta)) {
+                    compositeKeyBuilder.append(value);
+                } else {
+                    String escapedValue = value.toString().replace("'", "''");
+                    compositeKeyBuilder.append("'").append(escapedValue).append("'");
+                }
+                if (i < priValues.length - 1) {
+                    compositeKeyBuilder.append(",");
+                }
+            }
+            compositeKeyBuilder.append(")");
+            if (idx < batchParam.size() - 1) {
+                compositeKeyBuilder.append(",");
+            }
+        }
+        String safeSql = statement.replace(":primaryKeys", compositeKeyBuilder.toString());
+        return statementQuery(safeSql, tableMetadata);
     }
 
     private void rectifyValue(TableMetadata metadata, List<Map<String, String>> resultMap) {
