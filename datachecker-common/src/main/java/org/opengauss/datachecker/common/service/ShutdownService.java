@@ -1,5 +1,6 @@
 package org.opengauss.datachecker.common.service;
 
+import jakarta.annotation.Resource;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
@@ -12,7 +13,6 @@ import org.springframework.scheduling.concurrent.ExecutorConfigurationSupport;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.Resource;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;

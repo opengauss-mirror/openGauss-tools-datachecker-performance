@@ -15,14 +15,13 @@
 
 package org.opengauss.datachecker.common.service;
 
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.Resource;
 import org.opengauss.datachecker.common.constant.DynamicTpConstant;
 import org.opengauss.datachecker.common.exception.ExtractBootstrapException;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-
-import javax.annotation.PostConstruct;
-import javax.annotation.Resource;
 
 import java.util.LinkedList;
 import java.util.List;

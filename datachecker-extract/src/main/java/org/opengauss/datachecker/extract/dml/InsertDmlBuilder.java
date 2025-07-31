@@ -15,10 +15,10 @@
 
 package org.opengauss.datachecker.extract.dml;
 
+import jakarta.validation.constraints.NotNull;
 import org.opengauss.datachecker.common.entry.enums.DataBaseType;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 
-import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;

@@ -16,17 +16,15 @@
 package org.opengauss.datachecker.extract.debezium;
 
 import com.alibaba.fastjson.JSONObject;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import org.apache.logging.log4j.Logger;
-import org.opengauss.datachecker.common.config.ConfigCache;
-import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.debezium.DebeziumData;
 import org.opengauss.datachecker.common.entry.debezium.DebeziumPayload;
 import org.opengauss.datachecker.common.entry.debezium.PayloadSource;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.extract.service.MetaDataService;
 
-import javax.validation.constraints.NotEmpty;
-import javax.validation.constraints.NotNull;
 import java.util.Map;
 import java.util.concurrent.LinkedBlockingQueue;
 

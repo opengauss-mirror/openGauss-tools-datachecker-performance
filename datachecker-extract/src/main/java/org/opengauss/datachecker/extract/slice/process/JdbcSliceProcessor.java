@@ -40,7 +40,7 @@ import org.opengauss.datachecker.extract.task.sql.SliceQueryStatement;
 import org.opengauss.datachecker.extract.task.sql.UnionPrimarySliceQueryStatement;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.util.Assert;
-import org.springframework.util.concurrent.ListenableFuture;
+import java.util.concurrent.CompletableFuture;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -149,7 +149,7 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
             sliceSender = createSliceResultSetSender(tableMetadata);
             sliceSender.setRecordSendKey(slice.getName());
             List<long[]> offsetList = new CopyOnWriteArrayList<>();
-            List<ListenableFuture<SendResult<String, String>>> batchFutures = new CopyOnWriteArrayList<>();
+            List<CompletableFuture<SendResult<String, String>>> batchFutures = new CopyOnWriteArrayList<>();
             AsyncDataHandler asyncHandler = new AsyncDataHandler(batchFutures, sliceSender, offsetList);
             asyncHandler.start();
             context.asyncSendSlice(asyncHandler);
@@ -264,7 +264,7 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
         try {
             // 获取连接，准备查询分片数据： 并开启数据异步处理线程
             List<long[]> offsetList = new CopyOnWriteArrayList<>();
-            List<ListenableFuture<SendResult<String, String>>> batchFutures = new CopyOnWriteArrayList<>();
+            List<CompletableFuture<SendResult<String, String>>> batchFutures = new CopyOnWriteArrayList<>();
             sliceSender = createSliceResultSetSender(tableMetadata);
             sliceSender.setRecordSendKey(slice.getName());
             AsyncDataHandler asyncHandler = new AsyncDataHandler(batchFutures, sliceSender, offsetList);
@@ -318,7 +318,7 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
      * async data handler thread
      */
     class AsyncDataHandler implements Runnable {
-        private final List<ListenableFuture<SendResult<String, String>>> batchFutures;
+        private final List<CompletableFuture<SendResult<String, String>>> batchFutures;
         private final SliceResultSetSender sliceSender;
         private final int maxQueueSize = 10000;
         private final BlockingQueue<Map<String, String>> batchData = new LinkedBlockingQueue<>();
@@ -326,7 +326,7 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
 
         private boolean canStartFetchRow = false;
 
-        AsyncDataHandler(List<ListenableFuture<SendResult<String, String>>> batchFutures,
+        AsyncDataHandler(List<CompletableFuture<SendResult<String, String>>> batchFutures,
             SliceResultSetSender sliceSender, List<long[]> offsetList) {
             this.batchFutures = batchFutures;
             this.sliceSender = sliceSender;

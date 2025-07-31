@@ -15,6 +15,7 @@
 
 package org.opengauss.datachecker.extract.debezium;
 
+import jakarta.validation.constraints.NotEmpty;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.SourceDataLog;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
@@ -22,7 +23,6 @@ import org.opengauss.datachecker.common.exception.TableNotExistException;
 import org.opengauss.datachecker.extract.constants.ExtConstants;
 import org.opengauss.datachecker.extract.service.MetaDataService;
 
-import javax.validation.constraints.NotEmpty;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;

@@ -24,14 +24,9 @@ import org.opengauss.datachecker.common.entry.extract.SliceVo;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.TopicUtil;
 import org.opengauss.datachecker.extract.slice.SliceProcessorContext;
-import org.springframework.kafka.support.SendResult;
-import org.springframework.util.concurrent.ListenableFuture;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.Iterator;
-import java.util.List;
-import java.util.concurrent.ExecutionException;
 
 /**
  * AbstractSliceProcessor

@@ -30,7 +30,7 @@ import org.opengauss.datachecker.extract.slice.SliceProcessorContext;
 import org.opengauss.datachecker.extract.slice.common.SliceKafkaAgents;
 import org.opengauss.datachecker.extract.slice.common.SliceResultSetSender;
 import org.springframework.kafka.support.SendResult;
-import org.springframework.util.concurrent.ListenableFuture;
+import java.util.concurrent.CompletableFuture;
 
 import java.io.FileReader;
 import java.io.IOException;
@@ -111,7 +111,7 @@ public class CsvTableProcessor extends AbstractTableProcessor {
                 long estimatedSize = estimatedMemorySize(tableMetadata.getAvgRowLength(), fetchSize);
                 memoryOperations.takeMemory(estimatedSize);
                 List<long[]> offsetList = new LinkedList<>();
-                List<ListenableFuture<SendResult<String, String>>> batchFutures = new LinkedList<>();
+                List<CompletableFuture<SendResult<String, String>>> batchFutures = new LinkedList<>();
                 try (CSVReader reader = new CSVReader(new FileReader(sliceFilePath.toString()))) {
                     String[] nextLine;
                     int rowCount = 0;

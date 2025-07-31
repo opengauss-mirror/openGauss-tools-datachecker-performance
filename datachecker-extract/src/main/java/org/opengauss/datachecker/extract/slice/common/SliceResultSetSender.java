@@ -25,12 +25,13 @@ import org.opengauss.datachecker.extract.util.HashHandler;
 import org.opengauss.datachecker.extract.util.MetaDataUtil;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.lang.NonNull;
-import org.springframework.util.concurrent.ListenableFuture;
+import java.util.concurrent.CompletableFuture;
 
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * SliceResultSetSender
@@ -73,8 +74,8 @@ public class SliceResultSetSender {
      * @param rs rs
      * @param sNo sNo
      */
-    public ListenableFuture<SendResult<String, String>> resultSetTranslateAndSendSync(ResultSetMetaData rsmd,
-        ResultSet rs, int sNo) {
+    public CompletableFuture<SendResult<String, String>> resultSetTranslateAndSendSync(ResultSetMetaData rsmd,
+                                                                                       ResultSet rs, int sNo) {
         RowDataHash dataHash = resultSetTranslate(rsmd, rs, sNo);
         return kafkaOperate.sendRowDataSync(dataHash);
     }
@@ -109,7 +110,7 @@ public class SliceResultSetSender {
      * @param sNo sn
      * @return result
      */
-    public ListenableFuture<SendResult<String, String>> resultSetTranslate(Map<String, String> values, int sNo) {
+    public CompletableFuture<SendResult<String, String>> resultSetTranslate(Map<String, String> values, int sNo) {
         RowDataHash dataHash = handler(primary, columns, values);
         dataHash.setSNo(sNo);
         return kafkaOperate.sendRowDataSync(dataHash);
@@ -192,7 +193,7 @@ public class SliceResultSetSender {
      * @param rowIdx row idx of csv file
      * @param sNo sNo
      */
-    public ListenableFuture<SendResult<String, String>> csvTranslateAndSendSync(String[] nextLine,
+    public CompletableFuture<SendResult<String, String>> csvTranslateAndSendSync(String[] nextLine,
         Map<String, String> result, int rowIdx, int sNo) {
         RowDataHash dataHash = csvTranslate(nextLine, result, rowIdx, sNo);
         return kafkaOperate.sendRowDataSync(dataHash);

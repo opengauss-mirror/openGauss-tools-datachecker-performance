@@ -15,6 +15,7 @@
 
 package org.opengauss.datachecker.common.exception;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.common.entry.enums.ResultEnum;
@@ -24,8 +25,6 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
-
-import javax.servlet.http.HttpServletRequest;
 
 /**
  * GlobalCommonExceptionHandler

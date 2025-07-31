@@ -17,7 +17,7 @@ package org.opengauss.datachecker.check.config.validator;
 
 import org.opengauss.datachecker.common.entry.common.Rule;
 
-import javax.validation.ConstraintValidator;
+import jakarta.validation.ConstraintValidator;
 import java.lang.annotation.Annotation;
 import java.util.List;
 import java.util.regex.Pattern;

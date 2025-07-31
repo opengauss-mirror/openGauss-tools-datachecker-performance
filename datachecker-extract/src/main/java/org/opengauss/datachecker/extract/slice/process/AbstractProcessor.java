@@ -22,11 +22,12 @@ import org.opengauss.datachecker.common.entry.extract.SliceExtend;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.extract.slice.SliceProcessorContext;
 import org.springframework.kafka.support.SendResult;
-import org.springframework.util.concurrent.ListenableFuture;
+import java.util.concurrent.CompletableFuture;
 
 import java.math.BigDecimal;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 /**
@@ -91,9 +92,9 @@ public abstract class AbstractProcessor implements SliceProcessor {
      * @param batchFutures batchFutures
      * @return offset (min, max)
      */
-    protected long[] getBatchFutureRecordOffsetScope(List<ListenableFuture<SendResult<String, String>>> batchFutures) {
-        Iterator<ListenableFuture<SendResult<String, String>>> futureIterator = batchFutures.iterator();
-        ListenableFuture<SendResult<String, String>> candidate = futureIterator.next();
+    protected long[] getBatchFutureRecordOffsetScope(List<CompletableFuture<SendResult<String, String>>> batchFutures) {
+        Iterator<CompletableFuture<SendResult<String, String>>> futureIterator = batchFutures.iterator();
+        CompletableFuture<SendResult<String, String>> candidate = futureIterator.next();
         long minOffset = getFutureOffset(candidate);
         long maxOffset = minOffset;
 
@@ -109,7 +110,7 @@ public abstract class AbstractProcessor implements SliceProcessor {
         return new long[]{minOffset, maxOffset};
     }
 
-    private long getFutureOffset(ListenableFuture<SendResult<String, String>> next) {
+    private long getFutureOffset(CompletableFuture<SendResult<String, String>> next) {
         try {
             SendResult<String, String> sendResult = next.get();
             return sendResult.getRecordMetadata()

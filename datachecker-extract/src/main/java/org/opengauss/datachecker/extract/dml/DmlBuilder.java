@@ -15,6 +15,7 @@
 
 package org.opengauss.datachecker.extract.dml;
 
+import jakarta.validation.constraints.NotNull;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.entry.enums.DataBaseType;
@@ -23,7 +24,6 @@ import org.opengauss.datachecker.common.util.HexUtil;
 import org.opengauss.datachecker.common.util.SqlUtil;
 import org.opengauss.datachecker.extract.util.MetaDataUtil;
 
-import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;

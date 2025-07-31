@@ -6,7 +6,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>2.6.15</version>
+        <version>3.5.3</version>
     </parent>
 
     <groupId>org.opengauss</groupId>
@@ -21,32 +21,34 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <gs.datacheck.version>${project.version}</gs.datacheck.version>
-        <spring.boot.version>2.6.15</spring.boot.version>
-        <spring.cloud.version>2021.0.0</spring.cloud.version>
-        <java.version>11</java.version>
-        <mysql.connector.java.version>8.0.30</mysql.connector.java.version>
+        <spring.boot.version>3.5.3</spring.boot.version>
+        <spring.cloud.version>2025.0.0</spring.cloud.version>
+        <tomcat.version>10.1.43</tomcat.version>
+        <java.version>17</java.version>
+        <mysql.connector.java.version>9.3.0</mysql.connector.java.version>
         <opengauss.jdbc.version>5.1.0-og</opengauss.jdbc.version>
         <oracle.jdbc.version>11.2.0.3</oracle.jdbc.version>
         <druid.version>1.2.8</druid.version>
         <mybatis.version>2.2.2</mybatis.version>
         <lombok.version>1.18.24</lombok.version>
-        <fastjson.version>1.2.75</fastjson.version>
+        <fastjson.version>2.0.51</fastjson.version>
         <guava.version>32.0.0-jre</guava.version>
-        <springdoc.openapi.ui.version>1.6.8</springdoc.openapi.ui.version>
+        <springdoc.openapi.ui.version>1.6.15</springdoc.openapi.ui.version>
         <zero.allocation.hashing.version>0.15</zero.allocation.hashing.version>
-        <io.confluent.version>7.0.1</io.confluent.version>
+        <io.confluent.version>7.9.2</io.confluent.version>
         <snakeyaml.version>2.0</snakeyaml.version>
         <snappy-java.version>1.1.10.5</snappy-java.version>
         <powermock.version>2.0.0</powermock.version>
         <commons.cli.version>1.4</commons.cli.version>
-        <bcpkix-jdk15on.version>1.70</bcpkix-jdk15on.version>
-        <commons.fileupload.version>1.5</commons.fileupload.version>
+        <bcpkix-jdk18on.version>1.80</bcpkix-jdk18on.version>
+        <commons.fileupload.version>1.6.0</commons.fileupload.version>
+        <commons.lang3.version>3.18.0</commons.lang3.version>
         <commons.compress.version>1.26.1</commons.compress.version>
         <commons.collection.version>4.4</commons.collection.version>
         <log4j2.version>2.23.1</log4j2.version>
         <oshi.version>6.5.0</oshi.version>
-        <hutool-all.version>5.7.8</hutool-all.version>
-        <opencsv.version>5.7.1</opencsv.version>
+        <hutool-all.version>5.8.38</hutool-all.version>
+        <opencsv.version>5.12.0</opencsv.version>
         <disruptor.version>3.4.4</disruptor.version>
     </properties>
     <modules>
@@ -119,6 +121,11 @@
                 <version>${commons.compress.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-lang3</artifactId>
+                <version>${commons.lang3.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>commons-fileupload</groupId>
                 <artifactId>commons-fileupload</artifactId>
                 <version>${commons.fileupload.version}</version>
@@ -134,8 +141,8 @@
                 <version>${commons.cli.version}</version>
             </dependency>
             <dependency>
-                <groupId>mysql</groupId>
-                <artifactId>mysql-connector-java</artifactId>
+                <groupId>com.mysql</groupId>
+                <artifactId>mysql-connector-j</artifactId>
                 <version>${mysql.connector.java.version}</version>
             </dependency>
             <dependency>
@@ -192,8 +199,8 @@
             </dependency>
             <dependency>
                 <groupId>org.bouncycastle</groupId>
-                <artifactId>bcpkix-jdk15on</artifactId>
-                <version>${bcpkix-jdk15on.version}</version>
+                <artifactId>bcpkix-jdk18on</artifactId>
+                <version>${bcpkix-jdk18on.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.alibaba</groupId>
@@ -220,8 +227,8 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
-                    <source>11</source>
-                    <target>11</target>
+                    <source>17</source>
+                    <target>17</target>
                     <encoding>UTF-8</encoding>
                 </configuration>
             </plugin>

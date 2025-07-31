@@ -15,10 +15,10 @@
 
 package org.opengauss.datachecker.extract.debezium;
 
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import org.opengauss.datachecker.extract.service.MetaDataService;
 
-import javax.validation.constraints.NotEmpty;
-import javax.validation.constraints.NotNull;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
