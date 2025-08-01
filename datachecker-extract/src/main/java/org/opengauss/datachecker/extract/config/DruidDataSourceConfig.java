@@ -25,7 +25,10 @@ import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.SqlSessionFactoryBean;
 import org.mybatis.spring.SqlSessionTemplate;
 import org.mybatis.spring.annotation.MapperScan;
+import org.opengauss.datachecker.common.config.ConfigCache;
+import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.extract.constants.ExtConstants;
+import org.opengauss.datachecker.extract.resource.ConnectionMgr;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -62,11 +65,16 @@ public class DruidDataSourceConfig implements DataSourceConfig {
         druidDataSource.setMaxPoolPreparedStatementPerConnectionSize(20);
         druidDataSource.setMaxActive(20);
         druidDataSource.setMinIdle(10);
+        druidDataSource.setRemoveAbandoned(true);
+        druidDataSource.setRemoveAbandonedTimeout(300);
+        druidDataSource.setLogAbandoned(true);
         String isEnableStdinPassword = System.getenv(ExtConstants.ENABLE_ENV_PASSWORD);
         if (StrUtil.equalsIgnoreCase(isEnableStdinPassword, ExtConstants.ENABLE_TRUE)) {
             druidDataSource.setPassword(System.getenv(ExtConstants.SPRING_DATASOURCE_PASSWORD));
             log.info("enable system env password true");
         }
+        ConfigCache.put(ConfigConstants.DS_PASSWORD, druidDataSource.getPassword());
+        ConnectionMgr.initDruidDataSource(druidDataSource);
         return druidDataSource;
     }
 
