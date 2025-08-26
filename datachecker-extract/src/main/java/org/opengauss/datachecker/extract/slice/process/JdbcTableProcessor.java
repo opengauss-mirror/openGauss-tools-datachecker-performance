@@ -29,7 +29,7 @@ import org.opengauss.datachecker.extract.task.sql.AutoSliceQueryStatement;
 import org.opengauss.datachecker.extract.task.sql.FullQueryStatement;
 import org.opengauss.datachecker.extract.task.sql.QuerySqlEntry;
 import org.springframework.kafka.support.SendResult;
-import org.springframework.util.concurrent.ListenableFuture;
+import java.util.concurrent.CompletableFuture;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -40,6 +40,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * JdbcTableProcessor
@@ -104,7 +105,7 @@ public class JdbcTableProcessor extends AbstractTableProcessor {
             for (int i = 0; i < querySqlList.size(); i++) {
                 QuerySqlEntry sqlEntry = querySqlList.get(i);
                 List<long[]> offsetList = new LinkedList<>();
-                List<ListenableFuture<SendResult<String, String>>> batchFutures = new LinkedList<>();
+                List<CompletableFuture<SendResult<String, String>>> batchFutures = new LinkedList<>();
                 log.info(" {} , {}", table, sqlEntry.toString());
                 try (PreparedStatement ps = connection.prepareStatement(sqlEntry.getSql());
                     ResultSet resultSet = ps.executeQuery()) {
@@ -155,7 +156,7 @@ public class JdbcTableProcessor extends AbstractTableProcessor {
             QuerySqlEntry sqlEntry = getFullQuerySqlEntry();
             log.info(" {} , {}", table, sqlEntry.toString());
             List<long[]> offsetList = new LinkedList<>();
-            List<ListenableFuture<SendResult<String, String>>> batchFutures = new LinkedList<>();
+            List<CompletableFuture<SendResult<String, String>>> batchFutures = new LinkedList<>();
             try (PreparedStatement ps = connection.prepareStatement(sqlEntry.getSql());
                 ResultSet resultSet = ps.executeQuery()) {
                 resultSet.setFetchSize(fetchSize);

@@ -25,11 +25,11 @@ import org.opengauss.datachecker.common.exception.SendTopicMessageException;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
-import org.springframework.util.concurrent.ListenableFuture;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * SliceKafkaAgents
@@ -117,11 +117,11 @@ public class SliceKafkaAgents {
      * @param dataHash dataHash
      * @return 返回发送信息
      */
-    public ListenableFuture<SendResult<String, String>> sendRowDataSync(RowDataHash dataHash) {
+    public CompletableFuture<SendResult<String, String>> sendRowDataSync(RowDataHash dataHash) {
         return sendSync(recordKey, JSON.toJSONString(dataHash));
     }
 
-    private ListenableFuture<SendResult<String, String>> sendSync(String key, String message) {
+    private CompletableFuture<SendResult<String, String>> sendSync(String key, String message) {
         try {
             return kafkaTemplate.send(new ProducerRecord<>(topicName, ptn, key, message));
         } catch (Exception kafkaException) {

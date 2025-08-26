@@ -17,6 +17,8 @@ package org.opengauss.datachecker.extract.debezium;
 
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.TypeReference;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericData.Record;
 import org.apache.commons.lang3.StringUtils;
@@ -27,8 +29,6 @@ import org.opengauss.datachecker.common.util.LongHashFunctionWrapper;
 import org.opengauss.datachecker.extract.service.MetaDataService;
 import org.opengauss.datachecker.extract.util.MetaDataUtil;
 
-import javax.validation.constraints.NotEmpty;
-import javax.validation.constraints.NotNull;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;

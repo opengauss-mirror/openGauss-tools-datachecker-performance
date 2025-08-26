@@ -22,7 +22,7 @@ import org.opengauss.datachecker.common.entry.common.Rule;
 import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.common.util.LogUtils;
 
-import javax.validation.ConstraintValidatorContext;
+import jakarta.validation.ConstraintValidatorContext;
 import java.util.List;
 
 import static org.opengauss.datachecker.check.config.validator.RuleConfigValidatorUtil.fetchRuleByPredicate;

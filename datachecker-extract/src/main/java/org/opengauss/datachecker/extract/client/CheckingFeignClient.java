@@ -15,6 +15,7 @@
 
 package org.opengauss.datachecker.extract.client;
 
+import jakarta.validation.constraints.NotEmpty;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.extract.SliceExtend;
 import org.opengauss.datachecker.common.entry.extract.SliceVo;
@@ -27,7 +28,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import javax.validation.constraints.NotEmpty;
 import java.util.List;
 import java.util.Map;
 

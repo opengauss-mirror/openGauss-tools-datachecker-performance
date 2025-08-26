@@ -16,11 +16,11 @@
 package org.opengauss.datachecker.common.entry.report;
 
 import com.alibaba.fastjson.annotation.JSONType;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.experimental.Accessors;
 import org.opengauss.datachecker.common.entry.check.Difference;
 
-import javax.validation.constraints.NotNull;
 import java.util.List;
 
 /**
@@ -56,7 +56,7 @@ class CsvFileFailed {
     private List<Difference> keyDelete;
 
     public CsvFileFailed(String fileName, @NotNull List<Difference> keyInsert, @NotNull List<Difference> keyUpdate,
-        @NotNull List<Difference> keyDelete) {
+                         @NotNull List<Difference> keyDelete) {
         this.fileName = fileName;
         this.keyInsert = keyInsert;
         this.keyUpdate = keyUpdate;

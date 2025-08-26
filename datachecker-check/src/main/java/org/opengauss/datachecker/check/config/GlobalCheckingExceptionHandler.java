@@ -15,13 +15,12 @@
 
 package org.opengauss.datachecker.check.config;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.opengauss.datachecker.common.entry.enums.ResultEnum;
 import org.opengauss.datachecker.common.exception.*;
 import org.opengauss.datachecker.common.web.Result;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-
-import javax.servlet.http.HttpServletRequest;
 
 /**
  * GlobalCheckingExceptionHandler

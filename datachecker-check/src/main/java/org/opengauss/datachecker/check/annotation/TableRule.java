@@ -15,10 +15,10 @@
 
 package org.opengauss.datachecker.check.annotation;
 
+import jakarta.validation.Constraint;
+import jakarta.validation.Payload;
 import org.opengauss.datachecker.check.config.validator.RuleConfigTableValidator;
 
-import javax.validation.Constraint;
-import javax.validation.Payload;
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

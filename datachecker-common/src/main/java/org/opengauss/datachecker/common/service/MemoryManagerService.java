@@ -15,11 +15,11 @@
 
 package org.opengauss.datachecker.common.service;
 
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.Resource;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.Resource;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;

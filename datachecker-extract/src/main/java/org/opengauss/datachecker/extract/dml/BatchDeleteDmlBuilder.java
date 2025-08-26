@@ -15,12 +15,12 @@
 
 package org.opengauss.datachecker.extract.dml;
 
+import jakarta.validation.constraints.NotNull;
 import org.apache.commons.lang3.StringUtils;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.springframework.lang.NonNull;
 import org.springframework.util.Assert;
 
-import javax.validation.constraints.NotNull;
 import java.util.List;
 
 /**

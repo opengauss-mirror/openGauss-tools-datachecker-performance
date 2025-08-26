@@ -15,6 +15,7 @@
 
 package org.opengauss.datachecker.extract.config;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.common.entry.enums.ResultEnum;
@@ -23,8 +24,6 @@ import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.web.Result;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-
-import javax.servlet.http.HttpServletRequest;
 
 /**
  * GlobalCheckingExceptionHandler

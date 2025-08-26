@@ -19,7 +19,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.opengauss.datachecker.check.annotation.ColumnRule;
 import org.opengauss.datachecker.common.entry.common.Rule;
 
-import javax.validation.ConstraintValidatorContext;
+import jakarta.validation.ConstraintValidatorContext;
 import java.util.List;
 import java.util.function.Predicate;
 

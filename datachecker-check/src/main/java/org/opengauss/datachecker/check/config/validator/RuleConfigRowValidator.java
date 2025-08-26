@@ -19,7 +19,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.opengauss.datachecker.check.annotation.RowRule;
 import org.opengauss.datachecker.common.entry.common.Rule;
 
-import javax.validation.ConstraintValidatorContext;
+import jakarta.validation.ConstraintValidatorContext;
 import java.util.List;
 import java.util.regex.Pattern;
 

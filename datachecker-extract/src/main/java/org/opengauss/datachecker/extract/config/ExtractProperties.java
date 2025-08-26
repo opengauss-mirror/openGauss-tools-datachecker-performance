@@ -16,6 +16,7 @@
 package org.opengauss.datachecker.extract.config;
 
 import com.alibaba.fastjson.annotation.JSONType;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import org.hibernate.validator.constraints.Range;
 import org.opengauss.datachecker.common.entry.enums.DataBaseType;
@@ -24,7 +25,6 @@ import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
-import javax.validation.constraints.NotNull;
 import java.util.List;
 
 /**

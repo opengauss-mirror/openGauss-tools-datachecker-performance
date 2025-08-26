@@ -29,7 +29,7 @@ import org.opengauss.datachecker.extract.slice.SliceProcessorContext;
 import org.opengauss.datachecker.extract.slice.common.SliceKafkaAgents;
 import org.opengauss.datachecker.extract.slice.common.SliceResultSetSender;
 import org.springframework.kafka.support.SendResult;
-import org.springframework.util.concurrent.ListenableFuture;
+import java.util.concurrent.CompletableFuture;
 
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -93,7 +93,7 @@ public class CsvSliceProcessor extends AbstractSliceProcessor {
                 String[] nextLine;
                 Map<String, String> result = new TreeMap<>();
                 List<long[]> offsetList = new LinkedList<>();
-                List<ListenableFuture<SendResult<String, String>>> batchFutures = new LinkedList<>();
+                List<CompletableFuture<SendResult<String, String>>> batchFutures = new LinkedList<>();
                 while ((nextLine = reader.readNext()) != null) {
                     rowCount++;
                     batchFutures.add(sliceSender.csvTranslateAndSendSync(nextLine, result, rowCount, slice.getNo()));
