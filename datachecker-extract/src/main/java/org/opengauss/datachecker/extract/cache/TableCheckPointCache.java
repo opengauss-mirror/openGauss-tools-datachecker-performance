@@ -92,6 +92,14 @@ public class TableCheckPointCache {
     }
 
     /**
+     * clean table check point cache
+     */
+    public void clean() {
+        tableSize = 0;
+        TABLE_CHECKPOINT_CACHE.clear();
+    }
+
+    /**
      * get cache
      *
      * @param key table name as cached key

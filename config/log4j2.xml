@@ -23,7 +23,8 @@
         <Property name="KAFKA_SERVER">${sys:kafka.bootstrapServers:-127.0.0.1:9092}</Property>
         <Property name="KAFKA_TOPIC">${sys:kafka.topic}</Property>
         <Property name="KAFKA_KEY">${sys:kafka.key}</Property>
-        <property name="LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%c{1.}] - %msg%n"/>
+        <Property name="SAFE_MSG">%enc{%msg}{CRLF}%n</Property>
+        <property name="LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%c{1.}] - ${SAFE_MSG}"/>
     </Properties>
     <Appenders>
         <Console name="console_out_appender" target="SYSTEM_OUT">
@@ -61,7 +62,7 @@
                 must be close console_out_appender ,when portal exec gs data check .
                 portal will catch console log for something, this will cause check data process shutdown error.
             -->
-            <!--<AppenderRef ref="console_out_appender"/> -->
+            <AppenderRef ref="console_out_appender"/>
             <AppenderRef ref="progress"/>
             <AppenderRef ref="kafka"/>
         </Root>

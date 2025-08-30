@@ -34,8 +34,8 @@ import org.springframework.kafka.KafkaException;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.PreDestroy;
-import javax.annotation.Resource;
+import jakarta.annotation.PreDestroy;
+import jakarta.annotation.Resource;
 
 import java.time.Duration;
 import java.util.Collection;

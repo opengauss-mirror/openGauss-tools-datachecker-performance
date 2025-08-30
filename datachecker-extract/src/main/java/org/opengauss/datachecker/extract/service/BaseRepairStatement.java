@@ -30,7 +30,7 @@ import org.opengauss.datachecker.extract.dml.DeleteDmlBuilder;
 import org.opengauss.datachecker.extract.dml.InsertDmlBuilder;
 import org.opengauss.datachecker.extract.dml.UpdateDmlBuilder;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;

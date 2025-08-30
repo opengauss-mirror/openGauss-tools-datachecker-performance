@@ -20,7 +20,9 @@ import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.Resource;
+import jakarta.annotation.PreDestroy;
+import jakarta.annotation.Resource;
+
 import java.util.Objects;
 
 /**
@@ -49,6 +51,12 @@ public class CheckPointRegister {
             checkPointSwapRegister.pollSwapPoint();
             checkPointSwapRegister.registerCheckPoint();
         }
+    }
+
+    @PreDestroy
+    private void stopCheckMonitor() {
+        checkPointSwapRegister.stopMonitor(Endpoint.SOURCE);
+        checkPointSwapRegister.stopMonitor(Endpoint.SINK);
     }
 
     /**

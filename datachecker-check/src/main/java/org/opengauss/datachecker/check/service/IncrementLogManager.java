@@ -20,8 +20,8 @@ import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.PreDestroy;
-import javax.annotation.Resource;
+import jakarta.annotation.PreDestroy;
+import jakarta.annotation.Resource;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;

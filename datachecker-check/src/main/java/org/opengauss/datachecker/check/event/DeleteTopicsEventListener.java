@@ -26,8 +26,8 @@ import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.PreDestroy;
-import javax.annotation.Resource;
+import jakarta.annotation.PreDestroy;
+import jakarta.annotation.Resource;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;

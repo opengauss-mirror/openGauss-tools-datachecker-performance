@@ -26,7 +26,7 @@ import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 import jakarta.validation.constraints.NotEmpty;
 import java.util.ArrayList;
 import java.util.Collections;

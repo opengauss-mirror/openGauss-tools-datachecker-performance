@@ -27,7 +27,7 @@ import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.MapUtils;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 
 import java.util.HashMap;
 import java.util.List;

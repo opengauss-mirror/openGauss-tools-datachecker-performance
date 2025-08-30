@@ -1,10 +1,12 @@
 package org.opengauss.datachecker.check.util;
 
 import com.alibaba.fastjson.JSONObject;
-import org.apache.commons.io.IOUtils;
+
+import org.apache.logging.log4j.core.util.IOUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
@@ -39,7 +41,7 @@ public class TestJsonUtil {
     private static String mockDataJson(String resource) {
         try (InputStream inputStream = TestJsonUtil.class.getClassLoader().getResourceAsStream(resource)) {
             if (Objects.nonNull(inputStream)) {
-                return IOUtils.toString(inputStream, String.valueOf(StandardCharsets.UTF_8));
+                return IOUtils.toString(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
             } else {
                 return null;
             }

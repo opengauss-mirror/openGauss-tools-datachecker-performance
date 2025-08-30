@@ -23,7 +23,7 @@ import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 import java.util.Objects;
 
 /**

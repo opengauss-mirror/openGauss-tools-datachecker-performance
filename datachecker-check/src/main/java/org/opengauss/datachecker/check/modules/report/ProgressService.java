@@ -30,7 +30,7 @@ import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 import java.io.File;
 import java.time.Duration;
 import java.time.LocalDateTime;

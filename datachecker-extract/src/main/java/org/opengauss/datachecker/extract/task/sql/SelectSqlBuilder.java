@@ -15,6 +15,7 @@
 
 package org.opengauss.datachecker.extract.task.sql;
 
+import cn.hutool.core.util.StrUtil;
 import lombok.Getter;
 
 import org.apache.commons.lang3.StringUtils;
@@ -319,18 +320,21 @@ public class SelectSqlBuilder {
     }
 
     private String getCollate() {
-        String collate = "";
-        switch (dataBaseType) {
-            case MS:
-                collate = " COLLATE utf8mb4_bin";
-                break;
-            case OG:
-                collate = " COLLATE \"C\"";
-                break;
-            default:
-                break;
+        if (isDigit) {
+            return "";
         }
-        return collate;
+        if (StrUtil.isNotEmpty(tableMetadata.getTableCollation())) {
+            return " COLLATE " + tableMetadata.getTableCollation();
+        } else {
+            switch (dataBaseType) {
+                case MS:
+                    return " COLLATE utf8mb4_bin";
+                case OG:
+                    return " COLLATE \"C\"";
+                default:
+                    return "";
+            }
+        }
     }
 
     private String buildSelectSqlConditionLimit(TableMetadata tableMetadata, ConditionLimit conditionLimit) {

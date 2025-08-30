@@ -22,7 +22,7 @@ import org.opengauss.datachecker.extract.data.access.DataAccessService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 
 /**
  * health check of the data extraction service

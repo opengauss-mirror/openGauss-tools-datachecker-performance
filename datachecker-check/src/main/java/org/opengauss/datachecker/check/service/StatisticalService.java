@@ -21,7 +21,7 @@ import org.opengauss.datachecker.common.util.JsonObjectUtil;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.PostConstruct;
+import jakarta.annotation.PostConstruct;
 import jakarta.validation.constraints.NotNull;
 import java.io.File;
 import java.time.LocalDateTime;

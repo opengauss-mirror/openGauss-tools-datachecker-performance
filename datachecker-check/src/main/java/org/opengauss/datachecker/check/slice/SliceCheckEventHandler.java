@@ -36,7 +36,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 
 import static org.opengauss.datachecker.common.constant.DynamicTpConstant.CHECK_EXECUTOR;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 
 /**
  * SliceCheckEventHandler

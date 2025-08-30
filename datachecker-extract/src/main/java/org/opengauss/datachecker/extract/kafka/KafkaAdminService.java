@@ -29,7 +29,7 @@ import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.kafka.KafkaException;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.PreDestroy;
+import jakarta.annotation.PreDestroy;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;

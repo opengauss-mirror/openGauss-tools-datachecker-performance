@@ -25,7 +25,7 @@ import org.opengauss.datachecker.common.util.IdGenerator;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 
 /**
  * ConfigManagement

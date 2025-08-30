@@ -5,9 +5,7 @@ import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.util.LogUtils;
-import org.opengauss.datachecker.common.util.SpringUtil;
 import org.opengauss.datachecker.common.util.ThreadUtil;
-import org.springframework.boot.SpringApplication;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.concurrent.ExecutorConfigurationSupport;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -53,7 +51,6 @@ public class ShutdownService {
         threadExecutorList.forEach(ExecutorConfigurationSupport::shutdown);
         executorServiceList.forEach(ExecutorService::shutdownNow);
         sliceSendExecutor.shutdown();
-        System.exit(SpringApplication.exit(SpringUtil.getApplicationContext()));
     }
 
     public boolean isShutdown() {

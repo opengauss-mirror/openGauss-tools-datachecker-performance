@@ -36,6 +36,7 @@ import org.opengauss.datachecker.common.entry.extract.SliceVo;
 import org.opengauss.datachecker.common.entry.extract.SourceDataLog;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.entry.extract.TableMetadataHash;
+import org.opengauss.datachecker.common.exception.ExtractDataAccessException;
 import org.opengauss.datachecker.common.exception.ExtractException;
 import org.opengauss.datachecker.common.exception.ProcessMultipleException;
 import org.opengauss.datachecker.common.exception.TableNotExistException;
@@ -69,8 +70,9 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.Resource;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
+import jakarta.annotation.Resource;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -327,14 +329,13 @@ public class DataExtractServiceImpl implements DataExtractService {
                 }
             }
             ConfigCache.put(ConfigConstants.PROCESS_NO, processNo);
-            List<ExtractTask> taskList = taskReference.get();
-            if (CollectionUtils.isEmpty(taskList)) {
+            if (CollectionUtils.isEmpty(taskReference.get())) {
                 return;
             }
             sliceRegister.startCheckPointMonitor();
             Map<String, Integer> tableCheckStatus = checkingFeignClient.queryTableCheckStatus();
-            tableRegisterCheckPoint(taskList);
-            taskList.forEach(task -> execExtractTableTask(tableCheckStatus, task));
+            tableRegisterCheckPoint();
+            taskReference.get().forEach(task -> execExtractTableTask(tableCheckStatus, task));
         }
     }
 
@@ -430,6 +431,8 @@ public class DataExtractServiceImpl implements DataExtractService {
             executor.submit(() -> {
                 try {
                     sliceProcessor.run();
+                } catch (ExtractDataAccessException e) {
+                    log.error("slice process {} occ OOM error", sliceVo.getTable(), e);
                 } catch (OutOfMemoryError e) {
                     log.error("slice process {} occ OOM error", sliceVo.getTable(), e);
                     Runtime.getRuntime().halt(1);
@@ -545,24 +548,24 @@ public class DataExtractServiceImpl implements DataExtractService {
         return checkPointList;
     }
 
-    private void tableRegisterCheckPoint(List<ExtractTask> taskList) {
-        new Thread(() -> {
+    private void tableRegisterCheckPoint() {
+        cn.hutool.core.thread.ThreadUtil.newThread(() -> {
             checkPointManager = new ExtractPointSwapManager(kafkaTemplate, kafkaConsumerConfig);
             checkPointManager.setCheckPointSwapTopicName(ConfigCache.getValue(ConfigConstants.PROCESS_NO));
-            LogUtils.info(log, "start pollSwapPoint thread to register CheckPoint taskSize=" + taskList.size());
+            LogUtils.info(log, "start pollSwapPoint to register CheckPoint taskSize=" + taskReference.get().size());
             checkPointManager.pollSwapPoint(tableCheckPointCache);
             Endpoint endpoint = ConfigCache.getEndPoint();
-            taskList.forEach(task -> {
+            taskReference.get().forEach(task -> {
                 registerCheckPoint(task, endpoint);
             });
             LogUtils.info(log, "tableRegisterCheckPoint finished");
             // 该出增加空表过滤逻辑，导致检查点注册线程不能终止。迁移失败，导致目标端数据为空，或者源端表迁移完成后，数据清空
-            while (tableCheckPointCache.tableCount() != taskList.size()) {
+            while (tableCheckPointCache.tableCount() != taskReference.get().size()) {
                 ThreadUtil.sleepHalfSecond();
             }
             checkPointManager.close();
             sliceRegister.stopCheckPointMonitor(ConfigCache.getEndPoint());
-        }).start();
+        }, "table-register-check-point").start();
     }
 
     private void registerCheckPoint(ExtractTask task, Endpoint endpoint) {
@@ -697,5 +700,12 @@ public class DataExtractServiceImpl implements DataExtractService {
     @Override
     public TableMetadata queryIncrementMetaData(String tableName) {
         return metaDataService.queryIncrementMetaData(tableName);
+    }
+
+    @PreDestroy
+    private void environmentClear() {
+        tableCheckPointCache.clean();
+        taskReference.get().clear();
+        checkPointManager.close();
     }
 }

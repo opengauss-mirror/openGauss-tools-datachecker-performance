@@ -20,10 +20,14 @@ import org.opengauss.datachecker.check.client.FeignClientService;
 import org.opengauss.datachecker.check.event.CustomEventHistory;
 import org.opengauss.datachecker.common.service.ShutdownService;
 import org.opengauss.datachecker.common.util.LogUtils;
-import org.opengauss.datachecker.common.util.ThreadUtil;
-import org.springframework.beans.factory.annotation.Value;
 
-import javax.annotation.Resource;
+import cn.hutool.core.thread.ThreadUtil;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ConfigurableApplicationContext;
+
+import jakarta.annotation.Resource;
 
 /**
  * AbstractCheckLoader
@@ -46,6 +50,8 @@ public abstract class AbstractCheckLoader implements CheckLoader {
     private FeignClientService feignClient;
     @Resource
     private CustomEventHistory customEventHistory;
+    @Resource
+    private ApplicationContext applicationContext;
 
     /**
      * shutdown app
@@ -54,10 +60,15 @@ public abstract class AbstractCheckLoader implements CheckLoader {
      */
     public void shutdown(String message) {
         while (!customEventHistory.checkAllEventCompleted()) {
-            ThreadUtil.sleepOneSecond();
+            ThreadUtil.sleep(1000);
         }
-        feignClient.shutdown(message);
-        ThreadUtil.sleepOneSecond();
-        shutdownService.shutdown(message);
+        ThreadUtil.newThread(() -> {
+            feignClient.shutdown(message);
+            ThreadUtil.sleep(1000);
+            shutdownService.shutdown(message);
+            if (applicationContext instanceof ConfigurableApplicationContext configurableApplicationContext) {
+                configurableApplicationContext.close();
+            }
+        }, "shutdown-check").start();
     }
 }

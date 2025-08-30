@@ -38,7 +38,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;

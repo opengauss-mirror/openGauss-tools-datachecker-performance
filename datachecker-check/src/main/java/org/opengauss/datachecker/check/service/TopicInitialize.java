@@ -26,7 +26,7 @@ import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.TopicUtil;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 import java.util.LinkedList;
 import java.util.List;
 

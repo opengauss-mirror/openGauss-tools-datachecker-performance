@@ -15,19 +15,23 @@
 
 package org.opengauss.datachecker.extract.controller;
 
+import cn.hutool.core.thread.ThreadUtil;
 import io.swagger.v3.oas.annotations.Operation;
+
 import org.opengauss.datachecker.common.service.ShutdownService;
 import org.opengauss.datachecker.common.web.Result;
 import org.opengauss.datachecker.extract.kafka.KafkaManagerService;
 import org.opengauss.datachecker.extract.service.CsvManagementService;
 import org.opengauss.datachecker.extract.service.DataExtractService;
 import org.opengauss.datachecker.extract.slice.SliceProcessorContext;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 
 /**
  * Clearing the environment at the extraction endpoint
@@ -38,6 +42,8 @@ import javax.annotation.Resource;
  */
 @RestController
 public class ExtractCleanController {
+    @Resource
+    private ApplicationContext applicationContext;
     @Resource
     private DataExtractService dataExtractService;
     @Resource
@@ -69,11 +75,23 @@ public class ExtractCleanController {
         return Result.success();
     }
 
+    /**
+     * Shutdown the extractor
+     *
+     * @param message shutdown message
+     * @return interface invoking result
+     */
     @PostMapping("/extract/shutdown")
     Result<Void> shutdown(@RequestBody String message) {
-        csvManagementService.close();
-        sliceProcessorContext.shutdownSliceStatusFeedbackService();
-        shutdownService.shutdown(message);
+        ThreadUtil.newThread(() -> {
+            csvManagementService.close();
+            sliceProcessorContext.shutdownSliceStatusFeedbackService();
+            ThreadUtil.sleep(500);
+            shutdownService.shutdown(message);
+            if (applicationContext instanceof ConfigurableApplicationContext configurableApplicationContext) {
+                configurableApplicationContext.close();
+            }
+        }, "extract-shutdown-thread").start();
         return Result.success();
     }
 }

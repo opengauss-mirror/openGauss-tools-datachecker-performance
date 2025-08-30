@@ -31,7 +31,7 @@ import org.opengauss.datachecker.extract.data.BaseDataService;
 import org.opengauss.datachecker.extract.resource.ResourceManager;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
