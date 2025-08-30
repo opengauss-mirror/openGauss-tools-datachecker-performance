@@ -47,6 +47,7 @@ public class TableMetadata {
      * tableName
      */
     private String tableName;
+    private String tableCollation;
 
     /**
      * Total table data

@@ -29,7 +29,7 @@ import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.entry.extract.UniqueColumnBean;
 import org.opengauss.datachecker.extract.data.mapper.OpgsMetaDataMapper;
 
-import javax.annotation.PostConstruct;
+import jakarta.annotation.PostConstruct;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;

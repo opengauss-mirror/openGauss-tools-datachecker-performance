@@ -38,7 +38,7 @@ import org.opengauss.datachecker.extract.service.RuleAdapterService;
 import org.springframework.jdbc.BadSqlGrammarException;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 
 import java.util.Arrays;
 import java.util.Comparator;

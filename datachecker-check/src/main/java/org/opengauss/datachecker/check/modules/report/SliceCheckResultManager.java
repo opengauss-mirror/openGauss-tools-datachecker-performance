@@ -46,7 +46,7 @@ import org.opengauss.datachecker.common.util.TopicUtil;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 import jakarta.validation.constraints.NotEmpty;
 
 import java.time.Duration;

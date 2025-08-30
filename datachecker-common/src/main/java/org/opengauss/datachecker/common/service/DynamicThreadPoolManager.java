@@ -17,8 +17,10 @@ package org.opengauss.datachecker.common.service;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
+
 import org.opengauss.datachecker.common.constant.DynamicTpConstant;
 import org.opengauss.datachecker.common.exception.ExtractBootstrapException;
+import org.opengauss.datachecker.common.util.ThreadPoolShutdownUtil;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -78,7 +80,7 @@ public class DynamicThreadPoolManager {
             monitor.closeMonitor();
         }
         EXECUTOR_SERVICE_CACHE.forEach((name, executor) -> {
-            executor.shutdownNow();
+            ThreadPoolShutdownUtil.shutdown(executor, name);
         });
     }
 

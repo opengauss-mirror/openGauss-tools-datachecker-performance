@@ -17,7 +17,7 @@ package org.opengauss.datachecker.check.config;
 
 import org.springframework.stereotype.Component;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 
 /**
  * @author ：wangchao

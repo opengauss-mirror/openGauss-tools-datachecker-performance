@@ -40,8 +40,7 @@ public class CheckThreadFactory implements ThreadFactory {
      * CheckThreadFactory
      */
     public CheckThreadFactory() {
-        SecurityManager securityManager = System.getSecurityManager();
-        group = (securityManager != null) ? securityManager.getThreadGroup() : Thread.currentThread().getThreadGroup();
+        group = Thread.currentThread().getThreadGroup();
         namePrefix = "pool-" + POOL_NUMBER.getAndIncrement() + "-thread-";
     }
 
@@ -58,7 +57,6 @@ public class CheckThreadFactory implements ThreadFactory {
         if (thread.isDaemon()) {
             thread.setDaemon(false);
         }
-
         // UncaughtExceptionHandler
         thread.setUncaughtExceptionHandler(new CheckUncaughtExceptionHandler());
         if (thread.getPriority() != Thread.NORM_PRIORITY) {

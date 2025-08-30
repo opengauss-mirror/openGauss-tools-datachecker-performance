@@ -35,7 +35,7 @@ import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 
 import java.time.LocalDateTime;
 import java.util.List;

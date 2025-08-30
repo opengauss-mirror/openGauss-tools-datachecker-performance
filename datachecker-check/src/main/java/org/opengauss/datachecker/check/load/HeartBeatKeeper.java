@@ -20,11 +20,11 @@ import org.opengauss.datachecker.check.service.EndpointManagerService;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.service.ShutdownService;
-import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.Resource;
+import cn.hutool.core.thread.ThreadUtil;
+import jakarta.annotation.Resource;
 
 /**
  * HeartBeatStartLoader

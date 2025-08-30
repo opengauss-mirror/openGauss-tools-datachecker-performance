@@ -24,13 +24,16 @@ import org.opengauss.datachecker.common.entry.common.Health;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.service.ShutdownService;
 import org.opengauss.datachecker.common.util.LogUtils;
+import org.opengauss.datachecker.common.util.ThreadPoolShutdownUtil;
 import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.opengauss.datachecker.common.web.Result;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.Resource;
+import jakarta.annotation.PreDestroy;
+import jakarta.annotation.Resource;
+
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -74,8 +77,7 @@ public class EndpointManagerService {
      * Endpoint health check
      */
     public void endpointHealthCheck() {
-        Thread.currentThread()
-              .setName("heart-beat-heath");
+        Thread.currentThread().setName("heart-beat-heath");
         shutdownService.addMonitor();
         try {
             while (!(shutdownService.isShutdown() || executorService.isShutdown())) {
@@ -98,8 +100,7 @@ public class EndpointManagerService {
             // service check: service database check
             Result<Health> healthStatus = feignClientService.health(endpoint);
             if (healthStatus.isSuccess()) {
-                if (healthStatus.getData()
-                                .isHealth()) {
+                if (healthStatus.getData().isHealth()) {
                     endpointStatusManager.resetStatus(endpoint, Boolean.TRUE);
                 } else {
                     endpointStatusManager.resetStatus(endpoint, Boolean.FALSE);
@@ -115,7 +116,10 @@ public class EndpointManagerService {
         }
     }
 
+    @PreDestroy
     public void stopHeartBeat() {
-        executorService.shutdown();
+        endpointStatusManager.resetStatus(Endpoint.SOURCE, false);
+        endpointStatusManager.resetStatus(Endpoint.SINK, false);
+        ThreadPoolShutdownUtil.shutdown(executorService, "heart-beat-heath");
     }
 }

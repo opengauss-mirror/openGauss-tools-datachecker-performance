@@ -24,8 +24,8 @@ import org.opengauss.datachecker.extract.config.ExtractProperties;
 import org.opengauss.datachecker.extract.service.MetaDataService;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.Resource;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.Resource;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**

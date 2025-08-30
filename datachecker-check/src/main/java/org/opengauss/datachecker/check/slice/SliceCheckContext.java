@@ -29,7 +29,7 @@ import org.opengauss.datachecker.common.service.ProcessLogService;
 import org.opengauss.datachecker.common.util.TopicUtil;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 
 /**
  * SliceCheckContext

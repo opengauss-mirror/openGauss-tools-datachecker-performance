@@ -15,8 +15,12 @@
 
 package org.opengauss.datachecker.extract.slice.process;
 
+import static org.opengauss.datachecker.extract.slice.process.TableCollationFactory.getTableCollation;
+
 import com.alibaba.druid.pool.DruidDataSource;
 
+import cn.hutool.core.thread.ThreadUtil;
+import cn.hutool.core.util.StrUtil;
 import lombok.Getter;
 
 import org.apache.logging.log4j.Logger;
@@ -40,12 +44,15 @@ import org.opengauss.datachecker.extract.task.sql.SliceQueryStatement;
 import org.opengauss.datachecker.extract.task.sql.UnionPrimarySliceQueryStatement;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.util.Assert;
+
 import java.util.concurrent.CompletableFuture;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -54,6 +61,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 
 /**
  * JdbcSliceProcessor
@@ -64,11 +72,29 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class JdbcSliceProcessor extends AbstractSliceProcessor {
     private static final Logger log = LogUtils.getLogger(JdbcSliceProcessor.class);
-    private static final int MAX_RETRY_TIMES = 60;
+    private static final int MAX_RETRY_TIMES = 3;
 
     private final JdbcDataOperations jdbcOperation;
     private final AtomicInteger rowCount = new AtomicInteger(0);
     private final DruidDataSource dataSource;
+
+    /**
+     * translate collate utf8_general_ci to utf8mb4_general_ci
+     */
+    private final Function<String, String> translateUtf8GeneralCi = tableCollation -> {
+        if (StrUtil.equalsIgnoreCase(tableCollation, "utf8_general_ci")) {
+            tableCollation = "utf8mb4_general_ci";
+        }
+        return tableCollation;
+    };
+
+    private final SqlFieldMasker sqlFieldMasker = pageStatement -> {
+        String[] split = pageStatement.toLowerCase(Locale.ROOT).split(" from ");
+        if (split.length != 2) {
+            throw new ExtractDataAccessException("sql statement is not valid");
+        }
+        return "select * from " + split[1];
+    };
 
     /**
      * JdbcSliceProcessor
@@ -88,14 +114,19 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
         TableMetadata tableMetadata = context.getTableMetaData(table);
         SliceExtend sliceExtend = createSliceExtend(tableMetadata.getTableHash());
         try {
+            String tableCollation = tableMetadata.getTableCollation();
+            DataBaseType dataBaseType = ConfigCache.getValue(ConfigConstants.DATA_BASE_TYPE, DataBaseType.class);
+            if (StrUtil.isEmpty(tableCollation)) {
+                refreshTableCollation(tableMetadata, dataBaseType);
+            }
             if (tableMetadata.isUnionPrimary()) {
-                DataBaseType dataBaseType = ConfigCache.getValue(ConfigConstants.DATA_BASE_TYPE, DataBaseType.class);
                 Assert.isTrue(isSuiteUnionPrimary(dataBaseType),
                     "Union primary is not supported by current database type " + dataBaseType.getDescription());
                 executeSliceQueryStatementPage(tableMetadata, sliceExtend);
             } else {
                 QuerySqlEntry queryStatement = createQueryStatement(tableMetadata);
-                LogUtils.debug(log, "table [{}] query statement :  {}", table, queryStatement.getSql());
+                LogUtils.debug(log, "table [{}] query statement :  {}", table,
+                    sqlFieldMasker.mask(queryStatement.getSql()));
                 executeQueryStatement(queryStatement, tableMetadata, sliceExtend);
             }
         } catch (ExtractException ex) {
@@ -114,6 +145,22 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
         }
     }
 
+    private void refreshTableCollation(TableMetadata tableMetadata, DataBaseType dataBaseType) {
+        try (Connection connection = jdbcOperation.tryConnectionAndClosedAutoCommit(1);
+            PreparedStatement preparedStatement = connection.prepareStatement(getTableCollation(dataBaseType))) {
+            preparedStatement.setString(1, tableMetadata.getSchema());
+            preparedStatement.setString(2, tableMetadata.getTableName());
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                if (resultSet.next()) {
+                    String tableCollation = resultSet.getString(1);
+                    tableMetadata.setTableCollation(translateUtf8GeneralCi.apply(tableCollation));
+                }
+            }
+        } catch (SQLException ex) {
+            LogUtils.error(log, "refresh table collation failed with exp:", ex);
+        }
+    }
+
     private boolean isSuiteUnionPrimary(DataBaseType dataBaseType) {
         return Objects.equals(dataBaseType, DataBaseType.OG) || Objects.equals(dataBaseType, DataBaseType.MS);
     }
@@ -129,7 +176,6 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
     }
 
     private void executeSliceQueryStatementPage(TableMetadata tableMetadata, SliceExtend sliceExtend) {
-        // 分片数据统计
         UnionPrimarySliceQueryStatement sliceStatement = context.createSlicePageQueryStatement();
         int sliceCount = (int) slice.getRowCountOfInIds();
         if (slice.getRowCountOfInIds() == 0) {
@@ -140,60 +186,52 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
             slice.getFetchSize());
         SliceResultSetSender sliceSender = null;
         Connection connection = null;
+        AsyncDataHandler asyncHandler = null;
         try {
-            // 申请数据库链接
             long estimatedRowCount = Math.min(sliceCount, slice.getFetchSize());
             long estimatedMemorySize = estimatedMemorySize(tableMetadata.getAvgRowLength(), estimatedRowCount);
             connection = jdbcOperation.tryConnectionAndClosedAutoCommit(estimatedMemorySize);
-            // 获取连接，准备查询分片数据： 并开启数据异步处理线程
             sliceSender = createSliceResultSetSender(tableMetadata);
             sliceSender.setRecordSendKey(slice.getName());
             List<long[]> offsetList = new CopyOnWriteArrayList<>();
             List<CompletableFuture<SendResult<String, String>>> batchFutures = new CopyOnWriteArrayList<>();
-            AsyncDataHandler asyncHandler = new AsyncDataHandler(batchFutures, sliceSender, offsetList);
+            asyncHandler = new AsyncDataHandler(batchFutures, sliceSender, offsetList);
             asyncHandler.start();
             context.asyncSendSlice(asyncHandler);
-            // 开始查询数据，并将结果推送到异步处理线程中。
             boolean isFirstStatement = true;
             long startOffset = 0L;
             int idx = 0;
             for (String pageStatement : pageStatementList) {
-                log.debug("executeSliceQueryStatementPage : {} : {}", ++idx, maskQuery(pageStatement));
+                log.debug("executeSliceQueryStatementPage : {} : {}", ++idx, sqlFieldMasker.mask(pageStatement));
                 QueryParameters queryParameters = new QueryParameters(0, 0);
                 if (isFirstStatement) {
-                    // only use first page statement's start offset
                     startOffset = statementQuery(pageStatement, connection, sliceSender, asyncHandler, queryParameters);
                 } else {
-                    // other page statement's start offset is ignored
                     statementQuery(pageStatement, connection, sliceSender, asyncHandler, queryParameters);
                 }
                 isFirstStatement = false;
             }
-            log.info("executeSliceQueryStatementPage : {} execute statement end", slice.getName());
+            log.debug("executeSliceQueryStatementPage : {} execute statement end", slice.getName());
             sliceExtend.setStartOffset(startOffset);
-            waitToStopAsyncHandlerAndResources(asyncHandler);
+            asyncHandler.waitToStop(false);
             updateExtendSliceOffsetAndCount(sliceExtend, rowCount.get(), offsetList);
             log.info("executeSliceQueryStatementPage : {} async send end", slice.getName());
         } catch (Exception ex) {
             LogUtils.error(log, "{}slice [{}] has exception :", ErrorCode.EXECUTE_SLICE_QUERY, slice.getName(), ex);
             throw new ExtractDataAccessException(ex.getMessage());
         } finally {
-            if (sliceSender != null) {
-                sliceSender.agentsClosed();
-            }
-            jdbcOperation.releaseConnection(connection);
+            cleanResource(sliceSender, asyncHandler, connection);
         }
     }
 
-    /**
-     * only used by log print
-     *
-     * @param pageStatement sql statement
-     * @return mask statement
-     */
-    private String maskQuery(String pageStatement) {
-        String[] split = pageStatement.toLowerCase(Locale.ROOT).split(" from ");
-        return "select * from " + split[1];
+    private void cleanResource(SliceResultSetSender sliceSender, AsyncDataHandler asyncHandler, Connection connection) {
+        if (sliceSender != null) {
+            sliceSender.agentsClosed();
+        }
+        if (asyncHandler != null) {
+            asyncHandler.waitToStop(true);
+        }
+        jdbcOperation.releaseConnection(connection);
     }
 
     private long statementQuery(String pageStatement, Connection connection, SliceResultSetSender sliceSender,
@@ -215,7 +253,7 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
                 if (rsIdx >= queryParameters.getResultSetIdx()) {
                     this.rowCount.incrementAndGet();
                     if (asyncHandler.isSenderBusy()) {
-                        Thread.sleep(100);
+                        ThreadUtil.sleep(100);
                     }
                     asyncHandler.addRow(sliceSender.resultSet(rsmd, resultSet));
                 }
@@ -238,9 +276,9 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
                     startOffset = statementQuery(pageStatement, connection, sliceSender, asyncHandler, queryParameters);
                 } else {
                     log.error("{}execute query {} retry {} times error ,cause by ", ErrorCode.EXECUTE_QUERY_SQL,
-                        maskQuery(pageStatement), queryParameters.getRetryTimes(), ex);
+                        sqlFieldMasker.mask(pageStatement), queryParameters.getRetryTimes(), ex);
                     throw new ExtractDataAccessException(
-                        "execute query " + maskQuery(pageStatement) + " retry " + MAX_RETRY_TIMES
+                        "execute query " + sqlFieldMasker.mask(pageStatement) + " retry " + MAX_RETRY_TIMES
                             + " times error ,cause by " + ex.getMessage());
                 }
             }
@@ -248,26 +286,19 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
         return startOffset;
     }
 
-    private static void waitToStopAsyncHandlerAndResources(AsyncDataHandler asyncHandler) {
-        // 全部分页查询处理完成，关闭数据库连接，并关闭异步数据处理线程
-        try {
-            asyncHandler.waitToStop();
-        } catch (InterruptedException e) {
-            throw new ExtractDataAccessException("slice data async handler is interrupted");
-        }
-    }
     private void executeQueryStatement(QuerySqlEntry sqlEntry, TableMetadata tableMetadata, SliceExtend sliceExtend) {
         SliceResultSetSender sliceSender = null;
         Connection connection = null;
         PreparedStatement ps = null;
         ResultSet resultSet = null;
+        AsyncDataHandler asyncHandler = null;
         try {
             // 获取连接，准备查询分片数据： 并开启数据异步处理线程
             List<long[]> offsetList = new CopyOnWriteArrayList<>();
             List<CompletableFuture<SendResult<String, String>>> batchFutures = new CopyOnWriteArrayList<>();
             sliceSender = createSliceResultSetSender(tableMetadata);
             sliceSender.setRecordSendKey(slice.getName());
-            AsyncDataHandler asyncHandler = new AsyncDataHandler(batchFutures, sliceSender, offsetList);
+            asyncHandler = new AsyncDataHandler(batchFutures, sliceSender, offsetList);
             asyncHandler.start();
             context.asyncSendSlice(asyncHandler);
             // 申请数据库链接
@@ -279,7 +310,7 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
             long startOffset = statementQuery(sqlEntry.getSql(), connection, sliceSender, asyncHandler, parameters);
             sliceExtend.setStartOffset(startOffset);
             // 等待分片查询处理完成，关闭数据库连接，并关闭异步数据处理线程 ，关闭ps与rs
-            waitToStopAsyncHandlerAndResources(asyncHandler);
+            asyncHandler.waitToStop(false);
             updateExtendSliceOffsetAndCount(sliceExtend, rowCount.get(), offsetList);
         } catch (Exception ex) {
             LogUtils.error(log, "{}slice [{}] has exception :", ErrorCode.EXECUTE_SLICE_QUERY, slice.getName(), ex);
@@ -288,6 +319,9 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
             ConnectionMgr.close(connection, ps, resultSet);
             if (sliceSender != null) {
                 sliceSender.agentsClosed();
+            }
+            if (asyncHandler != null) {
+                asyncHandler.waitToStop(true);
             }
             jdbcOperation.releaseConnection(connection);
             LogUtils.info(log, "query slice and send data count {}", rowCount.get());
@@ -352,13 +386,19 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
         /**
          * wait queue empty to stop
          *
-         * @throws InterruptedException InterruptedException
+         * @param isForceClose is force close
          */
-        public void waitToStop() throws InterruptedException {
+        public void waitToStop(boolean isForceClose) {
             while (!batchData.isEmpty()) {
-                Thread.sleep(100);
+                ThreadUtil.sleep(100);
+                if (isForceClose) {
+                    break;
+                }
             }
             this.canStartFetchRow = false;
+            this.batchData.clear();
+            this.batchFutures.clear();
+            this.offsetList.clear();
         }
 
         @Override
@@ -366,10 +406,7 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
             log.info("start send slice row {}", slice.getName());
             while (canStartFetchRow) {
                 if (Objects.isNull(batchData.peek())) {
-                    try {
-                        Thread.sleep(100);
-                    } catch (InterruptedException ignore) {
-                    }
+                    ThreadUtil.sleep(100);
                 } else {
                     Map<String, String> value = batchData.poll();
                     batchFutures.add(sliceSender.resultSetTranslate(value, slice.getNo()));
@@ -427,4 +464,42 @@ enum ExecutionStage {
      * close
      */
     CLOSE
+}
+
+class TableCollationFactory {
+    private static final Map<DataBaseType, String> COLLATION = new HashMap<>();
+
+    static {
+        COLLATION.put(DataBaseType.OG, "select distinct collation_name from information_schema.columns "
+            + "where table_schema=? and table_name=? and collation_name is not null limit 1");
+        COLLATION.put(DataBaseType.MS,
+            "select table_collation from information_schema.tables where table_schema = ? and table_name = ?");
+        COLLATION.put(DataBaseType.O,
+            "SELECT DEFAULT_COLLATION FROM ALL_TAB_COLUMNS WHERE OWNER = ? AND TABLE_NAME = ?;");
+    }
+
+    /**
+     * get table collation
+     *
+     * @param dataBaseType data base type
+     * @return table collation
+     */
+    public static String getTableCollation(DataBaseType dataBaseType) {
+        return COLLATION.getOrDefault(dataBaseType, "");
+    }
+}
+
+/**
+ * mask query sql fields,this only used by log print
+ */
+@FunctionalInterface
+interface SqlFieldMasker {
+    /**
+     * mask query sql fields
+     *
+     * @param statementSql query sql statement
+     * @return mask query sql statement
+     * @throws ExtractDataAccessException current sql is invalid
+     */
+    String mask(String statementSql) throws ExtractDataAccessException;
 }
