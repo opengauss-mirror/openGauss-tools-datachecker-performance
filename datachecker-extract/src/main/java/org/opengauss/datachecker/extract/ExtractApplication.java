@@ -15,12 +15,14 @@
 
 package org.opengauss.datachecker.extract;
 
+import org.apache.logging.log4j.LogManager;
 import org.opengauss.datachecker.common.exception.ExtractBootstrapException;
 import org.opengauss.datachecker.common.service.CommonCommandLine.CmdOption;
 import org.opengauss.datachecker.extract.cmd.ExtractCommandLine;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.openfeign.EnableFeignClients;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.stereotype.Indexed;
 
@@ -46,7 +48,17 @@ public class ExtractApplication {
         System.setProperty(CmdOption.LOG_NAME, commandLine.getMode());
         if (commandLine.hasOnlySink()) {
             application.setAdditionalProfiles(PROFILE_SINK);
-            application.run(args);
+            ConfigurableApplicationContext ctx = application.run(args);
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                ctx.close();
+                try {
+                    Thread.sleep(3000);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+                System.setProperty("log4j2.disableShutdownHook", "true");
+                LogManager.shutdown(false); // 禁止关闭时记录日志
+            }));
         } else if (commandLine.hasOnlySource()) {
             application.setAdditionalProfiles(PROFILE_SOURCE);
             application.run(args);

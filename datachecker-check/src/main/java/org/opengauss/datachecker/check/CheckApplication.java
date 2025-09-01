@@ -15,14 +15,17 @@
 
 package org.opengauss.datachecker.check;
 
-import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 import org.opengauss.datachecker.check.cmd.CheckCommandLine;
-import org.opengauss.datachecker.common.entry.enums.ErrorCode;
+import org.opengauss.datachecker.common.exception.CheckingException;
 import org.opengauss.datachecker.common.service.CommonCommandLine.CmdOption;
-import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration;
+import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration;
 import org.springframework.cloud.openfeign.EnableFeignClients;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.stereotype.Indexed;
 
@@ -35,11 +38,12 @@ import org.springframework.stereotype.Indexed;
  **/
 @Indexed
 @EnableFeignClients(basePackages = {"org.opengauss.datachecker.check.client"})
-@SpringBootApplication
+@SpringBootApplication(exclude = {
+    DataSourceAutoConfiguration.class, DataSourceTransactionManagerAutoConfiguration.class,
+    HibernateJpaAutoConfiguration.class
+})
 @ComponentScan(value = {"org.opengauss.datachecker.check", "org.opengauss.datachecker.common"})
 public class CheckApplication {
-    private static final Logger log = LogUtils.getLogger();
-
     public static void main(String[] args) {
         try {
             CheckCommandLine commandLine = new CheckCommandLine();
@@ -49,10 +53,20 @@ public class CheckApplication {
             if (commandLine.hasHelp()) {
                 commandLine.help();
             } else {
-                application.run(args);
+                ConfigurableApplicationContext ctx = application.run(args);
+                Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                    ctx.close();
+                    try {
+                        Thread.sleep(3000);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                    System.setProperty("log4j2.disableShutdownHook", "true");
+                    LogManager.shutdown(false); // 禁止关闭时记录日志
+                }));
             }
         } catch (Throwable er) {
-            log.error("{}server start has unknown error", ErrorCode.CHECK_START_ERROR, er);
+            throw new CheckingException("server start has unknown error " + er.getMessage());
         }
     }
 }
