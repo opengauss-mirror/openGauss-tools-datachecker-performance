@@ -14,7 +14,7 @@
   ~ See the Mulan PSL v2 for more details.
   -->
 
-<Configuration status="INFO" monitorInterval="600">
+<Configuration status="OFF" monitorInterval="600" shutdownHook="disable" shutdownTimeout="5">
     <Properties>
         <!--Property LOG_HOME must be absolute path dir -->
         <Property name="LOG_HOME">logs</Property>
@@ -66,6 +66,7 @@
             <AppenderRef ref="progress"/>
             <AppenderRef ref="kafka"/>
         </Root>
+        <Logger name="org.apache.logging.log4j" level="off" />
         <logger name="org.apache.kafka" level="error" />
         <logger name="oshi.util" level="off" />
         <logger name="org.hibernate.validator" level="off" />
