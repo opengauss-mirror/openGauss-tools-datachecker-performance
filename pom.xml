@@ -6,7 +6,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.5.3</version>
+        <version>3.5.5</version>
     </parent>
 
     <groupId>org.opengauss</groupId>
@@ -21,9 +21,8 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <gs.datacheck.version>${project.version}</gs.datacheck.version>
-        <spring.cloud.version>2025.0.0</spring.cloud.version>
-        <spring.boot.version>3.5.3</spring.boot.version>
-        <tomcat.version>10.1.43</tomcat.version>
+        <spring.cloud.version>2025.1.0-M2</spring.cloud.version>
+        <spring.boot.version>3.5.5</spring.boot.version>
         <java.version>17</java.version>
         <mysql.connector.java.version>9.3.0</mysql.connector.java.version>
         <opengauss.jdbc.version>6.0.0-og</opengauss.jdbc.version>
@@ -33,12 +32,14 @@
         <lombok.version>1.18.24</lombok.version>
         <fastjson.version>2.0.51</fastjson.version>
         <guava.version>32.0.0-jre</guava.version>
-        <springdoc.openapi.ui.version>1.6.15</springdoc.openapi.ui.version>
+        <springdoc.openapi.ui.version>1.8.0</springdoc.openapi.ui.version>
         <zero.allocation.hashing.version>0.15</zero.allocation.hashing.version>
         <io.confluent.version>7.9.2</io.confluent.version>
         <powermock.version>2.0.0</powermock.version>
         <commons.cli.version>1.4</commons.cli.version>
-        <commons.compress.version>1.26.1</commons.compress.version>
+        <commons.compress.version>1.28.0</commons.compress.version>
+        <commons.fileupload.version>1.6.0</commons.fileupload.version>
+        <commons-lang3.version>3.18.0</commons-lang3.version>
         <commons.collection.version>4.4</commons.collection.version>
         <oshi.version>6.5.0</oshi.version>
         <hutool-all.version>5.8.38</hutool-all.version>
@@ -100,6 +101,16 @@
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-compress</artifactId>
                 <version>${commons.compress.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>commons-fileupload</groupId>
+                <artifactId>commons-fileupload</artifactId>
+                <version>${commons.fileupload.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-lang3</artifactId>
+                <version>${commons-lang3.version}</version>
             </dependency>
             <!-- disruptor  Log4j2 用于实现高性能的异步日志功能 -->
             <dependency>
