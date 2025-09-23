@@ -15,7 +15,6 @@
 
 package org.opengauss.datachecker.common.entry.check;
 
-import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
@@ -26,7 +25,6 @@ import lombok.experimental.Accessors;
  * @date ：Created in 2022/6/24
  * @since ：11
  */
-@Schema(name = "debezium增量校验topic信息")
 @Data
 @Accessors(chain = true)
 public class IncrementCheckTopic {
@@ -34,18 +32,9 @@ public class IncrementCheckTopic {
      * Debezium incremental migration topic, debezium monitors table incremental data,
      * and uses a single topic for incremental data management
      */
-    @Schema(name = "debeziumTopic")
     private String topic;
-
-    @Schema(name = "groupId", description = "Topic grouping")
     private String groupId;
-
-    @Schema(name = "partitions", description = "Topic partition")
     private int partitions;
-
-    @Schema(name = "begin", description = "Topic start offset")
     private Long begin;
-
-    @Schema(name = "end", description = "Topic end offset")
     private Long end;
 }

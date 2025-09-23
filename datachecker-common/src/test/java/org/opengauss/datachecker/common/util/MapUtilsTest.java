@@ -1,6 +1,5 @@
 package org.opengauss.datachecker.common.util;
 
-import nonapi.io.github.classgraph.fileslice.Slice;
 import org.junit.jupiter.api.Test;
 import org.opengauss.datachecker.common.entry.extract.SliceVo;
 

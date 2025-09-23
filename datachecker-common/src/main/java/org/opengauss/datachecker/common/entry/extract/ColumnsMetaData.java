@@ -18,10 +18,9 @@ package org.opengauss.datachecker.common.entry.extract;
 import lombok.Data;
 import lombok.ToString;
 import lombok.experimental.Accessors;
-import org.apache.commons.lang3.StringUtils;
 import org.opengauss.datachecker.common.entry.enums.ColumnKey;
-import org.opengauss.datachecker.common.exception.CommonException;
 import org.opengauss.datachecker.common.util.EnumUtil;
+import org.springframework.util.StringUtils;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
