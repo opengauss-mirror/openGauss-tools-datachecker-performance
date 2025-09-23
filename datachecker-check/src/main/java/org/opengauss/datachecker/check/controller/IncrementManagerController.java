@@ -15,8 +15,6 @@
 
 package org.opengauss.datachecker.check.controller;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import org.opengauss.datachecker.check.service.IncrementManagerService;
 import org.opengauss.datachecker.common.entry.extract.SourceDataLog;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.constraints.NotEmpty;
+
 import java.util.List;
 
 /**
@@ -35,11 +34,9 @@ import java.util.List;
  * @date ：Created in 2022/5/25
  * @since ：11
  */
-@Tag(name = "IncrementManagerController", description = "Verification service - incremental verification management")
 @Validated
 @RestController
 public class IncrementManagerController {
-
     @Autowired
     private IncrementManagerService incrementManagerService;
 
@@ -48,10 +45,8 @@ public class IncrementManagerController {
      *
      * @param dataLogList Incremental verification log
      */
-    @Operation(summary = "Incremental verification log notification")
     @PostMapping("/notify/source/increment/data/logs")
     public void notifySourceIncrementDataLogs(@RequestBody @NotEmpty List<SourceDataLog> dataLogList) {
         incrementManagerService.notifySourceIncrementDataLogs(dataLogList);
     }
-
 }

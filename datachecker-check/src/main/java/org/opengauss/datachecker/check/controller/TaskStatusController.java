@@ -15,8 +15,6 @@
 
 package org.opengauss.datachecker.check.controller;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import org.opengauss.datachecker.check.modules.task.TaskManagerService;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.extract.SliceVo;
@@ -36,11 +34,9 @@ import java.util.Map;
  * @date ：Created in 2022/5/25
  * @since ：11
  */
-@Tag(name = "TaskStatusController", description = "Verification service - data extraction task status")
 @Validated
 @RestController
 public class TaskStatusController {
-
     @Autowired
     private TaskManagerService taskManagerService;
 
@@ -51,7 +47,6 @@ public class TaskStatusController {
      * @param endpoint  endpoint {@link org.opengauss.datachecker.common.entry.enums.Endpoint}
      * @param status    status
      */
-    @Operation(summary = "Refresh the execution status of the data extraction table of the specified task")
     @PostMapping("/table/extract/status")
     public void refreshTableExtractStatus(@NotEmpty String tableName, @NonNull Endpoint endpoint, int status) {
         taskManagerService.refreshTableExtractStatus(tableName, endpoint, status);

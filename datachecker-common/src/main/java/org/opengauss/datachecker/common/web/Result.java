@@ -16,8 +16,6 @@
 package org.opengauss.datachecker.common.web;
 
 import com.alibaba.fastjson.annotation.JSONType;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -28,20 +26,13 @@ import org.opengauss.datachecker.common.entry.enums.ResultEnum;
  * @date ：Created in 2022/5/26
  * @since ：11
  */
-@Tag(name = "API Interface message return result encapsulation class")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @JSONType(orders = {"code", "message", "data"})
 public class Result<T> {
-
-    @Schema(name = "code", description = "Message response code")
     private int code;
-
-    @Schema(name = "message", description = "message")
     private String message;
-
-    @Schema(name = "data", description = "data")
     private T data;
 
     public static <T> Result<T> success() {

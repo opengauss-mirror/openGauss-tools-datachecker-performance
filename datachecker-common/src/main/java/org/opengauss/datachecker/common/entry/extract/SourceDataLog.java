@@ -15,7 +15,6 @@
 
 package org.opengauss.datachecker.common.entry.extract;
 
-import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.experimental.Accessors;
 import org.opengauss.datachecker.common.constant.Constants;
@@ -29,7 +28,6 @@ import java.util.List;
  * @date ：Created in 2022/6/14
  * @since ：11
  */
-@Schema(description = "Source side data change log")
 @Data
 @Accessors(chain = true)
 public class SourceDataLog {
@@ -37,13 +35,11 @@ public class SourceDataLog {
     /**
      * Data change log corresponding table name
      */
-    @Schema(name = "tableName")
     private String tableName;
     private long beginOffset = -1;
     /**
      * List of primary key field names of the current table
      */
-    @Schema(name = "compositePrimarys", description = "List of primary key field names of the current table")
     private List<String> compositePrimarys;
 
     /**
@@ -54,7 +50,6 @@ public class SourceDataLog {
      * the order of the primary key fields recorded in {@code compositePrimarys}. Linker {@value PRIMARY_DELIMITER}
      * </pre>
      */
-    @Schema(name = "compositePrimaryValues")
     private List<String> compositePrimaryValues;
 
     /**

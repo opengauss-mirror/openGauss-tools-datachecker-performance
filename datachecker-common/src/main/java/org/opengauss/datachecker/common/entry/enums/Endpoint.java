@@ -15,7 +15,6 @@
 
 package org.opengauss.datachecker.common.entry.enums;
 
-import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 
 /**
@@ -25,7 +24,6 @@ import lombok.Getter;
  * @date ：Created in 2022/5/25
  * @since ：11
  */
-@Schema(description = "data verification endpoint type")
 @Getter
 public enum Endpoint {
     /**

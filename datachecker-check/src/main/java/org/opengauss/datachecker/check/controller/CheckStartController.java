@@ -15,9 +15,6 @@
 
 package org.opengauss.datachecker.check.controller;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import org.opengauss.datachecker.check.service.CheckService;
 import org.opengauss.datachecker.check.service.EndpointMetaDataManager;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
@@ -37,7 +34,6 @@ import jakarta.annotation.Resource;
  * @date ：Created in 2022/5/25
  * @since ：11
  */
-@Tag(name = "CheckStartController", description = "Verification service - verification service start command")
 @Validated
 @RestController
 @RequestMapping
@@ -53,10 +49,8 @@ public class CheckStartController {
      * @param checkMode checkMode {@value CheckMode#API_DESCRIPTION}
      * @return verification process info
      */
-    @Operation(summary = "Turn on verification")
     @PostMapping("/start/check")
-    public Result<String> statCheck(
-        @Parameter(name = "checkMode", description = CheckMode.API_DESCRIPTION) @RequestParam("checkMode")
+    public Result<String> statCheck(@RequestParam("checkMode")
             CheckMode checkMode) {
         return Result.success(checkService.start(checkMode));
     }
@@ -81,7 +75,6 @@ public class CheckStartController {
      *
      * @return process number
      */
-    @Operation(summary = "Query the current verification service process number")
     @GetMapping("/get/check/process")
     public Result<String> getCurrentCheckProcess() {
         return Result.success(checkService.getCurrentCheckProcess());

@@ -15,7 +15,6 @@
 
 package org.opengauss.datachecker.check.controller;
 
-import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.opengauss.datachecker.check.service.TableKafkaService;
 import org.opengauss.datachecker.common.entry.check.TopicRecordInfo;
@@ -33,7 +32,6 @@ import java.util.List;
  * @date ：Created in 2022/5/25
  * @since ：11
  */
-@Tag(name = "TableKafkaController")
 @RestController
 @RequiredArgsConstructor
 public class TableKafkaController {
