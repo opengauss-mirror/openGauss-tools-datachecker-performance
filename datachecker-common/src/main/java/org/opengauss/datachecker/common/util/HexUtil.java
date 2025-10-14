@@ -16,6 +16,7 @@
 package org.opengauss.datachecker.common.util;
 
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 
 /**
  * HexUtil
@@ -43,7 +44,7 @@ public class HexUtil {
      */
     public static String toHex(String str) {
         StringBuilder sb = new StringBuilder("");
-        byte[] bs = str.getBytes();
+        byte[] bs = str.getBytes(StandardCharsets.UTF_8);
         int bit;
         for (int i = 0; i < bs.length; i++) {
             bit = (bs[i] & 0x0f0) >> 4;

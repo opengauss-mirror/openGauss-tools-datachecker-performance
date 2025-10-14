@@ -32,8 +32,8 @@ import static org.opengauss.datachecker.common.service.CommonCommandLine.CmdOpti
 public class CheckCommandLine extends CommonCommandLine {
     public CheckCommandLine() {
         super();
-        options.addOption(getJvmOption());
-        options.addOption(getCheckOption());
+        OPTIONS.addOption(getJvmOption());
+        OPTIONS.addOption(getCheckOption());
     }
 
     private static Option getJvmOption() {

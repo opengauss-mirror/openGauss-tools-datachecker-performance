@@ -31,12 +31,11 @@ import static org.opengauss.datachecker.common.service.CommonCommandLine.CmdOpti
  * @since ：11
  */
 public class ExtractCommandLine extends CommonCommandLine {
-
     public ExtractCommandLine() {
         super();
-        options.addOption(getJvmOption());
-        options.addOption(getSinkOption());
-        options.addOption(getSourceOption());
+        OPTIONS.addOption(getJvmOption());
+        OPTIONS.addOption(getSinkOption());
+        OPTIONS.addOption(getSourceOption());
     }
 
     private static Option getSinkOption() {
