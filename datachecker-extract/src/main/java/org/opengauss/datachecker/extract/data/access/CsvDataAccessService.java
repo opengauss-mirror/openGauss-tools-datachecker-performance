@@ -44,6 +44,7 @@ import javax.sql.DataSource;
 
 import java.io.FileReader;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
@@ -208,9 +209,9 @@ public class CsvDataAccessService implements DataAccessService {
             List<Integer> keyIdxList = differenceList.stream()
                     .map(Difference::getIdx)
                     .sorted()
-                    .collect(Collectors.toList());
+                    .toList();
             int fileReadIdx = 0;
-            try (CSVReader reader = new CSVReader(new FileReader(sliceFilePath))) {
+            try (CSVReader reader = new CSVReader(new FileReader(sliceFilePath, StandardCharsets.UTF_8))) {
                 String[] nextLine;
                 while ((nextLine = reader.readNext()) != null) {
                     fileReadIdx++;

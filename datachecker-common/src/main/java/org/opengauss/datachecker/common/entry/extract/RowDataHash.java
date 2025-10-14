@@ -18,6 +18,8 @@ package org.opengauss.datachecker.common.entry.extract;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
+import java.io.Serial;
+import java.io.Serializable;
 import java.util.Objects;
 
 /**
@@ -29,7 +31,10 @@ import java.util.Objects;
  */
 @Data
 @Accessors(chain = true)
-public class RowDataHash {
+public class RowDataHash implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
+
     /**
      * <pre>
      * If the primary key is a numeric type, it will be converted to a string.

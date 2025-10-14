@@ -35,6 +35,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.LinkedList;
 import java.util.List;
@@ -86,7 +87,7 @@ public class CsvSliceProcessor extends AbstractSliceProcessor {
             SliceKafkaAgents kafkaAgents = context.createSliceFixedKafkaAgents(topic, slice.getName());
             SliceResultSetSender sliceSender = new SliceResultSetSender(tableMetadata, kafkaAgents);
             sliceSender.setRecordSendKey(slice.getName());
-            try (CSVReader reader = new CSVReader(new FileReader(sliceFilePath))) {
+            try (CSVReader reader = new CSVReader(new FileReader(sliceFilePath, StandardCharsets.UTF_8))) {
                 LocalDateTime parseCsv = LocalDateTime.now();
                 LogUtils.info(log,"parse slice [{}] cost [{}] milliseconds", sliceExtend.toSimpleString(),
                     durationBetweenToMillis(start, parseCsv));

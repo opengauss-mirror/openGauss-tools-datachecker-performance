@@ -52,17 +52,6 @@ public class SliceCheckContext {
     private ProcessLogService processLogService;
 
     /**
-     * create kafka consumer handler
-     *
-     * @param groupId groupId
-     * @return KafkaConsumerHandler
-     */
-    public synchronized KafkaConsumerHandler buildKafkaHandler(String groupId) {
-        KafkaConsumerHandler kafkaHandler = new KafkaConsumerHandler(kafkaConsumerConfig.takeConsumer());
-        return new KafkaConsumerHandler(kafkaConsumerConfig.takeConsumer());
-    }
-
-    /**
      * 从kafka消费者缓存池中，获取一个consumer，并创建kafka处理器对象
      *
      * @return KafkaConsumerHandler

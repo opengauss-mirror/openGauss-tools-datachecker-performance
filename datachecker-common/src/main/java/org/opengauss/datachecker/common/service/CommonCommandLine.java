@@ -39,13 +39,23 @@ import static org.opengauss.datachecker.common.service.CommonCommandLine.CmdOpti
 public class CommonCommandLine {
     private static final Logger log = LogUtils.getLogger();
 
-    protected static Options options = new Options();
-    protected static CommandLineParser parser = new DefaultParser();
+    /**
+     * command options
+     */
+    protected static final Options OPTIONS = new Options();
+
+    /**
+     * command parser
+     */
+    protected static final CommandLineParser PARSER = new DefaultParser();
     protected static CommandLine commandLine;
 
+    /**
+     * command line
+     */
     public CommonCommandLine() {
-        options.addOption(getHelpOption());
-        options.addOption(getDStartOption());
+        OPTIONS.addOption(getHelpOption());
+        OPTIONS.addOption(getDStartOption());
     }
 
     /**
@@ -91,7 +101,7 @@ public class CommonCommandLine {
      */
     public void parseArgs(String[] args) {
         try {
-            commandLine = parser.parse(options, args);
+            commandLine = PARSER.parse(OPTIONS, args);
         } catch (ParseException e) {
             log.error("invalid bootstrap args {}", args);
             throw new ExtractBootstrapException("invalid bootstrap args");
@@ -112,7 +122,7 @@ public class CommonCommandLine {
      */
     public void help() {
         HelpFormatter formatter = new HelpFormatter();
-        formatter.printHelp("gs_datacheck help ", options);
+        formatter.printHelp("gs_datacheck help ", OPTIONS);
         System.out.println();
     }
 

@@ -15,7 +15,6 @@
 
 package org.opengauss.datachecker.extract.task;
 
-import com.alibaba.druid.pool.DruidDataSource;
 import com.alibaba.fastjson.JSON;
 
 import org.apache.commons.collections4.CollectionUtils;
@@ -59,7 +58,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.TreeMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -338,7 +336,6 @@ public class ExtractTaskRunnable implements Runnable {
                 resultSet.setFetchSize(fetchSize);
                 ResultSetMetaData rsmd = resultSet.getMetaData();
                 int rowCount = 0;
-                Map<String, String> result = new TreeMap<>();
                 if (kafkaOperate.isMultiplePartitions()) {
                     while (resultSet.next()) {
                         context.resultSetMultiplePartitionsHandler(rsmd, resultSet);
