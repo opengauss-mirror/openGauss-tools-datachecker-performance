@@ -11,7 +11,7 @@
 
     <groupId>org.opengauss</groupId>
     <artifactId>gs_datachecker</artifactId>
-    <version>7.0.0rc2</version>
+    <version>7.0.0rc3</version>
     <packaging>pom</packaging>
 
     <name>gs_datachecker</name>
