@@ -48,6 +48,7 @@ import org.opengauss.datachecker.common.entry.extract.SliceVo;
 import org.opengauss.datachecker.common.entry.extract.Topic;
 import org.opengauss.datachecker.common.exception.BucketNumberInconsistentException;
 import org.opengauss.datachecker.common.exception.CheckConsumerPollEmptyException;
+import org.opengauss.datachecker.common.exception.CheckingException;
 import org.opengauss.datachecker.common.exception.MerkleTreeDepthException;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.ThreadUtil;
@@ -115,10 +116,11 @@ public class SliceCheckWorker implements Runnable {
     public void run() {
         String errorMsg = "";
         try {
-            LogUtils.debug(LOGGER, "check slice of {}", slice.getName());
             SliceExtend source = checkEvent.getSource();
             SliceExtend sink = checkEvent.getSink();
             this.sliceRowCount = Math.max(source.getCount(), sink.getCount());
+            LogUtils.debug(LOGGER, "start check slice {} ,topic offset [source={}, sink={}]", slice.getName(),
+                source.getStartOffset(), sink.getStartOffset());
             setTableFixedTopic();
             SliceTuple sourceTuple = SliceTuple.of(Endpoint.SOURCE, source, new LinkedList<>());
             SliceTuple sinkTuple = SliceTuple.of(Endpoint.SINK, sink, new LinkedList<>());
@@ -225,9 +227,9 @@ public class SliceCheckWorker implements Runnable {
     }
 
     private List<Difference> limit(List<Difference> differences) {
-        return Objects.nonNull(differences)
-            ? differences.stream().limit(CheckResultConstants.MAX_DISPLAY_SIZE).collect(Collectors.toList())
-            : Collections.emptyList();
+        return Objects.nonNull(differences) ? differences.stream()
+            .limit(CheckResultConstants.MAX_DISPLAY_SIZE)
+            .collect(Collectors.toList()) : Collections.emptyList();
     }
 
     private String getConcatTableTopics() {
@@ -340,24 +342,10 @@ public class SliceCheckWorker implements Runnable {
         Map<Integer, Pair<Integer, Integer>> bucketDiff, int avgSliceCount, KafkaConsumerHandler consumer) {
         // Use feign client to pull Kafka data
         List<RowDataHash> dataList = new LinkedList<>();
-        TopicPartition topicPartition = new TopicPartition(
-            Objects.equals(Endpoint.SOURCE, endpoint) ? topic.getSourceTopicName() : topic.getSinkTopicName(),
-            topic.getPtnNum());
-        int attempts = 0;
-        while (attempts < maxAttemptsTimes) {
-            try {
-                consumer.consumerAssign(topicPartition, sliceExtend, attempts);
-                consumer.pollTpSliceData(sliceExtend, dataList);
-                break; // 如果成功，跳出循环
-            } catch (CheckConsumerPollEmptyException ex) {
-                if (++attempts >= maxAttemptsTimes) {
-                    checkContext.returnConsumer(consumer);
-                    throw ex; // 如果达到最大尝试次数，重新抛出异常
-                }
-                ThreadUtil.sleepOneSecond();
-                LogUtils.warn(LOGGER, "poll slice data {} {} , retry ({})", sliceExtend.getName(), sliceExtend.getNo(),
-                    attempts);
-            }
+        boolean isSuccess = tryToPollSliceDataAttempts(endpoint, sliceExtend, consumer, dataList);
+        if (!isSuccess) {
+            throw new CheckConsumerPollEmptyException(
+                "Failed to retrieve data after " + maxAttemptsTimes + " attempts");
         }
         if (CollectionUtils.isEmpty(dataList)) {
             return;
@@ -372,6 +360,51 @@ public class SliceCheckWorker implements Runnable {
         bucketList.addAll(bucketMap.values());
         bucketNoStatistics(endpoint, bucketMap.keySet(), bucketDiff);
         bucketMap.clear();
+    }
+
+    private boolean tryToPollSliceDataAttempts(Endpoint endpoint, SliceExtend sliceExtend,
+        KafkaConsumerHandler consumer, List<RowDataHash> dataList) {
+        TopicPartition topicPartition = new TopicPartition(
+            Objects.equals(Endpoint.SOURCE, endpoint) ? topic.getSourceTopicName() : topic.getSinkTopicName(),
+            topic.getPtnNum());
+        String sliceExtendName = sliceExtend.getName();
+        long start = System.currentTimeMillis();
+        LogUtils.info(LOGGER, "Start consuming data - Endpoint: {}, Topic: {}, Slice: {}, timestamp={}", endpoint,
+            topicPartition, sliceExtendName, start);
+        int attempts = 0;
+        boolean isSuccess = false;
+        while (attempts < maxAttemptsTimes) {
+            try {
+                LogUtils.debug(LOGGER, "Attempting {}th consumption for slice {}...", attempts + 1, sliceExtendName);
+                consumer.pollTpSliceData(topicPartition, sliceExtend, dataList);
+                if (dataList.isEmpty()) {
+                    LogUtils.warn(LOGGER, "{}th data pull returned empty, slice: {}", attempts + 1, sliceExtendName);
+                    throw new CheckConsumerPollEmptyException("poll empty for slice: " + sliceExtendName);
+                }
+                isSuccess = true;
+                break;
+            } catch (CheckConsumerPollEmptyException ex) {
+                if (++attempts >= maxAttemptsTimes) {
+                    LogUtils.error(LOGGER, "Reached maximum retry count {}, aborting retry. Error: {}",
+                        maxAttemptsTimes, ex.getMessage());
+                    checkContext.returnConsumer(consumer);
+                    throw ex;
+                }
+                LogUtils.warn(LOGGER,
+                    "Poll slice data {} {} failed, performing {}th retry for slice{} data acquisition",
+                    sliceExtend.getName(), sliceExtend.getNo(), attempts, sliceExtendName);
+                ThreadUtil.sleep(2000);
+            } catch (CheckingException ex) {
+                LogUtils.error(LOGGER, "Unknown error occurred while consuming data for slice{}", sliceExtendName, ex);
+                checkContext.returnConsumer(consumer);
+                throw new CheckingException("Data consumption failed", ex);
+            }
+        }
+        long end = System.currentTimeMillis();
+        LogUtils.info(LOGGER,
+            "Pulling slice {} data execution result: {}, successfully pulled {} records, total time consumed for this"
+                + " data pull: {}ms", sliceExtendName, isSuccess, dataList.size(), end - start);
+        return isSuccess;
     }
 
     private synchronized void bucketNoStatistics(@NonNull Endpoint endpoint, @NonNull Set<Integer> bucketNoSet,

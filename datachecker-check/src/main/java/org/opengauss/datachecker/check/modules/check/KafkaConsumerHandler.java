@@ -17,7 +17,10 @@ package org.opengauss.datachecker.check.modules.check;
 
 import com.alibaba.fastjson.JSON;
 
+import cn.hutool.core.thread.ThreadUtil;
+
 import org.apache.commons.lang3.StringUtils;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
@@ -26,12 +29,11 @@ import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.entry.extract.RowDataHash;
 import org.opengauss.datachecker.common.entry.extract.SliceExtend;
 import org.opengauss.datachecker.common.exception.CheckConsumerPollEmptyException;
+import org.opengauss.datachecker.common.exception.CheckingException;
 import org.opengauss.datachecker.common.util.LogUtils;
-import org.opengauss.datachecker.common.util.ThreadUtil;
 
 import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * KafkaConsumerHandler
@@ -44,7 +46,9 @@ public class KafkaConsumerHandler {
     private static final Logger log = LogUtils.getLogger(KafkaConsumerHandler.class);
     private static final int KAFKA_CONSUMER_POLL_DURATION = 20;
     private static final int MAX_CONSUMER_POLL_TIMES = 50;
+    private static final int MAX_CONSUMER_BACKOFF = 1000;
 
+    private final Object dataListLock = new Object();
     private KafkaConsumer<String, String> kafkaConsumer;
 
     /**
@@ -75,17 +79,6 @@ public class KafkaConsumerHandler {
         return kafkaConsumer;
     }
 
-    /**
-     * Query the Kafka partition data corresponding to the specified table
-     *
-     * @param topic Kafka topic
-     * @param partitions Kafka partitions
-     * @return kafka partitions data
-     */
-    public List<RowDataHash> queryCheckRowData(String topic, int partitions) {
-        return queryRowData(topic, partitions, false);
-    }
-
     public void poolTopicPartitionsData(String topic, int partitions, List<RowDataHash> list) {
         final TopicPartition topicPartition = new TopicPartition(topic, partitions);
         kafkaConsumer.assign(List.of(topicPartition));
@@ -99,46 +92,101 @@ public class KafkaConsumerHandler {
     /**
      * consumer poll data from the topic partition, and filter bu slice extend. then add data in the data list.
      *
-     * @param topicPartition topic partition
-     * @param sExtend slice extend
-     * @param attempts attempts
-     */
-    public void consumerAssign(TopicPartition topicPartition, SliceExtend sExtend, int attempts) {
-        kafkaConsumer.assign(List.of(topicPartition));
-        if (attempts == 0) {
-            kafkaConsumer.seek(topicPartition, sExtend.getStartOffset());
-        }
-    }
-
-    /**
-     * consumer poll data from the topic partition, and filter bu slice extend. then add data in the data list.
-     *
+     * @param topicPartition topicPartition
      * @param sExtend slice extend
      * @param dataList data list
      */
-    public synchronized void pollTpSliceData(SliceExtend sExtend, List<RowDataHash> dataList) {
-        AtomicLong currentCount = new AtomicLong(0);
+    public void pollTpSliceData(TopicPartition topicPartition, SliceExtend sExtend, List<RowDataHash> dataList) {
+        long targetCount = sExtend.getCount();
+        long currentCount = 0L;
         int pollEmptyCount = 0;
-        while (currentCount.get() < sExtend.getCount()) {
+        int pollSuccessCount = 0;
+        kafkaConsumer.assign(List.of(topicPartition));
+        kafkaConsumer.seek(topicPartition, sExtend.getStartOffset());
+        long startTime = System.currentTimeMillis();
+        log.debug("Start pulling data slice: {}, target quantity: {} , topic start offset {}", sExtend.getName(),
+            targetCount, sExtend.getStartOffset());
+        while (currentCount < targetCount) {
             ConsumerRecords<String, String> records = kafkaConsumer.poll(
                 Duration.ofMillis(KAFKA_CONSUMER_POLL_DURATION));
-            if (records.count() <= 0) {
+            if (records.isEmpty()) {
                 pollEmptyCount++;
-                if (pollEmptyCount > MAX_CONSUMER_POLL_TIMES) {
-                    throw new CheckConsumerPollEmptyException(sExtend.getName());
+                if (pollEmptyCount > calculateMaxPollEmptyTimes()) {
+                    long costTime = System.currentTimeMillis() - startTime;
+                    log.error(
+                        "Data pulling failed - slice: {}, pulled: {}/{}, time consumed: {}ms, empty poll count: {}",
+                        sExtend.getName(), currentCount, targetCount, costTime, pollEmptyCount);
+                    throw new CheckConsumerPollEmptyException(String.format(Locale.getDefault(),
+                        "Failed to pull data for slice %s: obtained %d/%d records, %d consecutive empty polls",
+                        sExtend.getName(), currentCount, targetCount, pollEmptyCount));
                 }
-                ThreadUtil.sleep(KAFKA_CONSUMER_POLL_DURATION);
+                long sleepTime = calculateBackoffTime(pollEmptyCount);
+                ThreadUtil.sleep(sleepTime);
                 continue;
             }
             pollEmptyCount = 0;
-            records.forEach(record -> {
-                RowDataHash row = JSON.parseObject(record.value(), RowDataHash.class);
-                if (row.getSNo() == sExtend.getNo() && StringUtils.equals(record.key(), sExtend.getName())) {
-                    dataList.add(row);
-                    currentCount.incrementAndGet();
-                }
-            });
+            pollSuccessCount += records.count();
+            int batchProcessed = processRecordsBatch(records, sExtend, dataList);
+            currentCount += batchProcessed;
+            if (pollSuccessCount > 0 && (pollSuccessCount % 100 == 0 || currentCount >= targetCount)) {
+                commitOffsetsAndLogProgress(sExtend, pollSuccessCount, currentCount, targetCount, startTime);
+            }
         }
+        long totalTime = System.currentTimeMillis() - startTime;
+        log.info("Data pulling completed - slice: {}, count: {}, time consumed: {}ms, average speed: {}/s",
+            sExtend.getName(), currentCount, totalTime, (currentCount * 1000) / totalTime);
+    }
+
+    private int processRecordsBatch(ConsumerRecords<String, String> records, SliceExtend sExtend,
+        List<RowDataHash> dataList) {
+        int processedCount = 0;
+        List<RowDataHash> batchList = new ArrayList<>(records.count());
+        for (ConsumerRecord<String, String> record : records) {
+            try {
+                RowDataHash row = JSON.parseObject(record.value(), RowDataHash.class);
+                if (isRecordMatch(row, record.key(), sExtend)) {
+                    batchList.add(row);
+                    processedCount++;
+                }
+            } catch (CheckingException e) {
+                log.warn("Record parsing failed, skipping - topic: {}, offset: {}", record.topic(), record.offset(), e);
+            }
+        }
+        if (!batchList.isEmpty()) {
+            synchronized (dataListLock) {
+                dataList.addAll(batchList);
+            }
+        }
+        return processedCount;
+    }
+
+    private void commitOffsetsAndLogProgress(SliceExtend sExtend, long pollSuccessCount, long currentCount,
+        long targetCount, long startTime) {
+        try {
+            kafkaConsumer.commitAsync();
+            long elapsed = System.currentTimeMillis() - startTime;
+            long remaining = targetCount - currentCount;
+            log.debug(
+                "Pull progress - slice: {}, progress: fetched records {}, matched records: {}/{}, remaining: {}, time"
+                    + " consumed: {}ms", sExtend.getName(), pollSuccessCount, currentCount, targetCount, remaining,
+                elapsed);
+        } catch (CheckingException e) {
+            log.warn("slice {} Offset commit failed", sExtend.getName(), e);
+        }
+    }
+
+    private boolean isRecordMatch(RowDataHash row, String recordKey, SliceExtend sExtend) {
+        return row.getSNo() == sExtend.getNo() && StringUtils.equals(recordKey, sExtend.getName());
+    }
+
+    private int calculateMaxPollEmptyTimes() {
+        return Math.max(MAX_CONSUMER_POLL_TIMES, 20);
+    }
+
+    private long calculateBackoffTime(int emptyCount) {
+        long baseTime = KAFKA_CONSUMER_POLL_DURATION;
+        long backoffTime = baseTime * (long) Math.pow(2, Math.min(emptyCount, 8));
+        return Math.min(backoffTime, MAX_CONSUMER_BACKOFF);
     }
 
     /**

@@ -3,7 +3,7 @@ server:
   shutdown: graceful
   tomcat:
     threads:
-      max: 20
+      max: ${spring.check.core-pool-size}
 logging:
   config: classpath:./config/log4j2.xml
 debug: false
@@ -45,8 +45,8 @@ spring:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       fetch-min-size: 1
-      max-poll-records: 20000
-      request-timeout-ms: 300000
+      max-poll-records: 1000
+      request-timeout-ms: 30000
       fetch-max-bytes: 67108864  # 64M
   csv:
     sync: true
