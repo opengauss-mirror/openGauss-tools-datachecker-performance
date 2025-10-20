@@ -46,6 +46,10 @@ import java.util.concurrent.ExecutorService;
 @Service
 public class EndpointManagerService {
     private static final Logger log = LogUtils.getLogger(EndpointManagerService.class);
+    private static final long INITIAL_CHECK_INTERVAL = 1000L;
+    private static final long FINAL_CHECK_INTERVAL = 30000L;
+    private static final long WARMUP_DURATION = 120000L;
+    private static final long TRANSITION_DURATION = 180000L;
     private static final ExecutorService executorService = ThreadUtil.newSingleThreadExecutor();
     @Value("${data.check.retry-interval-times}")
     protected int retryIntervalTimes;
@@ -80,13 +84,45 @@ public class EndpointManagerService {
         Thread.currentThread().setName("heart-beat-heath");
         shutdownService.addMonitor();
         try {
+            long startTime = System.currentTimeMillis();
+            long lastCheckTime = startTime;
             while (!(shutdownService.isShutdown() || executorService.isShutdown())) {
-                checkEndpoint(dataCheckProperties.getSourceUri(), Endpoint.SOURCE, "source endpoint service check");
-                checkEndpoint(dataCheckProperties.getSinkUri(), Endpoint.SINK, "sink endpoint service check");
-                ThreadUtil.sleep(retryIntervalTimes);
+                long currentTime = System.currentTimeMillis();
+                long elapsed = currentTime - startTime;
+                long checkInterval = calculateCheckInterval(elapsed);
+                if (currentTime - lastCheckTime >= checkInterval) {
+                    checkEndpoint(dataCheckProperties.getSourceUri(), Endpoint.SOURCE, "source endpoint service check");
+                    checkEndpoint(dataCheckProperties.getSinkUri(), Endpoint.SINK, "sink endpoint service check");
+                    lastCheckTime = currentTime;
+                }
+                // 短暂休眠避免CPU过度占用
+                ThreadUtil.sleep(100);
             }
         } finally {
             shutdownService.releaseMonitor();
+        }
+    }
+
+    /**
+     * Dynamically calculates the heartbeat check interval
+     * <p>
+     * Rules:
+     * 1. First 2 minutes (warm-up period): Use initial interval (1 second)
+     * 2. 2-5 minutes (transition period): Linearly increase interval from 1s to 10s
+     * 3. After 5 minutes: Use final interval (10 seconds)
+     *
+     * @param elapsedMillis elapsedMillis
+     * @return check interval
+     */
+    private long calculateCheckInterval(long elapsedMillis) {
+        if (elapsedMillis < WARMUP_DURATION) {
+            return INITIAL_CHECK_INTERVAL;
+        } else if (elapsedMillis < WARMUP_DURATION + TRANSITION_DURATION) {
+            double progress = (double) (elapsedMillis - WARMUP_DURATION) / (double) TRANSITION_DURATION;
+            return INITIAL_CHECK_INTERVAL + (long) (progress * (double) (FINAL_CHECK_INTERVAL
+                - INITIAL_CHECK_INTERVAL));
+        } else {
+            return FINAL_CHECK_INTERVAL;
         }
     }
 

@@ -53,7 +53,7 @@ public class AsyncConfig implements AsyncConfigurer {
         executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(corePoolSize);
         executor.setMaxPoolSize(maxPoolSize);
-        executor.setQueueCapacity(10000);
+        executor.setQueueCapacity(Integer.MAX_VALUE);
         executor.setThreadNamePrefix("slice-send-executor-");
         executor.initialize();
         return executor;

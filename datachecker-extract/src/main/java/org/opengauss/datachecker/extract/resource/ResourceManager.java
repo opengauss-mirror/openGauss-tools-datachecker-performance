@@ -24,7 +24,9 @@ import org.opengauss.datachecker.common.service.ShutdownService;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.stereotype.Service;
 
+import cn.hutool.core.thread.ThreadUtil;
 import jakarta.annotation.Resource;
+
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -53,7 +55,7 @@ public class ResourceManager {
     public void initMaxConnectionCount() {
         connectionCount.set(1000);
         final JvmInfo memory = MemoryManager.getJvmInfo();
-        LogUtils.info(log,"max active connection {} ,max memory {}", connectionCount.get(), memory.getMax());
+        LogUtils.info(log, "max active connection {} ,max memory {}", connectionCount.get(), memory.getMax());
     }
 
     /**
@@ -85,13 +87,17 @@ public class ResourceManager {
         lock.lock();
         try {
             tryAvailableTimes.incrementAndGet();
-            if (connectionCount.get() > 2 && checkFreeMemory(freeSize)) {
+            boolean hasFreeMemory = checkFreeMemory(freeSize);
+            if (connectionCount.get() > 2 && hasFreeMemory) {
                 connectionCount.decrementAndGet();
                 tryAvailableTimes.set(0);
+                log.warn("canExecQuery connection={} hasFreeMemory={}", connectionCount.get(), hasFreeMemory);
                 return true;
             } else {
+                log.warn("canExecQuery connection exhausted connection={} hasFreeMemory={}", connectionCount.get(),
+                    hasFreeMemory);
                 if (tryAvailableTimes.get() >= MAX_AVAILABLE_TIMES) {
-                    Runtime.getRuntime().gc();
+                    ThreadUtil.safeSleep(500);
                 }
                 return false;
             }
@@ -101,13 +107,8 @@ public class ResourceManager {
     }
 
     public boolean checkFreeMemory(long allocSize) {
-        lock.lock();
-        try {
-            long freeMemory = Runtime.getRuntime().freeMemory();
-            return freeMemory > allocSize;
-        } finally {
-            lock.unlock();
-        }
+        long freeMemory = Runtime.getRuntime().freeMemory();
+        return freeMemory > allocSize;
     }
 
     /**

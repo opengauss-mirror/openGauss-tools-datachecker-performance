@@ -312,8 +312,7 @@ public class TableCheckWorker implements Runnable {
         int attempts = 0;
         while (attempts < maxAttempts) {
             try {
-                consumer.consumerAssign(topicPartition, sliceExtend, attempts);
-                consumer.pollTpSliceData(sliceExtend, dataList);
+                consumer.pollTpSliceData(topicPartition, sliceExtend, dataList);
                 break; // 如果成功，跳出循环
             } catch (CheckConsumerPollEmptyException ex) {
                 if (++attempts >= maxAttempts) {

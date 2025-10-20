@@ -33,6 +33,17 @@ public class CheckingException extends RuntimeException {
         msg = message;
     }
 
+    /**
+     * check exception
+     *
+     * @param message message
+     * @param throwable throwable
+     */
+    public CheckingException(String message, Throwable throwable) {
+        super(message, throwable);
+        msg = message;
+    }
+
     @Override
     public String getMessage() {
         String message = super.getMessage();

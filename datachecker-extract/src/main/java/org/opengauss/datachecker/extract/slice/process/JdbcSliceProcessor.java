@@ -158,6 +158,8 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
             }
         } catch (SQLException ex) {
             LogUtils.error(log, "refresh table collation failed with exp:", ex);
+        } finally {
+            jdbcOperation.releaseConnection(null);
         }
     }
 
@@ -311,6 +313,7 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
             sliceExtend.setStartOffset(startOffset);
             // 等待分片查询处理完成，关闭数据库连接，并关闭异步数据处理线程 ，关闭ps与rs
             asyncHandler.waitToStop(false);
+            offsetList.add(new long[] {startOffset, 0});
             updateExtendSliceOffsetAndCount(sliceExtend, rowCount.get(), offsetList);
         } catch (Exception ex) {
             LogUtils.error(log, "{}slice [{}] has exception :", ErrorCode.EXECUTE_SLICE_QUERY, slice.getName(), ex);
