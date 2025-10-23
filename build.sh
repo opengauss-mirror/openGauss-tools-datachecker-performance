@@ -106,8 +106,7 @@ function build_main_pkg() {
 prepare_env
 build_main_pkg
 
-cd gs_datacheck-${pom_version}
-tar -zcf $root_path/gs_datacheck-${pom_version}.tar.gz ./*
+tar -zcf $root_path/openGauss-DataCheck-${pom_version}.tar.gz ./openGauss-DataCheck-${pom_version}
 
-echo $root_path/gs_datacheck-${pom_version}.tar.gz
-echo "Build gs_datacheck complate ..."
+echo $root_path/openGauss-DataCheck-${pom_version}.tar.gz
+echo "Build openGauss-DataCheck complete ..."

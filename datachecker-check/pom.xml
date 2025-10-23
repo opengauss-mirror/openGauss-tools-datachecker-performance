@@ -18,7 +18,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>org.opengauss</groupId>
+        <groupId>org.opengauss.tool</groupId>
         <artifactId>gs_datachecker</artifactId>
         <version>7.0.0rc3</version>
         <relativePath>../pom.xml</relativePath>
@@ -47,7 +47,7 @@
             </exclusions>
         </dependency>
         <dependency>
-            <groupId>org.opengauss</groupId>
+            <groupId>org.opengauss.tool</groupId>
             <artifactId>datachecker-common</artifactId>
             <version>${gs.datacheck.version}</version>
         </dependency>
@@ -115,7 +115,7 @@
                             <artifactId>datachecker-common</artifactId>
                         </include>
                     </includes>
-                    <outputDirectory>${project.basedir}/../gs_datacheck-${gs.datacheck.version}</outputDirectory>
+                    <outputDirectory>${project.basedir}/../openGauss-DataCheck-${gs.datacheck.version}</outputDirectory>
                 </configuration>
                 <executions>
                     <execution>
@@ -137,7 +137,7 @@
                             <goal>copy-dependencies</goal>
                         </goals>
                         <configuration>
-                            <outputDirectory>${project.basedir}/../gs_datacheck-${gs.datacheck.version}/lib</outputDirectory>
+                            <outputDirectory>${project.basedir}/../openGauss-DataCheck-${gs.datacheck.version}/lib</outputDirectory>
                             <excludeGroupIds>datachecker-extract</excludeGroupIds>
                             <includeScope>runtime</includeScope>
                         </configuration>
