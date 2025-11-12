@@ -6,7 +6,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.5.6</version>
+        <version>3.5.7</version>
     </parent>
 
     <groupId>org.opengauss.tool</groupId>
@@ -21,7 +21,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <gs.datacheck.version>${project.version}</gs.datacheck.version>
-        <spring.cloud.version>2025.0.0</spring.cloud.version>
+        <spring-cloud-starter-openfeign.version>4.3.0</spring-cloud-starter-openfeign.version>
         <java.version>17</java.version>
         <mysql.connector.java.version>9.3.0</mysql.connector.java.version>
         <opengauss.jdbc.version>6.0.0-og</opengauss.jdbc.version>
@@ -40,7 +40,7 @@
         <commons-lang3.version>3.18.0</commons-lang3.version>
         <commons.collection.version>4.4</commons.collection.version>
         <oshi.version>6.5.0</oshi.version>
-        <hutool-all.version>5.8.38</hutool-all.version>
+        <hutool-all.version>5.8.39</hutool-all.version>
         <opencsv.version>5.12.0</opencsv.version>
         <disruptor.version>3.4.4</disruptor.version>
     </properties>
@@ -63,10 +63,8 @@
         <dependencies>
             <dependency>
                 <groupId>org.springframework.cloud</groupId>
-                <artifactId>spring-cloud-dependencies</artifactId>
-                <version>${spring.cloud.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
+                <artifactId>spring-cloud-starter-openfeign</artifactId>
+                <version>${spring-cloud-starter-openfeign.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.github.oshi</groupId>
