@@ -328,16 +328,7 @@ failureaccess:
   artifactId: failureaccess
   version: 1.0.1
   url: https://mvnrepository.com/artifact/com.google.guava/failureaccess/1.0.1
-disruptor:
-  groupId: com.lmax
-  artifactId: disruptor
-  version: 3.4.4
-  url: https://mvnrepository.com/artifact/com.lmax/disruptor/3.4.4
-swagger-ui:
-  groupId: org.webjars
-  artifactId: swagger-ui
-  version: 4.10.3
-  url: https://mvnrepository.com/artifact/org.webjars/swagger-ui/4.10.3
+
 spring-cloud-openfeign-core:
   groupId: org.springframework.cloud
   artifactId: spring-cloud-openfeign-core

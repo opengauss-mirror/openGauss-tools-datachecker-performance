@@ -40,9 +40,9 @@
         <commons-lang3.version>3.18.0</commons-lang3.version>
         <commons.collection.version>4.4</commons.collection.version>
         <oshi.version>6.5.0</oshi.version>
-        <hutool-all.version>5.8.39</hutool-all.version>
+        <hutool-all.version>5.8.43</hutool-all.version>
         <opencsv.version>5.12.0</opencsv.version>
-        <disruptor.version>3.4.4</disruptor.version>
+        <log4j2.version>2.25.1</log4j2.version>
     </properties>
     <modules>
         <module>datachecker-common</module>
@@ -95,12 +95,6 @@
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-lang3</artifactId>
                 <version>${commons-lang3.version}</version>
-            </dependency>
-            <!-- disruptor  Log4j2 用于实现高性能的异步日志功能 -->
-            <dependency>
-                <groupId>com.lmax</groupId>
-                <artifactId>disruptor</artifactId>
-                <version>${disruptor.version}</version>
             </dependency>
             <dependency>
                 <groupId>commons-cli</groupId>
@@ -175,6 +169,27 @@
                 <artifactId>powermock-api-mockito2</artifactId>
                 <version>${powermock.version}</version>
                 <scope>test</scope>
+            </dependency>
+            <!-- Log4j2 依赖管理，修复 CVE-2025-13465 漏洞 -->
+            <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-api</artifactId>
+                <version>${log4j2.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-core</artifactId>
+                <version>${log4j2.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-slf4j2-impl</artifactId>
+                <version>${log4j2.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-jul</artifactId>
+                <version>${log4j2.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
