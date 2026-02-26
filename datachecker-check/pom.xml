@@ -47,6 +47,10 @@
             </exclusions>
         </dependency>
         <dependency>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.opengauss.tool</groupId>
             <artifactId>datachecker-common</artifactId>
             <version>${gs.datacheck.version}</version>
@@ -107,7 +111,7 @@
                     <layout>ZIP</layout>
                     <includes>
                         <include>
-                            <groupId>org.opengauss</groupId>
+                            <groupId>org.opengauss.tool</groupId>
                             <artifactId>datachecker-common</artifactId>
                         </include>
                     </includes>

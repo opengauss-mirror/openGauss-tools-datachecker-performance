@@ -232,18 +232,26 @@ public class OpgsDataAccessService extends AbstractDataAccessService {
         Connection connection = getConnection();
         Map<String, LowerCaseTableNames> result = new HashMap<>();
         try (PreparedStatement ps = connection.prepareStatement(sql); ResultSet resultSet = ps.executeQuery()) {
+            String value = "";
+            String name = "";
             while (resultSet.next()) {
-                String name = resultSet.getString("name");
-                LowerCaseTableNames setting = LowerCaseTableNames.codeOf(resultSet.getString("setting"));
-                result.put(name, setting);
+                name = resultSet.getString(1);
+                value = resultSet.getString(2);
+                result.put(name, LowerCaseTableNames.codeOf(value));
             }
         } catch (SQLException ex) {
             log.error("{}queryLowerCaseTableNames error", ErrorCode.EXECUTE_QUERY_SQL, ex);
         } finally {
             closeConnection(connection);
         }
-        return isOgCompatibilityB()
-            ? result.getOrDefault(DOLPHIN_LOWER_CASE_TABLE_NAMES, LowerCaseTableNames.UNKNOWN)
-            : result.getOrDefault(LOWER_CASE_TABLE_NAMES, LowerCaseTableNames.UNKNOWN);
+        if (isOgCompatibilityB) {
+            if (result.containsKey(DOLPHIN_LOWER_CASE_TABLE_NAMES)) {
+                return result.get(DOLPHIN_LOWER_CASE_TABLE_NAMES);
+            } else {
+                return result.getOrDefault(LOWER_CASE_TABLE_NAMES, LowerCaseTableNames.UNKNOWN);
+            }
+        } else {
+            return result.getOrDefault(LOWER_CASE_TABLE_NAMES, LowerCaseTableNames.UNKNOWN);
+        }
     }
 }

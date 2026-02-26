@@ -121,13 +121,13 @@ jackson-datatype-jdk8:
 tomcat-embed-websocket:
   groupId: org.apache.tomcat.embed
   artifactId: tomcat-embed-websocket
-  version: 9.0.75
-  url: https://mvnrepository.com/artifact/org.apache.tomcat.embed/tomcat-embed-websocket/9.0.75
+  version: 10.1.52
+  url: https://mvnrepository.com/artifact/org.apache.tomcat.embed/tomcat-embed-websocket/10.1.52
 tomcat-embed-el:
   groupId: org.apache.tomcat.embed
   artifactId: tomcat-embed-el
-  version: 9.0.75
-  url: https://mvnrepository.com/artifact/org.apache.tomcat.embed/tomcat-embed-el/9.0.75
+  version: 10.1.52
+  url: https://mvnrepository.com/artifact/org.apache.tomcat.embed/tomcat-embed-el/10.1.52
 zero-allocation-hashing:
   groupId: net.openhft
   artifactId: zero-allocation-hashing
@@ -281,8 +281,8 @@ druid:
 avro:
   groupId: org.apache.avro
   artifactId: avro
-  version: 1.10.1
-  url: https://mvnrepository.com/artifact/org.apache.avro/avro/1.10.1
+  version: 1.12.1
+  url: https://mvnrepository.com/artifact/org.apache.avro/avro/1.12.1
 bcpkix-jdk15on:
   groupId: org.bouncycastle
   artifactId: bcpkix-jdk15on
@@ -497,8 +497,8 @@ spring-boot-starter-jdbc:
 tomcat-embed-core:
   groupId: org.apache.tomcat.embed
   artifactId: tomcat-embed-core
-  version: 9.0.75
-  url: https://mvnrepository.com/artifact/org.apache.tomcat.embed/tomcat-embed-core/9.0.75
+  version: 10.1.52
+  url: https://mvnrepository.com/artifact/org.apache.tomcat.embed/tomcat-embed-core/10.1.52
 webjars-locator-core:
   groupId: org.webjars
   artifactId: webjars-locator-core

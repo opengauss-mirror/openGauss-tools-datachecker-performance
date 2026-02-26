@@ -43,6 +43,8 @@
         <hutool-all.version>5.8.43</hutool-all.version>
         <opencsv.version>5.12.0</opencsv.version>
         <log4j2.version>2.25.3</log4j2.version>
+        <apache.avro.version>1.12.1</apache.avro.version>
+        <apache.tomcat.version>10.1.52</apache.tomcat.version>
     </properties>
     <modules>
         <module>datachecker-common</module>
@@ -149,6 +151,32 @@
                 <version>${zero.allocation.hashing.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.apache.avro</groupId>
+                <artifactId>avro</artifactId>
+                <version>${apache.avro.version}</version>
+            </dependency>
+            <!-- Tomcat 依赖管理，修复 CVE-2026-24733 漏洞 -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-tomcat</artifactId>
+                <version>3.5.7</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.tomcat.embed</groupId>
+                <artifactId>tomcat-embed-core</artifactId>
+                <version>${apache.tomcat.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.tomcat.embed</groupId>
+                <artifactId>tomcat-embed-websocket</artifactId>
+                <version>${apache.tomcat.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.tomcat.embed</groupId>
+                <artifactId>tomcat-embed-el</artifactId>
+                <version>${apache.tomcat.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>io.confluent</groupId>
                 <artifactId>kafka-avro-serializer</artifactId>
                 <version>${io.confluent.version}</version>
@@ -190,6 +218,12 @@
                 <groupId>org.apache.logging.log4j</groupId>
                 <artifactId>log4j-jul</artifactId>
                 <version>${log4j2.version}</version>
+            </dependency>
+            <!-- Jakarta Servlet API 依赖，支持 Tomcat 10.x -->
+            <dependency>
+                <groupId>jakarta.servlet</groupId>
+                <artifactId>jakarta.servlet-api</artifactId>
+                <version>6.0.0</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
