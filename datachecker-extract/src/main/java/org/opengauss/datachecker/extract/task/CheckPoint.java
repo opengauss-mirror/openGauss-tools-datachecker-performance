@@ -81,12 +81,14 @@ public class CheckPoint {
         String schema = tableMetadata.getSchema();
         StopWatch stopWatch = new StopWatch("table check point " + tableName);
         stopWatch.start();
+        boolean isOpenGaussB = dataAccessService.isOgCompatibilityB();
         DataBaseType dataBaseType = ConfigCache.getValue(ConfigConstants.DATA_BASE_TYPE, DataBaseType.class);
-        DataAccessParam param = new DataAccessParam().setSchema(SqlUtil.escape(schema, dataBaseType))
-            .setName(SqlUtil.escape(tableName, dataBaseType))
-            .setColName(SqlUtil.escape(pkName, dataBaseType));
+        DataAccessParam param = new DataAccessParam().setSchema(SqlUtil.escape(schema, dataBaseType, isOpenGaussB))
+                .setName(SqlUtil.escape(tableName, dataBaseType, isOpenGaussB))
+                .setColName(SqlUtil.escape(pkName, dataBaseType, isOpenGaussB));
         Connection connection = getConnection();
         param.setOffset(slice);
+
         Object maxPoint = dataAccessService.max(connection, param);
         List<Object> checkPointList = dataAccessService.queryPointList(connection, param);
         checkPointList.add(maxPoint);
