@@ -81,11 +81,11 @@ public class CheckPoint {
         String schema = tableMetadata.getSchema();
         StopWatch stopWatch = new StopWatch("table check point " + tableName);
         stopWatch.start();
-        boolean isOgCompatibilityB = dataAccessService.isOgCompatibilityB();
+        boolean isOpenGaussB = dataAccessService.isOgCompatibilityB();
         DataBaseType dataBaseType = ConfigCache.getValue(ConfigConstants.DATA_BASE_TYPE, DataBaseType.class);
-        DataAccessParam param = new DataAccessParam().setSchema(SqlUtil.escape(schema, dataBaseType, isOgCompatibilityB))
-                .setName(SqlUtil.escape(tableName, dataBaseType, isOgCompatibilityB))
-                .setColName(SqlUtil.escape(pkName, dataBaseType, isOgCompatibilityB));
+        DataAccessParam param = new DataAccessParam().setSchema(SqlUtil.escape(schema, dataBaseType, isOpenGaussB))
+                .setName(SqlUtil.escape(tableName, dataBaseType, isOpenGaussB))
+                .setColName(SqlUtil.escape(pkName, dataBaseType, isOpenGaussB));
         Connection connection = getConnection();
         param.setOffset(slice);
 
@@ -103,7 +103,7 @@ public class CheckPoint {
         return ConnectionMgr.getConnection();
     }
 
-    private void addCheckList(Lisgit t<Object> checkList, Object value) {
+    private void addCheckList(List<Object> checkList, Object value) {
         if (Objects.nonNull(value)) {
             checkList.add(value);
         }
