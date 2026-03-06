@@ -20,7 +20,7 @@
     <parent>
         <groupId>org.opengauss.tool</groupId>
         <artifactId>gs_datachecker</artifactId>
-        <version>7.0.0rc3</version>
+        <version>7.0.0-RC3</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <artifactId>datachecker-common</artifactId>
