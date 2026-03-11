@@ -61,8 +61,8 @@
             <!--
                 must be close console_out_appender ,when portal exec gs data check .
                 portal will catch console log for something, this will cause check data process shutdown error.
-
-            <AppenderRef ref="console_out_appender"/> -->
+                -->
+            <AppenderRef ref="console_out_appender"/>
             <AppenderRef ref="progress"/>
             <AppenderRef ref="kafka"/>
         </Root>
@@ -70,6 +70,11 @@
         <logger name="org.apache.kafka" level="error" />
         <logger name="oshi.util" level="off" />
         <logger name="org.hibernate.validator" level="off" />
+        <logger name="javax.management.remote" level="off" />
+        <logger name="sun.rmi" level="off" />
+        <logger name="com.sun.jna" level="off" />
+        <logger name="sun.net.www" level="off" />
+        <logger name="org.apache.coyote" level="off" />
         <logger name="org.springframework" level="error" />
         <logger name="_org.springframework.web" level="error" />
         <logger name="org.mybatis.spring" level="error" />

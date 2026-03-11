@@ -34,6 +34,7 @@ import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.exception.ExtractDataAccessException;
 import org.opengauss.datachecker.common.exception.ExtractException;
 import org.opengauss.datachecker.common.util.LogUtils;
+import org.opengauss.datachecker.common.util.SqlUtil;
 import org.opengauss.datachecker.extract.resource.ConnectionMgr;
 import org.opengauss.datachecker.extract.resource.JdbcDataOperations;
 import org.opengauss.datachecker.extract.slice.SliceProcessorContext;
@@ -45,6 +46,12 @@ import org.opengauss.datachecker.extract.task.sql.UnionPrimarySliceQueryStatemen
 import org.springframework.kafka.support.SendResult;
 import org.springframework.util.Assert;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 
 import java.sql.Connection;
@@ -52,11 +59,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -76,7 +78,6 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
 
     private final JdbcDataOperations jdbcOperation;
     private final AtomicInteger rowCount = new AtomicInteger(0);
-    private final DruidDataSource dataSource;
 
     /**
      * translate collate utf8_general_ci to utf8mb4_general_ci
@@ -105,7 +106,6 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
     public JdbcSliceProcessor(SliceVo slice, SliceProcessorContext context, DruidDataSource dataSource) {
         super(slice, context);
         this.jdbcOperation = context.getJdbcDataOperations();
-        this.dataSource = dataSource;
     }
 
     @Override
@@ -114,6 +114,7 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
         TableMetadata tableMetadata = context.getTableMetaData(table);
         SliceExtend sliceExtend = createSliceExtend(tableMetadata.getTableHash());
         try {
+            resetSmallTableRowCount(tableMetadata);
             String tableCollation = tableMetadata.getTableCollation();
             DataBaseType dataBaseType = ConfigCache.getValue(ConfigConstants.DATA_BASE_TYPE, DataBaseType.class);
             if (StrUtil.isEmpty(tableCollation)) {
@@ -142,6 +143,28 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
             LogUtils.info(log, "table slice [{} count {}] is finally   ", slice.toSimpleString(), rowCount.get());
             feedbackStatus(sliceExtend);
             context.saveProcessing(slice);
+        }
+    }
+
+    private void resetSmallTableRowCount(TableMetadata tableMetadata) {
+        if (tableMetadata.getTableRows() < 100) {
+            DataBaseType dataBaseType = ConfigCache.getValue(ConfigConstants.DATA_BASE_TYPE, DataBaseType.class);
+            boolean isOgB = ConfigCache.getBooleanValue(ConfigConstants.OG_COMPATIBILITY_B);
+            String maskSchema = SqlUtil.escape(slice.getSchema(), dataBaseType, isOgB);
+            String maskTable = SqlUtil.escape(slice.getTable(), dataBaseType, isOgB);
+            String countSql = "select count(*) count from " + maskSchema + "." + maskTable;
+            log.debug("reset small table row count for table [{}] is {}", tableMetadata.getTableName(), countSql);
+            try (Connection connection = jdbcOperation.tryConnectionAndClosedAutoCommit(0);
+                 PreparedStatement ps = connection.prepareStatement(countSql);
+                 ResultSet resultSet = ps.executeQuery()) {
+                if (resultSet.next()) {
+                    long count = resultSet.getLong("count");
+                    tableMetadata.setTableRows(count);
+                    slice.setRowCountOfInIds(count);
+                }
+            } catch (SQLException e) {
+                log.error("query table[{}] count sql statument [{}] is not valid", this.table, countSql);
+            }
         }
     }
 
@@ -186,6 +209,8 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
         QuerySqlEntry baseSliceSql = sliceStatement.buildSlice(tableMetadata, slice);
         List<String> pageStatementList = sliceStatement.buildPageStatement(baseSliceSql, sliceCount,
             slice.getFetchSize());
+        LogUtils.debug(log, "table [{}] query statement :  {}", table,
+                sqlFieldMasker.mask(Arrays.toString(pageStatementList.toArray())));
         SliceResultSetSender sliceSender = null;
         Connection connection = null;
         AsyncDataHandler asyncHandler = null;

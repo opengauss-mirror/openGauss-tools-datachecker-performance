@@ -24,7 +24,7 @@
         <spring-cloud-starter-openfeign.version>4.3.0</spring-cloud-starter-openfeign.version>
         <java.version>17</java.version>
         <mysql.connector.java.version>9.3.0</mysql.connector.java.version>
-        <opengauss.jdbc.version>6.0.0-og</opengauss.jdbc.version>
+        <opengauss.jdbc.version>6.0.3-og</opengauss.jdbc.version>
         <oracle.jdbc.version>11.2.0.3</oracle.jdbc.version>
         <druid.version>1.2.27</druid.version>
         <mybatis.version>3.0.5</mybatis.version>
