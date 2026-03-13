@@ -50,10 +50,10 @@ public class MysqlResultSetHandler extends ResultSetHandler {
         // byte binary blob
         simpleTypeHandlers.put(MysqlType.BINARY, typeHandlerFactory.createBytesHandler());
         simpleTypeHandlers.put(MysqlType.VARBINARY, typeHandlerFactory.createBytesHandler());
-        simpleTypeHandlers.put(MysqlType.BLOB, typeHandlerFactory.createBytesHandler());
-        simpleTypeHandlers.put(MysqlType.LONGBLOB, typeHandlerFactory.createBytesHandler());
-        simpleTypeHandlers.put(MysqlType.MEDIUMBLOB, typeHandlerFactory.createBytesHandler());
-        simpleTypeHandlers.put(MysqlType.TINYBLOB, typeHandlerFactory.createBytesHandler());
+        simpleTypeHandlers.put(MysqlType.BLOB, typeHandlerFactory.createBlobHandler());
+        simpleTypeHandlers.put(MysqlType.LONGBLOB, typeHandlerFactory.createBlobHandler());
+        simpleTypeHandlers.put(MysqlType.MEDIUMBLOB, typeHandlerFactory.createBlobHandler());
+        simpleTypeHandlers.put(MysqlType.TINYBLOB, typeHandlerFactory.createBlobHandler());
 
         // date time timestamp
         simpleTypeHandlers.put(MysqlType.DATE, typeHandlerFactory.createDateHandler());

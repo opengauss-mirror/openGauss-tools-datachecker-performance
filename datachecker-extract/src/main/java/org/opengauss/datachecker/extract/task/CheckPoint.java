@@ -185,10 +185,11 @@ public class CheckPoint {
         String colName = unionKey.getColumnName();
         String schema = unionKey.getSchema();
         String tableName = unionKey.getTableName();
+        boolean isOgB = dataAccessService.isOgCompatibilityB();
         DataBaseType dataBaseType = ConfigCache.getValue(ConfigConstants.DATA_BASE_TYPE, DataBaseType.class);
-        DataAccessParam param = new DataAccessParam().setSchema(SqlUtil.escape(schema, dataBaseType))
-            .setName(SqlUtil.escape(tableName, dataBaseType))
-            .setColName(SqlUtil.escape(colName, dataBaseType));
+        DataAccessParam param = new DataAccessParam().setSchema(SqlUtil.escape(schema, dataBaseType, isOgB))
+                .setName(SqlUtil.escape(tableName, dataBaseType, isOgB))
+                .setColName(SqlUtil.escape(colName, dataBaseType, isOgB));
         try (Connection connection = getConnection()) {
             return dataAccessService.queryUnionFirstPrimaryCheckPointList(connection, param);
         } catch (Exception e) {
