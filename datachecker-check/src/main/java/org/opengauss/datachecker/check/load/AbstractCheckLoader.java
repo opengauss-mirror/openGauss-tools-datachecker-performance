@@ -63,11 +63,25 @@ public abstract class AbstractCheckLoader implements CheckLoader {
             ThreadUtil.sleep(1000);
         }
         ThreadUtil.newThread(() -> {
-            feignClient.shutdown(message);
-            ThreadUtil.sleep(1000);
-            shutdownService.shutdown(message);
-            if (applicationContext instanceof ConfigurableApplicationContext configurableApplicationContext) {
-                configurableApplicationContext.close();
+            try {
+                feignClient.shutdown(message);
+                ThreadUtil.sleep(1000);
+                shutdownService.shutdown(message);
+                ThreadUtil.sleep(2000);
+                if (applicationContext instanceof ConfigurableApplicationContext configurableApplicationContext) {
+                    Runtime.getRuntime().addShutdownHook(ThreadUtil.newThread(() -> {
+                        try {
+                            configurableApplicationContext.close();
+                        } catch (Exception e) {
+                            log.error("shutdown hook error: {}", e.getMessage());
+                        }
+                    }, "shutdown-hook-thread"));
+                    configurableApplicationContext.close();
+                }
+                System.exit(0);
+            } catch (Exception e) {
+                LogUtils.error(log, "shutdown error: {}", e.getMessage());
+                System.exit(1);
             }
         }, "shutdown-check").start();
     }

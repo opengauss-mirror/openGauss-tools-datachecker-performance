@@ -20,6 +20,7 @@ import io.swagger.v3.oas.annotations.Operation;
 
 import org.opengauss.datachecker.common.service.ShutdownService;
 import org.opengauss.datachecker.common.web.Result;
+import org.opengauss.datachecker.extract.kafka.KafkaAdminService;
 import org.opengauss.datachecker.extract.kafka.KafkaManagerService;
 import org.opengauss.datachecker.extract.service.CsvManagementService;
 import org.opengauss.datachecker.extract.service.DataExtractService;
@@ -32,6 +33,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Clearing the environment at the extraction endpoint
@@ -40,6 +42,7 @@ import jakarta.annotation.Resource;
  * @date ：Created in 2022/6/23
  * @since ：11
  */
+@Slf4j
 @RestController
 public class ExtractCleanController {
     @Resource
@@ -48,6 +51,8 @@ public class ExtractCleanController {
     private DataExtractService dataExtractService;
     @Resource
     private KafkaManagerService kafkaManagerService;
+    @Resource
+    private KafkaAdminService kafkaAdminService;
     @Resource
     private ShutdownService shutdownService;
     @Resource
@@ -84,12 +89,28 @@ public class ExtractCleanController {
     @PostMapping("/extract/shutdown")
     Result<Void> shutdown(@RequestBody String message) {
         ThreadUtil.newThread(() -> {
-            csvManagementService.close();
-            sliceProcessorContext.shutdownSliceStatusFeedbackService();
-            ThreadUtil.sleep(500);
-            shutdownService.shutdown(message);
-            if (applicationContext instanceof ConfigurableApplicationContext configurableApplicationContext) {
-                configurableApplicationContext.close();
+            try {
+                log.info("shutdown extractor: {}", message);
+                csvManagementService.close();
+                sliceProcessorContext.shutdownSliceStatusFeedbackService();
+                sliceProcessorContext.destroy();
+                kafkaAdminService.closeAdminClient();
+                ThreadUtil.sleep(1000);
+                shutdownService.shutdown(message);
+                if (applicationContext instanceof ConfigurableApplicationContext configurableApplicationContext) {
+                    Runtime.getRuntime().addShutdownHook(ThreadUtil.newThread(() -> {
+                        try {
+                            configurableApplicationContext.close();
+                        } catch (Exception e) {
+                            log.error("shutdown hook error: {}", e.getMessage());
+                        }
+                    }, "shutdown-hook-thread"));
+                    configurableApplicationContext.close();
+                }
+                System.exit(0);
+            } catch (Exception e) {
+                log.error("shutdown error: {}", e.getMessage());
+                System.exit(1);
             }
         }, "extract-shutdown-thread").start();
         return Result.success();

@@ -133,8 +133,8 @@ public class KafkaConsumerHandler {
             }
         }
         long totalTime = System.currentTimeMillis() - startTime;
-        log.info("Data pulling completed - slice: {}, count: {}, time consumed: {}ms, average speed: {}/s",
-                sExtend.getName(), currentCount, totalTime, currentCount == 0 ? 0 : (currentCount * 1000) / totalTime);
+        log.info("Data pulling completed - slice: {}, count: {}, time consumed: {}ms", sExtend.getName(),
+                currentCount, totalTime);
     }
 
     private int processRecordsBatch(ConsumerRecords<String, String> records, SliceExtend sExtend,
