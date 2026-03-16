@@ -21,6 +21,7 @@ import org.opengauss.datachecker.common.entry.extract.SliceVo;
 import org.opengauss.datachecker.extract.client.CheckingFeignClient;
 import org.springframework.stereotype.Component;
 
+import cn.hutool.core.thread.ThreadUtil;
 import jakarta.annotation.Resource;
 import java.util.ArrayList;
 import java.util.List;
@@ -44,15 +45,22 @@ public class SliceRegister {
      */
     public void batchRegister(List<SliceVo> sliceList) {
         List<SliceVo> tableSliceTmpList = new ArrayList<>();
-        sliceList.forEach(sliceVo -> {
+        int count = 0;
+        for (SliceVo sliceVo : sliceList) {
             sliceVo.setEndpoint(ConfigCache.getEndPoint());
             tableSliceTmpList.add(sliceVo);
-            if (tableSliceTmpList.size() >= 10) {
+            if (tableSliceTmpList.size() >= 3) {
                 checkingClient.batchRegisterSlice(tableSliceTmpList);
                 tableSliceTmpList.clear();
+                // Add small delay to avoid overwhelming check service
+                ThreadUtil.safeSleep(200);
             }
-        });
-        if (tableSliceTmpList.size() > 0) {
+            // Add additional delay every 10 slices to further reduce concurrent requests
+            if (++count % 10 == 0) {
+                ThreadUtil.safeSleep(1000);
+            }
+        }
+        if (!tableSliceTmpList.isEmpty()) {
             checkingClient.batchRegisterSlice(tableSliceTmpList);
         }
     }
