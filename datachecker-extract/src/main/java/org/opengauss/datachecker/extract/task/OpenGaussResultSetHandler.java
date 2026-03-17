@@ -75,6 +75,7 @@ public class OpenGaussResultSetHandler extends ResultSetHandler {
         simpleTypeHandlers.put(OpenGaussType.INTEGER, typeHandlerFactory.createIntHandler());
         simpleTypeHandlers.put(OpenGaussType.DATE, typeHandlerFactory.createDateHandler());
         simpleTypeHandlers.put(OpenGaussType.TIME, typeHandlerFactory.createTimeHandler());
+        simpleTypeHandlers.put(OpenGaussType.YEAR, typeHandlerFactory.createYearHandler());
 
         commonTypeHandlers.put(OpenGaussType.TIMESTAMP, typeHandlerFactory.createDateTimeHandler());
         commonTypeHandlers.put(OpenGaussType.TIMESTAMPTZ, typeHandlerFactory.createDateTimeHandler());

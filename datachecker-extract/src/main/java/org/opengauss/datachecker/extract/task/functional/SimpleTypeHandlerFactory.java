@@ -47,7 +47,7 @@ public class SimpleTypeHandlerFactory {
     private static final Logger LOG = LogUtils.getLogger();
     private static final String NULL = null;
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-    private static final DateTimeFormatter YEAR = DateTimeFormatter.ofPattern("yyyy");
+    private static final DateTimeFormatter YEAR = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm:ss");
     private static final DateTimeFormatterMap TIMESTAMP_MAPPER = new DateTimeFormatterMap();
     private static final Map<Integer, String> FLOAT_FORMAT_CACHE = new ConcurrentHashMap<>();
