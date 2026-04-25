@@ -16,6 +16,9 @@
 package org.opengauss.datachecker.check.service;
 
 import org.apache.logging.log4j.Logger;
+import org.opengauss.datachecker.common.config.ConfigCache;
+import org.opengauss.datachecker.common.entry.enums.CheckMode;
+import org.opengauss.datachecker.common.exception.CheckingException;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
@@ -32,6 +35,7 @@ import java.nio.file.FileVisitResult;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Arrays;
 import java.util.LinkedList;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -44,11 +48,11 @@ import java.util.stream.Collectors;
 public class IncrementLogManager {
     private static final Logger log = LogUtils.getLogger(IncrementLogManager.class);
     private static final int MAX_BACK_DIR_NUM = 10;
+    private static final long MONITOR_INTERVAL_MS = 5000L;
 
     @Resource
     private ThreadPoolTaskExecutor threadPoolTaskExecutor;
     private boolean isWatching = true;
-    private final LinkedList<Path> backDirs = new LinkedList<>();
 
     /**
      * init log dir and register watch service
@@ -65,24 +69,24 @@ public class IncrementLogManager {
      * @param path path
      */
     private void bakResultLogMonitor(String path) {
+        CheckMode checkMode = ConfigCache.getCheckMode();
+        if (!Objects.equals(checkMode, CheckMode.INCREMENT)) {
+            log.info("debezium-enable is false, not monitor result log file");
+            return;
+        }
         threadPoolTaskExecutor.submit(() -> {
             while (isWatching) {
-                Path dir = Paths.get(path);
-                File[] files = dir.toFile().listFiles();
-                if (files != null && files.length > 0) {
-                    backDirs.addAll(Arrays.stream(files).map(File::toPath).sorted().collect(Collectors.toList()));
+                try {
+                    monitorDirectory(path);
+                } catch (CheckingException e) {
+                    LogUtils.error(log, "Error monitoring directory: {}", e.getMessage());
                 }
-                while (backDirs.size() > MAX_BACK_DIR_NUM) {
-                    Path delDir = backDirs.removeFirst();
-                    try {
-                        deleteDir(delDir);
-                        LogUtils.warn(log, "remove result back more dir : {}", delDir);
-                    } catch (IOException e) {
-                        LogUtils.error(log, "remove result back more dir : ", e.getMessage());
-                        backDirs.addLast(delDir);
-                    }
+                try {
+                    Thread.sleep(MONITOR_INTERVAL_MS);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
                 }
-                backDirs.clear();
             }
         });
     }
@@ -93,6 +97,28 @@ public class IncrementLogManager {
     @PreDestroy
     public void destroy() {
         isWatching = false;
+    }
+
+    private void monitorDirectory(String path) {
+        Path dir = Paths.get(path);
+        File[] files = dir.toFile().listFiles();
+        if (files == null || files.length == 0) {
+            return;
+        }
+        LinkedList<Path> sortedDirs = Arrays.stream(files)
+                .map(File::toPath)
+                .sorted()
+                .collect(Collectors.toCollection(LinkedList::new));
+        while (sortedDirs.size() > MAX_BACK_DIR_NUM) {
+            Path delDir = sortedDirs.removeFirst();
+            try {
+                deleteDir(delDir);
+                LogUtils.warn(log, "remove result back more dir : {}", delDir);
+            } catch (IOException e) {
+                LogUtils.error(log, "remove result back more dir : ", e.getMessage());
+                sortedDirs.addLast(delDir);
+            }
+        }
     }
 
     private static void deleteDir(Path dir) throws IOException {
@@ -109,7 +135,6 @@ public class IncrementLogManager {
                     Files.delete(dir);
                     return FileVisitResult.CONTINUE;
                 } else {
-                    // 目录删除失败，可以选择抛出异常或记录日志
                     throw exc;
                 }
             }

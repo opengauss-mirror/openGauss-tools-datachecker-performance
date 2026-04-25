@@ -34,12 +34,13 @@
             <PatternLayout pattern="${LOG_PATTERN}"/>
         </Console>
 
-        <RollingRandomAccessFile name="progress" immediateFlush="true" fileName="${LOG_HOME}/${LOG_NAME}.log"
+        <RollingRandomAccessFile name="progress" immediateFlush="false" bufferSize="8192"
+                                 fileName="${LOG_HOME}/${LOG_NAME}.log"
                                  filePattern="${LOG_HOME}/history/${LOG_NAME}.%d{yyyyMMddHH}.zip">
             <PatternLayout pattern="${LOG_PATTERN}"/>
             <Policies>
-                <OnStartupTriggeringPolicy />
                 <SizeBasedTriggeringPolicy size="200MB"/>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
             </Policies>
             <Filters>
                 <ThresholdFilter level="${LOG_LEVEL}" onMatch="ACCEPT" onMismatch="DENY"/>
@@ -54,17 +55,24 @@
             <Property name="bootstrap.servers">${KAFKA_SERVER}</Property>
             <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %c{1.}:() - %msg%n"/>
         </Kafka>
+
+        <Async name="async_progress" bufferSize="16384" includeLocation="false"
+               blocking="false" timeout="100" discardThreshold="0">
+            <AppenderRef ref="progress"/>
+            <DiscardThreshold level="INFO" />
+        </Async>
+
+        <Async name="async_kafka" bufferSize="8192" includeLocation="false"
+               blocking="false" timeout="50" discardThreshold="0">
+            <AppenderRef ref="kafka"/>
+        </Async>
+
     </Appenders>
 
     <Loggers>
         <Root level="${LOG_LEVEL}">
-            <!--
-                must be close console_out_appender ,when portal exec gs data check .
-                portal will catch console log for something, this will cause check data process shutdown error.
-                -->
-            <AppenderRef ref="console_out_appender"/>
-            <AppenderRef ref="progress"/>
-            <AppenderRef ref="kafka"/>
+            <AppenderRef ref="async_progress"/>
+            <AppenderRef ref="async_kafka"/>
         </Root>
         <Logger name="org.apache.logging.log4j" level="off" />
         <logger name="org.apache.kafka" level="error" />

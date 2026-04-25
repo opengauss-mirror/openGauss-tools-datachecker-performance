@@ -47,9 +47,8 @@ import java.util.concurrent.ExecutorService;
 public class EndpointManagerService {
     private static final Logger log = LogUtils.getLogger(EndpointManagerService.class);
     private static final long INITIAL_CHECK_INTERVAL = 1000L;
-    private static final long FINAL_CHECK_INTERVAL = 30000L;
-    private static final long WARMUP_DURATION = 120000L;
-    private static final long TRANSITION_DURATION = 180000L;
+    private static final long MAX_CHECK_INTERVAL = 10000L;
+    private static final double BACKOFF_MULTIPLIER = 2.0;
     private static final ExecutorService executorService = ThreadUtil.newSingleThreadExecutor();
     @Value("${data.check.retry-interval-times}")
     protected int retryIntervalTimes;
@@ -84,71 +83,56 @@ public class EndpointManagerService {
         Thread.currentThread().setName("heart-beat-heath");
         shutdownService.addMonitor();
         try {
-            long startTime = System.currentTimeMillis();
-            long lastCheckTime = startTime;
-            while (!(shutdownService.isShutdown() || executorService.isShutdown())) {
-                long currentTime = System.currentTimeMillis();
-                long elapsed = currentTime - startTime;
-                long checkInterval = calculateCheckInterval(elapsed);
-                if (currentTime - lastCheckTime >= checkInterval) {
-                    checkEndpoint(dataCheckProperties.getSourceUri(), Endpoint.SOURCE, "source endpoint service check");
-                    checkEndpoint(dataCheckProperties.getSinkUri(), Endpoint.SINK, "sink endpoint service check");
-                    lastCheckTime = currentTime;
+            HealthCheckState state = new HealthCheckState();
+            while (!isShutdown()) {
+                if (state.shouldPerformCheck()) {
+                    performHealthCheck(state);
                 }
-                // 短暂休眠避免CPU过度占用
-                ThreadUtil.sleep(100);
+                ThreadUtil.sleepOneSecond();
             }
         } finally {
             shutdownService.releaseMonitor();
         }
     }
 
-    /**
-     * Dynamically calculates the heartbeat check interval
-     * <p>
-     * Rules:
-     * 1. First 2 minutes (warm-up period): Use initial interval (1 second)
-     * 2. 2-5 minutes (transition period): Linearly increase interval from 1s to 10s
-     * 3. After 5 minutes: Use final interval (10 seconds)
-     *
-     * @param elapsedMillis elapsedMillis
-     * @return check interval
-     */
-    private long calculateCheckInterval(long elapsedMillis) {
-        if (elapsedMillis < WARMUP_DURATION) {
-            return INITIAL_CHECK_INTERVAL;
-        } else if (elapsedMillis < WARMUP_DURATION + TRANSITION_DURATION) {
-            double progress = (double) (elapsedMillis - WARMUP_DURATION) / (double) TRANSITION_DURATION;
-            return INITIAL_CHECK_INTERVAL + (long) (progress * (double) (FINAL_CHECK_INTERVAL
-                - INITIAL_CHECK_INTERVAL));
-        } else {
-            return FINAL_CHECK_INTERVAL;
-        }
+    private boolean isShutdown() {
+        return shutdownService.isShutdown() || executorService.isShutdown();
+    }
+
+    private void performHealthCheck(HealthCheckState state) {
+        boolean isSourceHealthy = checkEndpoint(dataCheckProperties.getSourceUri(), Endpoint.SOURCE,
+                "source endpoint service check");
+        boolean isSinkHealthy = checkEndpoint(dataCheckProperties.getSinkUri(), Endpoint.SINK,
+                "sink endpoint service check");
+        state.update(isSourceHealthy && isSinkHealthy);
     }
 
     public boolean checkEndpointHealth(Endpoint endpoint) {
         return endpointStatusManager.getHealthStatus(endpoint);
     }
 
-    private void checkEndpoint(String requestUri, Endpoint endpoint, String message) {
-        // service network check ping
+    private boolean checkEndpoint(String requestUri, Endpoint endpoint, String message) {
         try {
-            // service check: service database check
             Result<Health> healthStatus = feignClientService.health(endpoint);
             if (healthStatus.isSuccess()) {
                 if (healthStatus.getData().isHealth()) {
                     endpointStatusManager.resetStatus(endpoint, Boolean.TRUE);
+                    LogUtils.info(log, "{} : {} status {}", message, requestUri, healthStatus.getData());
+                    return true;
                 } else {
                     endpointStatusManager.resetStatus(endpoint, Boolean.FALSE);
+                    LogUtils.warn(log, "{} : {} status [{}]", message, requestUri, healthStatus.getData());
+                    return false;
                 }
-                LogUtils.info(log, "{} ：{} status {}", message, requestUri, healthStatus.getData());
             } else {
                 endpointStatusManager.resetStatus(endpoint, Boolean.FALSE);
                 LogUtils.warn(log, "{} : {} status [{}]", message, requestUri, healthStatus.getData());
+                return false;
             }
         } catch (Exception ce) {
             LogUtils.warn(log, "{} : {} service unreachable", message, ce.getMessage());
             endpointStatusManager.resetStatus(endpoint, Boolean.FALSE);
+            return false;
         }
     }
 
@@ -157,5 +141,42 @@ public class EndpointManagerService {
         endpointStatusManager.resetStatus(Endpoint.SOURCE, false);
         endpointStatusManager.resetStatus(Endpoint.SINK, false);
         ThreadPoolShutdownUtil.shutdown(executorService, "heart-beat-heath");
+    }
+
+    private static class HealthCheckState {
+        private long lastCheckTime = System.currentTimeMillis();
+        private long currentInterval = INITIAL_CHECK_INTERVAL;
+        private int consecutiveFailures = 0;
+
+        boolean shouldPerformCheck() {
+            return System.currentTimeMillis() - lastCheckTime >= currentInterval;
+        }
+
+        void update(boolean isAllHealthy) {
+            lastCheckTime = System.currentTimeMillis();
+            if (isAllHealthy) {
+                resetBackoff();
+            } else {
+                incrementBackoff();
+            }
+        }
+
+        private void resetBackoff() {
+            consecutiveFailures = 0;
+            currentInterval = INITIAL_CHECK_INTERVAL;
+        }
+
+        private void incrementBackoff() {
+            consecutiveFailures++;
+            currentInterval = calculateExponentialBackoffInterval(consecutiveFailures);
+            if (currentInterval >= MAX_CHECK_INTERVAL) {
+                consecutiveFailures = 0;
+            }
+        }
+
+        private long calculateExponentialBackoffInterval(int consecutiveFailures) {
+            long interval = (long) (INITIAL_CHECK_INTERVAL * Math.pow(BACKOFF_MULTIPLIER, consecutiveFailures));
+            return Math.min(interval, MAX_CHECK_INTERVAL);
+        }
     }
 }

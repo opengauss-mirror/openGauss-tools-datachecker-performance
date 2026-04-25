@@ -15,7 +15,6 @@
 
 package org.opengauss.datachecker.common.util;
 
-import org.apache.commons.lang3.RandomUtils;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.apache.logging.log4j.Logger;
 
@@ -40,7 +39,7 @@ public class ThreadUtil {
      *
      * @param millisTime Sleep time MS
      */
-    public static void sleep(int millisTime) {
+    public static void sleep(long millisTime) {
         try {
             Thread.sleep(millisTime);
         } catch (InterruptedException ie) {
@@ -101,17 +100,6 @@ public class ThreadUtil {
     }
 
     /**
-     * The current thread sleeps for 10 - 500 milliseconds
-     */
-    public static void requestConflictingSleeping() {
-        try {
-            Thread.sleep(RandomUtils.nextLong(50, 500));
-        } catch (InterruptedException ie) {
-            LogUtils.warn(log, "thread sleep interrupted exception ");
-        }
-    }
-
-    /**
      * The current thread sleeps for 1000 milliseconds
      */
     public static void sleepOneSecond() {
@@ -128,15 +116,8 @@ public class ThreadUtil {
     /**
      * thread sleep for 300 - 1000 milliseconds
      */
-    public static void sleepMax2Second() {
-        sleep(RandomUtils.nextInt(300, 2000));
-    }
-
-    /**
-     * thread sleep for 300 - 1000 milliseconds
-     */
     public static void sleepMaxHalfSecond() {
-        sleep(RandomUtils.nextInt(100, 500));
+        sleep(500);
     }
 
     /**
@@ -144,7 +125,7 @@ public class ThreadUtil {
      *
      * @return thread pool
      */
-    @SuppressWarnings( {"all"})
+    @SuppressWarnings({"all"})
     public static ExecutorService newSingleThreadExecutor() {
         return Executors.newFixedThreadPool(1, Executors.defaultThreadFactory());
     }
@@ -158,8 +139,13 @@ public class ThreadUtil {
         return new ScheduledThreadPoolExecutor(1, new BasicThreadFactory.Builder().daemon(true).build());
     }
 
+    /**
+     * Custom scheduled task single thread
+     *
+     * @param name Scheduled task single thread name
+     * @return Scheduled task single thread
+     */
     public static ScheduledExecutorService newSingleThreadScheduledExecutor(String name) {
         return new ScheduledThreadPoolExecutor(1, new BasicThreadFactory.Builder().namingPattern(name).build());
     }
-
 }

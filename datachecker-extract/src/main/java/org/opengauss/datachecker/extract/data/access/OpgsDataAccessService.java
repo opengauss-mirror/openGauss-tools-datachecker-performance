@@ -228,7 +228,7 @@ public class OpgsDataAccessService extends AbstractDataAccessService {
 
     @Override
     public LowerCaseTableNames queryLowerCaseTableNames() {
-        String sql = "SHOW VARIABLES  LIKE \"lower_case_table_names\";";
+        String sql = "SHOW VARIABLES  LIKE \"%lower_case_table_names\";";
         Connection connection = getConnection();
         Map<String, LowerCaseTableNames> result = new HashMap<>();
         try (PreparedStatement ps = connection.prepareStatement(sql); ResultSet resultSet = ps.executeQuery()) {
