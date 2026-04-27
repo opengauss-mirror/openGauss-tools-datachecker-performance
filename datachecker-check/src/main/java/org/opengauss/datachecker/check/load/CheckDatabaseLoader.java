@@ -84,6 +84,7 @@ public class CheckDatabaseLoader extends AbstractCheckLoader {
     }
 
     private void checkDatabaseLowerCaseTableNames(Database source, Database sink) {
+        log.info("check database  source {} : sink {}", source, sink);
         Assert.notNull(source, "source database config can't be null");
         Assert.notNull(sink, "sink database config can't be null");
         Assert.notNull(source.getLowercaseTableNames(), "source database lower_case_table_name fetch error");
