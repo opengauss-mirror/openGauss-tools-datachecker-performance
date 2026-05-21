@@ -228,16 +228,28 @@ public class OpgsDataAccessService extends AbstractDataAccessService {
 
     @Override
     public LowerCaseTableNames queryLowerCaseTableNames() {
-        String sql = "SHOW VARIABLES  LIKE \"%lower_case_table_names\";";
         Connection connection = getConnection();
         Map<String, LowerCaseTableNames> result = new HashMap<>();
-        try (PreparedStatement ps = connection.prepareStatement(sql); ResultSet resultSet = ps.executeQuery()) {
-            String value = "";
-            String name = "";
-            while (resultSet.next()) {
-                name = resultSet.getString(1);
-                value = resultSet.getString(2);
-                result.put(name, LowerCaseTableNames.codeOf(value));
+        try {
+            String sql = "SHOW VARIABLES  LIKE \"%lower_case_table_names\";";
+            try (PreparedStatement ps = connection.prepareStatement(sql); ResultSet resultSet = ps.executeQuery()) {
+                String value = "";
+                String name = "";
+                while (resultSet.next()) {
+                    name = resultSet.getString(1);
+                    value = resultSet.getString(2);
+                    result.put(name, LowerCaseTableNames.codeOf(value));
+                }
+            }
+            if (result.isEmpty()) {
+                String fallbackSql = "show dolphin.lower_case_table_names;";
+                try (PreparedStatement ps = connection.prepareStatement(fallbackSql);
+                        ResultSet resultSet = ps.executeQuery()) {
+                    if (resultSet.next()) {
+                        String value = resultSet.getString(1);
+                        result.put(DOLPHIN_LOWER_CASE_TABLE_NAMES, LowerCaseTableNames.codeOf(value));
+                    }
+                }
             }
         } catch (SQLException ex) {
             log.error("{}queryLowerCaseTableNames error", ErrorCode.EXECUTE_QUERY_SQL, ex);
