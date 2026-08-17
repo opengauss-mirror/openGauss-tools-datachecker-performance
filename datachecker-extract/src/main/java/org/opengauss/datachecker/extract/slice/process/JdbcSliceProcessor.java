@@ -23,6 +23,12 @@ import cn.hutool.core.thread.ThreadUtil;
 import cn.hutool.core.util.StrUtil;
 import lombok.Getter;
 
+import net.sf.jsqlparser.JSQLParserException;
+import net.sf.jsqlparser.parser.CCJSqlParserUtil;
+import net.sf.jsqlparser.statement.Statement;
+import net.sf.jsqlparser.statement.select.FromItem;
+import net.sf.jsqlparser.statement.select.PlainSelect;
+import net.sf.jsqlparser.statement.select.Select;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
@@ -46,9 +52,8 @@ import org.opengauss.datachecker.extract.task.sql.UnionPrimarySliceQueryStatemen
 import org.springframework.kafka.support.SendResult;
 import org.springframework.util.Assert;
 
-import java.util.Arrays;
+
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.Map;
 import java.util.HashMap;
@@ -90,11 +95,21 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
     };
 
     private final SqlFieldMasker sqlFieldMasker = pageStatement -> {
-        String[] split = pageStatement.toLowerCase(Locale.ROOT).split(" from ");
-        if (split.length != 2) {
-            throw new ExtractDataAccessException("sql statement is not valid");
+        try {
+            Statement stmt = CCJSqlParserUtil.parse(pageStatement);
+            if (stmt instanceof Select selectStmt) {
+                if (selectStmt.getSelectBody() instanceof PlainSelect plainSelect) {
+                    FromItem fromItem = plainSelect.getFromItem();
+                    if (fromItem != null) {
+                        return "select * from " + fromItem.toString();
+                    }
+                }
+            }
+            return pageStatement;
+        } catch (JSQLParserException e) {
+            LogUtils.warn(log, "parse sql failed, origin sql:{} error:{}", pageStatement, e.getMessage());
+            return pageStatement;
         }
-        return "select * from " + split[1];
     };
 
     /**
@@ -209,8 +224,8 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
         QuerySqlEntry baseSliceSql = sliceStatement.buildSlice(tableMetadata, slice);
         List<String> pageStatementList = sliceStatement.buildPageStatement(baseSliceSql, sliceCount,
             slice.getFetchSize());
-        LogUtils.debug(log, "table [{}] query statement :  {}", table,
-                sqlFieldMasker.mask(Arrays.toString(pageStatementList.toArray())));
+        LogUtils.debug(log, "table [{}] page query statement count: {}, first: {}",
+                table, pageStatementList.size(), sqlFieldMasker.mask(pageStatementList.get(0)));
         SliceResultSetSender sliceSender = null;
         Connection connection = null;
         AsyncDataHandler asyncHandler = null;
