@@ -11,7 +11,7 @@ openGauss数据校验工具 ，包含全量数据校验以及增量数据校验�
 #### 安装包下载
 
 ~~~
-wget https://opengauss.obs.cn-south-1.myhuaweicloud.com/latest/tools/gs_datacheck-7.0.0rc2.tar.gz
+wget https://opengauss.obs.cn-south-1.myhuaweicloud.com/latest/tools/openGauss-DataCheck-7.0.0.tar.gz
 ~~~
 
 #### 完整性校验

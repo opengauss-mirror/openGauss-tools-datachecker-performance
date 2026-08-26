@@ -11,7 +11,7 @@ Incremental data verification: Debezium monitors source database changes. The ex
 #### Downloading the Installation Package
 
 ~~~
-wget: https://opengauss.obs.cn-south-1.myhuaweicloud.com/latest/tools/gs_datacheck-7.0.0rc2.tar.gz
+wget: https://opengauss.obs.cn-south-1.myhuaweicloud.com/latest/tools/openGauss-DataCheck-7.0.0.tar.gz
 ~~~
 
 #### Performing Integrity Check
