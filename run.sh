@@ -3,8 +3,8 @@
 # Usage: sh run.sh [start|stop|restart|status]
 
 # ====================== 配置区 ======================
-EXTRACT_JAR=datachecker-extract-7.0.0-RC3.jar
-CHECK_JAR=datachecker-check-7.0.0-RC3.jar
+EXTRACT_JAR=datachecker-extract-7.0.0.jar
+CHECK_JAR=datachecker-check-7.0.0.jar
 CONFIG_PATH=config
 run_path=$(cd `dirname $0`; pwd)
 JAVA_OPTS="-Xmx1G -Xms1G -XX:+UseG1GC -XX:MaxGCPauseMillis=100 -XX:+ParallelRefProcEnabled"
