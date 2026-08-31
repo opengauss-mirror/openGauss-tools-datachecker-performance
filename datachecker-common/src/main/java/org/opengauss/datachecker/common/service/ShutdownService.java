@@ -6,7 +6,6 @@ import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.ThreadUtil;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.concurrent.ExecutorConfigurationSupport;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
@@ -37,8 +36,9 @@ public class ShutdownService {
     @Resource
     private ProcessLogService processLogService;
 
-    @Async
     public void shutdown(String message) {
+        // 优先写入 stop 进程日志，确保 JVM 退出前结束标识落盘，避免与 System.exit 抢跑导致丢失
+        processLogService.saveStopProcessLog();
         LogUtils.info(log, "The check server will be shutdown , {} . check server exited .", message);
         ThreadUtil.sleep(ConfigCache.getIntValue(ConfigConstants.TIMEOUT_PER_SHUTDOWN_PHASE));
         LogUtils.info(log, "The check server wait 5s and will be shutdown , {} . check server exited .", message);
@@ -47,7 +47,6 @@ public class ShutdownService {
         while (monitor.get() > 0) {
             ThreadUtil.sleepHalfSecond();
         }
-        processLogService.saveStopProcessLog();
         threadExecutorList.forEach(ExecutorConfigurationSupport::shutdown);
         executorServiceList.forEach(ExecutorService::shutdownNow);
         sliceSendExecutor.shutdown();
