@@ -58,7 +58,9 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 import static org.opengauss.datachecker.check.modules.check.CheckResultConstants.FAILED_MESSAGE;
@@ -77,6 +79,7 @@ public class SliceCheckResultManager {
     private static final String SUCCESS_LOG_NAME = "success.log";
     private static final String REPAIR_LOG_TEMPLATE = "repair_%s_%s_%s.txt";
     private static final int MAX_DISPLAY_SIZE = CheckResultConstants.MAX_DISPLAY_SIZE;
+    private static final int MAX_SUCCESS_MESSAGE_SIZE = 20;
 
     private final Map<String, Integer> tableSliceCountMap = new ConcurrentHashMap<>();
     private final Map<String, List<CheckDiffResult>> checkResult = new ConcurrentHashMap<>();
@@ -84,13 +87,13 @@ public class SliceCheckResultManager {
 
     @Resource
     private FeignClientService feignClient;
-    private int successTableCount = 0;
-    private int failedTableCount = 0;
-    private long rowCount = 0L;
-    private boolean isCsvMode = false;
-    private boolean ogCompatibility = false;
-    private boolean hasInitSliceResultEnvironment = true;
-    private CheckTableInfo checkTableInfo = null;
+    private final AtomicInteger successTableCount = new AtomicInteger(0);
+    private final AtomicInteger failedTableCount = new AtomicInteger(0);
+    private final AtomicLong rowCount = new AtomicLong(0L);
+    private volatile boolean isCsvMode = false;
+    private volatile boolean isOgCompatibility = false;
+    private final AtomicBoolean hasInitSliceResultEnvironment = new AtomicBoolean(true);
+    private volatile CheckTableInfo checkTableInfo = null;
 
     /**
      * add slice check result
@@ -102,11 +105,11 @@ public class SliceCheckResultManager {
         if (!tableSliceCountMap.containsKey(slice.getTable())) {
             tableSliceCountMap.put(slice.getTable(), slice.getTotal());
         }
-        if (hasInitSliceResultEnvironment) {
+        if (hasInitSliceResultEnvironment.compareAndSet(true, false)) {
             isCsvMode = Objects.equals(ConfigCache.getCheckMode(), CheckMode.CSV);
-            ogCompatibility = feignClient.checkTargetOgCompatibility();
-            hasInitSliceResultEnvironment = false;
-            LogUtils.info(log, "my gold ,i want to set property hasInitSliceResultEnvironment, and execute once");
+            isOgCompatibility = feignClient.checkTargetOgCompatibility();
+            LogUtils.info(log, "init slice result environment: isCsvMode={}, ogCompatibility={}", isCsvMode,
+                    isOgCompatibility);
         }
         addResult(slice.getTable(), result);
     }
@@ -127,7 +130,7 @@ public class SliceCheckResultManager {
         }
         log.error("{}checked table structure failed, [{}]", ErrorCode.TABLE_STRUCTURE, table);
         tableStructureResult.put(table, result);
-        failedTableCount++;
+        failedTableCount.incrementAndGet();
         CheckFailed failed = translateCheckFailed(List.of(), List.of(result));
         String failedLogPath = ConfigCache.getCheckResult() + CheckResultConstants.FAILED_LOG_NAME;
         FileUtils.writeAppendFile(failedLogPath, JsonObjectUtil.prettyFormatMillis(failed) + ",");
@@ -153,32 +156,33 @@ public class SliceCheckResultManager {
         // is Immediately Rename Check Success File
         boolean isImmediately = Objects.equals(checkDiffResult.getResult(), CheckResultConstants.RESULT_SUCCESS);
         notifyCsvShardingCompleted(checkDiffResult, isImmediately);
-        if (completedSliceSize.get() == tableSliceCountMap.get(table)) {
+        Integer totalSlice = tableSliceCountMap.get(table);
+        if (totalSlice != null && completedSliceSize.get() == totalSlice) {
             List<CheckDiffResult> results = checkResult.get(table);
             Map<String, List<CheckDiffResult>> resultMap;
             resultMap = results.stream().collect(Collectors.groupingBy(CheckDiffResult::getResult));
             String checkResultPath = ConfigCache.getCheckResult();
             if (resultMap.containsKey(CheckResultConstants.RESULT_FAILED)) {
-                List<CheckDiffResult> tableFiledList = resultMap.get(CheckResultConstants.RESULT_FAILED);
+                List<CheckDiffResult> tableFailedList = resultMap.get(CheckResultConstants.RESULT_FAILED);
                 List<CheckDiffResult> tableSuccessList = resultMap.get(CheckResultConstants.RESULT_SUCCESS);
-                CheckFailed failed = translateCheckFailed(tableSuccessList, tableFiledList);
+                CheckFailed failed = translateCheckFailed(tableSuccessList, tableFailedList);
                 String failedLogPath = checkResultPath + CheckResultConstants.FAILED_LOG_NAME;
                 FileUtils.writeAppendFile(failedLogPath, JsonObjectUtil.prettyFormatMillis(failed) + ",");
-                reduceFailedRepair(checkResultPath, tableFiledList);
+                reduceFailedRepair(checkResultPath, tableFailedList);
                 if (isCsvMode) {
                     List<CheckCsvFailed> csvFailedList = translateCheckCsvFaileds(results);
                     String csvFailedLogPath = checkResultPath + CheckResultConstants.CSV_FAILED_DETAIL_NAME;
                     saveCsvSliceFailedDetails(csvFailedList, csvFailedLogPath);
                 }
-                rowCount += failed.getRowCount();
-                failedTableCount++;
+                rowCount.addAndGet(failed.getRowCount());
+                failedTableCount.incrementAndGet();
             } else {
                 List<CheckDiffResult> tableSuccessList = resultMap.get(CheckResultConstants.RESULT_SUCCESS);
                 CheckSuccess success = translateCheckSuccess(tableSuccessList);
                 String successLogPath = checkResultPath + SUCCESS_LOG_NAME;
                 FileUtils.writeAppendFile(successLogPath, JsonObjectUtil.prettyFormatMillis(success) + ",");
-                successTableCount++;
-                rowCount += success.getRowCount();
+                successTableCount.incrementAndGet();
+                rowCount.addAndGet(success.getRowCount());
             }
             refreshSummary();
         }
@@ -217,16 +221,16 @@ public class SliceCheckResultManager {
      */
     public void refreshSummary() {
         CheckSummary checkSummary = new CheckSummary();
-        int completeCount = successTableCount + failedTableCount;
+        int completeCount = successTableCount.get() + failedTableCount.get();
         checkSummary.setMode(ConfigCache.getCheckMode());
         checkSummary.setTableCount(completeCount);
         checkSummary.setMissTable(checkTableInfo);
         checkSummary.setStartTime(ConfigCache.getValue(ConfigConstants.START_LOCAL_TIME, LocalDateTime.class));
         checkSummary.setEndTime(LocalDateTime.now());
         checkSummary.setCost(calcCheckTaskCost(checkSummary.getStartTime(), checkSummary.getEndTime()));
-        checkSummary.setSuccessCount(successTableCount);
-        checkSummary.setFailedCount(failedTableCount);
-        checkSummary.setRowCount(rowCount);
+        checkSummary.setSuccessCount(successTableCount.get());
+        checkSummary.setFailedCount(failedTableCount.get());
+        checkSummary.setRowCount(rowCount.get());
         String summaryPath = ConfigCache.getCheckResult() + SUMMARY_LOG_NAME;
         FileUtils.writeFile(summaryPath, JsonObjectUtil.prettyFormatMillis(checkSummary));
     }
@@ -266,38 +270,40 @@ public class SliceCheckResultManager {
         return failed;
     }
 
-    private FetchDiffKeys fetchInsertDiffKeys = tableFiledList -> {
+    private FetchDiffKeys fetchInsertDiffKeys = tableFailedList -> {
         Set<String> diffKey = new TreeSet<>();
-        tableFiledList.forEach(tableFiled -> {
-            if (CollectionUtils.isNotEmpty(tableFiled.getKeyInsertSet())) {
-                diffKey.addAll(tableFiled.getKeyInsertSet());
+        tableFailedList.forEach(tableFailed -> {
+            if (CollectionUtils.isNotEmpty(tableFailed.getKeyInsertSet())) {
+                diffKey.addAll(tableFailed.getKeyInsertSet());
             }
-            if (CollectionUtils.isNotEmpty(tableFiled.getKeyInsert())) {
-                diffKey.addAll(tableFiled.getKeyInsert().stream().map(Difference::getKey).collect(Collectors.toList()));
+            if (CollectionUtils.isNotEmpty(tableFailed.getKeyInsert())) {
+                diffKey.addAll(tableFailed.getKeyInsert().stream().map(Difference::getKey).toList());
             }
         });
         return diffKey;
     };
-    private FetchDiffKeys fetchDeleteDiffKeys = tableFiledList -> {
+
+    private FetchDiffKeys fetchDeleteDiffKeys = tableFailedList -> {
         Set<String> diffKey = new TreeSet<>();
-        tableFiledList.forEach(tableFiled -> {
-            if (CollectionUtils.isNotEmpty(tableFiled.getKeyDeleteSet())) {
-                diffKey.addAll(tableFiled.getKeyDeleteSet());
+        tableFailedList.forEach(tableFailed -> {
+            if (CollectionUtils.isNotEmpty(tableFailed.getKeyDeleteSet())) {
+                diffKey.addAll(tableFailed.getKeyDeleteSet());
             }
-            if (CollectionUtils.isNotEmpty(tableFiled.getKeyDelete())) {
-                diffKey.addAll(tableFiled.getKeyDelete().stream().map(Difference::getKey).collect(Collectors.toList()));
+            if (CollectionUtils.isNotEmpty(tableFailed.getKeyDelete())) {
+                diffKey.addAll(tableFailed.getKeyDelete().stream().map(Difference::getKey).toList());
             }
         });
         return diffKey;
     };
-    private FetchDiffKeys fetchUpdateDiffKeys = tableFiledList -> {
+
+    private FetchDiffKeys fetchUpdateDiffKeys = tableFailedList -> {
         Set<String> diffKey = new TreeSet<>();
-        tableFiledList.forEach(tableFiled -> {
-            if (CollectionUtils.isNotEmpty(tableFiled.getKeyUpdateSet())) {
-                diffKey.addAll(tableFiled.getKeyUpdateSet());
+        tableFailedList.forEach(tableFailed -> {
+            if (CollectionUtils.isNotEmpty(tableFailed.getKeyUpdateSet())) {
+                diffKey.addAll(tableFailed.getKeyUpdateSet());
             }
-            if (CollectionUtils.isNotEmpty(tableFiled.getKeyUpdate())) {
-                diffKey.addAll(tableFiled.getKeyUpdate().stream().map(Difference::getKey).collect(Collectors.toList()));
+            if (CollectionUtils.isNotEmpty(tableFailed.getKeyUpdate())) {
+                diffKey.addAll(tableFailed.getKeyUpdate().stream().map(Difference::getKey).toList());
             }
         });
         return diffKey;
@@ -309,15 +315,21 @@ public class SliceCheckResultManager {
 
     @FunctionalInterface
     protected interface FetchDiffKeys {
-        Set<String> fetchKey(List<CheckDiffResult> tableFiledList);
+        /**
+         * collect failed keys
+         *
+         * @param tableFailedList tableFailedList
+         * @return keys
+         */
+        Set<String> fetchKey(List<CheckDiffResult> tableFailedList);
     }
 
-    private long fetchTotal(List<CheckDiffResult> tableFiled,
+    private long fetchTotal(List<CheckDiffResult> tableFailed,
         java.util.function.ToLongFunction<? super CheckDiffResult> mapper) {
-        if (Objects.isNull(tableFiled)) {
+        if (Objects.isNull(tableFailed)) {
             return 0L;
         }
-        return tableFiled.stream().mapToLong(mapper).sum();
+        return tableFailed.stream().mapToLong(mapper).sum();
     }
 
     private Set<String> getKeyList(Set<String> keySet, StringBuilder hasMore, String message) {
@@ -356,15 +368,22 @@ public class SliceCheckResultManager {
     }
 
     private LocalDateTime fetchMaxEndTime(@NotEmpty List<CheckDiffResult> tableResultList) {
-        return tableResultList.stream().map(CheckDiffResult::getEndTime).max(LocalDateTime::compareTo).get();
+        return tableResultList.stream().map(CheckDiffResult::getEndTime).max(LocalDateTime::compareTo).orElse(null);
     }
 
     private String fetchMessage(@NotEmpty List<CheckDiffResult> tableResultList) {
-        return tableResultList.stream().map(CheckDiffResult::getMessage).collect(Collectors.toList()).toString();
+        List<String> messages =
+            tableResultList.stream().map(CheckDiffResult::getMessage).collect(Collectors.toCollection(LinkedList::new));
+        if (messages.size() <= MAX_SUCCESS_MESSAGE_SIZE) {
+            return messages.toString();
+        }
+        List<String> limited = new LinkedList<>(messages.subList(0, MAX_SUCCESS_MESSAGE_SIZE));
+        limited.add("... and " + (messages.size() - MAX_SUCCESS_MESSAGE_SIZE) + " more slices");
+        return limited.toString();
     }
 
     private LocalDateTime fetchMinStartTime(@NotEmpty List<CheckDiffResult> tableResultList) {
-        return tableResultList.stream().map(CheckDiffResult::getStartTime).min(LocalDateTime::compareTo).get();
+        return tableResultList.stream().map(CheckDiffResult::getStartTime).min(LocalDateTime::compareTo).orElse(null);
     }
 
     private void reduceFailedRepair(String logFilePath, List<CheckDiffResult> failedList) {
@@ -412,7 +431,7 @@ public class SliceCheckResultManager {
         if (Objects.nonNull(sinkDatabase)) {
             repairEntry.setSchema(sinkDatabase.getSchema());
         }
-        repairEntry.setDiffSet(diffsSet).setOgCompatibility(ogCompatibility).setDiffList(keyDifference);
+        repairEntry.setDiffSet(diffsSet).setOgCompatibility(isOgCompatibility).setDiffList(keyDifference);
         return repairEntry;
     }
 
