@@ -46,6 +46,31 @@ public class FileUtils {
     private static final Logger log = LogUtils.getLogger();
 
     /**
+     * Fixed stripe write lock: the same path always maps to the same slot to ensure append mutual exclusion,
+     * while writes to different files are mostly parallel;
+     * lock memory is O(1), decoupled from the number of files written to disk (scale of business tables).
+     * Rule of thumb for tuning: slot count >= 4 × the maximum number of concurrent writer threads in the whole process
+     * (expected collision pairs = C(n,2)/slot count).
+     * Currently there are about 25 concurrent writer threads
+     * (check verification pool 10 + async event pool 10 + extract send pool 3 + a few scheduled tasks);
+     * scale this value up accordingly when enlarging the worker thread pools
+     * (e.g., 50 threads -> 256, 100 threads -> 512)
+     */
+    private static final int LOCK_STRIPE_COUNT = 128;
+    private static final Object[] LOCK_STRIPES = new Object[LOCK_STRIPE_COUNT];
+
+    static {
+        for (int i = 0; i < LOCK_STRIPE_COUNT; i++) {
+            LOCK_STRIPES[i] = new Object();
+        }
+    }
+
+    private static Object lockFor(String filename) {
+        String normalized = Paths.get(filename).toAbsolutePath().normalize().toString();
+        return LOCK_STRIPES[(normalized.hashCode() & 0x7fffffff) % LOCK_STRIPE_COUNT];
+    }
+
+    /**
      * Creates a directory by creating all nonexistent parent directories first.
      *
      * @param path path
@@ -68,11 +93,13 @@ public class FileUtils {
      * @param filename filename
      * @param content  content
      */
-    public static synchronized void writeAppendFile(String filename, List<String> content) {
-        try {
-            Files.write(Paths.get(filename), content, StandardOpenOption.APPEND, StandardOpenOption.CREATE);
-        } catch (IOException e) {
-            log.error("file write error:", e);
+    public static void writeAppendFile(String filename, List<String> content) {
+        synchronized (lockFor(filename)) {
+            try {
+                Files.write(Paths.get(filename), content, StandardOpenOption.APPEND, StandardOpenOption.CREATE);
+            } catch (IOException e) {
+                log.error("file write error:", e);
+            }
         }
     }
 
@@ -82,11 +109,13 @@ public class FileUtils {
      * @param filename filename
      * @param content  content
      */
-    public static synchronized void writeAppendFile(String filename, Set<String> content) {
-        try {
-            Files.write(Paths.get(filename), content, StandardOpenOption.APPEND, StandardOpenOption.CREATE);
-        } catch (IOException e) {
-            log.error("file write error:", e);
+    public static void writeAppendFile(String filename, Set<String> content) {
+        synchronized (lockFor(filename)) {
+            try {
+                Files.write(Paths.get(filename), content, StandardOpenOption.APPEND, StandardOpenOption.CREATE);
+            } catch (IOException e) {
+                log.error("file write error:", e);
+            }
         }
     }
 
@@ -96,12 +125,18 @@ public class FileUtils {
      * @param filename filename
      * @param content  content
      */
-    public static synchronized void writeAppendFile(String filename, String content) {
-        try {
-            Files.write(Paths.get(filename), content.getBytes(StandardCharsets.UTF_8), StandardOpenOption.APPEND,
-                StandardOpenOption.CREATE);
-        } catch (IOException e) {
-            log.error("file write error:", e);
+    public static void writeAppendFile(String filename, String content) {
+        synchronized (lockFor(filename)) {
+            try {
+                Path path = Paths.get(filename);
+                if (path.getParent() != null) {
+                    Files.createDirectories(path.getParent());
+                }
+                Files.write(path, content.getBytes(StandardCharsets.UTF_8),
+                        StandardOpenOption.APPEND, StandardOpenOption.CREATE);
+            } catch (IOException e) {
+                log.error("file write error:", e);
+            }
         }
     }
 
@@ -111,11 +146,17 @@ public class FileUtils {
      * @param filename filename
      * @param content  content
      */
-    public static synchronized void writeFile(String filename, String content) {
-        try {
-            Files.write(Paths.get(filename), content.getBytes(StandardCharsets.UTF_8), StandardOpenOption.CREATE);
-        } catch (IOException e) {
-            log.error("file write error:", e);
+    public static void writeFile(String filename, String content) {
+        synchronized (lockFor(filename)) {
+            try {
+                Path path = Paths.get(filename);
+                if (path.getParent() != null) {
+                    Files.createDirectories(path.getParent());
+                }
+                Files.write(path, content.getBytes(StandardCharsets.UTF_8), StandardOpenOption.CREATE);
+            } catch (IOException e) {
+                log.error("file write error:", e);
+            }
         }
     }
 

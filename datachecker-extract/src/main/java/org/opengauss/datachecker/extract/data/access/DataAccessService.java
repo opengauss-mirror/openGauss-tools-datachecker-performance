@@ -190,8 +190,8 @@ public interface DataAccessService {
     /**
      * <pre>
      * query database variables lower_case_table_names
-     *  lower_case_table_names=0  : SENSITIVE    : 表名区分大小写
-     *  lower_case_table_names=1  : INSENSITIVE  : 表名不区分大小写
+     *  lower_case_table_names=0  : SENSITIVE    : table names are case-sensitive
+     *  lower_case_table_names=1  : INSENSITIVE  : table names are case-insensitive
      * </pre>
      *
      * @return value
@@ -201,7 +201,7 @@ public interface DataAccessService {
     /**
      * query table unique columns
      * <pre>
-     *     唯一性约束与唯一性索引
+     *     unique constraints and unique indexes
      * </pre>
      *
      * @param tableName table
@@ -217,4 +217,33 @@ public interface DataAccessService {
      * @return point list
      */
     List<PointPair> queryUnionFirstPrimaryCheckPointList(Connection connection, DataAccessParam param);
+
+    /**
+     * Query the cardinality of union primary key columns at the SQL layer with count(distinct),
+     * for low-cardinality comparison during slice column selection, avoiding OOM caused by
+     * full group-by loading on high-cardinality columns.
+     *
+     * @param connection connection
+     * @param param param
+     * @return column cardinality; -1 on query exception
+     */
+    long queryUnionColumnCardinality(Connection connection, DataAccessParam param);
+
+    /**
+     * Query a single row by offset, with pagination syntax adapted to the database type.
+     * <p>
+     * Syntax per database:
+     * <ul>
+     *   <li>MySQL (MS): {@code baseSql LIMIT 1 OFFSET offset}</li>
+     *   <li>openGauss (OG): {@code baseSql LIMIT 1 OFFSET offset}</li>
+     *   <li>Oracle (O): {@code baseSql OFFSET offset ROWS FETCH NEXT 1 ROWS ONLY}</li>
+     * </ul>
+     *
+     * @param baseSql   base SQL (without the pagination clause)
+     * @param offset    offset
+     * @param rowMapper row mapper
+     * @param <T>       data type
+     * @return query result list
+     */
+    <T> List<T> queryOneWithOffset(String baseSql, long offset, RowMapper<T> rowMapper);
 }

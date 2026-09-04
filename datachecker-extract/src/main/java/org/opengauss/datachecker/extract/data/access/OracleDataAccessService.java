@@ -151,6 +151,12 @@ public class OracleDataAccessService extends AbstractDataAccessService {
     }
 
     @Override
+    public long queryUnionColumnCardinality(Connection connection, DataAccessParam param) {
+        // oracle database`table,that is defined by union primary key
+        return 0L;
+    }
+
+    @Override
     public boolean dasCheckDatabaseNotEmpty() {
         return oracleMetaDataMapper.checkDatabaseNotEmpty(properties.getSchema());
     }
