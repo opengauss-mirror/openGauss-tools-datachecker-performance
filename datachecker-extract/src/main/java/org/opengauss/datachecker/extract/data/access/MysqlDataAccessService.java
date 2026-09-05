@@ -31,6 +31,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -55,8 +56,8 @@ public class MysqlDataAccessService extends AbstractDataAccessService {
     @Override
     public Health health() {
         String schema = properties.getSchema();
-        String sql = "SELECT SCHEMA_NAME tableSchema FROM information_schema.SCHEMATA info WHERE SCHEMA_NAME='" + schema
-            + "' limit 1";
+        String sql = "SELECT SCHEMA_NAME tableSchema FROM information_schema.SCHEMATA info WHERE SCHEMA_NAME=:schema"
+            + " limit 1";
         return health(schema, sql);
     }
 
@@ -67,10 +68,9 @@ public class MysqlDataAccessService extends AbstractDataAccessService {
 
     @Override
     public List<String> dasQueryTableNameList() {
-        String schema = properties.getSchema();
-        String sql = "select info.table_name tableName from information_schema.tables info where table_schema='"
-            + schema + "'  and table_type='BASE TABLE'";
-        return adasQueryTableNameList(sql);
+        String sql = "select info.table_name tableName from information_schema.tables info where table_schema=:schema"
+            + "  and table_type='BASE TABLE'";
+        return adasQueryTableNameList(sql, Map.of("schema", properties.getSchema()));
     }
 
     @Override
@@ -86,19 +86,19 @@ public class MysqlDataAccessService extends AbstractDataAccessService {
     @Override
     public List<PrimaryColumnBean> queryTablePrimaryColumns() {
         String sql = "select table_name tableName ,lower(column_name) columnName from information_schema.columns "
-            + "where table_schema='" + properties.getSchema() + "' and column_key='PRI' order by ordinal_position asc ";
-        return adasQueryTablePrimaryColumns(sql);
+            + "where table_schema=:schema and column_key='PRI' order by ordinal_position asc ";
+        return adasQueryTablePrimaryColumns(sql, Map.of("schema", properties.getSchema()));
     }
 
     @Override
     public List<PrimaryColumnBean> queryTableUniqueColumns(String tableName) {
-        String schema = properties.getSchema();
         String sql = "select s.table_schema,s.table_name tableName,s.column_name columnName,c.ordinal_position colIdx,"
             + " s.index_name indexIdentifier from information_schema.statistics s "
             + " left join information_schema.columns c on s.table_schema=c.table_schema  "
             + " and s.table_schema=c.table_schema and s.table_name=c.table_name and s.column_name=c.column_name "
-            + " where s.table_schema='" + schema + "' and s.table_name='" + tableName + "'" + " and s.non_unique=0;";
-        List<UniqueColumnBean> uniqueColumns = adasQueryTableUniqueColumns(sql);
+            + " where s.table_schema=:schema and s.table_name=:tableName and s.non_unique=0;";
+        List<UniqueColumnBean> uniqueColumns = adasQueryTableUniqueColumns(sql,
+            Map.of("schema", properties.getSchema(), "tableName", tableName));
         return translateUniqueToPrimaryColumns(uniqueColumns);
     }
 
@@ -114,9 +114,8 @@ public class MysqlDataAccessService extends AbstractDataAccessService {
             ? "info.table_name tableName"
             : "lower(info.table_name) tableName";
         String sql = " SELECT info.TABLE_SCHEMA tableSchema," + colTableName + ",info.table_rows tableRows , "
-            + "info.avg_row_length avgRowLength FROM information_schema.tables info WHERE TABLE_SCHEMA='"
-            + properties.getSchema() + "'";
-        return wrapperTableMetadata(adasQueryTableMetadataList(sql));
+            + "info.avg_row_length avgRowLength FROM information_schema.tables info WHERE TABLE_SCHEMA=:schema";
+        return wrapperTableMetadata(adasQueryTableMetadataList(sql, Map.of("schema", properties.getSchema())));
     }
 
     @Override

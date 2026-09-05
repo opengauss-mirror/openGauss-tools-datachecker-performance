@@ -27,6 +27,7 @@ import org.opengauss.datachecker.extract.data.mapper.OracleMetaDataMapper;
 
 import java.sql.Connection;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -60,9 +61,8 @@ public class OracleDataAccessService extends AbstractDataAccessService {
 
     @Override
     public List<String> dasQueryTableNameList() {
-        String schema = properties.getSchema();
-        String sql = "SELECT TABLE_NAME tableName FROM ALL_TABLES WHERE OWNER = '" + schema + "'";
-        return adasQueryTableNameList(sql);
+        String sql = "SELECT TABLE_NAME tableName FROM ALL_TABLES WHERE OWNER = :schema";
+        return adasQueryTableNameList(sql, Map.of("schema", properties.getSchema()));
     }
 
     @Override
@@ -78,21 +78,20 @@ public class OracleDataAccessService extends AbstractDataAccessService {
     @Override
     public List<PrimaryColumnBean> queryTablePrimaryColumns() {
         String sql = "SELECT A.TABLE_NAME tableName, A.COLUMN_NAME columnName FROM ALL_CONS_COLUMNS A,ALL_CONSTRAINTS B"
-            + " WHERE A.constraint_name = B.constraint_name AND  B.constraint_type = 'P' AND A.OWNER = '"
-            + properties.getSchema() + "'";
-        return adasQueryTablePrimaryColumns(sql);
+            + " WHERE A.constraint_name = B.constraint_name AND  B.constraint_type = 'P' AND A.OWNER = :schema";
+        return adasQueryTablePrimaryColumns(sql, Map.of("schema", properties.getSchema()));
     }
 
     @Override
     public List<PrimaryColumnBean> queryTableUniqueColumns(String tableName) {
-        String schema = properties.getSchema();
         String sql = " SELECT ui.index_name indexIdentifier,ui.table_owner,ui.table_name tableName,"
             + " utc.column_name columnName, utc.column_id colIdx"
             + " from user_indexes ui left join user_ind_columns uic on ui.index_name=uic.index_name "
             + " and ui.table_name=uic.table_name  "
             + " left join user_tab_columns utc on ui.table_name =utc.table_name and uic.column_name=utc.column_name"
-            + " where ui.uniqueness='UNIQUE' and ui.table_owner='" + schema + "' and ui.table_name='" + tableName + "'";
-        List<UniqueColumnBean> uniqueColumns = adasQueryTableUniqueColumns(sql);
+            + " where ui.uniqueness='UNIQUE' and ui.table_owner=:schema and ui.table_name=:tableName";
+        List<UniqueColumnBean> uniqueColumns = adasQueryTableUniqueColumns(sql,
+            Map.of("schema", properties.getSchema(), "tableName", tableName));
         return translateUniqueToPrimaryColumns(uniqueColumns);
     }
 
@@ -103,15 +102,14 @@ public class OracleDataAccessService extends AbstractDataAccessService {
 
     @Override
     public List<TableMetadata> dasQueryTableMetadataList() {
-        String schema = properties.getSchema();
         LowerCaseTableNames lowerCaseTableNames = getLowerCaseTableNames();
         String colTableName = Objects.equals(LowerCaseTableNames.SENSITIVE, lowerCaseTableNames)
             ? "t.table_name tableName"
             : "lower(t.table_name) tableName";
         String sql = "SELECT t.owner tableSchema," + colTableName + ",t.num_rows tableRows,avg_row_len avgRowLength"
-            + " FROM ALL_TABLES t LEFT JOIN (SELECT DISTINCT table_name from ALL_CONSTRAINTS where OWNER = '" + schema
-            + "' AND constraint_type='P') pc on t.table_name=pc.table_name WHERE t.OWNER = '" + schema + "'";
-        return wrapperTableMetadata(adasQueryTableMetadataList(sql));
+            + " FROM ALL_TABLES t LEFT JOIN (SELECT DISTINCT table_name from ALL_CONSTRAINTS where OWNER = :schema"
+            + " AND constraint_type='P') pc on t.table_name=pc.table_name WHERE t.OWNER = :schema";
+        return wrapperTableMetadata(adasQueryTableMetadataList(sql, Map.of("schema", properties.getSchema())));
     }
 
     @Override
