@@ -222,6 +222,13 @@ public class OpgsDataAccessService extends AbstractDataAccessService {
     }
 
     @Override
+    public long queryUnionColumnCardinality(Connection connection, DataAccessParam param) {
+        String sqlTmp = "select count(distinct %s) from %s.%s";
+        String sql = String.format(sqlTmp, param.getColName(), param.getSchema(), param.getName());
+        return adasQueryCardinality(connection, sql);
+    }
+
+    @Override
     public boolean dasCheckDatabaseNotEmpty() {
         return opgsMetaDataMapper.checkDatabaseNotEmpty(properties.getSchema());
     }

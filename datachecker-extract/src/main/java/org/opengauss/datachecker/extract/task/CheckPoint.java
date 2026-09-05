@@ -17,7 +17,6 @@ package org.opengauss.datachecker.extract.task;
 
 import com.alibaba.druid.pool.DruidDataSource;
 
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
@@ -153,32 +152,59 @@ public class CheckPoint {
     }
 
     /**
-     * 初始化联合主键表检查点
+     * Initialize checkpoints for a union primary key table
+     * <p>
+     * Executed in two phases to avoid OOM caused by full group-by loading on
+     * high-cardinality columns:
+     * Phase 1: compare the cardinality of each union primary key column at the SQL layer
+     * with count(distinct), and select the column with the smallest cardinality as the slice column;
+     * Phase 2: query the full checkpoint list only for the selected low-cardinality column
+     * (the result set is already small).
      *
      * @param tableName tableName
-     * @return 检查点列表
+     * @return checkpoint list
      */
     public List<PointPair> initUnionPrimaryCheckPointList(String tableName) {
         List<PointPair> checkPointList = new ArrayList<>();
         TableMetadata tableMetadata = MetaDataCache.get(tableName);
         List<ColumnsMetaData> primaryList = tableMetadata.getPrimaryMetas();
+        // Phase 1: compare column cardinality at the SQL layer and select the column with the smallest cardinality
+        ColumnsMetaData sliceColumn = null;
+        long minCardinality = Long.MAX_VALUE;
         for (ColumnsMetaData unionKey : primaryList) {
-            List<PointPair> tmp = queryUnionKeyList(unionKey);
-            if (CollectionUtils.isEmpty(tmp)) {
+            long cardinality = queryUnionKeyCardinality(unionKey);
+            if (cardinality <= 0) {
                 tableMetadata.setSliceColumn(unionKey);
-                break;
+                return checkPointList;
             }
-            if (CollectionUtils.isEmpty(checkPointList)) {
-                checkPointList = tmp;
-                tableMetadata.setSliceColumn(unionKey);
-            } else {
-                if (checkPointList.size() > tmp.size()) {
-                    checkPointList = tmp;
-                    tableMetadata.setSliceColumn(unionKey);
-                }
+            if (cardinality < minCardinality) {
+                minCardinality = cardinality;
+                sliceColumn = unionKey;
             }
         }
-        return checkPointList;
+        if (sliceColumn == null) {
+            return checkPointList;
+        }
+        tableMetadata.setSliceColumn(sliceColumn);
+        // Phase 2: query the full checkpoint list only for the selected low-cardinality column
+        return queryUnionKeyList(sliceColumn);
+    }
+
+    private long queryUnionKeyCardinality(ColumnsMetaData unionKey) {
+        String colName = unionKey.getColumnName();
+        String schema = unionKey.getSchema();
+        String tableName = unionKey.getTableName();
+        boolean isOgB = dataAccessService.isOgCompatibilityB();
+        DataBaseType dataBaseType = ConfigCache.getValue(ConfigConstants.DATA_BASE_TYPE, DataBaseType.class);
+        DataAccessParam param = new DataAccessParam().setSchema(SqlUtil.escape(schema, dataBaseType, isOgB))
+                .setName(SqlUtil.escape(tableName, dataBaseType, isOgB))
+                .setColName(SqlUtil.escape(colName, dataBaseType, isOgB));
+        try (Connection connection = getConnection()) {
+            return dataAccessService.queryUnionColumnCardinality(connection, param);
+        } catch (Exception e) {
+            log.error("{}query union primary column cardinality error {}", ErrorCode.BUILD_SLICE_POINT, e.getMessage());
+        }
+        return -1;
     }
 
     private List<PointPair> queryUnionKeyList(ColumnsMetaData unionKey) {
@@ -199,10 +225,10 @@ public class CheckPoint {
     }
 
     /**
-     * 获取分片列名
+     * get slice column name
      *
-     * @param tableMetadata 表元数据
-     * @return 分片列名
+     * @param tableMetadata table metadata
+     * @return slice column name
      */
     public String getSliceColumnName(TableMetadata tableMetadata) {
         ColumnsMetaData sliceColumn = tableMetadata.getSliceColumn();

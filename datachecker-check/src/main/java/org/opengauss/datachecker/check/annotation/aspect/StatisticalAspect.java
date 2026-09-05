@@ -30,6 +30,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.lang.reflect.Method;
+import java.io.File;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Objects;
@@ -91,7 +92,7 @@ public class StatisticalAspect {
     }
 
     private String getStatisticalFileName() {
-        return path.concat("statistical.txt");
+        return path.concat(File.separator).concat("statistical.txt");
     }
 
     private StatisticalRecord buildStatistical(Statistical statistical, LocalDateTime start) {

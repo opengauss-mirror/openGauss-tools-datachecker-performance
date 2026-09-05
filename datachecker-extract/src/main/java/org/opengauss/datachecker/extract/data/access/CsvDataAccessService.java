@@ -290,4 +290,14 @@ public class CsvDataAccessService implements DataAccessService {
     public List<PointPair> queryUnionFirstPrimaryCheckPointList(Connection connection, DataAccessParam param) {
         return null;
     }
+
+    @Override
+    public long queryUnionColumnCardinality(Connection connection, DataAccessParam param) {
+        return 0L;
+    }
+
+    @Override
+    public <T> List<T> queryOneWithOffset(String baseSql, long offset, RowMapper<T> rowMapper) {
+        return List.of();
+    }
 }

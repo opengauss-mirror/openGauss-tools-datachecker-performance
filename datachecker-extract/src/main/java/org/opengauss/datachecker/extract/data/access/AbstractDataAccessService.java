@@ -26,6 +26,7 @@ import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.check.Difference;
 import org.opengauss.datachecker.common.entry.common.Health;
 import org.opengauss.datachecker.common.entry.common.PointPair;
+import org.opengauss.datachecker.common.entry.enums.DataBaseType;
 import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.common.entry.enums.LowerCaseTableNames;
 import org.opengauss.datachecker.common.entry.extract.PrimaryColumnBean;
@@ -50,6 +51,7 @@ import java.sql.SQLException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -81,7 +83,7 @@ public abstract class AbstractDataAccessService implements DataAccessService {
     protected ExtractProperties properties;
 
     /**
-     * 获取数据库连接
+     * get database connection
      *
      * @return connection
      */
@@ -90,7 +92,7 @@ public abstract class AbstractDataAccessService implements DataAccessService {
     }
 
     /**
-     * 关闭数据库连接
+     * close database connection
      *
      * @param connection connection
      */
@@ -105,12 +107,35 @@ public abstract class AbstractDataAccessService implements DataAccessService {
     }
 
     @Override
+    public <T> List<T> queryOneWithOffset(String baseSql, long offset, RowMapper<T> rowMapper) {
+        String paginatedSql = buildPaginatedSql(baseSql, offset);
+        NamedParameterJdbcTemplate jdbc = new NamedParameterJdbcTemplate(jdbcTemplate);
+        return jdbc.query(paginatedSql, new HashMap<>(), rowMapper);
+    }
+
+    /**
+     * Build paginated SQL according to the database type.
+     * <ul>
+     *   <li>MySQL / openGauss: {@code baseSql LIMIT 1 OFFSET offset}</li>
+     *   <li>Oracle: {@code baseSql OFFSET offset ROWS FETCH NEXT 1 ROWS ONLY}</li>
+     * </ul>
+     */
+    private String buildPaginatedSql(String baseSql, long offset) {
+        DataBaseType dbType = properties.getDatabaseType();
+        if (dbType == DataBaseType.O) {
+            return baseSql + " OFFSET " + offset + " ROWS FETCH NEXT 1 ROWS ONLY";
+        }
+        // Both MySQL (MS) and openGauss (OG) support LIMIT ... OFFSET
+        return baseSql + " LIMIT 1 OFFSET " + offset;
+    }
+
+    @Override
     public DataSource getDataSource() {
         return druidDataSource;
     }
 
     /**
-     * 查询schema 信息是否存在
+     * query whether the schema information exists
      *
      * @param executeQueryStatement executeQueryStatement
      * @return result
@@ -131,7 +156,7 @@ public abstract class AbstractDataAccessService implements DataAccessService {
     }
 
     /**
-     * 数据库schema是否合法
+     * whether the database schema is valid
      *
      * @param schema schema
      * @param sql sql
@@ -209,7 +234,7 @@ public abstract class AbstractDataAccessService implements DataAccessService {
     }
 
     /**
-     * adas查询表的唯一性约束列信息
+     * adas query table unique constraint column info
      *
      * @param executeQueryStatement executeQueryStatement
      * @return List<UniqueColumnBean>
@@ -237,10 +262,10 @@ public abstract class AbstractDataAccessService implements DataAccessService {
     }
 
     /**
-     * 将UniqueColumnBean列表转换为PrimaryColumnBean列表
+     * convert a UniqueColumnBean list to a PrimaryColumnBean list
      *
-     * @param uniqueColumns 输入的UniqueColumnBean列表，可能为空
-     * @return PrimaryColumnBean列表，永远不会为null，其中的元素是唯一的
+     * @param uniqueColumns input UniqueColumnBean list, may be empty
+     * @return PrimaryColumnBean list, never null, with distinct elements
      */
     public List<PrimaryColumnBean> translateUniqueToPrimaryColumns(List<UniqueColumnBean> uniqueColumns) {
         if (CollUtil.isEmpty(uniqueColumns)) {
@@ -310,11 +335,11 @@ public abstract class AbstractDataAccessService implements DataAccessService {
     }
 
     /**
-     * 查询表数据抽样检查点清单
+     * query table data sampling checkpoint list
      *
      * @param connection connection
-     * @param sql 检查点查询SQL
-     * @return 检查点列表
+     * @param sql checkpoint query SQL
+     * @return checkpoint list
      */
     protected List<Object> adasQueryPointList(Connection connection, String sql) {
         final LocalDateTime start = LocalDateTime.now();
@@ -350,11 +375,30 @@ public abstract class AbstractDataAccessService implements DataAccessService {
     }
 
     /**
-     * 查询表数据抽样检查点清单
+     * Execute a cardinality SQL (e.g. count(distinct)) that returns a single long row;
+     * only one row is materialized, with O(1) memory.
      *
      * @param connection connection
-     * @param sql 检查点查询SQL
-     * @return 检查点列表
+     * @param sql sql
+     * @return cardinality; -1 on query exception
+     */
+    protected long adasQueryCardinality(Connection connection, String sql) {
+        try (PreparedStatement ps = connection.prepareStatement(sql); ResultSet resultSet = ps.executeQuery()) {
+            if (resultSet.next()) {
+                return resultSet.getLong(1);
+            }
+        } catch (SQLException esql) {
+            LogUtils.error(log, "{}adasQueryCardinality error", ErrorCode.EXECUTE_QUERY_SQL, esql);
+        }
+        return -1;
+    }
+
+    /**
+     * query table data sampling checkpoint list
+     *
+     * @param connection connection
+     * @param sql checkpoint query SQL
+     * @return checkpoint list
      */
     protected String adasQueryOnePoint(Connection connection, String sql) {
         final LocalDateTime start = LocalDateTime.now();
