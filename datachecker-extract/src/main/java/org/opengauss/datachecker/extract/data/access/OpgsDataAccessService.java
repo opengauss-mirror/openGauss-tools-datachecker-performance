@@ -76,7 +76,7 @@ public class OpgsDataAccessService extends AbstractDataAccessService {
     @Override
     public Health health() {
         String schema = properties.getSchema();
-        String sql = "select nspname tableSchema from pg_namespace where nspname='" + schema + "' limit 1";
+        String sql = "select nspname tableSchema from pg_namespace where nspname=:schema limit 1";
         return health(schema, sql);
     }
 
@@ -91,10 +91,9 @@ public class OpgsDataAccessService extends AbstractDataAccessService {
      */
     @Override
     public List<String> dasQueryTableNameList() {
-        String schema = properties.getSchema();
         String sql = "select c.relname tableName from pg_class c  LEFT JOIN pg_namespace n on n.oid = c.relnamespace "
-            + " where n.nspname='" + schema + "' and c.relkind ='r';";
-        return adasQueryTableNameList(sql);
+            + " where n.nspname=:schema and c.relkind ='r';";
+        return adasQueryTableNameList(sql, Map.of("schema", properties.getSchema()));
     }
 
     /**
@@ -111,35 +110,34 @@ public class OpgsDataAccessService extends AbstractDataAccessService {
      */
     @Override
     public List<PrimaryColumnBean> queryTablePrimaryColumns() {
-        String schema = properties.getSchema();
         String sql = "select c.relname tableName,ns.nspname,ns.oid,a.attname columnName from pg_class c "
             + "left join pg_namespace ns on c.relnamespace=ns.oid "
             + "left join pg_attribute a on c.oid=a.attrelid and a.attnum>0 and not a.attisdropped "
             + "inner join pg_constraint cs on a.attrelid=cs.conrelid and a.attnum=any(cs.conkey) "
-            + "where ns.nspname='" + schema + "' and cs.contype='p';";
-        return adasQueryTablePrimaryColumns(sql);
+            + "where ns.nspname=:schema and cs.contype='p';";
+        return adasQueryTablePrimaryColumns(sql, Map.of("schema", properties.getSchema()));
     }
 
     @Override
     public List<PrimaryColumnBean> queryTablePrimaryColumns(String tableName) {
-        String schema = properties.getSchema();
         String sql = "select c.relname tableName,ns.nspname,ns.oid,a.attname columnName from pg_class c "
             + "left join pg_namespace ns on c.relnamespace=ns.oid "
             + "left join pg_attribute a on c.oid=a.attrelid and a.attnum>0 and not a.attisdropped "
             + "inner join pg_constraint cs on a.attrelid=cs.conrelid and a.attnum=any(cs.conkey) "
-            + "where ns.nspname='" + schema + "' and c.relname='" + tableName + "' and cs.contype='p';";
-        return adasQueryTablePrimaryColumns(sql);
+            + "where ns.nspname=:schema and c.relname=:tableName and cs.contype='p';";
+        return adasQueryTablePrimaryColumns(sql,
+            Map.of("schema", properties.getSchema(), "tableName", tableName));
     }
 
     @Override
     public List<PrimaryColumnBean> queryTableUniqueColumns(String tableName) {
-        String schema = properties.getSchema();
         String sql = "SELECT c.relname AS tableName, ns.nspname, i.indexrelid indexIdentifier, "
             + " a.attname AS columnName, a.attnum colIdx FROM pg_index i"
             + " JOIN pg_class c ON i.indrelid = c.oid join pg_namespace ns on c.relnamespace=ns.oid"
             + " JOIN pg_attribute a ON i.indrelid = a.attrelid AND a.attnum = ANY(i.indkey)         "
-            + " where ns.nspname='" + schema + "' and c.relname='" + tableName + "' and i.indisunique = true;";
-        List<UniqueColumnBean> uniqueColumns = adasQueryTableUniqueColumns(sql);
+            + " where ns.nspname=:schema and c.relname=:tableName and i.indisunique = true;";
+        List<UniqueColumnBean> uniqueColumns = adasQueryTableUniqueColumns(sql,
+            Map.of("schema", properties.getSchema(), "tableName", tableName));
         return translateUniqueToPrimaryColumns(uniqueColumns);
     }
 
@@ -156,9 +154,10 @@ public class OpgsDataAccessService extends AbstractDataAccessService {
         String queryTable = isSensitive ? tableName : tableName.toLowerCase(Locale.ROOT);
         String sql = " select n.nspname tableSchema, " + colTableName + ",c.reltuples tableRows, "
             + " case when c.reltuples>0 then pg_table_size(c.oid)/c.reltuples else 0 end as avgRowLength "
-            + " from pg_class c LEFT JOIN pg_namespace n on n.oid = c.relnamespace where n.nspname='"
-            + properties.getSchema() + "' and c.relkind ='r' and c.relname='" + queryTable + "';";
-        return wrapperTableMetadata(adasQueryTableMetadata(sql));
+            + " from pg_class c LEFT JOIN pg_namespace n on n.oid = c.relnamespace where n.nspname=:schema"
+            + " and c.relkind ='r' and c.relname=:tableName;";
+        return wrapperTableMetadata(
+            adasQueryTableMetadata(sql, Map.of("schema", properties.getSchema(), "tableName", queryTable)));
     }
 
     @Override
@@ -169,9 +168,9 @@ public class OpgsDataAccessService extends AbstractDataAccessService {
             : "lower(c.relname) tableName";
         String sql = " select n.nspname tableSchema, " + colTableName + ",c.reltuples tableRows, "
             + "case when c.reltuples>0 then pg_table_size(c.oid)/c.reltuples else 0 end as avgRowLength "
-            + "from pg_class c LEFT JOIN pg_namespace n on n.oid = c.relnamespace " + "where n.nspname='"
-            + properties.getSchema() + "' and c.relkind ='r';";
-        return wrapperTableMetadata(adasQueryTableMetadataList(sql));
+            + "from pg_class c LEFT JOIN pg_namespace n on n.oid = c.relnamespace where n.nspname=:schema"
+            + " and c.relkind ='r';";
+        return wrapperTableMetadata(adasQueryTableMetadataList(sql, Map.of("schema", properties.getSchema())));
     }
 
     @Override

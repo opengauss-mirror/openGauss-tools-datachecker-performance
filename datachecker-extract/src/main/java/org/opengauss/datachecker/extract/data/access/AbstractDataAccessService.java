@@ -37,6 +37,7 @@ import org.opengauss.datachecker.common.util.DurationUtils;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.extract.config.ExtractProperties;
 import org.opengauss.datachecker.extract.resource.ConnectionMgr;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -137,29 +138,24 @@ public abstract class AbstractDataAccessService implements DataAccessService {
     /**
      * query whether the schema information exists
      *
-     * @param executeQueryStatement executeQueryStatement
+     * @param sql schema query sql, bind schema via named parameter :schema
+     * @param params named parameters
      * @return result
      */
-    public String adasQuerySchema(Connection connection, String executeQueryStatement) {
-        String schema = "";
-        try (PreparedStatement ps = connection.prepareStatement(executeQueryStatement);
-            ResultSet resultSet = ps.executeQuery()) {
-            if (resultSet.next()) {
-                schema = resultSet.getString(RS_COL_SCHEMA);
-            }
-        } catch (SQLException esql) {
+    public String adasQuerySchema(String sql, Map<String, Object> params) {
+        try {
+            List<String> result = query(sql, params, (resultSet, rowNum) -> resultSet.getString(RS_COL_SCHEMA));
+            return CollUtil.isEmpty(result) ? "" : result.get(0);
+        } catch (DataAccessException ex) {
             throw new ExtractDataAccessException("can not access current database");
-        } finally {
-            closeConnection(connection);
         }
-        return schema;
     }
 
     /**
      * whether the database schema is valid
      *
      * @param schema schema
-     * @param sql sql
+     * @param sql sql with :schema named parameter
      * @return result
      */
     public Health health(String schema, String sql) {
@@ -168,7 +164,8 @@ public abstract class AbstractDataAccessService implements DataAccessService {
             if (Objects.isNull(connection)) {
                 return Health.buildFailed("can not connection current database");
             }
-            String result = adasQuerySchema(connection, sql);
+            closeConnection(connection);
+            String result = adasQuerySchema(sql, Map.of("schema", schema));
             if (StringUtils.equalsIgnoreCase(result, schema)) {
                 return Health.buildSuccess();
             } else {
@@ -182,22 +179,17 @@ public abstract class AbstractDataAccessService implements DataAccessService {
     /**
      * adasQueryTableNameList
      *
-     * @param executeQueryStatement executeQueryStatement
+     * @param sql table list query sql with named parameters
+     * @param params named parameters
      * @return table list
      */
-    public List<String> adasQueryTableNameList(String executeQueryStatement) {
+    public List<String> adasQueryTableNameList(String sql, Map<String, Object> params) {
         final LocalDateTime start = LocalDateTime.now();
-        Connection connection = getConnection();
         List<String> list = new LinkedList<>();
-        try (PreparedStatement ps = connection.prepareStatement(executeQueryStatement);
-            ResultSet resultSet = ps.executeQuery()) {
-            while (resultSet.next()) {
-                list.add(resultSet.getString(RS_COL_TABLE_NAME));
-            }
-        } catch (SQLException esql) {
-            LogUtils.error(log, "{}adasQueryTableNameList error ", ErrorCode.EXECUTE_QUERY_SQL, esql);
-        } finally {
-            closeConnection(connection);
+        try {
+            list = query(sql, params, (resultSet, rowNum) -> resultSet.getString(RS_COL_TABLE_NAME));
+        } catch (DataAccessException ex) {
+            LogUtils.error(log, "{}adasQueryTableNameList error ", ErrorCode.EXECUTE_QUERY_SQL, ex);
         }
         long betweenToMillis = durationBetweenToMillis(start, LocalDateTime.now());
         LogUtils.debug(log, "adasQueryTableNameList cost [{}ms]", betweenToMillis);
@@ -207,26 +199,22 @@ public abstract class AbstractDataAccessService implements DataAccessService {
     /**
      * adasQueryTablePrimaryColumns
      *
-     * @param executeQueryStatement executeQueryStatement
+     * @param sql primary column query sql with named parameters
+     * @param params named parameters
      * @return PrimaryColumnBean list
      */
-    public List<PrimaryColumnBean> adasQueryTablePrimaryColumns(String executeQueryStatement) {
+    public List<PrimaryColumnBean> adasQueryTablePrimaryColumns(String sql, Map<String, Object> params) {
         final LocalDateTime start = LocalDateTime.now();
-        Connection connection = getConnection();
         List<PrimaryColumnBean> list = new LinkedList<>();
-        try (PreparedStatement ps = connection.prepareStatement(executeQueryStatement);
-            ResultSet resultSet = ps.executeQuery()) {
-            PrimaryColumnBean metadata;
-            while (resultSet.next()) {
-                metadata = new PrimaryColumnBean();
+        try {
+            list = query(sql, params, (resultSet, rowNum) -> {
+                PrimaryColumnBean metadata = new PrimaryColumnBean();
                 metadata.setColumnName(resultSet.getString(RS_COL_COLUMN_NAME));
                 metadata.setTableName(resultSet.getString(RS_COL_TABLE_NAME));
-                list.add(metadata);
-            }
-        } catch (SQLException esql) {
-            LogUtils.error(log, "{}adasQueryTablePrimaryColumns error:", ErrorCode.EXECUTE_QUERY_SQL, esql);
-        } finally {
-            closeConnection(connection);
+                return metadata;
+            });
+        } catch (DataAccessException ex) {
+            LogUtils.error(log, "{}adasQueryTablePrimaryColumns error:", ErrorCode.EXECUTE_QUERY_SQL, ex);
         }
         long betweenToMillis = durationBetweenToMillis(start, LocalDateTime.now());
         LogUtils.debug(log, "adasQueryTablePrimaryColumns cost [{}ms]", betweenToMillis);
@@ -236,27 +224,23 @@ public abstract class AbstractDataAccessService implements DataAccessService {
     /**
      * adas query table unique constraint column info
      *
-     * @param executeQueryStatement executeQueryStatement
+     * @param sql unique column query sql with named parameters
+     * @param params named parameters
      * @return List<UniqueColumnBean>
      */
-    public List<UniqueColumnBean> adasQueryTableUniqueColumns(String executeQueryStatement) {
-        Connection connection = getConnection();
+    public List<UniqueColumnBean> adasQueryTableUniqueColumns(String sql, Map<String, Object> params) {
         List<UniqueColumnBean> list = new LinkedList<>();
-        try (PreparedStatement ps = connection.prepareStatement(executeQueryStatement);
-            ResultSet resultSet = ps.executeQuery()) {
-            UniqueColumnBean metadata;
-            while (resultSet.next()) {
-                metadata = new UniqueColumnBean();
+        try {
+            list = query(sql, params, (resultSet, rowNum) -> {
+                UniqueColumnBean metadata = new UniqueColumnBean();
                 metadata.setTableName(resultSet.getString("tableName"));
                 metadata.setColumnName(resultSet.getString("columnName"));
                 metadata.setIndexIdentifier(resultSet.getString("indexIdentifier"));
                 metadata.setColIdx(resultSet.getInt("colIdx"));
-                list.add(metadata);
-            }
-        } catch (SQLException esql) {
-            LogUtils.error(log, "{}adasQueryTablePrimaryColumns error:", ErrorCode.EXECUTE_QUERY_SQL, esql);
-        } finally {
-            closeConnection(connection);
+                return metadata;
+            });
+        } catch (DataAccessException ex) {
+            LogUtils.error(log, "{}adasQueryTablePrimaryColumns error:", ErrorCode.EXECUTE_QUERY_SQL, ex);
         }
         return list;
     }
@@ -280,28 +264,17 @@ public abstract class AbstractDataAccessService implements DataAccessService {
     /**
      * adasQueryTableMetadataList
      *
-     * @param executeQueryStatement executeQueryStatement
+     * @param sql metadata list query sql with named parameters
+     * @param params named parameters
      * @return TableMetadata list
      */
-    public List<TableMetadata> adasQueryTableMetadataList(String executeQueryStatement) {
+    public List<TableMetadata> adasQueryTableMetadataList(String sql, Map<String, Object> params) {
         final LocalDateTime start = LocalDateTime.now();
-        Connection connection = getConnection();
         List<TableMetadata> list = new LinkedList<>();
-        try (PreparedStatement ps = connection.prepareStatement(executeQueryStatement);
-            ResultSet resultSet = ps.executeQuery()) {
-            TableMetadata metadata;
-            while (resultSet.next()) {
-                metadata = new TableMetadata();
-                metadata.setSchema(resultSet.getString(RS_COL_SCHEMA));
-                metadata.setTableName(resultSet.getString(RS_COL_TABLE_NAME));
-                metadata.setTableRows(resultSet.getLong(RS_COL_TABLE_ROWS));
-                metadata.setAvgRowLength(resultSet.getLong(RS_COL_AVG_ROW_LENGTH));
-                list.add(metadata);
-            }
-        } catch (SQLException esql) {
-            LogUtils.error(log, "{}adasQueryTableMetadataList error: ", ErrorCode.EXECUTE_QUERY_SQL, esql);
-        } finally {
-            closeConnection(connection);
+        try {
+            list = query(sql, params, (resultSet, rowNum) -> mapTableMetadata(resultSet));
+        } catch (DataAccessException ex) {
+            LogUtils.error(log, "{}adasQueryTableMetadataList error: ", ErrorCode.EXECUTE_QUERY_SQL, ex);
         }
         long betweenToMillis = durationBetweenToMillis(start, LocalDateTime.now());
         LogUtils.debug(log, "dasQueryTableMetadataList cost [{}ms]", betweenToMillis);
@@ -311,26 +284,26 @@ public abstract class AbstractDataAccessService implements DataAccessService {
     /**
      * query table metadata
      *
-     * @param executeQueryStatement executeQueryStatement
+     * @param sql metadata query sql with named parameters
+     * @param params named parameters
      * @return metadata
      */
-    public TableMetadata adasQueryTableMetadata(String executeQueryStatement) {
-        Connection connection = getConnection();
-        TableMetadata metadata = null;
-        try (PreparedStatement ps = connection.prepareStatement(executeQueryStatement);
-            ResultSet resultSet = ps.executeQuery()) {
-            while (resultSet.next()) {
-                metadata = new TableMetadata();
-                metadata.setSchema(resultSet.getString(RS_COL_SCHEMA));
-                metadata.setTableName(resultSet.getString(RS_COL_TABLE_NAME));
-                metadata.setTableRows(resultSet.getLong(RS_COL_TABLE_ROWS));
-                metadata.setAvgRowLength(resultSet.getLong(RS_COL_AVG_ROW_LENGTH));
-            }
-        } catch (SQLException esql) {
-            LogUtils.error(log, "{}adasQueryTableMetadata error: ", ErrorCode.EXECUTE_QUERY_SQL, esql);
-        } finally {
-            closeConnection(connection);
+    public TableMetadata adasQueryTableMetadata(String sql, Map<String, Object> params) {
+        List<TableMetadata> list = new LinkedList<>();
+        try {
+            list = query(sql, params, (resultSet, rowNum) -> mapTableMetadata(resultSet));
+        } catch (DataAccessException ex) {
+            LogUtils.error(log, "{}adasQueryTableMetadata error: ", ErrorCode.EXECUTE_QUERY_SQL, ex);
         }
+        return CollUtil.isEmpty(list) ? null : CollUtil.getLast(list);
+    }
+
+    private TableMetadata mapTableMetadata(ResultSet resultSet) throws SQLException {
+        TableMetadata metadata = new TableMetadata();
+        metadata.setSchema(resultSet.getString(RS_COL_SCHEMA));
+        metadata.setTableName(resultSet.getString(RS_COL_TABLE_NAME));
+        metadata.setTableRows(resultSet.getLong(RS_COL_TABLE_ROWS));
+        metadata.setAvgRowLength(resultSet.getLong(RS_COL_AVG_ROW_LENGTH));
         return metadata;
     }
 

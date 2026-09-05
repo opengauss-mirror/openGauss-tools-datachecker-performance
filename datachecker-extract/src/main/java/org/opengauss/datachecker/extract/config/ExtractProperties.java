@@ -16,6 +16,7 @@
 package org.opengauss.datachecker.extract.config;
 
 import com.alibaba.fastjson.annotation.JSONType;
+import jakarta.annotation.PostConstruct;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import org.hibernate.validator.constraints.Range;
@@ -26,6 +27,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * @author ：wangchao
@@ -38,6 +40,15 @@ import java.util.List;
 @JSONType(orders = {"schema", "dataLoadMode", "databaseType", "endpoint", "isDebeziumEnable", "debeziumTopic",
     "debeziumGroupId", "debeziumSerializer", "debeziumAvroRegistry"})
 public class ExtractProperties {
+    /**
+     * schema whitelist: only letters, digits, underscore, '$' and '#' are allowed, length 1~64.
+     * covers valid schema names of MySQL / openGauss / Oracle, and rejects SQL injection characters
+     * such as quotes, semicolons, spaces and comment markers.
+     * schema names containing other characters (e.g. '-' or spaces) cannot work at identifier
+     * concatenation positions anyway, so existing working deployments are not affected.
+     */
+    private static final Pattern SAFE_SCHEMA_PATTERN = Pattern.compile("^[A-Za-z0-9_$#]{1,64}$");
+
     @NotNull(message = DataLoad.API_DESCRIPTION + "data load mode configuration, must [jdbc/csv] cannot be empty")
     private DataLoad dataLoadMode;
 
@@ -104,4 +115,16 @@ public class ExtractProperties {
      */
     private int debeziumNumPeriod = 1000;
     private int debeziumNumDefaultPeriod = 1000;
+
+    /**
+     * startup validation of the schema configuration, fail fast on illegal values.
+     * csv data load mode does not use schema, allow null.
+     */
+    @PostConstruct
+    void validateSchema() {
+        if (schema != null && !SAFE_SCHEMA_PATTERN.matcher(schema).matches()) {
+            throw new IllegalStateException(
+                "invalid schema configuration, only letters, digits, '_', '$', '#' are allowed, length 1~64");
+        }
+    }
 }
