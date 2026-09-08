@@ -71,7 +71,7 @@ public class JdbcTableProcessor extends AbstractTableProcessor {
     public void run() {
         SliceExtend tableSliceExtend = createTableSliceExtend();
         try {
-            sliceSender = new SliceResultSetSender(tableMetadata, context.createSliceFixedKafkaAgents(topic, table));
+            sliceSender = new SliceResultSetSender(tableMetadata, context.createSliceFixedKafkaAgents(topic, table, 0));
             sliceSender.setRecordSendKey(table);
             long tableRowCount;
             if (noTableSlice()) {
@@ -98,8 +98,7 @@ public class JdbcTableProcessor extends AbstractTableProcessor {
         long tableRowCount = 0;
         int fetchSize = getFetchSize();
         try {
-            long estimatedSize = estimatedMemorySize(tableMetadata.getAvgRowLength(), fetchSize);
-            connection = jdbcOperation.tryConnectionAndClosedAutoCommit(estimatedSize);
+            connection = jdbcOperation.tryConnectionAndClosedAutoCommit(MEMORY_GATE_TRIGGER);
             List<Long> minOffsetList = new LinkedList<>();
             List<Long> maxOffsetList = new LinkedList<>();
             for (int i = 0; i < querySqlList.size(); i++) {
@@ -115,7 +114,7 @@ public class JdbcTableProcessor extends AbstractTableProcessor {
                     while (resultSet.next()) {
                         rowCount++;
                         batchFutures.add(sliceSender.resultSetTranslateAndSendSync(rsmd, resultSet, i));
-                        if (batchFutures.size() == FETCH_SIZE) {
+                        if (batchFutures.size() == BATCH_FLUSH_SIZE) {
                             offsetList.add(getBatchFutureRecordOffsetScope(batchFutures));
                             batchFutures.clear();
                         }
@@ -138,7 +137,9 @@ public class JdbcTableProcessor extends AbstractTableProcessor {
             log.error("{}jdbc query  {} error : {}", ErrorCode.EXECUTE_QUERY_SQL, table, ex.getMessage());
             throw new ExtractDataAccessException();
         } finally {
-            jdbcOperation.releaseConnection(connection);
+            if (connection != null) {
+                jdbcOperation.releaseConnection(connection);
+            }
             log.info("query table [{}] row-count [{}] cost [{}] milliseconds", table, tableRowCount,
                 Duration.between(start, LocalDateTime.now()).toMillis());
         }
@@ -151,8 +152,7 @@ public class JdbcTableProcessor extends AbstractTableProcessor {
         long tableRowCount = 0;
         int fetchSize = getFetchSize();
         try {
-            long estimatedSize = estimatedMemorySize(tableMetadata.getAvgRowLength(), fetchSize);
-            connection = jdbcOperation.tryConnectionAndClosedAutoCommit(estimatedSize);
+            connection = jdbcOperation.tryConnectionAndClosedAutoCommit(MEMORY_GATE_TRIGGER);
             QuerySqlEntry sqlEntry = getFullQuerySqlEntry();
             log.info(" {} , {}", table, sqlEntry.toString());
             List<long[]> offsetList = new LinkedList<>();
@@ -164,7 +164,7 @@ public class JdbcTableProcessor extends AbstractTableProcessor {
                 while (resultSet.next()) {
                     tableRowCount++;
                     batchFutures.add(sliceSender.resultSetTranslateAndSendSync(rsmd, resultSet, 0));
-                    if (batchFutures.size() == FETCH_SIZE) {
+                    if (batchFutures.size() == BATCH_FLUSH_SIZE) {
                         offsetList.add(getBatchFutureRecordOffsetScope(batchFutures));
                         batchFutures.clear();
                     }
@@ -182,7 +182,9 @@ public class JdbcTableProcessor extends AbstractTableProcessor {
             log.error("{}jdbc query  {} error : {}", ErrorCode.EXECUTE_QUERY_SQL, table, ex.getMessage());
             throw new ExtractDataAccessException();
         } finally {
-            jdbcOperation.releaseConnection(connection);
+            if (connection != null) {
+                jdbcOperation.releaseConnection(connection);
+            }
             log.info("query table [{}] row-count [{}] cost [{}] milliseconds", table, tableRowCount,
                 Duration.between(start, LocalDateTime.now()).toMillis());
         }

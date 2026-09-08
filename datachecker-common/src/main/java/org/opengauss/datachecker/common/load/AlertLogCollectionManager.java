@@ -35,6 +35,7 @@ import java.util.Map;
 public class AlertLogCollectionManager implements ApplicationRunner {
     private static final Logger log = LogUtils.getLogger(DynamicThreadPoolMonitor.class);
     private static final String KAFKA_APPENDER_NAME = "kafka";
+    private static final String ASYNC_KAFKA_APPENDER_NAME = "async_kafka";
 
     private static volatile boolean isAddAppender = false;
     private static boolean isAlertLogCollectionEnabled = false;
@@ -111,12 +112,14 @@ public class AlertLogCollectionManager implements ApplicationRunner {
             Configuration configuration = context.getConfiguration();
 
             LoggerConfig loggerConfig = configuration.getLoggerConfig(LogManager.ROOT_LOGGER_NAME);
-            loggerConfig.removeAppender(KAFKA_APPENDER_NAME);
+            loggerConfig.removeAppender(ASYNC_KAFKA_APPENDER_NAME);
 
-            Appender kafkaAppender = configuration.getAppenders().get(KAFKA_APPENDER_NAME);
-            if (kafkaAppender != null && !kafkaAppender.isStopped()) {
-                kafkaAppender.stop();
-                log.info("KafkaAppender has been stopped.");
+            for (String appenderName : new String[] {ASYNC_KAFKA_APPENDER_NAME, KAFKA_APPENDER_NAME}) {
+                Appender appender = configuration.getAppenders().get(appenderName);
+                if (appender != null && !appender.isStopped()) {
+                    appender.stop();
+                    LogUtils.info(log, "Appender " + appenderName + " has been stopped.");
+                }
             }
         }
     }

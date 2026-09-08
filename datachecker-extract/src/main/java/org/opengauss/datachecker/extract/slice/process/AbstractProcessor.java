@@ -22,9 +22,7 @@ import org.opengauss.datachecker.common.entry.extract.SliceExtend;
 import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.extract.slice.SliceProcessorContext;
 import org.springframework.kafka.support.SendResult;
-import java.util.concurrent.CompletableFuture;
 
-import java.math.BigDecimal;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -39,17 +37,37 @@ import java.util.concurrent.ExecutionException;
  */
 public abstract class AbstractProcessor implements SliceProcessor {
     /**
-     * JDBC fetch size
+     * JDBC fetch size minimum (safety net, avoid fetch too small and hurt throughput)
      */
-    protected static final int FETCH_SIZE = 200;
+    protected static final int FETCH_SIZE_MIN = 100;
 
     /**
-     * log
+     * JDBC fetch size default / upper bound (ConfigConstants.FETCH_SIZE config caps to this if missing)
      */
+    protected static final int FETCH_SIZE_DEFAULT = 2000;
+
+    /**
+     * Every 200 accumulated Kafka send futures, harvest the offset range once and clear the list
+     */
+    protected static final int BATCH_FLUSH_SIZE = 200;
+
+    /**
+     * Enable the heap memory watermark check: 1 on, 0 off
+     */
+    protected static final long MEMORY_GATE_TRIGGER = 1L;
+
     private static final Logger log = LogUtils.getLogger(AbstractProcessor.class);
 
+    /**
+     * JDBC fetch size: from config jdbc.result-set.fetch-size, defaulting to 2000 when missing.
+     * Callers further clamp it adaptively against remaining memory / row width.
+     */
+    protected volatile int fetchSize;
+
+    /**
+     * slice processor context
+     */
     protected SliceProcessorContext context;
-    protected int objectSizeExpansionFactor;
 
     /**
      * AbstractProcessor
@@ -58,22 +76,8 @@ public abstract class AbstractProcessor implements SliceProcessor {
      */
     protected AbstractProcessor(SliceProcessorContext context) {
         this.context = context;
-        this.objectSizeExpansionFactor = ConfigCache.getIntValue(ConfigConstants.OBJECT_SIZE_EXPANSION_FACTOR);
-    }
-
-    /**
-     * estimated memory size
-     *
-     * @param rowLength avg row length
-     * @param sliceSize slice row size
-     * @return memory size
-     */
-    protected long estimatedMemorySize(long rowLength, long sliceSize) {
-        BigDecimal rowLengthNum = BigDecimal.valueOf(rowLength);
-        BigDecimal sliceSizeNum = BigDecimal.valueOf(sliceSize);
-        return rowLengthNum.multiply(sliceSizeNum)
-                           .multiply(BigDecimal.valueOf(objectSizeExpansionFactor))
-                           .longValue();
+        int configuredFetch = ConfigCache.getIntValue(ConfigConstants.FETCH_SIZE);
+        this.fetchSize = configuredFetch > 0 ? Math.min(configuredFetch, FETCH_SIZE_DEFAULT) : FETCH_SIZE_DEFAULT;
     }
 
     /**
@@ -92,7 +96,8 @@ public abstract class AbstractProcessor implements SliceProcessor {
      * @param batchFutures batchFutures
      * @return offset (min, max)
      */
-    protected long[] getBatchFutureRecordOffsetScope(List<CompletableFuture<SendResult<String, String>>> batchFutures) {
+    protected long[] getBatchFutureRecordOffsetScope(
+        List<CompletableFuture<SendResult<String, String>>> batchFutures) {
         Iterator<CompletableFuture<SendResult<String, String>>> futureIterator = batchFutures.iterator();
         CompletableFuture<SendResult<String, String>> candidate = futureIterator.next();
         long minOffset = getFutureOffset(candidate);

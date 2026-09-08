@@ -147,6 +147,11 @@ public class ExtractFallbackFactory implements FallbackFactory<ExtractFeignClien
             return Result.error("Remote call, build and repair statement exceptions according to parameters");
         }
 
+        @Override
+        public Result<Map<String, Map<String, String>>> queryColumnValues(RepairEntry repairEntry) {
+            return Result.error("Remote call, query diff column values exception");
+        }
+
         /**
          * querySourceTableMetadataHash
          *

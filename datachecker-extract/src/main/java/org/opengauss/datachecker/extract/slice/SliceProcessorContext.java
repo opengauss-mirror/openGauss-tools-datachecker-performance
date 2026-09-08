@@ -101,10 +101,11 @@ public class SliceProcessorContext {
      *
      * @param topicName topic 名称
      * @param groupId GroupID
+     * @param ptn     topic partition number
      * @return 分片kafka代理
      */
-    public SliceKafkaAgents createSliceFixedKafkaAgents(String topicName, String groupId) {
-        return new SliceKafkaAgents(kafkaTemplate, kafkaConsumerConfig.createConsumer(groupId), topicName, 0);
+    public SliceKafkaAgents createSliceFixedKafkaAgents(String topicName, String groupId, int ptn) {
+        return new SliceKafkaAgents(kafkaTemplate, kafkaConsumerConfig.createConsumer(groupId), topicName, ptn);
     }
 
     /**

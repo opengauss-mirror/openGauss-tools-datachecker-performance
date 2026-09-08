@@ -72,6 +72,8 @@ public class CheckResultManagerService implements ApplicationContextAware {
     private CheckEnvironment checkEnvironment;
     @Resource
     private FeignClientService feignClient;
+    @Resource
+    private DiffDetailLogService diffDetailLogService;
 
     private final Map<CheckPartition, CheckDiffResult> checkResultCache = new ConcurrentHashMap<>();
     private final Map<String, CheckDiffResult> noCheckedCache = new ConcurrentHashMap<>();
@@ -116,6 +118,7 @@ public class CheckResultManagerService implements ApplicationContextAware {
             Boolean isOgCompatibility = ConfigCache.getBooleanValue(ConfigConstants.OG_COMPATIBILITY_B);
             reduceFailedRepair(logFilePath, failedList, isOgCompatibility);
             reduceSummary(successList, failedList);
+            diffDetailLogService.writeDiffDetailLog(failedList);
         } catch (Exception exception) {
             log.error("{}summaryCheckResult ", ErrorCode.SUMMARY_CHECK_RESULT, exception);
         } finally {

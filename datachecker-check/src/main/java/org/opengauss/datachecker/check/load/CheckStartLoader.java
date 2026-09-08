@@ -15,6 +15,7 @@
 
 package org.opengauss.datachecker.check.load;
 
+import org.opengauss.datachecker.check.modules.report.DiffDetailLogService;
 import org.opengauss.datachecker.check.modules.report.SliceCheckResultManager;
 import org.opengauss.datachecker.check.modules.report.SliceProgressService;
 import org.opengauss.datachecker.check.service.CheckService;
@@ -66,6 +67,8 @@ public class CheckStartLoader extends AbstractCheckLoader {
     @Resource
     private SliceCheckResultManager sliceCheckResultManager;
     @Resource
+    private DiffDetailLogService diffDetailLogService;
+    @Resource
     private TopicInitialize topicInitialize;
 
     @Override
@@ -95,6 +98,7 @@ public class CheckStartLoader extends AbstractCheckLoader {
         }
         sliceProgressService.refreshCheckCompletedProgress();
         sliceCheckResultManager.refreshSummary();
+        diffDetailLogService.writeDiffDetailLogDelay(sliceCheckResultManager.getFailedCheckResults());
         shutdown(FULL_CHECK_COMPLETED);
     }
 }

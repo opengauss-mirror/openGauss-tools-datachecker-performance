@@ -21,6 +21,7 @@ import cn.hutool.core.bean.BeanUtil;
 
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.errors.TimeoutException;
 import org.apache.logging.log4j.Logger;
@@ -152,7 +153,12 @@ public class ExtractPointSwapManager {
                     }
                     processTablePoint(tableCheckPointCache, deliveredCount);
                 } catch (Exception ex) {
-                    LogUtils.info(log, "pollSwapPoint swap summarized checkpoint end {}", ex.getMessage());
+                    if (isCompletedSwapTablePoint) {
+                        Thread.currentThread().interrupt();
+                        LogUtils.info(log, "pollSwapPoint interrupted on close, consumer stopping");
+                    } else {
+                        log.warn("pollSwapPoint swap summarized checkpoint exception", ex);
+                    }
                 }
             }
             LogUtils.warn(log, "close check point swap consumer {} :{}", checkPointSwapTopicName,
@@ -167,8 +173,9 @@ public class ExtractPointSwapManager {
             Map.Entry<String, List<CheckPointBean>> next = iterator.next();
             List<CheckPointBean> value = next.getValue();
             CheckPointBean checkPointBean = value.get(0);
-            if (checkPointBean.getSize() == value.size()) {
+            if (checkPointBean.getSize() <= value.size()) {
                 List<PointPair> collect = value.stream()
+                    .limit(checkPointBean.getSize())
                     .map(CheckPointBean::getCheckPoint)
                     .collect(Collectors.toList());
                 tableCheckPointCache.add(next.getKey(), collect);
@@ -186,6 +193,34 @@ public class ExtractPointSwapManager {
             isSubscribe = subscribe();
             subscribeTimes++;
         }
+        seekToBeginning();
+    }
+
+    /**
+     * This topic is dedicated to the current check task, so every message belongs to it and
+     * consuming from the beginning is safe.
+     * Summary messages the check side wrote before partition assignment completes would be
+     * skipped entirely if consumption started at the end, leaving the extract side forever
+     * short of that table's checkpoints and stalling the check flow. So we force a seek to
+     * the beginning.
+     */
+    private void seekToBeginning() {
+        try {
+            int emptyPollTimes = 0;
+            while (kafkaConsumer.assignment().isEmpty() && emptyPollTimes < 50) {
+                // Empty polls only trigger partition assignment; records they pull are handled
+                // by the formal consumption after the seek
+                kafkaConsumer.poll(Duration.ofMillis(200));
+                emptyPollTimes++;
+            }
+            if (!kafkaConsumer.assignment().isEmpty()) {
+                kafkaConsumer.seekToBeginning(kafkaConsumer.assignment());
+                LogUtils.info(log, "seek to beginning of topic {} partitions {}",
+                    checkPointSwapTopicName, kafkaConsumer.assignment().size());
+            }
+        } catch (org.apache.kafka.common.KafkaException ex) {
+            log.warn("seekToBeginning {} exception", checkPointSwapTopicName, ex);
+        }
     }
 
     private boolean subscribe() {
@@ -195,7 +230,7 @@ public class ExtractPointSwapManager {
             Map<String, List<PartitionInfo>> listTopics = kafkaConsumer.listTopics();
             isSubscribe = listTopics.containsKey(checkPointSwapTopicName);
             LogUtils.info(log, "subscribe check point swap topic {} ", checkPointSwapTopicName);
-        } catch (Exception ex) {
+        } catch (KafkaException ex) {
             LogUtils.warn(log, "subscribe {} failed", checkPointSwapTopicName);
         }
         return isSubscribe;

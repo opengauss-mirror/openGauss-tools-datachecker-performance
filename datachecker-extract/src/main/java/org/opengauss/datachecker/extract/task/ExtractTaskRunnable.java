@@ -145,7 +145,9 @@ public class ExtractTaskRunnable implements Runnable {
             log.error("jdbc query  {} error : {}", context.getTableName(), ex.getMessage());
             throw new ExtractDataAccessException();
         } finally {
-            jdbcOperation.get().releaseConnection(connection);
+            if (connection != null) {
+                jdbcOperation.get().releaseConnection(connection);
+            }
             log.info("query table [{}] row-count [{}] cost [{}] milliseconds", context.getTableName(), rowCount,
                 Duration.between(start, LocalDateTime.now()).toMillis());
             logNumberOfGlobalTasks(context.getTableName(), null,
@@ -196,7 +198,9 @@ public class ExtractTaskRunnable implements Runnable {
                     throw new ExtractDataAccessException();
                 } finally {
                     countDown(context.getTableName(), countDownLatch, executor);
-                    jdbcOperation.get().releaseConnection(connection);
+                    if (connection != null) {
+                        jdbcOperation.get().releaseConnection(connection);
+                    }
                 }
             });
         });
@@ -483,7 +487,9 @@ public class ExtractTaskRunnable implements Runnable {
          */
         public void sendSinglePartitionRowData(RowDataHash row) {
             if (row.getKHash() == 0) {
-                log.debug("row data hash zero :{}:{}", row.getKey(), JSON.toJSONString(row));
+                log.warn("row with kHash=0 is dropped, check side cannot receive it, may report false diff: "
+                    + "key={}, vHash={}, row={}",
+                    row.getKey(), row.getVHash(), JSON.toJSONString(row));
                 return;
             }
             send(topicName, DEFAULT_PARTITION, row.getKey(), JSON.toJSONString(row));

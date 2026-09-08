@@ -114,11 +114,6 @@ public interface ConfigConstants {
     String DATA_BASE_TYPE = "spring.extract.databaseType";
 
     /**
-     * spring.extract.object-size-expansion-factor
-     */
-    String OBJECT_SIZE_EXPANSION_FACTOR = "spring.extract.object-size-expansion-factor";
-
-    /**
      * spring.memory-monitor-enable
      */
     String MEMORY_MONITOR = "spring.memory-monitor-enable";
@@ -152,6 +147,11 @@ public interface ConfigConstants {
      * with table slice check, config the maximum number of threads in the thread pool
      */
     String MAXIMUM_POOL_SIZE = "spring.check.maximum-pool-size";
+
+    /**
+     * topic-partition-size
+     */
+    String TOPIC_PARTITION_SIZE = "spring.check.topic-partition-size";
 
     /**
      * data.check.bucket-expect-capacity
@@ -322,4 +322,34 @@ public interface ConfigConstants {
      * data.check.create-repair-sql
      */
     String CREATE_REPAIR_SQL = "data.check.create-repair-sql";
+
+    /**
+     * data.check.diff-debug-log-enabled
+     */
+    String DIFF_DEBUG_LOG_ENABLED = "data.check.diff-debug-log-enabled";
+
+    /**
+     * spring.check.sample.ratio
+     */
+    String SAMPLE_RATIO = "spring.check.sample.ratio";
+
+    /**
+     * spring.check.sample.threshold
+     */
+    String SAMPLE_THRESHOLD = "spring.check.sample.threshold";
+
+    /**
+     * data.check.oracle2ograc.precision-mode
+     */
+    String ORACLE2OGRAC_PRECISION_MODE = "data.check.oracle2ograc.precision-mode";
+
+    /**
+     * spring.extract.memory-safe-watermark
+     */
+    String MEMORY_SAFE_WATERMARK = "spring.extract.memory-safe-watermark";
+
+    /**
+     * spring.extract.memory-min-concurrency
+     */
+    String MEMORY_MIN_CONCURRENCY = "spring.extract.memory-min-concurrency";
 }

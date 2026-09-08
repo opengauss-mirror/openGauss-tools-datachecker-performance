@@ -25,6 +25,7 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 import java.util.stream.IntStream;
 
@@ -36,6 +37,11 @@ import java.util.stream.IntStream;
  * @since 11
  **/
 public abstract class ResultSetHandler {
+    /**
+     * Suffix for the raw database value key (pre-mapping) when raw value capture is enabled
+     */
+    public static final String RAW_VALUE_SUFFIX = "__raw";
+
     /**
      * log
      */
@@ -57,6 +63,12 @@ public abstract class ResultSetHandler {
     protected final boolean supplyZero;
 
     /**
+     * Whether to also capture the raw database value before mapping (default false;
+     * enabled only for diff_detail debug queries)
+     */
+    protected boolean isCaptureRaw = false;
+
+    /**
      * ResultSetHandler
      */
     protected ResultSetHandler() {
@@ -70,6 +82,17 @@ public abstract class ResultSetHandler {
      */
     protected ResultSetHandler(Boolean supplyZero) {
         this.supplyZero = supplyZero;
+    }
+
+    /**
+     * Set whether to capture raw values.
+     *
+     * @param isCaptureRaw when true, each column records the raw database value (pre-mapping)
+     *                     under a key suffixed with {@link #RAW_VALUE_SUFFIX}, in addition to
+     *                     the mapped value
+     */
+    public void setCaptureRaw(boolean isCaptureRaw) {
+        this.isCaptureRaw = isCaptureRaw;
     }
 
     /**
@@ -89,6 +112,10 @@ public abstract class ResultSetHandler {
                 try {
                     columnLabel = rsmd.getColumnLabel(columnIdx);
                     result.put(columnLabel, convert(resultSet, columnIdx, rsmd));
+                    if (isCaptureRaw) {
+                        result.put(columnLabel + RAW_VALUE_SUFFIX,
+                            readRawValue(resultSet, columnIdx).orElse(null));
+                    }
                 } catch (SQLException ex) {
                     LOG.error("{} Convert data [{}:{}] {} error ", ErrorCode.EXECUTE_QUERY_SQL, tableName, columnLabel,
                         ex.getMessage(), ex);
@@ -110,6 +137,17 @@ public abstract class ResultSetHandler {
         final ResultSetMetaData rsmd = resultSet.getMetaData();
         String tableName = rsmd.getTableName(1);
         return putOneResultSetToMap(tableName, rsmd, resultSet);
+    }
+
+    private Optional<String> readRawValue(ResultSet resultSet, int columnIdx) {
+        try {
+            Object raw = resultSet.getObject(columnIdx);
+            return resultSet.wasNull() ? Optional.empty() : Optional.ofNullable(String.valueOf(raw));
+        } catch (SQLException ex) {
+            LOG.error("{} Read raw value [columnIdx={}] error: {}", ErrorCode.EXECUTE_QUERY_SQL, columnIdx,
+                ex.getMessage(), ex);
+            return Optional.empty();
+        }
     }
 
     /**

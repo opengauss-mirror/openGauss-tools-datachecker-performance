@@ -39,7 +39,8 @@ public class SqlUtil {
         ESCAPE.put(DataBaseType.MS, (key) -> quote(key, escape_back_quote));
         ESCAPE.put(DataBaseType.OG, (key) -> quote(key, escape_double_quote));
         ESCAPEB.put(DataBaseType.OG, (key) -> quote(key, escape_back_quote));
-        ESCAPE.put(DataBaseType.O, (key) -> quote(key, escape_double_quote));
+        ESCAPE.put(DataBaseType.O, (key) -> key);
+        ESCAPE.put(DataBaseType.OGRAC, (key) -> key);
     }
 
     public static String quote(String key, String quote) {

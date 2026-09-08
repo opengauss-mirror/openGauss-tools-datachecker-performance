@@ -96,7 +96,7 @@ public class CsvTableProcessor extends AbstractTableProcessor {
         throws IOException {
         final LocalDateTime start = LocalDateTime.now();
         long tableRowCount = 0;
-        SliceKafkaAgents kafkaAgents = context.createSliceFixedKafkaAgents(topic, table);
+        SliceKafkaAgents kafkaAgents = context.createSliceFixedKafkaAgents(topic, table, 0);
         SliceResultSetSender sliceSender = new SliceResultSetSender(tableMetadata, kafkaAgents);
         sliceSender.setRecordSendKey(table);
         try {
@@ -110,8 +110,7 @@ public class CsvTableProcessor extends AbstractTableProcessor {
                 log.info("start  [{}-{}] - {} ", tableFileCount, i, slicePath);
                 Path sliceFilePath = Path.of(csvDataRootPath, slicePath.toString());
                 fetchSize = Math.max(fetchSize, tableRowCount / i);
-                long estimatedSize = estimatedMemorySize(tableMetadata.getAvgRowLength(), fetchSize);
-                memoryOperations.takeMemory(estimatedSize);
+                memoryOperations.takeMemory(MEMORY_GATE_TRIGGER);
                 List<long[]> offsetList = new LinkedList<>();
                 List<CompletableFuture<SendResult<String, String>>> batchFutures = new LinkedList<>();
                 try (CSVReader reader = new CSVReader(
@@ -123,7 +122,7 @@ public class CsvTableProcessor extends AbstractTableProcessor {
                         while ((nextLine = reader.readNext()) != null) {
                             rowCount++;
                             batchFutures.add(sliceSender.csvTranslateAndSendSync(nextLine, result, rowCount, i));
-                            if (batchFutures.size() == FETCH_SIZE) {
+                            if (batchFutures.size() == BATCH_FLUSH_SIZE) {
                                 offsetList.add(getBatchFutureRecordOffsetScope(batchFutures));
                                 batchFutures.clear();
                             }

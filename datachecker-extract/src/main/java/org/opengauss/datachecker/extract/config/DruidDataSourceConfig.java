@@ -63,7 +63,6 @@ public class DruidDataSourceConfig implements DataSourceConfig {
     public DataSource druidDataSource() {
         DruidDataSource druidDataSource = DruidDataSourceBuilder.create().build();
         druidDataSource.setMaxPoolPreparedStatementPerConnectionSize(20);
-        druidDataSource.setMaxActive(20);
         druidDataSource.setMinIdle(10);
         druidDataSource.setRemoveAbandoned(true);
         druidDataSource.setRemoveAbandonedTimeout(300);

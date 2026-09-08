@@ -82,9 +82,8 @@ public class CsvSliceProcessor extends AbstractSliceProcessor {
             String csvDataRootPath = ConfigCache.getCsvData();
             String sliceFilePath = Path.of(csvDataRootPath, slice.getName())
                                        .toString();
-            long estimatedSize = estimatedMemorySize(tableMetadata.getAvgRowLength(), slice.getFetchSize());
-            memoryOperations.takeMemory(estimatedSize);
-            SliceKafkaAgents kafkaAgents = context.createSliceFixedKafkaAgents(topic, slice.getName());
+            memoryOperations.takeMemory(MEMORY_GATE_TRIGGER);
+            SliceKafkaAgents kafkaAgents = context.createSliceFixedKafkaAgents(topic, slice.getName(), slice.getPtn());
             SliceResultSetSender sliceSender = new SliceResultSetSender(tableMetadata, kafkaAgents);
             sliceSender.setRecordSendKey(slice.getName());
             try (CSVReader reader = new CSVReader(new FileReader(sliceFilePath, StandardCharsets.UTF_8))) {
@@ -98,7 +97,7 @@ public class CsvSliceProcessor extends AbstractSliceProcessor {
                 while ((nextLine = reader.readNext()) != null) {
                     rowCount++;
                     batchFutures.add(sliceSender.csvTranslateAndSendSync(nextLine, result, rowCount, slice.getNo()));
-                    if (batchFutures.size() == FETCH_SIZE) {
+                    if (batchFutures.size() == BATCH_FLUSH_SIZE) {
                         offsetList.add(getBatchFutureRecordOffsetScope(batchFutures));
                         batchFutures.clear();
                     }

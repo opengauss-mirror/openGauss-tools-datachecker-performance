@@ -29,6 +29,7 @@ import org.springframework.util.Assert;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -81,7 +82,8 @@ public class SelectSqlBuilder {
         QuerySqlTemplate.QUERY_OFF_SET, sqlGenerateMeta);
     private static final SqlGenerate NO_OFFSET_GENERATE = (sqlGenerateMeta) -> NO_OFFSET_SQL_GENERATE_TEMPLATE.replace(
         QuerySqlTemplate.QUERY_NO_OFF_SET, sqlGenerateMeta);
-
+    private static final SqlGenerate ORACLE_OFFSET_GENERATE = (sqlGenerateMeta) -> GENERATE_TEMPLATE.replace(
+        QuerySqlTemplate.QUERY_ORACLE_OFFSET, sqlGenerateMeta);
     private static final SqlGenerateTemplate QUERY_BETWEEN_TEMPLATE = (template, sqlGenerateMeta) -> template.replace(
             COLUMN, sqlGenerateMeta.getColumns())
         .replace(SCHEMA, sqlGenerateMeta.getSchema())
@@ -96,7 +98,8 @@ public class SelectSqlBuilder {
     static {
         SQL_GENERATE.put(DataBaseType.MS, OFFSET_GENERATE);
         SQL_GENERATE.put(DataBaseType.OG, OFFSET_GENERATE);
-        SQL_GENERATE.put(DataBaseType.O, OFFSET_GENERATE);
+        SQL_GENERATE.put(DataBaseType.O, ORACLE_OFFSET_GENERATE);
+        SQL_GENERATE.put(DataBaseType.OGRAC, OFFSET_GENERATE);
     }
 
     private String schema;
@@ -189,7 +192,7 @@ public class SelectSqlBuilder {
     }
 
     /**
-     * 设置当前校验模式是否为CSV模式
+     * Set whether the current check mode is CSV mode.
      *
      * @param isCsvMode isCsvMode
      * @return builder
@@ -209,17 +212,19 @@ public class SelectSqlBuilder {
         List<ColumnsMetaData> columnsMetas = tableMetadata.getColumnsMetas();
         Assert.notEmpty(columnsMetas, Message.COLUMN_METADATA_EMPTY_NOT_TO_BUILD_SQL);
         final ConditionLimit conditionLimit = tableMetadata.getConditionLimit();
+        String sql;
         if (Objects.nonNull(conditionLimit)) {
-            return buildSelectSqlConditionLimit(tableMetadata, conditionLimit);
+            sql = buildSelectSqlConditionLimit(tableMetadata, conditionLimit);
         } else if (isDivisions) {
             if (tableMetadata.isUnionPrimary()) {
-                return buildSelectSqlWhereInUnionPrimary(tableMetadata);
+                sql = buildSelectSqlWhereInUnionPrimary(tableMetadata);
             } else {
-                return buildSelectSqlWherePrimary(tableMetadata);
+                sql = buildSelectSqlWherePrimary(tableMetadata);
             }
         } else {
-            return buildSelectSqlOffsetZero(columnsMetas, tableMetadata.getTableName());
+            sql = buildSelectSqlOffsetZero(columnsMetas, tableMetadata.getTableName());
         }
+        return sql;
     }
 
     private String buildSelectSqlWhereInUnionPrimary(TableMetadata tableMetadata) {
@@ -390,9 +395,86 @@ public class SelectSqlBuilder {
 
     private String getColumnNameList(@NonNull List<ColumnsMetaData> columnsMetas, DataBaseType dataBaseType) {
         return columnsMetas.stream()
-            .map(ColumnsMetaData::getColumnName)
-            .map(column -> escape(column, dataBaseType))
+            .map(column -> buildColumnExpression(column, dataBaseType))
             .collect(Collectors.joining(DELIMITER));
+    }
+
+    /**
+     * Build the SELECT expression for a single column.
+     * <p>
+     * Oracle XMLTYPE is an object type; ojdbc6 without the xdb jar (oracle.xdb.XMLType)
+     * cannot read it via getObject()/getString() and throws NPE or returns null.
+     * So the SQL layer serializes XMLTYPE to CLOB, making the driver return it as a CLOB
+     * that goes through createOracleClobHandlerSafe's character-stream reading, symmetric
+     * with the oGRAC side (XML migrated to CLOB).
+     * An alias keeps the column label unchanged so the column-name-based comparison mapping
+     * between the two sides is unaffected.
+     *
+     * @param column       column metadata
+     * @param dataBaseType database type
+     * @return the SELECT expression for this column
+     */
+    private String buildColumnExpression(ColumnsMetaData column, DataBaseType dataBaseType) {
+        String escapedName = escape(column.getColumnName(), dataBaseType);
+        if (dataBaseType == DataBaseType.O && isXmlType(column)) {
+            return "XMLSERIALIZE(CONTENT " + escapedName + " AS CLOB) AS " + escapedName;
+        }
+        // For oGRAC DATE_YEAR_MONTH / INTERVAL YEAR TO MONTH (the migration target of Oracle
+        // INTERVAL YEAR TO MONTH), the driver's ORTimestampUtils.getDateYearMonth() behind
+        // JDBC getString() takes the absolute value of the internal integer, losing the sign
+        // of negative values (e.g. "-2-11" becomes "2-11").
+        // So use to_char() to format the string server-side with the true sign (e.g.
+        // "-02-11") and read it via the TEXT character handler.
+        // Note: oGRAC metadata (ADM_TAB_COLUMNS.data_type) may report this column's type
+        // name as "INTERVAL YEAR TO MONTH".
+        if (dataBaseType == DataBaseType.OGRAC && isIntervalYearMonthType(column)) {
+            return "to_char(" + escapedName + ") AS " + escapedName;
+        }
+        // oGRAC TIMESTAMP WITH TIME ZONE: the JDBC driver's getString() returns garbage for
+        // sub-seconds (the timezone wall clock is correct but the fraction is scrambled,
+        // e.g. .999999 becomes .064703); the real fraction digits cannot be recovered from
+        // the driver. So use to_char() to output the real string server-side (like
+        // "2024-07-04 08:00:00.999999 -05:00"), then OgracResultSetHandler recognizes the
+        // value shape and routes it back to the TSTZ handler for GMT+8 normalization,
+        // comparing symmetrically with the Oracle side.
+        if (dataBaseType == DataBaseType.OGRAC && isTimestampTzType(column)) {
+            return "to_char(" + escapedName + ") AS " + escapedName;
+        }
+        return escapedName;
+    }
+
+    private boolean isXmlType(ColumnsMetaData column) {
+        String dataType = column.getDataType();
+        return dataType != null && dataType.toUpperCase(Locale.ENGLISH).contains("XMLTYPE");
+    }
+
+    private boolean isIntervalYearMonthType(ColumnsMetaData column) {
+        String dataType = column.getDataType();
+        if (dataType == null) {
+            return false;
+        }
+        String upper = dataType.toUpperCase(Locale.ENGLISH);
+        return upper.equals("DATE_YEAR_MONTH") || upper.equals("INTERVAL YEAR TO MONTH");
+    }
+
+    /**
+     * Whether the column is an oGRAC TIMESTAMP WITH TIME ZONE column.
+     * oGRAC metadata (ADM_TAB_COLUMNS.data_type) reports the type name in two forms:
+     * 1. "TIMESTAMP_TZ" (the name the oGRAC JDBC driver actually returns, per logs);
+     * 2. "TIMESTAMP(6) WITH TIME ZONE" (the Oracle form).
+     * Both must match ("TIMESTAMP_TZ" matches exactly, excluding LOCAL, i.e. TIMESTAMP_LTZ).
+     *
+     * @param column column metadata
+     * @return true when it is a TIMESTAMP WITH TIME ZONE column
+     */
+    private boolean isTimestampTzType(ColumnsMetaData column) {
+        String dataType = column.getDataType();
+        if (dataType == null) {
+            return false;
+        }
+        String upper = dataType.toUpperCase(Locale.ENGLISH);
+        return upper.equals("TIMESTAMP_TZ")
+            || (upper.contains("TIMESTAMP") && upper.contains("WITH TIME ZONE"));
     }
 
     private SqlGenerate getSqlGenerate(DataBaseType dataBaseType) {

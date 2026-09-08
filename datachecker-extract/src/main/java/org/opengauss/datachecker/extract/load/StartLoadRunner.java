@@ -55,8 +55,9 @@ public class StartLoadRunner implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         // if extract boot start finished,then running.
-        resourceManager.initMaxConnectionCount();
+        // Load config first so initMaxConnectionCount reads the real Druid max-active value
         configManagement.loadExtractProperties();
+        resourceManager.initMaxConnectionCount();
         memoryManagerService.startMemoryManager(ConfigCache.getBooleanValue(ConfigConstants.MEMORY_MONITOR));
         dynamicThreadPoolManager.dynamicThreadPoolMonitor();
         initExtractContextDataSource();

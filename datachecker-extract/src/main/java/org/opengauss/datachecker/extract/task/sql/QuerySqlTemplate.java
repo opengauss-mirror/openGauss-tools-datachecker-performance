@@ -52,6 +52,10 @@ public interface QuerySqlTemplate {
      * Query SQL statement offset fragment: Fragment query offset
      */
     String OFFSET = ":offset";
+
+    /**
+     * Query SQL statement order by fragment: order by clause of the query
+     */
     String ORDER_BY = ":orderBy";
     /**
      * Query SQL statement joinOn fragment: Query SQL statement joinOn fragment
@@ -67,6 +71,16 @@ public interface QuerySqlTemplate {
      * Query SQL statement fragment: SQL statement for fragment query using offset in single primary key scenario
      */
     String QUERY_OFF_SET = "SELECT :columnsList FROM :schema.:tableName :orderBy LIMIT :start,:offset";
+
+    /**
+     * Query SQL statement fragment: SQL statement for fragment query using ROWNUM in Oracle scenario
+     */
+    String QUERY_ORACLE_OFFSET = "SELECT t.* FROM (SELECT a.*, ROWNUM rn FROM "
+        + "(SELECT :columnsList FROM :schema.:tableName :orderBy) a) t WHERE rn > :start AND rn <= :start + :offset";
+
+    /**
+     * Query SQL statement fragment: SQL statement for range query with pk condition
+     */
     String QUERY_WHERE_BETWEEN = "SELECT :columnsList FROM :schema.:tableName where :pkCondition :orderBy ";
     /**
      * Query SQL statement fragment: SQL statement for fragment query using offset in single primary key scenario

@@ -37,7 +37,11 @@ public enum DataBaseType implements IEnum {
     /**
      * oracle database type
      */
-    O("ORACLE", "ORACLE");
+    O("ORACLE", "ORACLE"),
+    /**
+     * ograc database type
+     */
+    OGRAC("OGRAC", "OGRAC");
 
     private final String code;
     private final String description;
@@ -50,5 +54,5 @@ public enum DataBaseType implements IEnum {
     /**
      * DataBaseType api description
      */
-    public static final String API_DESCRIPTION = "Database type [MS-MYSQL,OG-OPENGAUSS,O-ORACLE]";
+    public static final String API_DESCRIPTION = "Database type [MS-MYSQL,OG-OPENGAUSS,O-ORACLE,OGRAC-OGRAC]";
 }

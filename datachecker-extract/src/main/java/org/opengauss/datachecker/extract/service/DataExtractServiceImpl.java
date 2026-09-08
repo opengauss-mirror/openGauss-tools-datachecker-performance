@@ -22,10 +22,12 @@ import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.constant.Constants;
 import org.opengauss.datachecker.common.entry.common.CheckPointData;
 import org.opengauss.datachecker.common.entry.common.PointPair;
+import org.opengauss.datachecker.common.entry.common.RepairEntry;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.common.entry.enums.SliceStatus;
 import org.opengauss.datachecker.common.entry.extract.BaseSlice;
+import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.Database;
 import org.opengauss.datachecker.common.entry.extract.ExtractConfig;
 import org.opengauss.datachecker.common.entry.extract.ExtractTask;
@@ -50,9 +52,11 @@ import org.opengauss.datachecker.extract.cache.TableExtractStatusCache;
 import org.opengauss.datachecker.extract.client.CheckingFeignClient;
 import org.opengauss.datachecker.extract.config.ExtractProperties;
 import org.opengauss.datachecker.extract.config.KafkaConsumerConfig;
+import org.opengauss.datachecker.extract.constants.ExtConstants;
 import org.opengauss.datachecker.extract.data.BaseDataService;
 import org.opengauss.datachecker.extract.data.access.DataAccessService;
 import org.opengauss.datachecker.extract.slice.ExtractPointSwapManager;
+import org.opengauss.datachecker.extract.slice.SampleSelector;
 import org.opengauss.datachecker.extract.slice.SliceProcessorContext;
 import org.opengauss.datachecker.extract.slice.SliceRegister;
 import org.opengauss.datachecker.extract.slice.factory.SliceFactory;
@@ -60,8 +64,10 @@ import org.opengauss.datachecker.extract.slice.process.SliceProcessor;
 import org.opengauss.datachecker.extract.task.CheckPoint;
 import org.opengauss.datachecker.extract.task.DataManipulationService;
 import org.opengauss.datachecker.extract.task.ExtractTaskBuilder;
+import org.apache.commons.lang3.StringUtils;
 import org.opengauss.datachecker.extract.task.sql.AutoSliceQueryStatement;
 import org.opengauss.datachecker.extract.task.sql.QueryStatementFactory;
+import org.opengauss.datachecker.extract.util.MetaDataUtil;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -158,6 +164,7 @@ public class DataExtractServiceImpl implements DataExtractService {
     private ExtractPointSwapManager checkPointManager = null;
     @Resource
     private SliceProcessorContext sliceProcessorContext;
+    private SampleSelector sampleSelector;
 
     /**
      * Data extraction service
@@ -319,15 +326,7 @@ public class DataExtractServiceImpl implements DataExtractService {
     @Override
     public void execExtractTaskAllTables(String processNo) throws TaskNotFoundException {
         if (Objects.equals(atomicProcessNo.get(), processNo)) {
-            int sleepCount = 0;
-            while (CollectionUtils.isEmpty(taskReference.get())) {
-                ThreadUtil.sleep(MAX_SLEEP_MILLIS_TIME);
-                if (sleepCount++ > MAX_SLEEP_COUNT) {
-                    LogUtils.info(log, "endpoint [{}] and process[{}}] task is empty!",
-                        extractProperties.getEndpoint().getDescription(), processNo);
-                    break;
-                }
-            }
+            awaitTasksLoaded(processNo);
             ConfigCache.put(ConfigConstants.PROCESS_NO, processNo);
             if (CollectionUtils.isEmpty(taskReference.get())) {
                 return;
@@ -336,6 +335,16 @@ public class DataExtractServiceImpl implements DataExtractService {
             Map<String, Integer> tableCheckStatus = checkingFeignClient.queryTableCheckStatus();
             tableRegisterCheckPoint();
             taskReference.get().forEach(task -> execExtractTableTask(tableCheckStatus, task));
+        }
+    }
+
+    private void awaitTasksLoaded(String processNo) {
+        for (int i = 0; i < MAX_SLEEP_COUNT && CollectionUtils.isEmpty(taskReference.get()); i++) {
+            ThreadUtil.sleep(MAX_SLEEP_MILLIS_TIME);
+        }
+        if (CollectionUtils.isEmpty(taskReference.get())) {
+            LogUtils.info(log, "endpoint [{}] and process[{}] task is empty!",
+                extractProperties.getEndpoint().getDescription(), processNo);
         }
     }
 
@@ -352,10 +361,8 @@ public class DataExtractServiceImpl implements DataExtractService {
             if (!tableMetadata.isExistTableRows()) {
                 emptyTableSliceProcessor(tableMetadata);
             } else {
+                awaitCheckPointRegistered(tableName);
                 Endpoint endpoint = extractProperties.getEndpoint();
-                while (!tableCheckPointCache.contains(tableName)) {
-                    ThreadUtil.sleepHalfSecond();
-                }
                 List<PointPair> summarizedCheckPoint = tableCheckPointCache.get(tableName);
                 LogUtils.debug(log, "table [{}] summarized check-point-list : {}", tableName,
                     summarizedCheckPoint.size());
@@ -364,9 +371,20 @@ public class DataExtractServiceImpl implements DataExtractService {
                 addSliceProcessor(sliceVoList);
             }
             tableCheckPointCache.remove(tableName);
-        } catch (Exception ex) {
+        } catch (ExtractDataAccessException | ExtractException ex) {
             LogUtils.error(log, "{}async exec extract tables error {}:{} ", ErrorCode.ASYNC_EXTRACT_TABLE,
                 task.getTableName(), ex.getMessage(), ex);
+        }
+    }
+
+    private void awaitCheckPointRegistered(String tableName) {
+        int cpWait = 0;
+        while (!tableCheckPointCache.contains(tableName)) {
+            ThreadUtil.sleepHalfSecond();
+            if (++cpWait % 20 == 0) {
+                LogUtils.info(log, "table [{}] waiting for check-point registration, waited {}s",
+                    tableName, cpWait / 2);
+            }
         }
     }
 
@@ -402,21 +420,38 @@ public class DataExtractServiceImpl implements DataExtractService {
     }
 
     private void addSliceProcessor(List<SliceVo> sliceVoList) {
-        sliceRegister.batchRegister(sliceVoList);
-        int sliceSize = sliceVoList.size();
+        List<SliceVo> extractSlices = sliceVoList;
+        List<SliceVo> registerSlices = sliceVoList;
+        SampleSelector selector = getSampleSelector();
+        if (selector != null && selector.shouldSample(sliceVoList)) {
+            extractSlices = selector.selectSlices(sliceVoList);
+            registerSlices = selector.createRegisterCopies(extractSlices);
+            String tableName = sliceVoList.get(0).getTable();
+            LogUtils.info(log, "sample check enabled for table [{}]: extract {} of {} slices, register {} slices",
+                tableName, extractSlices.size(), sliceVoList.size(), registerSlices.size());
+        }
+        sliceRegister.batchRegister(registerSlices);
+        submitSlices(selectExecutor(extractSlices.size()), extractSlices);
+    }
+
+    private ExecutorService selectExecutor(int sliceSize) {
+        if (sliceSize <= 20) {
+            return dynamicThreadPoolManager.getExecutor(EXTRACT_EXECUTOR);
+        }
         int topicSize = ConfigCache.getIntValue(ConfigConstants.MAXIMUM_TOPIC_SIZE);
         int extendMaxPoolSize = ConfigCache.getIntValue(ConfigConstants.EXTEND_MAXIMUM_POOL_SIZE);
-        ExecutorService executor;
-        if (sliceVoList.size() <= 20) {
-            executor = dynamicThreadPoolManager.getExecutor(EXTRACT_EXECUTOR);
-        } else {
-            executor = dynamicThreadPoolManager.getFreeExecutor(topicSize, extendMaxPoolSize);
-        }
-        AtomicInteger lastShardSize = new AtomicInteger(sliceSize);
+        return dynamicThreadPoolManager.getFreeExecutor(topicSize, extendMaxPoolSize);
+    }
+
+    private void submitSlices(ExecutorService executor, List<SliceVo> extractSlices) {
+        int sliceSize = extractSlices.size();
+        String table = extractSlices.get(0).getTable();
         SliceFactory sliceFactory = new SliceFactory(baseDataService.getDataSource());
-        String table = sliceVoList.get(0).getTable();
+        AtomicInteger lastShardSize = new AtomicInteger(sliceSize);
         AtomicInteger sliceCount = new AtomicInteger(sliceSize);
-        sliceVoList.forEach(sliceVo -> {
+        LogUtils.info(log, "table [{}] {} slices assigned to executor, isBusy={}", table, sliceSize,
+            dynamicThreadPoolManager.isExecutorBusy(executor));
+        extractSlices.forEach(sliceVo -> {
             int bussyWait = 0;
             while (dynamicThreadPoolManager.isExecutorBusy(executor)) {
                 // 线程池满了，等待线程池释放线程
@@ -432,7 +467,7 @@ public class DataExtractServiceImpl implements DataExtractService {
                 try {
                     sliceProcessor.run();
                 } catch (ExtractDataAccessException e) {
-                    log.error("slice process {} occ OOM error", sliceVo.getTable(), e);
+                    log.error("slice process {} extract failed", sliceVo.getTable(), e);
                 } catch (OutOfMemoryError e) {
                     log.error("slice process {} occ OOM error", sliceVo.getTable(), e);
                     Runtime.getRuntime().halt(1);
@@ -440,8 +475,32 @@ public class DataExtractServiceImpl implements DataExtractService {
             });
             sliceCount.getAndDecrement();
             log.info("shard is added to executor. table {} has {} shards remaining and a total of " + "{} shards.",
-                table, sliceCount.get(), sliceVoList.size());
+                table, sliceCount.get(), sliceSize);
         });
+    }
+
+    /**
+     * Sampling check selector
+     *
+     * @return SampleSelector
+     */
+    private SampleSelector getSampleSelector() {
+        if (sampleSelector != null) {
+            return sampleSelector;
+        }
+        double ratio = 1.0;
+        try {
+            String ratioStr = ConfigCache.getValue(ConfigConstants.SAMPLE_RATIO);
+            if (StringUtils.isNotEmpty(ratioStr)) {
+                ratio = Double.parseDouble(ratioStr);
+            }
+        } catch (NumberFormatException e) {
+            LogUtils.warn(log, "parse sample ratio failed, fallback to 1.0 (full check): {}", e.getMessage());
+        }
+        int threshold = ConfigCache.getIntValue(ConfigConstants.SAMPLE_THRESHOLD);
+        LogUtils.info(log, "sample check config: ratio={}, threshold={}", ratio, threshold);
+        sampleSelector = new SampleSelector(ratio, threshold);
+        return sampleSelector;
     }
 
     private List<SliceVo> buildSingleSlice(TableMetadata metadata, Endpoint endpoint) {
@@ -498,7 +557,8 @@ public class DataExtractServiceImpl implements DataExtractService {
         tmp.setTable(metadata.getTableName());
         tmp.setSchema(metadata.getSchema());
         tmp.setFetchSize(ConfigCache.getIntValue(ConfigConstants.MAXIMUM_TABLE_SLICE_SIZE));
-        tmp.setPtnNum(1);
+        int ptnNum = ConfigCache.getIntValue(ConfigConstants.TOPIC_PARTITION_SIZE);
+        tmp.setPtnNum(ptnNum > 0 ? ptnNum : 1);
         tmp.setPtn(0);
         tmp.setEndpoint(endpoint);
         return tmp;
@@ -520,6 +580,7 @@ public class DataExtractServiceImpl implements DataExtractService {
             sliceVo.setEndIdx(String.valueOf(offset));
             sliceVo.setTotal(summarizedCheckPoint.size() - 1);
             sliceVo.setNo(++index);
+            sliceVo.setPtn(index % tmp.getPtnNum());
             sliceTaskList.add(sliceVo);
             preOffset = point;
         }
@@ -707,5 +768,51 @@ public class DataExtractServiceImpl implements DataExtractService {
         tableCheckPointCache.clean();
         taskReference.get().clear();
         checkPointManager.close();
+    }
+
+    @Override
+    public Map<String, Map<String, String>> queryColumnValues(RepairEntry repairEntry) {
+        if (CollectionUtils.isEmpty(repairEntry.getDiffSet())) {
+            return new HashMap<>();
+        }
+        final TableMetadata metadata = metaDataService.getMetaDataOfSchemaByCache(repairEntry.getTable());
+        final TableMetadata filteredMetadata = MetaDataUtil.filterLargeColumns(metadata);
+        // Controlled by data.check.diff-debug-log-enabled: when enabled, also return the raw database
+        // values before mapping, so diff_detail can tell whether mapping truncated precision;
+        // not captured in normal business flow or when the switch is off.
+        boolean isCaptureRaw = ConfigCache.getBooleanValue(ConfigConstants.DIFF_DEBUG_LOG_ENABLED);
+        List<Map<String, String>> columnValues = dataManipulationService
+                .queryColumnValues(repairEntry.getTable(), repairEntry.diffSetToList(), filteredMetadata,
+                    isCaptureRaw);
+
+        return transtlateColumnValues(columnValues, filteredMetadata.getPrimaryMetas());
+    }
+
+    /**
+     * Reorganize the queried row list into a map keyed by primary key, so the caller can
+     * fetch the row of a diff key directly.
+     *
+     * @param columnValues queried row list, each row a column-name to value map
+     * @param primaryMetas  primary key column metadata
+     * @return row map keyed by composite primary key string
+     */
+    protected Map<String, Map<String, String>> transtlateColumnValues(List<Map<String, String>> columnValues,
+                                                                      List<ColumnsMetaData> primaryMetas) {
+        final List<String> primaryKeys = getCompositeKeyColumns(primaryMetas);
+        Map<String, Map<String, String>> map = new HashMap<>(Constants.InitialCapacity.CAPACITY_16);
+        columnValues.forEach(values -> map.put(getCompositeKey(values, primaryKeys), values));
+        return map;
+    }
+
+    private List<String> getCompositeKeyColumns(List<ColumnsMetaData> primaryMetas) {
+        return primaryMetas.stream()
+                .map(ColumnsMetaData::getColumnName)
+                .collect(Collectors.toUnmodifiableList());
+    }
+
+    private String getCompositeKey(Map<String, String> columnValues, List<String> primaryKeys) {
+        return primaryKeys.stream()
+                .map(columnValues::get)
+                .collect(Collectors.joining(ExtConstants.PRIMARY_DELIMITER));
     }
 }

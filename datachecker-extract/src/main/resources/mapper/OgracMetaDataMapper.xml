@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
-<mapper namespace="org.opengauss.datachecker.extract.data.mapper.OracleMetaDataMapper">
+<mapper namespace="org.opengauss.datachecker.extract.data.mapper.OgracMetaDataMapper">
     <resultMap id="tableMetadataMap" type="org.opengauss.datachecker.common.entry.extract.TableMetadata">
         <id property="tableName" column="table_name"/>
         <result property="schema" column="schema"/>
@@ -19,48 +19,54 @@
 
     <resultMap id="primaryColumnBeanMap" type="org.opengauss.datachecker.common.entry.extract.PrimaryColumnBean">
         <id property="tableName" column="TABLE_NAME"/>
-        <result property="columnName" column="COLUMN_NAME"/>
+        <result property="columnName" column="COLUMNS"/>
     </resultMap>
 
-    <!-- oracle does not have sql mode -->
     <select id="sqlMode" resultType="String">
-          SELECT 1 FROM DUAL
+        SELECT 1
     </select>
 
     <select id="health" resultType="boolean">
-         SELECT 1 FROM DUAL
+        SELECT 1
     </select>
 
     <select id="queryTableNameList" resultType="string">
-       SELECT TABLE_NAME FROM ALL_TABLES WHERE OWNER = #{schema}
+        SELECT TABLE_NAME FROM ADM_TABLES WHERE OWNER = #{schema}
     </select>
 
     <select id="queryTableMetadataList" resultMap="tableMetadataMap">
-        SELECT t.owner as schema, t.table_name, t.num_rows numRows, avg_row_len avgRowLen
-        FROM ALL_TABLES t LEFT JOIN (SELECT DISTINCT table_name from ALL_CONSTRAINTS where OWNER = #{schema} AND constraint_type='P') pc on t.table_name=pc.table_name
+        SELECT t.owner as schema, t.table_name, nvl(t.num_rows, 0) numRows, nvl(t.avg_row_len, 0) avgRowLen
+        FROM ADM_TABLES t
         WHERE t.OWNER = #{schema} order by numRows asc
     </select>
 
     <select id="queryTableMetadata" resultMap="tableMetadataMap">
-         SELECT t.owner as schema, t.table_name, nvl(num_rows,0) tableRows, nvl(avg_row_len,0) avgRowLength
-         FROM ALL_TABLES t
-         WHERE t.OWNER = #{schema} and t.table_name = #{name}
+        SELECT t.owner as schema, t.table_name, nvl(t.num_rows, 0) tableRows, nvl(t.avg_row_len, 0) avgRowLength
+        FROM ADM_TABLES t
+        WHERE t.OWNER = #{schema} and t.table_name = #{name}
     </select>
 
     <select id="queryTableColumnsMetaData" resultMap="columnMetadataMap">
         select c.owner as schema, c.table_name, c.column_name as name, c.data_type, c.data_length, c.data_precision, c.data_scale, c.nullable, c.column_id
-        from all_tab_columns c
-        WHERE c.OWNER =  #{schema}  and c.table_name= #{name} order by c.column_id asc
+        from ADM_TAB_COLUMNS c
+        WHERE c.OWNER = #{schema} and c.table_name= #{name} order by c.column_id asc
+    </select>
+
+    <!-- Query all column metadata of the whole schema at once: oGRAC ADM_TAB_COLUMNS filtered by a single table takes seconds per table, while a whole-schema query takes only milliseconds -->
+    <select id="querySchemaColumnsMetaData" resultMap="columnMetadataMap">
+        select c.owner as schema, c.table_name, c.column_name as name, c.data_type, c.data_length, c.data_precision, c.data_scale, c.nullable, c.column_id
+        from ADM_TAB_COLUMNS c
+        WHERE c.OWNER = #{schema} order by c.table_name, c.column_id asc
     </select>
 
     <select id="queryTablePrimaryColumns" resultMap="primaryColumnBeanMap">
-        SELECT A.TABLE_NAME, A.COLUMN_NAME FROM ALL_CONS_COLUMNS A,ALL_CONSTRAINTS B
-        WHERE A.constraint_name = B.constraint_name AND  B.constraint_type = 'P' AND A.OWNER = #{schema}
+        SELECT TABLE_NAME, COLUMNS FROM ADM_INDEXES
+        WHERE IS_PRIMARY = 'Y' AND OWNER = #{schema}
     </select>
 
     <select id="queryTablePrimaryColumnsByTableName" resultMap="primaryColumnBeanMap">
-       SELECT A.TABLE_NAME, A.COLUMN_NAME FROM ALL_CONS_COLUMNS A,ALL_CONSTRAINTS B
-        WHERE A.constraint_name = B.constraint_name AND  B.constraint_type = 'P' AND A.OWNER = #{schema} and A.TABLE_NAME =#{name}
+        SELECT TABLE_NAME, COLUMNS FROM ADM_INDEXES
+        WHERE IS_PRIMARY = 'Y' AND OWNER = #{schema} AND TABLE_NAME = #{name}
     </select>
 
     <select id="rowCount" resultType="long">
@@ -68,32 +74,26 @@
     </select>
 
     <select id="tableExistsRows" resultType="boolean">
-        select count(1) from ${schema}.${name} where rownum = 1
+        select count(1) from (select 1 from ${schema}.${name} limit 1) t
     </select>
 
     <select id="min" resultType="string">
-         select min(${param.colName}) from ${param.schema}.${param.name}
+        select min(${param.colName}) from ${param.schema}.${param.name}
     </select>
 
     <select id="max" resultType="string">
-         select max(${param.colName}) from ${param.schema}.${param.name}
+        select max(${param.colName}) from ${param.schema}.${param.name}
     </select>
 
     <select id="next" resultType="string">
-        select ${param.colName} from (
-            select ${param.colName}, rownum rn from (
-                select ${param.colName} from ${param.schema}.${param.name} where ${param.colName} &gt;= #{param.preValue} order by ${param.colName} asc
-            )
-        ) where rn = #{param.offset}
+        select ${param.colName} from ${param.schema}.${param.name} where ${param.colName} &gt;= #{param.preValue} order by ${param.colName} asc LIMIT #{param.offset}, 1
     </select>
 
     <select id="queryPointList" resultType="string">
-        select * from (
-             select rownum rn ,${param.colName} from ${param.schema}.${param.name}  order by ${param.colName} asc
-        ) where mod(rn,#{param.offset})=1
+        SELECT s.${param.colName} FROM (SELECT row_number() OVER(ORDER BY ${param.colName} ASC) AS rn, ${param.colName} FROM ${param.schema}.${param.name}) s WHERE MOD(s.rn, #{param.offset}) = 1
     </select>
 
     <select id="checkDatabaseNotEmpty" resultType="boolean">
-       select count(table_name) from (SELECT TABLE_NAME FROM ALL_TABLES WHERE OWNER = #{schema} and rownum=1)
+        SELECT COUNT(1) FROM ADM_TABLES WHERE OWNER = #{schema} LIMIT 1
     </select>
 </mapper>

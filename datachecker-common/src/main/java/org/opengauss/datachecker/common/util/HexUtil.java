@@ -106,6 +106,9 @@ public class HexUtil {
     }
 
     private static String byteToHexTrim(byte[] data, String prefix) {
+        if (data == null || data.length == 0) {
+            return "";
+        }
         StringBuilder result = new StringBuilder(prefix);
         int fast = 0;
         int slow = 0;

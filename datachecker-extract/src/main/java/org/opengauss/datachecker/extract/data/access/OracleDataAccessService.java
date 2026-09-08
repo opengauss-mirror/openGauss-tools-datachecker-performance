@@ -51,7 +51,9 @@ public class OracleDataAccessService extends AbstractDataAccessService {
 
     @Override
     public Health health() {
-        return Health.buildSuccess();
+        String schema = properties.getSchema();
+        String sql = "SELECT OWNER tableSchema FROM ALL_TABLES WHERE OWNER = '" + schema + "' AND ROWNUM = 1";
+        return health(schema, sql);
     }
 
     @Override
@@ -124,12 +126,14 @@ public class OracleDataAccessService extends AbstractDataAccessService {
 
     @Override
     public String min(Connection connection, DataAccessParam param) {
-        return oracleMetaDataMapper.min(param);
+        String sql = " select min(" + param.getColName() + ") from " + param.getSchema() + "." + param.getName();
+        return adasQueryOnePoint(connection, sql);
     }
 
     @Override
     public String max(Connection connection, DataAccessParam param) {
-        return oracleMetaDataMapper.max(param);
+        String sql = " select max(" + param.getColName() + ") from " + param.getSchema() + "." + param.getName();
+        return adasQueryOnePoint(connection, sql);
     }
 
     @Override
@@ -139,13 +143,17 @@ public class OracleDataAccessService extends AbstractDataAccessService {
 
     @Override
     public List<Object> queryPointList(Connection connection, DataAccessParam param) {
-        return oracleMetaDataMapper.queryPointList(param);
+        String sql = "select colName from (select ROWNUM rn, colName from " + param.getSchema() + "." + param.getName()
+                + " order by colName asc) where mod(rn," + param.getOffset() + ")=1";
+        sql = sql.replace("colName", param.getColName());
+        return adasQueryPointList(connection, sql);
     }
 
     @Override
     public List<PointPair> queryUnionFirstPrimaryCheckPointList(Connection connection, DataAccessParam param) {
-        // oracle database`table,that is defined by union primary key
-        return null;
+        String sqlTmp = "select %s,count(1) from %s.%s group by %s";
+        String sql = String.format(sqlTmp, param.getColName(), param.getSchema(), param.getName(), param.getColName());
+        return adasQueryUnionPointList(connection, sql);
     }
 
     @Override
@@ -161,6 +169,6 @@ public class OracleDataAccessService extends AbstractDataAccessService {
 
     @Override
     public LowerCaseTableNames queryLowerCaseTableNames() {
-        return LowerCaseTableNames.INSENSITIVE;
+        return LowerCaseTableNames.SENSITIVE;
     }
 }

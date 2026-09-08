@@ -54,12 +54,19 @@ public class KafkaProducerConfig {
     private Map<String, Object> buildProducerConfig() {
         // configuration information
         Map<String, Object> props = new HashMap<>(InitialCapacity.CAPACITY_8);
+        KafkaProperties.Producer producer = properties.getProducer();
         // kafka server address
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, String.join(",", properties.getBootstrapServers()));
-        props.put(ProducerConfig.ACKS_CONFIG, properties.getProducer().getAcks());
+        props.put(ProducerConfig.ACKS_CONFIG, producer.getAcks());
         // sets the serialization processing class for data keys and values.
-        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, properties.getProducer().getKeySerializer());
-        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, properties.getProducer().getValueSerializer());
+        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, producer.getKeySerializer());
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, producer.getValueSerializer());
+        // spring.kafka.properties.* passthrough, such as linger.ms, compression.type and max.in.flight
+        // empty map when not configured
+        props.putAll(properties.getProperties());
+        // spring.kafka.producer.batch-size / buffer-memory; Spring defaults equal kafka defaults (16KB/32MB)
+        props.put(ProducerConfig.BATCH_SIZE_CONFIG, (int) producer.getBatchSize().toBytes());
+        props.put(ProducerConfig.BUFFER_MEMORY_CONFIG, producer.getBufferMemory().toBytes());
         // creating a kafka producer instance
         return props;
     }

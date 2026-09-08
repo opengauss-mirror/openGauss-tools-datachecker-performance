@@ -1,0 +1,2 @@
+org.springframework.data.jdbc.core.dialect.DialectResolver$JdbcDialectProvider=\
+org.opengauss.datachecker.extract.config.OgracDialectConfig

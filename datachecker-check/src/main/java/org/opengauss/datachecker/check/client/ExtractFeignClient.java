@@ -167,6 +167,16 @@ public interface ExtractFeignClient {
     Result<List<String>> buildRepairStatementDeleteDml(@RequestBody RepairEntry repairEntry);
 
     /**
+     * Query the actual column values of diff rows by primary key,
+     * for the check side to print diff detail logs for troubleshooting.
+     *
+     * @param repairEntry repair entry, whose diffSet is the primary key set to query
+     * @return composite primary key -> (column name -> column value) mapping
+     */
+    @PostMapping("/extract/debug/query/columnValues")
+    Result<Map<String, Map<String, String>>> queryColumnValues(@RequestBody RepairEntry repairEntry);
+
+    /**
      * Query table metadata hash information
      *
      * @param tableName tableName

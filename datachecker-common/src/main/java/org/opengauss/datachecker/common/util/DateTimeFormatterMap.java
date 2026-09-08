@@ -16,8 +16,8 @@
 package org.opengauss.datachecker.common.util;
 
 import java.time.format.DateTimeFormatter;
-import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * <pre>
@@ -36,15 +36,24 @@ import java.util.Map;
  * @since ：11
  */
 public class DateTimeFormatterMap {
-    private static final Map<Integer, DateTimeFormatter> FORMATTER = new LinkedHashMap<>();
+    private static final Map<Integer, DateTimeFormatter> FORMATTER = new ConcurrentHashMap<>();
     private static final String FORMAT = "yyyy-MM-dd HH:mm:ss";
     private static final String FORMAT_S = "S";
 
     /**
-     * Constructor
+     * Max length of the nanosecond fractional digits (TIMESTAMP scale limit).
      */
-    public DateTimeFormatterMap() {
-        FORMATTER.put(0, DateTimeFormatter.ofPattern(FORMAT));
+    private static final int MAX_NANO_PRECISION = 9;
+
+    static {
+        // Pre-build all common precisions 0~9 to avoid runtime computeIfAbsent races among threads
+        for (int i = 0; i <= MAX_NANO_PRECISION; i++) {
+            FORMATTER.put(i, DateTimeFormatter.ofPattern(patternOf(i)));
+        }
+    }
+
+    private static String patternOf(int numberOfTimes) {
+        return numberOfTimes == 0 ? FORMAT : FORMAT + "." + FORMAT_S.repeat(numberOfTimes);
     }
 
     /**
@@ -54,7 +63,6 @@ public class DateTimeFormatterMap {
      * @return DateTimeFormatter
      */
     public DateTimeFormatter get(Integer length) {
-        return FORMATTER.computeIfAbsent(length,
-            numberOfTimes -> DateTimeFormatter.ofPattern(FORMAT + "." + FORMAT_S.repeat(numberOfTimes)));
+        return FORMATTER.computeIfAbsent(length, len -> DateTimeFormatter.ofPattern(patternOf(len)));
     }
 }

@@ -19,6 +19,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.NotEmpty;
+import org.opengauss.datachecker.common.entry.common.RepairEntry;
 import org.opengauss.datachecker.common.entry.extract.ExtractConfig;
 import org.opengauss.datachecker.common.entry.extract.ExtractTask;
 import org.opengauss.datachecker.common.entry.extract.PageExtract;
@@ -270,5 +271,18 @@ public class ExtractController {
     @GetMapping("/check/table/empty")
     Result<Boolean> isCheckTableEmpty(@RequestParam(name = "isForced") boolean isForced) {
         return Result.success(metaDataService.mdsIsCheckTableEmpty(isForced));
+    }
+
+
+    /**
+     * Query the actual column values of differing rows by primary key,
+     * for the check side to log diff details and locate problems.
+     *
+     * @param repairEntry repair entry whose diffSet holds the primary keys to query
+     * @return composite primary key -> (column name -> column value)
+     */
+    @PostMapping("/extract/debug/query/columnValues")
+    Result<Map<String, Map<String, String>>> queryColumnValues(@RequestBody RepairEntry repairEntry) {
+        return Result.success(dataExtractService.queryColumnValues(repairEntry));
     }
 }
