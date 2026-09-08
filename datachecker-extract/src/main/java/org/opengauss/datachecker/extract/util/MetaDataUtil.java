@@ -51,6 +51,17 @@ public class MetaDataUtil {
             List.of("uint8", "long", "decimal", "numeric", "number", "bigint", "double", "float");
 
     /**
+     * Currently only Oracle LONG / LONG RAW are enabled: they are Oracle legacy streaming
+     * types that JDBC requires to be read before the other columns of the row, otherwise the
+     * driver drops the LONG stream and later reads fail with "Stream has already been
+     * closed" (guaranteed on wide tables). diff_detail queries exclude them entirely to
+     * avoid that error; other large types stay unfiltered so diff_detail can still show the
+     * real differences of large fields.
+     * Note: dataType comes from ADM_TAB_COLUMNS.data_type; LONG RAW is the spaced "LONG RAW".
+     */
+    private static final List<String> LARGE_COLUMN_TYPES = List.of("long", "long raw");
+
+    /**
      * getTableColumns
      *
      * @param tableMetadata tableMetadata
@@ -116,9 +127,9 @@ public class MetaDataUtil {
     }
 
     /**
-     * 判断当前列类型是否是数字类型
+     * Whether the current column type is a numeric type.
      *
-     * @param columnKey 列元数据
+     * @param columnKey column metadata
      * @return boolean
      */
     public static boolean isDigitKey(ColumnsMetaData columnKey) {
@@ -131,7 +142,7 @@ public class MetaDataUtil {
     }
 
     /**
-     * 大数字类型，结果可能为科学计数表示
+     * Large numeric types; values may be represented in scientific notation.
      *
      * @param primaryKey primaryKey
      * @return boolean
@@ -149,5 +160,41 @@ public class MetaDataUtil {
                 .filter(dataType -> dataType.equalsIgnoreCase(primaryKey.getDataType()))
                 .findAny()
                 .isEmpty();
+    }
+
+    /**
+     * Whether the given data type is a large-object type (CLOB/BLOB/text and the like).
+     *
+     * @param dataType column data type
+     * @return true if the type is a large-object type
+     */
+    public static boolean isLargeColumnType(String dataType) {
+        if (dataType == null) {
+            return false;
+        }
+        return LARGE_COLUMN_TYPES.contains(dataType.toLowerCase(Locale.getDefault()));
+    }
+
+    /**
+     * Return a copy of the metadata with large-object columns removed; primary key columns
+     * are always kept so the filtered metadata stays usable for WHERE clauses.
+     *
+     * @param metadata original table metadata
+     * @return filtered table metadata
+     */
+    public static TableMetadata filterLargeColumns(TableMetadata metadata) {
+        if (metadata == null || CollectionUtils.isEmpty(metadata.getColumnsMetas())) {
+            return metadata;
+        }
+        List<ColumnsMetaData> filteredColumns = metadata.getColumnsMetas().stream()
+                .filter(col -> !isLargeColumnType(col.getDataType()))
+                .collect(Collectors.toList());
+        TableMetadata filtered = new TableMetadata();
+        filtered.setTableName(metadata.getTableName());
+        filtered.setSchema(metadata.getSchema());
+        filtered.setColumnsMetas(filteredColumns);
+        filtered.setPrimaryMetas(metadata.getPrimaryMetas());
+        filtered.setOgCompatibilityB(metadata.isOgCompatibilityB());
+        return filtered;
     }
 }

@@ -477,4 +477,16 @@ public class SliceCheckResultManager {
     private void appendLogFile(String logPath, List<String> resultList) {
         FileUtils.writeAppendFile(logPath, resultList);
     }
+
+    /**
+     * Collect all failed check results across tables.
+     *
+     * @return failed check result list
+     */
+    public List<CheckDiffResult> getFailedCheckResults() {
+        return checkResult.values().stream()
+            .flatMap(List::stream)
+            .filter(result -> CheckResultConstants.RESULT_FAILED.equals(result.getResult()))
+            .collect(Collectors.toList());
+    }
 }

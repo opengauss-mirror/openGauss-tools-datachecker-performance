@@ -110,8 +110,10 @@ public class TopicInitialize {
 
     private String createTopic(String process, Endpoint endpoint, int no) {
         String topicName = TopicUtil.createMoreFixedTopicName(process, endpoint, no);
-        kafkaServiceManager.createTopic(topicName, 1);
-        LogUtils.info(log, "create data check fixed topic name {}", topicName);
+        int partitionSize = ConfigCache.getIntValue(ConfigConstants.TOPIC_PARTITION_SIZE);
+        kafkaServiceManager.createTopic(topicName, partitionSize > 0 ? partitionSize : 1);
+        LogUtils.info(log, "create data check fixed topic name {} , partitions={}", topicName,
+            partitionSize > 0 ? partitionSize : 1);
         return topicName;
     }
 }

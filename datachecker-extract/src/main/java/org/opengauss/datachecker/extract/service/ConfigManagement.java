@@ -20,6 +20,7 @@ import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.csv.CsvPathConfig;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
+import org.opengauss.datachecker.common.entry.enums.PrecisionMode;
 import org.opengauss.datachecker.common.util.SpringUtil;
 import org.opengauss.datachecker.extract.config.DataSourceConfig;
 import org.opengauss.datachecker.extract.config.DruidDataSourceConfig;
@@ -80,10 +81,18 @@ public class ConfigManagement {
     private int minEvictableIdleTimeMillis;
     @Value("${spring.lifecycle.timeout-per-shutdown-phase}")
     private int timeoutPerShutdownPhase;
-    @Value("${spring.extract.object-size-expansion-factor}")
-    private int objectSizeExpansionFactor;
+    @Value("${spring.jdbc.result-set.fetch-size:200}")
+    private int fetchSize;
     @Value("${spring.check.max-retry-times}")
     private int maxRetryTimes;
+    @Value("${data.check.oracle2ograc.precision-mode:COMPATIBLE}")
+    private String oracle2ogracPrecisionMode;
+    @Value("${data.check.diff-debug-log-enabled:false}")
+    private boolean isDiffDebugLogEnabled;
+    @Value("${spring.extract.memory-safe-watermark:0.30}")
+    private double memorySafeWatermark;
+    @Value("${spring.extract.memory-min-concurrency:1}")
+    private int memoryMinConcurrency;
 
     /**
      * init csv config
@@ -124,11 +133,15 @@ public class ConfigManagement {
         ConfigCache.put(ConfigConstants.MEMORY_MONITOR, isEnableMemoryMonitor);
         ConfigCache.put(ConfigConstants.QUERY_DOP, queryDop);
         ConfigCache.put(ConfigConstants.MAXIMUM_TABLE_SLICE_SIZE, maximumTableSliceSize);
-        ConfigCache.put(ConfigConstants.FETCH_SIZE, 1000);
+        ConfigCache.put(ConfigConstants.FETCH_SIZE, fetchSize);
         ConfigCache.put(ConfigConstants.TIMEOUT_PER_SHUTDOWN_PHASE, timeoutPerShutdownPhase);
         ConfigCache.put(ConfigConstants.EXTEND_MAXIMUM_POOL_SIZE, extendMaxPoolSize);
         ConfigCache.put(ConfigConstants.MAXIMUM_POOL_SIZE, maxPoolSize);
         ConfigCache.put(ConfigConstants.MAX_RETRY_TIMES, maxRetryTimes);
+        ConfigCache.put(ConfigConstants.ORACLE2OGRAC_PRECISION_MODE, parsePrecisionMode(oracle2ogracPrecisionMode));
+        ConfigCache.put(ConfigConstants.DIFF_DEBUG_LOG_ENABLED, isDiffDebugLogEnabled);
+        ConfigCache.put(ConfigConstants.MEMORY_SAFE_WATERMARK, memorySafeWatermark);
+        ConfigCache.put(ConfigConstants.MEMORY_MIN_CONCURRENCY, memoryMinConcurrency);
 
         loadKafkaProperties();
     }
@@ -136,6 +149,23 @@ public class ConfigManagement {
     public void loadKafkaProperties() {
         ConfigCache.put(ConfigConstants.KAFKA_SERVERS, servers);
         kafkaAdminService.initAdminClient();
+    }
+
+    /**
+     * Parse the precision mode; null/blank/invalid values fall back to COMPATIBLE.
+     *
+     * @param value raw precision mode string from configuration
+     * @return parsed PrecisionMode
+     */
+    private PrecisionMode parsePrecisionMode(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return PrecisionMode.COMPATIBLE;
+        }
+        try {
+            return PrecisionMode.valueOf(value.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            return PrecisionMode.COMPATIBLE;
+        }
     }
 
     private void setDataSourceConfig(DruidDataSource bean) {
@@ -159,7 +189,6 @@ public class ConfigManagement {
     private void setExtractConfig(ExtractProperties properties) {
         ConfigCache.put(ConfigConstants.ENDPOINT, properties.getEndpoint());
         ConfigCache.put(ConfigConstants.DATA_BASE_TYPE, properties.getDatabaseType());
-        ConfigCache.put(ConfigConstants.OBJECT_SIZE_EXPANSION_FACTOR, objectSizeExpansionFactor);
         ConfigCache.put(ConfigConstants.DEBEZIUM_ROW_DISPLAY, isDebeziumRowDisplay);
     }
 }

@@ -9,6 +9,11 @@ spring:
     core-pool-size: 3
     maximum-pool-size: 3
     maximum-topic-size: 1
+    sample:
+      # Sampling check ratio (0~1, 1 means full check)
+      ratio: 1
+      # Sampling trigger threshold: tables whose slice count is less than or equal to this value are fully checked without sampling; 0 means no threshold
+      threshold: 0
 data:
   check:
     data-path: ./check_result
@@ -20,6 +25,8 @@ data:
     increment-max-diff-count: 1000
     create-repair-sql: false
     max-retry-times: 200
+    # Enable this parameter to inspect the details of failed data differences
+    diff-debug-log-enabled: false
 rules:
   # There are three types of filtering rules: table-level rules, row-level rules, and column-level rules.
   # Rules are configured in the form of List collection.

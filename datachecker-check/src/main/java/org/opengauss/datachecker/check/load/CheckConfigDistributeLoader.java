@@ -105,6 +105,8 @@ public class CheckConfigDistributeLoader extends AbstractCheckLoader {
         globalConfig.addBoolProperties(ConfigConstants.SQL_MODE_PAD_CHAR_TO_FULL_LENGTH);
         globalConfig.addProperties(ConfigConstants.DATA_CHECK_SINK_DATABASE, Database.class);
         globalConfig.addProperties(ConfigConstants.DATA_CHECK_SOURCE_DATABASE, Database.class);
+        globalConfig.addProperties(ConfigConstants.SAMPLE_RATIO);
+        globalConfig.addIntProperties(ConfigConstants.SAMPLE_THRESHOLD);
         return globalConfig;
     }
 }

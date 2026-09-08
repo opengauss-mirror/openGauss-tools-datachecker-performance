@@ -51,8 +51,11 @@ public class AsyncConfig implements AsyncConfigurer {
     @Bean(name = "sliceSendExecutor")
     public ThreadPoolTaskExecutor getAsyncExecutor() {
         executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(corePoolSize);
-        executor.setMaxPoolSize(maxPoolSize);
+        // Sending is decoupled from extraction: a slow sender with fast query can leave cleanup tasks queued,
+        // so the pool needs 2x corePoolSize
+        int senderPoolSize = corePoolSize * 2;
+        executor.setCorePoolSize(senderPoolSize);
+        executor.setMaxPoolSize(senderPoolSize);
         executor.setQueueCapacity(Integer.MAX_VALUE);
         executor.setThreadNamePrefix("slice-send-executor-");
         executor.initialize();

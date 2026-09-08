@@ -18,6 +18,7 @@ package org.opengauss.datachecker.extract.slice;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.config.ConfigCache;
+import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.enums.Endpoint;
 import org.opengauss.datachecker.common.entry.enums.ErrorCode;
 import org.opengauss.datachecker.common.entry.extract.SliceVo;
@@ -128,7 +129,8 @@ public class TableDispatcher implements Runnable {
         tableSlice.setTotal(1);
         tableSlice.setEndpoint(ConfigCache.getEndPoint());
         tableSlice.setTableHash(tableMetadata.getTableHash());
-        tableSlice.setPtnNum(1);
+        int ptnNum = ConfigCache.getIntValue(ConfigConstants.TOPIC_PARTITION_SIZE);
+        tableSlice.setPtnNum(ptnNum > 0 ? ptnNum : 1);
         return tableSlice;
     }
 

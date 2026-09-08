@@ -203,6 +203,15 @@ public class JdbcDataOperations {
     }
 
     /**
+     * Called when the slice sending queue is full (Kafka sending blocked/timed out):
+     * temporarily tightens the memory safety margin to stop new slices from entering,
+     * while running slices are unaffected.
+     */
+    public void tightenAdmissionOnBackpressure() {
+        resourceManager.tightenWatermarkTemporarily();
+    }
+
+    /**
      * start openGauss query dop
      *
      * @param queryDop queryDop
@@ -221,13 +230,19 @@ public class JdbcDataOperations {
         int waitTimes = 0;
         while (!canExecQuery(free)) {
             if (isShutdown()) {
-                break;
+                return;
             }
             ThreadUtil.sleepMaxHalfSecond();
             waitTimes++;
             if (waitTimes >= LOG_WAIT_TIMES) {
-                LogUtils.debug(log, "wait times , try to take connection");
-                waitTimes = 0;
+                // Bounded wait: failing to get admission for ~5 minutes straight (600 x 0.5s) means resources
+                // are fully occupied or stuck. Throw so the slice fails and the whole-table re-check upstream
+                // retries it (no data loss, just re-extraction), instead of spinning forever.
+                log.error("takeConnection timeout after {} waits (~5min), connection=admission deprived. "
+                        + "The slice will be failed and retried by whole-table re-check. requested={} bytes",
+                    waitTimes, free);
+                throw new ExtractDataAccessException(
+                    "take connection admission timeout after " + waitTimes + " waits (~5min)");
             }
         }
     }

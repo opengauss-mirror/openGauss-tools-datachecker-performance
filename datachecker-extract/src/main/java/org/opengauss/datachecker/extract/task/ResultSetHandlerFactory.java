@@ -19,6 +19,7 @@ import org.opengauss.datachecker.common.config.ConfigCache;
 import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
 import org.opengauss.datachecker.common.entry.enums.DataBaseType;
+import org.opengauss.datachecker.common.entry.enums.PrecisionMode;
 
 import java.util.Objects;
 
@@ -48,9 +49,22 @@ public class ResultSetHandlerFactory {
                 return new OpenGaussResultSetHandler(supplyZero);
             }
         } else if (Objects.equals(databaseType, DataBaseType.O)) {
-            return new OracleResultSetHandler();
+            return new OracleResultSetHandler(getPrecisionMode());
+        } else if (Objects.equals(databaseType, DataBaseType.OGRAC)) {
+            return new OgracResultSetHandler(getPrecisionMode());
         } else {
             return null;
         }
+    }
+
+    /**
+     * Get the Oracle/oGRAC precision mode; defaults to COMPATIBLE when unset or on read errors,
+     * matching historical behavior.
+     *
+     * @return PrecisionMode
+     */
+    private PrecisionMode getPrecisionMode() {
+        PrecisionMode mode = ConfigCache.getValue(ConfigConstants.ORACLE2OGRAC_PRECISION_MODE, PrecisionMode.class);
+        return mode == null ? PrecisionMode.COMPATIBLE : mode;
     }
 }

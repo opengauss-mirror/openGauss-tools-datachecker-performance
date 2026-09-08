@@ -73,7 +73,8 @@ public abstract class AbstractTableProcessor extends AbstractProcessor {
      * @return fetch size
      */
     protected int getFetchSize() {
-        return ConfigCache.getIntValue(ConfigConstants.FETCH_SIZE);
+        int configured = ConfigCache.getIntValue(ConfigConstants.FETCH_SIZE);
+        return configured > 0 ? Math.min(configured, FETCH_SIZE_DEFAULT) : FETCH_SIZE_DEFAULT;
     }
 
     /**

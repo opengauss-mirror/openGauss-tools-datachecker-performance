@@ -29,11 +29,13 @@ import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.exception.CheckingException;
 import org.opengauss.datachecker.common.exception.DispatchClientException;
 import org.opengauss.datachecker.common.web.Result;
+import feign.FeignException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -254,6 +256,25 @@ public class FeignClientService {
             return result.getData();
         } else {
             return new ArrayList<>();
+        }
+    }
+
+    /**
+     * Query the actual column values of the rows covered by the repair entry from one endpoint.
+     *
+     * @param endpoint    endpoint type
+     * @param repairEntry repair entry
+     * @return row map keyed by primary key; empty map on failure
+     */
+    public Map<String, Map<String, String>> queryColumnValues(Endpoint endpoint, RepairEntry repairEntry) {
+        try {
+            Result<Map<String, Map<String, String>>> result = getClient(endpoint).queryColumnValues(repairEntry);
+            if (result.isSuccess()) {
+                return result.getData();
+            }
+            return new HashMap<>();
+        } catch (FeignException ex) {
+            return new HashMap<>();
         }
     }
 

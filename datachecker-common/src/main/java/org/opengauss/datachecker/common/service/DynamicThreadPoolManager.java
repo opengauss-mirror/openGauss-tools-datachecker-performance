@@ -18,10 +18,11 @@ package org.opengauss.datachecker.common.service;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
 
+import org.apache.logging.log4j.Logger;
 import org.opengauss.datachecker.common.constant.DynamicTpConstant;
 import org.opengauss.datachecker.common.exception.ExtractBootstrapException;
+import org.opengauss.datachecker.common.util.LogUtils;
 import org.opengauss.datachecker.common.util.ThreadPoolShutdownUtil;
-import org.opengauss.datachecker.common.util.ThreadUtil;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -41,6 +42,7 @@ import java.util.concurrent.ThreadPoolExecutor;
  */
 @Component
 public class DynamicThreadPoolManager {
+    private static final Logger log = LogUtils.getLogger(DynamicThreadPoolManager.class);
     private static final Map<String, ThreadPoolExecutor> EXECUTOR_SERVICE_CACHE = new ConcurrentHashMap<>();
 
     private volatile DynamicThreadPoolMonitor monitor;
@@ -113,9 +115,30 @@ public class DynamicThreadPoolManager {
         if (count < topicSize) {
             return buildExtendDtpExecutor(DynamicTpConstant.EXTEND_EXECUTOR + (count + 1), extendMaxPoolSize);
         } else {
-            ThreadUtil.sleepOneSecond();
-            return getFreeExecutor(topicSize, extendMaxPoolSize);
+            LogUtils.warn(log,
+                "all {} extend executors are busy, returning the least-busy one to avoid main-thread stall",
+                topicSize);
+            return getLeastBusyExtendExecutor();
         }
+    }
+
+    private ThreadPoolExecutor getLeastBusyExtendExecutor() {
+        ThreadPoolExecutor leastBusy = null;
+        int minQueue = Integer.MAX_VALUE;
+        for (Map.Entry<String, ThreadPoolExecutor> entry : EXECUTOR_SERVICE_CACHE.entrySet()) {
+            if (!entry.getKey().startsWith(DynamicTpConstant.EXTEND_EXECUTOR)) {
+                continue;
+            }
+            ThreadPoolExecutor pool = entry.getValue();
+            int queueSize = pool.getQueue().size();
+            LogUtils.info(log, "extend executor {} state: active={}, queue={}, completed={}",
+                entry.getKey(), pool.getActiveCount(), queueSize, pool.getCompletedTaskCount());
+            if (queueSize < minQueue) {
+                minQueue = queueSize;
+                leastBusy = pool;
+            }
+        }
+        return leastBusy;
     }
 
     private List<String> getFreeDtpList() {

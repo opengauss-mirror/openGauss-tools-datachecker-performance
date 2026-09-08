@@ -112,7 +112,19 @@ public class ConfigCache {
      */
     public static long getLongValue(String key) {
         Long value = getValue(key, Long.class);
-        return Objects.isNull(value) ? 0L : value;
+        return Objects.isNull(value) ? 0L : value.longValue();
+    }
+
+    /**
+     * get config key when value type is Long, fall back to default when missing
+     *
+     * @param key key
+     * @param defaultValue default value
+     * @return config value
+     */
+    public static long getLongValue(String key, long defaultValue) {
+        Long value = getValue(key, Long.class);
+        return Objects.isNull(value) ? defaultValue : value.longValue();
     }
 
     /**
@@ -123,7 +135,42 @@ public class ConfigCache {
      */
     public static int getIntValue(String key) {
         Integer value = getValue(key, Integer.class);
-        return Objects.isNull(value) ? 0 : value;
+        return Objects.isNull(value) ? 0 : value.intValue();
+    }
+
+    /**
+     * get config key when value type is Integer, fall back to default when missing
+     *
+     * @param key key
+     * @param defaultValue default value
+     * @return config value
+     */
+    public static int getIntValue(String key, int defaultValue) {
+        Integer value = getValue(key, Integer.class);
+        return Objects.isNull(value) ? defaultValue : value.intValue();
+    }
+
+    /**
+     * get config key when value type is Double (decimals supported)
+     *
+     * @param key config key
+     * @return config value, 0.0 when not configured
+     */
+    public static double getDoubleValue(String key) {
+        Double value = getValue(key, Double.class);
+        return Objects.isNull(value) ? 0.0 : value.doubleValue();
+    }
+
+    /**
+     * get config key when value type is Double, fall back to default when missing
+     *
+     * @param key key
+     * @param defaultValue default value
+     * @return config value
+     */
+    public static double getDoubleValue(String key, double defaultValue) {
+        Double value = getValue(key, Double.class);
+        return Objects.isNull(value) ? defaultValue : value.doubleValue();
     }
 
     /**

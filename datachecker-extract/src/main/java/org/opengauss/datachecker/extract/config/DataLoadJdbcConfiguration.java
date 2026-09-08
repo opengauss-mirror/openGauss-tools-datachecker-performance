@@ -19,6 +19,7 @@ import org.opengauss.datachecker.common.entry.enums.DataBaseType;
 import org.opengauss.datachecker.common.entry.enums.DataLoad;
 import org.opengauss.datachecker.extract.data.mapper.MetaDataMapper;
 import org.opengauss.datachecker.extract.data.mapper.MysqlMetaDataMapper;
+import org.opengauss.datachecker.extract.data.mapper.OgracMetaDataMapper;
 import org.opengauss.datachecker.extract.data.mapper.OpgsMetaDataMapper;
 import org.opengauss.datachecker.extract.data.mapper.OracleMetaDataMapper;
 import org.springframework.beans.factory.annotation.Value;
@@ -48,6 +49,8 @@ public class DataLoadJdbcConfiguration {
     private OpgsMetaDataMapper opgsMetaDataMapper;
     @Resource
     private OracleMetaDataMapper oracleMetaDataMapper;
+    @Resource
+    private OgracMetaDataMapper ogracMetaDataMapper;
 
     @Value("${spring.extract.dataLoadMode}")
     private DataLoad dataLoadMode;
@@ -57,6 +60,7 @@ public class DataLoadJdbcConfiguration {
             mybatisMappers.put(DataBaseType.MS, mysqlMetaDataMapper);
             mybatisMappers.put(DataBaseType.OG, opgsMetaDataMapper);
             mybatisMappers.put(DataBaseType.O, oracleMetaDataMapper);
+            mybatisMappers.put(DataBaseType.OGRAC, ogracMetaDataMapper);
         }
         return mybatisMappers;
     }

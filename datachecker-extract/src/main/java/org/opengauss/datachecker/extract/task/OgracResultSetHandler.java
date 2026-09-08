@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2022 Huawei Technologies Co.,Ltd.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2026-2026. All rights reserved.
  *
  * openGauss is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -32,16 +32,15 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Oracle-side result set handler: converts JDBC row data to a string Map column by column type.
- * Compared with the base implementation, it caches column metadata, handler selection and the
- * LONG/LONG RAW-first read order per ResultSetMetaData, so the per-row loop only reads values and
- * writes the Map; type name variants returned by Oracle JDBC are normalized for routing.
+ * ResultSet handler for the oGRAC source database: converts each row of the extract
+ * query into a column-name to value-string map, dispatching per column type to
+ * handlers built by {@link OgracTypeHandlerFactory}.
  *
  * @author : xujintao
- * @date : Created in 2026/8/31
+ * @date : Created in 2026/9/7
  * @since : 11
  */
-public class OracleResultSetHandler extends ResultSetHandler {
+public class OgracResultSetHandler extends ResultSetHandler {
     private static final int MAX_CACHE_SIZE = 1024;
 
     private final OgracTypeHandlerFactory ogracFactory = new OgracTypeHandlerFactory();
@@ -50,12 +49,12 @@ public class OracleResultSetHandler extends ResultSetHandler {
     private final SimpleTypeHandler defaultObjectHandler = ogracFactory.createObjectHandlerSafe();
     private final PrecisionMode precisionMode;
 
-    private final Map<ResultSetMetaData, ColumnDescriptors> metadataCache = new ConcurrentHashMap<>();
+    private final Map<ResultSetMetaData, ColumnDescriptor[]> metadataCache = new ConcurrentHashMap<>();
 
     /**
      * Default constructor using COMPATIBLE (kernel-compatible) mode, matching historical behavior.
      */
-    public OracleResultSetHandler() {
+    public OgracResultSetHandler() {
         this(PrecisionMode.COMPATIBLE);
     }
 
@@ -66,7 +65,7 @@ public class OracleResultSetHandler extends ResultSetHandler {
      *
      * @param precisionMode precision mode
      */
-    public OracleResultSetHandler(PrecisionMode precisionMode) {
+    public OgracResultSetHandler(PrecisionMode precisionMode) {
         super();
         this.precisionMode = precisionMode;
         registerHandlers();
@@ -84,6 +83,7 @@ public class OracleResultSetHandler extends ResultSetHandler {
         boolean isStrict = precisionMode == PrecisionMode.STRICT;
         registerIntervalHandlers(isStrict);
         registerNumberHandlers(isStrict);
+        registerFloatHandlers(isStrict);
         registerDateTimeHandlers(isStrict);
     }
 
@@ -91,28 +91,13 @@ public class OracleResultSetHandler extends ResultSetHandler {
      * Register character type handlers (mode-agnostic, identical normalization on both sides).
      */
     private void registerCharHandlers() {
-        simpleTypeHandlers.put(OracleType.CHAR, ogracFactory.createCharHandler());
-        simpleTypeHandlers.put(OracleType.VARCHAR2, ogracFactory.createCharHandler());
-        simpleTypeHandlers.put(OracleType.NCHAR, ogracFactory.createCharHandler());
-        simpleTypeHandlers.put(OracleType.NVARCHAR2, ogracFactory.createCharHandler());
-        simpleTypeHandlers.put(OracleType.LONG, ogracFactory.createCharHandler());
-    }
-
-    /**
-     * Register LOB and binary type handlers (mode-agnostic).
-     */
-    private void registerLobAndBinaryHandlers() {
-        // LOB: CLOB family (mode-agnostic)
-        simpleTypeHandlers.put(OracleType.CLOB, ogracFactory.createOracleClobHandlerSafe());
-        simpleTypeHandlers.put(OracleType.NCLOB, ogracFactory.createOracleClobHandlerSafe());
-        simpleTypeHandlers.put(OracleType.JSON, ogracFactory.createOracleClobHandlerSafe());
-        simpleTypeHandlers.put(OracleType.XMLTYPE, ogracFactory.createOracleXmlHandlerSafe());
-        // LOB: BLOB family (mode-agnostic)
-        simpleTypeHandlers.put(OracleType.LONG_RAW, ogracFactory.createOracleBlobHandlerSafe());
-        simpleTypeHandlers.put(OracleType.BLOB, ogracFactory.createOracleBlobHandlerSafe());
-        simpleTypeHandlers.put(OracleType.NBLOB, ogracFactory.createOracleBlobHandlerSafe());
-        // Binary RAW (mode-agnostic)
-        simpleTypeHandlers.put(OracleType.RAW, ogracFactory.createOracleRawHandler());
+        simpleTypeHandlers.put(OgracType.CHAR, ogracFactory.createCharHandler());
+        simpleTypeHandlers.put(OgracType.VARCHAR, ogracFactory.createCharHandler());
+        simpleTypeHandlers.put(OgracType.VARCHAR2, ogracFactory.createCharHandler());
+        simpleTypeHandlers.put(OgracType.TEXT, ogracFactory.createCharHandler());
+        simpleTypeHandlers.put(OgracType.NCHAR, ogracFactory.createCharHandler());
+        simpleTypeHandlers.put(OgracType.NVARCHAR2, ogracFactory.createCharHandler());
+        simpleTypeHandlers.put(OgracType.LONG, ogracFactory.createCharHandler());
     }
 
     /**
@@ -123,39 +108,75 @@ public class OracleResultSetHandler extends ResultSetHandler {
      * @param isStrict whether STRICT mode
      */
     private void registerIntervalHandlers(boolean isStrict) {
-        // INTERVAL YEAR TO MONTH: zero-padded in both modes
-        simpleTypeHandlers.put(OracleType.INTERVAL_YEAR_TO_MONTH, ogracFactory.createIntervalYearMonthHandler());
+        // INTERVAL YEAR TO MONTH: zero-padded in both modes (including the migration target DATE_YEAR_MONTH)
+        simpleTypeHandlers.put(OgracType.INTERVAL_YEAR_TO_MONTH, ogracFactory.createIntervalYearMonthHandler());
+        simpleTypeHandlers.put(OgracType.DATE_YEAR_MONTH, ogracFactory.createIntervalYearMonthHandler());
         // INTERVAL DAY TO SECOND: STRICT keeps the original precision (getString as-is), COMPATIBLE rounds to 6 digits
-        simpleTypeHandlers.put(OracleType.INTERVAL_DAY_TO_SECOND,
+        simpleTypeHandlers.put(OgracType.INTERVAL_DAY_TO_SECOND,
+            isStrict ? ogracFactory.createCharHandler() : ogracFactory.createIntervalDaySecondHandler());
+        simpleTypeHandlers.put(OgracType.DATE_DAY_HMS,
             isStrict ? ogracFactory.createCharHandler() : ogracFactory.createIntervalDaySecondHandler());
     }
 
     /**
-     * Register NUMBER family and float type handlers.
-     * The NUMBER family keeps full precision under STRICT (getString + toPlainString) and is rounded
-     * to 12 decimal places under COMPATIBLE; float types use getDouble (64-bit) under STRICT to keep
-     * precision differences and getFloat (32-bit) under COMPATIBLE to align with oGRAC REAL.
+     * Register LOB and binary type handlers (mode-agnostic).
+     */
+    private void registerLobAndBinaryHandlers() {
+        // LOB: CLOB (mode-agnostic)
+        simpleTypeHandlers.put(OgracType.CLOB, ogracFactory.createOracleClobHandlerSafe());
+        simpleTypeHandlers.put(OgracType.NCLOB, ogracFactory.createOracleClobHandlerSafe());
+        simpleTypeHandlers.put(OgracType.XMLTYPE, ogracFactory.createOracleXmlHandlerSafe());
+        // LOB: BLOB (mode-agnostic), IMAGE being its variant
+        simpleTypeHandlers.put(OgracType.BLOB, ogracFactory.createOracleBlobHandlerSafe());
+        simpleTypeHandlers.put(OgracType.IMAGE, ogracFactory.createOracleBlobHandlerSafe());
+        // Binary RAW (mode-agnostic)
+        simpleTypeHandlers.put(OgracType.RAW, ogracFactory.createOracleRawHandler());
+        // BINARY/VARBINARY: getObject returns byte[]; the default handler would print junk like [B@xxx,
+        // so getBytes + hex must be used
+        simpleTypeHandlers.put(OgracType.BINARY, ogracFactory.createOracleBlobHandlerSafe());
+        simpleTypeHandlers.put(OgracType.VARBINARY, ogracFactory.createOracleBlobHandlerSafe());
+    }
+
+    /**
+     * Register NUMBER family handlers.
+     * STRICT keeps full precision (getString + toPlainString); COMPATIBLE rounds to 12 decimal places uniformly.
      *
      * @param isStrict whether STRICT mode
      */
     private void registerNumberHandlers(boolean isStrict) {
         CommonTypeHandler numberHandler = isStrict
-            ? ogracFactory.createStrictOracleBigDecimalHandler()
+            ? ogracFactory.createStrictOgracBigDecimalHandler()
             : ogracFactory.createOracleFloatCompatibleHandler();
-        commonTypeHandlers.put(OracleType.NUMBER, numberHandler);
-        commonTypeHandlers.put(OracleType.NUMBER0, numberHandler);
-        commonTypeHandlers.put(OracleType.INTEGER, numberHandler);
-        commonTypeHandlers.put(OracleType.INT, numberHandler);
-        commonTypeHandlers.put(OracleType.SMALLINT, numberHandler);
+        commonTypeHandlers.put(OgracType.NUMBER, numberHandler);
+        commonTypeHandlers.put(OgracType.NUMBER0, numberHandler);
+        commonTypeHandlers.put(OgracType.INTEGER, numberHandler);
+        commonTypeHandlers.put(OgracType.INT, numberHandler);
+        commonTypeHandlers.put(OgracType.SMALLINT, numberHandler);
+        commonTypeHandlers.put(OgracType.BIGINT, numberHandler);
+        commonTypeHandlers.put(OgracType.NUMERIC, numberHandler);
+        commonTypeHandlers.put(OgracType.DECIMAL, numberHandler);
+        commonTypeHandlers.put(OgracType.UINT, numberHandler);
+        commonTypeHandlers.put(OgracType.NUMBER2, numberHandler);
         // FLOAT: STRICT uses getDouble (64-bit); COMPATIBLE reuses NUMBER's 12-decimal normalization
-        commonTypeHandlers.put(OracleType.FLOAT,
+        commonTypeHandlers.put(OgracType.FLOAT,
             isStrict ? ogracFactory.createStrictFloatHandler() : numberHandler);
+    }
+
+    /**
+     * Register float type handlers.
+     * STRICT uses getDouble (64-bit) to keep precision differences; COMPATIBLE uses getFloat (32-bit)
+     * to align with oGRAC REAL.
+     *
+     * @param isStrict whether STRICT mode
+     */
+    private void registerFloatHandlers(boolean isStrict) {
         CommonTypeHandler floatHandler = isStrict
             ? ogracFactory.createStrictFloatHandler()
             : ogracFactory.createBinaryFloatCompatibleHandler();
-        commonTypeHandlers.put(OracleType.BINARY_FLOAT, floatHandler);
-        commonTypeHandlers.put(OracleType.BINARY_DOUBLE, floatHandler);
-        commonTypeHandlers.put(OracleType.DOUBLE_PRECISION, floatHandler);
+        commonTypeHandlers.put(OgracType.BINARY_FLOAT, floatHandler);
+        commonTypeHandlers.put(OgracType.BINARY_DOUBLE, floatHandler);
+        commonTypeHandlers.put(OgracType.DOUBLE_PRECISION, floatHandler);
+        commonTypeHandlers.put(OgracType.REAL, floatHandler);
     }
 
     /**
@@ -167,29 +188,30 @@ public class OracleResultSetHandler extends ResultSetHandler {
      */
     private void registerDateTimeHandlers(boolean isStrict) {
         // DATE has no sub-second part and both sides agree; both modes share the full-precision handler
-        commonTypeHandlers.put(OracleType.DATE, ogracFactory.createFullPrecisionDateTimeHandler());
+        commonTypeHandlers.put(OgracType.DATE, ogracFactory.createFullPrecisionDateTimeHandler());
         // TIMESTAMP: STRICT keeps sub-second digits (per scale), COMPATIBLE truncates to seconds
-        commonTypeHandlers.put(OracleType.TIMESTAMP, isStrict
+        commonTypeHandlers.put(OgracType.TIMESTAMP, isStrict
             ? ogracFactory.createFullPrecisionDateTimeHandler()
             : ogracFactory.createTruncatedToSecondDateTimeCompatibleHandler());
         // TIMESTAMP WITH TIME ZONE: STRICT uses the TSTZ full-precision handler (GMT+8 normalization,
-        // sub-second digits kept); COMPATIBLE uses the trailing-zero-stripped variant, aligned with
-        // the oGRAC side's to_char output that pads sub-second digits to a fixed 6 digits
-        // (the same value .680070 yields .68007 on both sides, avoiding new diffs from sub-second trailing zeros)
+        // sub-second digits kept); COMPATIBLE uses the trailing-zero-stripped variant, aligning the
+        // digit-count difference between oGRAC's to_char rewrite (sub-second padded to a fixed 6 digits)
+        // and Oracle's per-column scale output (e.g. .998000 and .998 produce identical output for the same value)
         CommonTypeHandler timestampTzHandler = isStrict
             ? ogracFactory.createTimestampTzStringHandlerNanosecond()
             : ogracFactory.createTimestampTzStringHandlerNanosecondCompat();
-        commonTypeHandlers.put(OracleType.TIMESTAMPTZ, timestampTzHandler);
-        commonTypeHandlers.put(OracleType.TIMESTAMPTZ_OFFICIAL, timestampTzHandler);
+        commonTypeHandlers.put(OgracType.TIMESTAMPTZ, timestampTzHandler);
+        commonTypeHandlers.put(OgracType.TIMESTAMPTZ_OFFICIAL, timestampTzHandler);
+        commonTypeHandlers.put(OgracType.TIMESTAMP_TZ, timestampTzHandler);
         // TIMESTAMP WITH LOCAL TIME ZONE: STRICT keeps sub-second digits, COMPATIBLE truncates to seconds
         CommonTypeHandler timestampLtzHandler = isStrict
-            ? ogracFactory.createTimestampZoneGmt8HandlerStrict()
-            : ogracFactory.createTimestampZoneGmt8HandlerCompatible();
-        commonTypeHandlers.put(OracleType.TIMESTAMPLTZ, timestampLtzHandler);
-        commonTypeHandlers.put(OracleType.TIMESTAMPLTZ_OFFICIAL, timestampLtzHandler);
+            ? ogracFactory.createOgracTimestampZoneGmt8HandlerStrict()
+            : ogracFactory.createOgracTimestampZoneGmt8HandlerCompatible();
+        commonTypeHandlers.put(OgracType.TIMESTAMPLTZ, timestampLtzHandler);
+        commonTypeHandlers.put(OgracType.TIMESTAMPLTZ_OFFICIAL, timestampLtzHandler);
+        commonTypeHandlers.put(OgracType.TIMESTAMP_LTZ, timestampLtzHandler);
+        commonTypeHandlers.put(OgracType.UTC, timestampLtzHandler);
     }
-
-    // ---- conversion ----
 
     /**
      * Convert the current result set row to a Map. Instead of re-parsing metadata for every row and
@@ -198,6 +220,9 @@ public class OracleResultSetHandler extends ResultSetHandler {
      * - HashMap replaces the base class TreeMap (no sorting needed; values are read later in columns order)
      * - A plain for loop replaces the base class IntStream (avoids creating a stream per row)
      * - Column metadata and normalizeTypeName are parsed only once per ResultSet (cached by rsmd)
+     * - Character columns read via getString once: first check the value shape to decide whether to
+     *   route to TSTZ normalization, and reuse that single read either way, avoiding the double
+     *   getString ("check + handler read") on the same column in the base/original convert.
      *
      * @param tableName JDBC Data query table
      * @param rsmd JDBC Data query result set metadata
@@ -214,30 +239,21 @@ public class OracleResultSetHandler extends ResultSetHandler {
             LOG.error("{} parse data metadata information exception", ErrorCode.EXECUTE_QUERY_SQL, ex);
             return new HashMap<>();
         }
-        ColumnDescriptors columns;
+        ColumnDescriptor[] descriptors;
         try {
-            columns = resolveColumnDescriptors(rsmd, columnCount);
+            descriptors = resolveColumnDescriptors(rsmd, columnCount);
         } catch (SQLException ex) {
             LOG.error("{} parse data metadata information exception", ErrorCode.EXECUTE_QUERY_SQL, ex);
             return new HashMap<>();
         }
-        ColumnDescriptor[] descriptors = columns.descriptors;
-        // LONG/LONG RAW-first read order: computed once at the first parse of each ResultSet and
-        // cached alongside the descriptors; here we only read in that order, no per-row recomputation
-        // (see buildLongFirstReadOrder).
-        int[] readOrder = columns.readOrder;
         Map<String, String> result = new HashMap<>(columnCount * 2);
-        for (int orderIdx = 0; orderIdx < columnCount; orderIdx++) {
-            int i = readOrder[orderIdx];
+        for (int i = 0; i < columnCount; i++) {
             ColumnDescriptor d = descriptors[i];
             int columnIdx = i + 1;
             try {
                 String value = convertColumn(resultSet, rsmd, columnIdx, d);
                 result.put(d.columnLabel, value);
-                // LONG/LONG RAW can be read only once: the mapped value already consumed its stream,
-                // so getObject for the raw value would always fail; captureRaw debug mode therefore
-                // skips LONG columns (diff_detail queries already filter this type, so normally unreachable).
-                if (isCaptureRaw && !isLongColumn(d)) {
+                if (isCaptureRaw) {
                     result.put(d.columnLabel + RAW_VALUE_SUFFIX, readRawValueCopy(resultSet, columnIdx).orElse(null));
                 }
             } catch (SQLException ex) {
@@ -252,16 +268,15 @@ public class OracleResultSetHandler extends ResultSetHandler {
      * Resolve each column's label, type name and handler from ResultSetMetaData (runs only at the
      * first parse of each ResultSet; later rows hit the cache directly). The same rsmd object is
      * reused across all rows of a result set, so caching by rsmd identity is safe.
-     * Also computes the LONG/LONG RAW-first read order once and caches it with the descriptors for reuse.
      *
      * @param rsmd JDBC result set metadata
      * @param columnCount total column count of the result set
-     * @return column descriptor array plus the read order
+     * @return per-column metadata and handler descriptor array
      * @throws SQLException thrown when reading column metadata fails
      */
-    private ColumnDescriptors resolveColumnDescriptors(ResultSetMetaData rsmd, int columnCount)
+    private ColumnDescriptor[] resolveColumnDescriptors(ResultSetMetaData rsmd, int columnCount)
         throws SQLException {
-        ColumnDescriptors cached = metadataCache.get(rsmd);
+        ColumnDescriptor[] cached = metadataCache.get(rsmd);
         if (cached != null) {
             return cached;
         }
@@ -282,6 +297,7 @@ public class OracleResultSetHandler extends ResultSetHandler {
                 columnTypeName = null;
             }
             String normalizedTypeName = normalizeTypeName(columnTypeName);
+            boolean isCharLikeColumn = isCharLike(normalizedTypeName);
             SimpleTypeHandler simpleHandler = simpleTypeHandlers.get(normalizedTypeName);
             CommonTypeHandler commonHandler = null;
             if (simpleHandler == null) {
@@ -291,46 +307,22 @@ public class OracleResultSetHandler extends ResultSetHandler {
                 }
             }
             descriptors[i] = new ColumnDescriptor(columnLabel, normalizedTypeName,
-                simpleHandler, commonHandler);
+                simpleHandler, commonHandler, isCharLikeColumn);
         }
-        ColumnDescriptors columns = new ColumnDescriptors(descriptors, buildLongFirstReadOrder(descriptors));
         if (metadataCache.size() > MAX_CACHE_SIZE) {
             metadataCache.clear();
         }
-        metadataCache.put(rsmd, columns);
-        return columns;
-    }
-
-    /**
-     * Build a "LONG/LONG RAW columns first" read order (computed once per ResultSet, reused across rows).
-     * Oracle streams LONG data, and reading any other column of the row discards that stream; reading
-     * LONG afterwards then fails with "Stream has already been closed" (always hit when a LONG column
-     * comes after other columns on a wide table). So the read indices are ordered "LONG/LONG RAW first,
-     * then the rest"; with no LONG column it is just the natural order 0..n-1. result is an unordered
-     * HashMap, so the write order does not affect downstream reads by the columns list.
-     *
-     * @param descriptors per-column metadata and handler descriptors
-     * @return column indices arranged in read order
-     */
-    private int[] buildLongFirstReadOrder(ColumnDescriptor[] descriptors) {
-        int columnCount = descriptors.length;
-        int[] readOrder = new int[columnCount];
-        int orderPos = 0;
-        for (int i = 0; i < columnCount; i++) {
-            if (isLongColumn(descriptors[i])) {
-                readOrder[orderPos++] = i;
-            }
-        }
-        for (int i = 0; i < columnCount; i++) {
-            if (!isLongColumn(descriptors[i])) {
-                readOrder[orderPos++] = i;
-            }
-        }
-        return readOrder;
+        metadataCache.put(rsmd, descriptors);
+        return descriptors;
     }
 
     /**
      * Convert one column in-row using its resolved column descriptor.
+     * <p>Character-like columns read via getString once: after the oGRAC side rewrites a TIMESTAMP
+     * WITH TIME ZONE column as to_char(col) in the SELECT, its JDBC type degrades to TEXT/VARCHAR,
+     * so the value shape decides the route — a TSTZ string with a timezone suffix goes to GMT+8
+     * normalization (symmetric with the Oracle side), otherwise it is returned as an ordinary
+     * character value. Both cases reuse the same single getString result, avoiding a second read.
      *
      * @param resultSet JDBC result set
      * @param rsmd JDBC result set metadata
@@ -342,7 +334,26 @@ public class OracleResultSetHandler extends ResultSetHandler {
     private String convertColumn(ResultSet resultSet, ResultSetMetaData rsmd, int columnIdx,
         ColumnDescriptor d) throws SQLException {
         String value;
-        if (d.commonHandler != null) {
+        if (d.isCharLike) {
+            // Character-like columns (including TSTZ columns rewritten by to_char): read once, then
+            // route by value shape. Values with a timezone suffix are normalized per the reference
+            // TSTZ handler semantics (scale taken from column metadata, consistent with
+            // createTimestampTzStringHandlerNanosecond), avoiding precision digit drift from a
+            // hardcoded 0; otherwise the registered SimpleTypeHandler (e.g. createCharHandler)
+            // applies, restoring the original handler call chain and keeping value and
+            // NULL/wasNull semantics exactly as the original implementation.
+            String rawValue = resultSet.getString(columnIdx);
+            if (OgracTypeHandlerFactory.isTstzFormattedValue(rawValue)) {
+                // Under COMPATIBLE, strip trailing fractional zeros: oGRAC to_char pads sub-second
+                // digits to a fixed 6 (e.g. TIMESTAMP(3) .998 becomes .998000), which must align
+                // with the Oracle side's per-scale .998; STRICT keeps the original normalization
+                value = precisionMode == PrecisionMode.STRICT
+                    ? OgracTypeHandlerFactory.normalizeTstzString(rawValue, rsmd.getScale(columnIdx))
+                    : OgracTypeHandlerFactory.normalizeTstzStringCompat(rawValue, rsmd.getScale(columnIdx));
+            } else {
+                value = d.simpleHandler.convert(resultSet, d.columnLabel);
+            }
+        } else if (d.commonHandler != null) {
             value = d.commonHandler.convert(resultSet, columnIdx, rsmd);
         } else {
             value = d.simpleHandler.convert(resultSet, d.columnLabel);
@@ -351,13 +362,13 @@ public class OracleResultSetHandler extends ResultSetHandler {
     }
 
     /**
-     * Read the raw database value before mapping (best-effort). The base class readRawValue is private,
-     * so this provides an equivalent implementation for the subclass's per-row override path
-     * (invoked only when captureRaw debug is enabled).
+     * Read the raw database value before mapping (best-effort). The base class readRawValue is
+     * private, so this provides an equivalent implementation for the subclass's per-row override
+     * path (only called when captureRaw debugging is enabled).
      *
      * @param resultSet JDBC result set
      * @param columnIdx column number (1-based)
-     * @return the raw value string; {@link Optional#empty()} when the column is NULL or reading fails
+     * @return the raw value string; {@link Optional#empty()} when NULL or the read fails
      */
     private Optional<String> readRawValueCopy(ResultSet resultSet, int columnIdx) {
         try {
@@ -371,47 +382,25 @@ public class OracleResultSetHandler extends ResultSetHandler {
     }
 
     /**
-     * Whether this is an Oracle streamed LONG/LONG RAW column (must be read first in its row).
-     *
-     * @param d the current column's metadata and handler descriptor
-     * @return true if it is a LONG/LONG RAW column
-     */
-    private boolean isLongColumn(ColumnDescriptor d) {
-        return OracleType.LONG.equals(d.normalizedTypeName)
-            || OracleType.LONG_RAW.equals(d.normalizedTypeName);
-    }
-
-    /**
-     * Resolved metadata and handler descriptor of a single column. Reused across rows
-     * to avoid re-parsing types per row.
+     * Resolved metadata and handler descriptor for one column. Reused across rows to avoid
+     * re-parsing the type on every row.
      */
     private static final class ColumnDescriptor {
         final String columnLabel;
         final String normalizedTypeName;
         final SimpleTypeHandler simpleHandler;  // handler registered in simpleTypeHandlers (or the default handler)
-        final CommonTypeHandler commonHandler;  // handler registered in commonTypeHandlers,
-                                                // mutually exclusive with simpleHandler
+
+        // Handler registered in commonTypeHandlers, mutually exclusive with simpleHandler
+        final CommonTypeHandler commonHandler;
+        final boolean isCharLike; // character/text column; in-row routing to TSTZ normalization decided by value shape
 
         ColumnDescriptor(String columnLabel, String normalizedTypeName,
-            SimpleTypeHandler simpleHandler, CommonTypeHandler commonHandler) {
+            SimpleTypeHandler simpleHandler, CommonTypeHandler commonHandler, boolean isCharLike) {
             this.columnLabel = columnLabel;
             this.normalizedTypeName = normalizedTypeName;
             this.simpleHandler = simpleHandler;
             this.commonHandler = commonHandler;
-        }
-    }
-
-    /**
-     * Per-ResultSet parse result: the column descriptor array + the read order computed once,
-     * cached by rsmd and reused across rows.
-     */
-    private static final class ColumnDescriptors {
-        final ColumnDescriptor[] descriptors;
-        final int[] readOrder;
-
-        ColumnDescriptors(ColumnDescriptor[] descriptors, int[] readOrder) {
-            this.descriptors = descriptors;
-            this.readOrder = readOrder;
+            this.isCharLike = isCharLike;
         }
     }
 
@@ -420,6 +409,19 @@ public class OracleResultSetHandler extends ResultSetHandler {
         String columnLabel = rsmd.getColumnLabel(columnIdx);
         String columnTypeName = rsmd.getColumnTypeName(columnIdx);
         String normalizedTypeName = normalizeTypeName(columnTypeName);
+
+        // oGRAC-side TIMESTAMP WITH TIME ZONE columns: the JDBC driver's getString() returns junk
+        // for sub-second digits (wall-clock time is right but the fraction is garbled, e.g. .999999
+        // becomes .064703). The SELECT layer already rewrites such columns as to_char(col) so the
+        // server emits the real string (like "2024-07-04 08:00:00.999999 -05:00"), and the JDBC
+        // type degrades to TEXT/VARCHAR. Returning that raw string through the plain text handler
+        // would disagree with the Oracle side (normalized to GMT+8), so when a character-like
+        // column holds a "TSTZ string with timezone suffix", route it to the TIMESTAMPTZ handler
+        // for GMT+8 normalization.
+        if (isCharLike(normalizedTypeName)
+                && OgracTypeHandlerFactory.isTstzFormattedValue(resultSet.getString(columnIdx))) {
+            normalizedTypeName = OgracType.TIMESTAMPTZ;
+        }
 
         String value;
         if (simpleTypeHandlers.containsKey(normalizedTypeName)) {
@@ -435,75 +437,103 @@ public class OracleResultSetHandler extends ResultSetHandler {
     }
 
     /**
-     * Normalize the column type name: uppercase it, strip precision suffixes (e.g. CHAR(10 BYTE),
-     * NCHAR(10)), and map the shorthand/variant names returned by Oracle JDBC (INTERVALYM,
-     * INTERVALDS, etc.) to the constant names used by registered handlers.
+     * Whether the normalized type is character/text-like. Only such columns may be routed back to
+     * the TSTZ handler after the to_char(col) rewrite, which avoids hitting real
+     * TIMESTAMP/TIMESTAMPLTZ columns (they go through their own datetime handlers).
      *
-     * @param columnTypeName raw column type name returned by JDBC, possibly null
-     * @return the normalized type name; an empty string when the input is null (all handler lookups
-     *         miss and the default handler applies)
+     * @param normalizedTypeName the normalized column type name
+     * @return true if it is a character/text type
+     */
+    private boolean isCharLike(String normalizedTypeName) {
+        return OgracType.CHAR.equals(normalizedTypeName)
+                || OgracType.VARCHAR.equals(normalizedTypeName)
+                || OgracType.VARCHAR2.equals(normalizedTypeName)
+                || OgracType.NCHAR.equals(normalizedTypeName)
+                || OgracType.NVARCHAR2.equals(normalizedTypeName)
+                || OgracType.TEXT.equals(normalizedTypeName)
+                || OgracType.LONG.equals(normalizedTypeName);
+    }
+
+    /**
+     * Normalize the column type name: uppercase it, strip precision suffixes (e.g. CHAR(10 BYTE),
+     * NUMBER(38,12)), and map the variant names oGRAC JDBC returns to the constant names used by
+     * registered handlers.
+     *
+     * @param columnTypeName the raw column type name returned by JDBC, may be null
+     * @return the normalized type name; an empty string when the input is null (all handler
+     *         lookups miss and the default handler applies)
      */
     private String normalizeTypeName(String columnTypeName) {
         if (columnTypeName == null) {
             return "";
         }
         String upperTypeName = columnTypeName.toUpperCase(Locale.ENGLISH);
+
+        // The migration converts Oracle CHAR/VARCHAR2/NCHAR/NVARCHAR2 into oGRAC CHAR/VARCHAR.
+        // Type names returned by oGRAC JDBC may carry a precision suffix (e.g. CHAR(10 BYTE),
+        // VARCHAR(100 CHAR)); normalize them, otherwise the suffixed names miss the registered
+        // handlers and fall back to the default ObjectHandler.
         if (upperTypeName.startsWith("CHAR(")) {
-            return OracleType.CHAR;
+            return OgracType.CHAR;
         }
-        if (upperTypeName.startsWith("VARCHAR2(")) {
-            return OracleType.VARCHAR2;
+        if (upperTypeName.startsWith("VARCHAR(")) {
+            return OgracType.VARCHAR;
         }
-        // Oracle JDBC returns precision-carrying type names for NCHAR(n)/NVARCHAR2(n); normalize to
-        // the suffix-free constant, otherwise the registered createCharHandler misses and the
-        // fallback defaultObjectHandler makes the two sides inconsistent.
         if (upperTypeName.startsWith("NCHAR(")) {
-            return OracleType.NCHAR;
+            return OgracType.NCHAR;
         }
         if (upperTypeName.startsWith("NVARCHAR2(")) {
-            return OracleType.NVARCHAR2;
+            return OgracType.NVARCHAR2;
         }
-        // Oracle JDBC returns "TIMESTAMP(n)" or "TIMESTAMP WITH TIME ZONE" /
-        // "TIMESTAMP WITH LOCAL TIME ZONE" (no parentheses) for the TIMESTAMP family. Match on the
-        // "TIMESTAMP" prefix (parentheses not required), otherwise the parenthesis-free zone types
-        // fall back to defaultObjectHandler.
-        // Note: check WITH LOCAL TIME ZONE first, since it contains the WITH TIME ZONE substring.
-        if (upperTypeName.startsWith("TIMESTAMP")) {
-            if (upperTypeName.contains("WITH LOCAL TIME ZONE")) {
-                return OracleType.TIMESTAMPLTZ_OFFICIAL;
-            } else if (upperTypeName.contains("WITH TIME ZONE")) {
-                return OracleType.TIMESTAMPTZ_OFFICIAL;
+        // The migration converts Oracle INTEGER/INT/SMALLINT/FLOAT(n!=126) into oGRAC NUMBER(p)
+        // or NUMBER(p,s); type names returned by JDBC may carry precision (e.g. NUMBER(38),
+        // NUMBER(38,12)), so normalize them to NUMBER.
+        if (upperTypeName.startsWith("NUMBER(")) {
+            return OgracType.NUMBER;
+        }
+        // RAW may be returned with a length (e.g. RAW(2000)); normalize to RAW
+        if (upperTypeName.startsWith("RAW(")) {
+            return OgracType.RAW;
+        }
+        if (upperTypeName.startsWith("TIMESTAMP(")) {
+            if (upperTypeName.contains("WITH TIME ZONE")) {
+                return OgracType.TIMESTAMPTZ_OFFICIAL;
+            } else if (upperTypeName.contains("WITH LOCAL TIME ZONE")) {
+                return OgracType.TIMESTAMPLTZ_OFFICIAL;
             } else {
-                return OracleType.TIMESTAMP;
+                return OgracType.TIMESTAMP;
             }
         }
-        // Oracle JDBC returns the shorthand "INTERVALYM" for INTERVAL YEAR TO MONTH and "INTERVALDS"
-        // for INTERVAL DAY TO SECOND. Normalize to the full names to match the registered normalized handlers.
-        if (upperTypeName.equals("INTERVALYM") || upperTypeName.startsWith("INTERVAL YEAR")) {
-            return OracleType.INTERVAL_YEAR_TO_MONTH;
+        if (upperTypeName.startsWith("INTERVAL YEAR")) {
+            return OgracType.INTERVAL_YEAR_TO_MONTH;
         }
-        if (upperTypeName.equals("INTERVALDS") || upperTypeName.startsWith("INTERVAL DAY")) {
-            return OracleType.INTERVAL_DAY_TO_SECOND;
+        if (upperTypeName.startsWith("INTERVAL DAY")) {
+            return OgracType.INTERVAL_DAY_TO_SECOND;
         }
         if (upperTypeName.endsWith(".XMLTYPE")) {
-            return OracleType.XMLTYPE;
+            return OracleResultSetHandler.OracleType.XMLTYPE;
         }
         return upperTypeName;
     }
 
     /**
-     * Oracle-side JDBC column type name constants: covering character, number, float, datetime,
-     * interval, binary and LOB types, plus the variant names Oracle JDBC returns.
+     * oGRAC-side JDBC column type name constants: covering character, number, float, datetime,
+     * interval, binary and LOB types, plus the variant names oGRAC/the migration tool returns.
      * Handler registration and this class's normalization logic both key on these constants.
      */
-    interface OracleType {
+    interface OgracType {
         /**
          * Fixed-length character type CHAR
          */
         String CHAR = "CHAR";
 
         /**
-         * Variable-length character type VARCHAR2
+         * Variable-length character type VARCHAR
+         */
+        String VARCHAR = "VARCHAR";
+
+        /**
+         * Oracle variable-length character type VARCHAR2 (oGRAC compatibility alias)
          */
         String VARCHAR2 = "VARCHAR2";
 
@@ -518,7 +548,7 @@ public class OracleResultSetHandler extends ResultSetHandler {
         String NVARCHAR2 = "NVARCHAR2";
 
         /**
-         * Long text type LONG (streamed; must be read first in its row)
+         * Long text type LONG
          */
         String LONG = "LONG";
 
@@ -553,6 +583,11 @@ public class OracleResultSetHandler extends ResultSetHandler {
         String FLOAT = "FLOAT";
 
         /**
+         * Big integer type BIGINT
+         */
+        String BIGINT = "BIGINT";
+
+        /**
          * Single-precision float BINARY_FLOAT
          */
         String BINARY_FLOAT = "BINARY_FLOAT";
@@ -567,6 +602,79 @@ public class OracleResultSetHandler extends ResultSetHandler {
          */
         String DOUBLE_PRECISION = "DOUBLE PRECISION";
 
+        // Type names returned by openGauss JDBC (actual column types after migration); handlers
+        // must be registered explicitly so they do not fall back to defaultObjectHandler
+        /**
+         * Number type NUMERIC (openGauss JDBC name)
+         */
+        String NUMERIC = "NUMERIC";
+
+        /**
+         * Number type DECIMAL
+         */
+        String DECIMAL = "DECIMAL";
+
+        /**
+         * Float type REAL (openGauss 32-bit float)
+         */
+        String REAL = "REAL";
+
+        /**
+         * Unsigned integer, same semantics as BIGINT
+         */
+        String UINT = "UINT";
+
+        /**
+         * NUMBER variant (getObject returns String), same semantics as NUMBER
+         */
+        String NUMBER2 = "NUMBER2";
+
+        /**
+         * Long text, same semantics as VARCHAR
+         */
+        String TEXT = "TEXT";
+
+        /**
+         * BLOB variant
+         */
+        String IMAGE = "IMAGE";
+
+        /**
+         * Binary; getObject returns byte[] (the default handler would print junk like [B@xxx,
+         * so it must be registered explicitly)
+         */
+        String BINARY = "BINARY";
+
+        /**
+         * Variable-length binary, same as BINARY
+         */
+        String VARBINARY = "VARBINARY";
+
+        /**
+         * Name oGRAC JDBC actually returns for TIMESTAMP WITH TIME ZONE
+         */
+        String TIMESTAMP_TZ = "TIMESTAMP_TZ";
+
+        /**
+         * Name oGRAC JDBC actually returns for TIMESTAMP WITH LOCAL TIME ZONE
+         */
+        String TIMESTAMP_LTZ = "TIMESTAMP_LTZ";
+
+        /**
+         * Timestamp variant
+         */
+        String UTC = "UTC";
+
+        /**
+         * Presumed migration target of Oracle INTERVAL YEAR TO MONTH
+         */
+        String DATE_YEAR_MONTH = "DATE_YEAR_MONTH";
+
+        /**
+         * Presumed migration target of Oracle INTERVAL DAY TO SECOND
+         */
+        String DATE_DAY_HMS = "DATE_DAY_HMS";
+
         /**
          * Date type DATE (no time part)
          */
@@ -578,7 +686,7 @@ public class OracleResultSetHandler extends ResultSetHandler {
         String TIMESTAMP = "TIMESTAMP";
 
         /**
-         * Timezone timestamp name returned by JDBC (underscore form)
+         * Timezone timestamp name returned by oGRAC JDBC (underscore form)
          */
         String TIMESTAMPTZ = "TIMESTAMP_WITH_TIMEZONE";
 
@@ -588,7 +696,7 @@ public class OracleResultSetHandler extends ResultSetHandler {
         String TIMESTAMPTZ_OFFICIAL = "TIMESTAMP WITH TIME ZONE";
 
         /**
-         * Local-timezone timestamp name returned by JDBC (underscore form)
+         * Local-timezone timestamp name returned by oGRAC JDBC (underscore form)
          */
         String TIMESTAMPLTZ = "TIMESTAMP_WITH_LOCAL_TIMEZONE";
 
@@ -613,19 +721,9 @@ public class OracleResultSetHandler extends ResultSetHandler {
         String RAW = "RAW";
 
         /**
-         * Long binary type LONG RAW (streamed; must be read first in its row)
-         */
-        String LONG_RAW = "LONG RAW";
-
-        /**
          * Binary large object BLOB
          */
         String BLOB = "BLOB";
-
-        /**
-         * National charset binary large object NBLOB
-         */
-        String NBLOB = "NBLOB";
 
         /**
          * Character large object CLOB
@@ -638,11 +736,6 @@ public class OracleResultSetHandler extends ResultSetHandler {
         String NCLOB = "NCLOB";
 
         /**
-         * JSON type (read as CLOB)
-         */
-        String JSON = "JSON";
-
-        /**
          * XML type XMLTYPE
          */
         String XMLTYPE = "XMLTYPE";
@@ -650,7 +743,7 @@ public class OracleResultSetHandler extends ResultSetHandler {
         /**
          * Numeric type name set (used to decide whether a column type is numeric/float)
          */
-        List<String> DIGIT_TYPES = List.of(NUMBER, NUMBER0, INTEGER, INT, SMALLINT, FLOAT,
+        List<String> DIGIT_TYPES = List.of(NUMBER, NUMBER0, INTEGER, INT, SMALLINT, FLOAT, BIGINT,
             BINARY_FLOAT, BINARY_DOUBLE, DOUBLE_PRECISION);
 
         /**

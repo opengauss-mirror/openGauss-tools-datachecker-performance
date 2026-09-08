@@ -143,8 +143,11 @@ public class KafkaConsumerHandler {
         List<RowDataHash> batchList = new ArrayList<>(records.count());
         for (ConsumerRecord<String, String> record : records) {
             try {
+                if (!StringUtils.equals(record.key(), sExtend.getName())) {
+                    continue;
+                }
                 RowDataHash row = JSON.parseObject(record.value(), RowDataHash.class);
-                if (isRecordMatch(row, record.key(), sExtend)) {
+                if (row.getSNo() == sExtend.getNo()) {
                     batchList.add(row);
                     processedCount++;
                 }
@@ -173,10 +176,6 @@ public class KafkaConsumerHandler {
         } catch (CheckingException e) {
             log.warn("slice {} Offset commit failed", sExtend.getName(), e);
         }
-    }
-
-    private boolean isRecordMatch(RowDataHash row, String recordKey, SliceExtend sExtend) {
-        return row.getSNo() == sExtend.getNo() && StringUtils.equals(recordKey, sExtend.getName());
     }
 
     private int calculateMaxPollEmptyTimes() {

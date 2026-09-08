@@ -15,6 +15,7 @@
 
 package org.opengauss.datachecker.extract.service;
 
+import org.opengauss.datachecker.common.entry.common.RepairEntry;
 import org.opengauss.datachecker.common.entry.extract.ExtractConfig;
 import org.opengauss.datachecker.common.entry.extract.ExtractTask;
 import org.opengauss.datachecker.common.entry.extract.PageExtract;
@@ -140,4 +141,12 @@ public interface DataExtractService {
      * @return TableMetadata
      */
     TableMetadata queryIncrementMetaData(String tableName);
+
+    /**
+     * queryColumnValues
+     *
+     * @param repairEntry repair entry carrying the table and diff key set
+     * @return composite
+     */
+    Map<String, Map<String, String>> queryColumnValues(RepairEntry repairEntry);
 }

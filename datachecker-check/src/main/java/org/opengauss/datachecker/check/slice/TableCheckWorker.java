@@ -237,15 +237,21 @@ public class TableCheckWorker implements Runnable {
         Map<String, RowDataHash> sourceMap = sourceBucket.getBucket();
         Map<String, RowDataHash> sinkMap = sinkBucket.getBucket();
         MapDifference<String, RowDataHash> bucketDifference = Maps.difference(sourceMap, sinkMap);
-        List<Difference> entriesOnlyOnLeft = collectorDeleteOrInsert(bucketDifference.entriesOnlyOnLeft());
-        List<Difference> entriesOnlyOnRight = collectorDeleteOrInsert(bucketDifference.entriesOnlyOnRight());
+        List<Difference> entriesOnlyOnLeft = collectorDeleteOrInsert(bucketDifference.entriesOnlyOnLeft(),
+            "INSERT(source has, sink missing)");
+        List<Difference> entriesOnlyOnRight = collectorDeleteOrInsert(bucketDifference.entriesOnlyOnRight(),
+            "DELETE(sink has, source missing)");
         List<Difference> differing = collectorUpdate(bucketDifference.entriesDiffering());
         return DifferencePair.of(entriesOnlyOnLeft, entriesOnlyOnRight, differing);
     }
 
-    private List<Difference> collectorDeleteOrInsert(Map<String, RowDataHash> diffMaps) {
+    private List<Difference> collectorDeleteOrInsert(Map<String, RowDataHash> diffMaps, String diffType) {
         List<Difference> result = new LinkedList<>();
         diffMaps.forEach((key, diff) -> {
+            // Log the hash of one-side-missing diffs, to tell a kHash=0 lost row from real
+            // missing data
+            log.info("diff detail table={}, slice={}, type={}, key={}, kHash={}, vHash={}",
+                slice.getTable(), slice.getNo(), diffType, key, diff.getKHash(), diff.getVHash());
             result.add(new Difference(key, diff.getIdx()));
         });
         return result;
@@ -254,8 +260,17 @@ public class TableCheckWorker implements Runnable {
     private List<Difference> collectorUpdate(Map<String, MapDifference.ValueDifference<RowDataHash>> diffMaps) {
         List<Difference> result = new LinkedList<>();
         diffMaps.forEach((key, diff) -> {
-            RowDataHash rowDataHash = diff.leftValue();
-            result.add(new Difference(key, rowDataHash.getIdx()));
+            RowDataHash sourceRow = diff.leftValue();
+            RowDataHash sinkRow = diff.rightValue();
+            // Log diffs present on both sides with mismatched hashes, tagging the
+            // kHash/vHash comparison to distinguish a primary-key hash difference from a row
+            // hash difference
+            log.info(
+                "diff detail table={}, slice={}, type=UPDATE, key={}, source(kHash={}, vHash={}), "
+                    + "sink(kHash={}, vHash={})",
+                slice.getTable(), slice.getNo(), key, sourceRow.getKHash(), sourceRow.getVHash(),
+                sinkRow.getKHash(), sinkRow.getVHash());
+            result.add(new Difference(key, sourceRow.getIdx()));
         });
         return result;
     }
@@ -288,13 +303,20 @@ public class TableCheckWorker implements Runnable {
         // Get the Kafka partition number corresponding to the current task
         // Initialize source bucket column list data
         KafkaConsumerHandler consumer = checkContext.createKafkaHandler();
-        CountDownLatch countDownLatch = new CountDownLatch(checkTupleList.size());
-        checkTupleList.forEach(check -> {
-            initBucketList(check.getEndpoint(), check.getSlice(), check.getBuckets(), bucketDiff, consumer);
-            countDownLatch.countDown();
-        });
-        countDownLatch.await();
-        checkContext.returnConsumer(consumer);
+        try {
+            CountDownLatch countDownLatch = new CountDownLatch(checkTupleList.size());
+            checkTupleList.forEach(check -> {
+                initBucketList(check.getEndpoint(), check.getSlice(), check.getBuckets(), bucketDiff, consumer);
+                countDownLatch.countDown();
+            });
+            countDownLatch.await();
+        } finally {
+            // The consumer must be returned in finally: the inner initBucketList throws
+            // CheckConsumerPollEmptyException on poll empty-timeout; if not returned, the
+            // consumerPool leaks away one consumer at a time, then takeConsumer() blocks
+            // forever and completeCount stops moving.
+            checkContext.returnConsumer(consumer);
+        }
         // Align the source and destination bucket list
         alignAllBuckets(sourceTuple, sinkTuple, bucketDiff);
         sortBuckets(sourceTuple.getBuckets());
@@ -316,7 +338,10 @@ public class TableCheckWorker implements Runnable {
                 break; // 如果成功，跳出循环
             } catch (CheckConsumerPollEmptyException ex) {
                 if (++attempts >= maxAttempts) {
-                    checkContext.returnConsumer(consumer);
+                    // Do not return the consumer here: the outer initBucketList's finally
+                    // returns it uniformly. Returning here would add the same consumer to
+                    // the pool twice, and two threads would get the same non-thread-safe
+                    // consumer.
                     throw ex; // 如果达到最大尝试次数，重新抛出异常
                 }
             }
@@ -389,7 +414,7 @@ public class TableCheckWorker implements Runnable {
         String sinkTopicName = TopicUtil.getMoreFixedTopicName(processNo, Endpoint.SINK, table, maxTopicSize);
         topic.setSourceTopicName(sourceTopicName);
         topic.setSinkTopicName(sinkTopicName);
-        topic.setPtnNum(0);
-        topic.setPartitions(1);
+        topic.setPtnNum(slice.getPtn());
+        topic.setPartitions(slice.getPtnNum() > 0 ? slice.getPtnNum() : 1);
     }
 }

@@ -25,7 +25,6 @@ import org.opengauss.datachecker.extract.util.HashHandler;
 import org.opengauss.datachecker.extract.util.MetaDataUtil;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.lang.NonNull;
-import java.util.concurrent.CompletableFuture;
 
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;

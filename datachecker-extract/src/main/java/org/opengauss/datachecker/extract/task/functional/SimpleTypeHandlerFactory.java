@@ -65,6 +65,23 @@ public class SimpleTypeHandlerFactory {
     }
 
     /**
+     * Whether the string is NaN or Infinity (positive/negative)
+     *
+     * @param value value
+     * @return boolean
+     */
+    protected static boolean isNaNOrInfinityString(String value) {
+        if (value == null) {
+            return false;
+        }
+        String upper = value.toUpperCase(Locale.ROOT);
+        return "NAN".equals(upper)
+            || "INFINITY".equals(upper)
+            || "+INFINITY".equals(upper)
+            || "-INFINITY".equals(upper);
+    }
+
+    /**
      * 根据scale参数格式化浮点类型数据
      *
      * @param scale scale
@@ -564,40 +581,47 @@ public class SimpleTypeHandlerFactory {
 
     /**
      * <pre>
-     * 创建 oracle 数字 类型处理函数
-     * oracle scale >= -84 && scale<=0 则BigDecimal格式化为整数，scale>0 格式化为浮点类型数据
-     * 并判断value值是否为科学计数法表示，是则展平科学计数
+     * Create the Oracle number type handler (COMPATIBLE, low-precision mode).
+     * Reads uniformly via getDouble() (64-bit) and flattens scientific notation with
+     * BigDecimal.valueOf().toPlainString(). The lenient mode tolerates precision loss: both
+     * sides compare at double precision, avoiding false mismatches caused by precision differences.
+     * Special values like NaN / Infinity are returned as their string representations.
      * </pre>
      *
      * @return CommonTypeHandler
      */
     public CommonTypeHandler createOracleBigDecimalHandler() {
         return (resultSet, columnIdx, rsmd) -> {
-            BigDecimal decimalValue = resultSet.getBigDecimal(columnIdx);
+            double doubleValue = resultSet.getDouble(columnIdx);
             if (resultSet.wasNull()) {
                 return NULL;
             }
-            int scale = rsmd.getScale(columnIdx);
-            String value;
-            if (scale >= O_NUMERIC_SCALE_F84 && scale <= O_NUMERIC_SCALE_0) {
-                value = String.valueOf(decimalValue.toBigInteger());
-            } else {
-                value = String.valueOf(decimalValue.doubleValue());
+            if (Double.isNaN(doubleValue) || Double.isInfinite(doubleValue)) {
+                return String.valueOf(doubleValue);
             }
-            if (isScientificNotation(value)) {
-                return new BigDecimal(value).toPlainString();
-            }
-            return value;
+            return BigDecimal.valueOf(doubleValue).toPlainString();
         };
     }
 
     /**
-     * 创建 oracle Raw 类型处理函数
+     * Create the Oracle RAW type handler.
+     * <p>When a RAW column is NULL, the oGRAC JDBC driver's getString() throws an internal
+     * NegativeArraySizeException (ORResultSet.getOther allocates an array of length -1). The
+     * exception is swallowed upstream, dropping the column from the result set — disagreeing
+     * with the Oracle side (getString returns null) and causing a false check mismatch. So
+     * probe NULL with getBytes() first (the driver's getBytes() safely returns null for NULL
+     * RAW), and only call getString() for the hex string when non-NULL, keeping NULL semantics
+     * aligned on both sides (both return null). This handler is shared by the Oracle/oGRAC sides.
      *
      * @return SimpleTypeHandler
      */
     public SimpleTypeHandler createOracleRawHandler() {
-        return ResultSet::getString;
+        return (resultSet, columnLabel) -> {
+            if (resultSet.getBytes(columnLabel) == null) {
+                return null;
+            }
+            return resultSet.getString(columnLabel);
+        };
     }
 
     /**
@@ -633,7 +657,12 @@ public class SimpleTypeHandlerFactory {
         };
     }
 
-    private void closeBufferedReader(BufferedReader bf) {
+    /**
+     * Close a BufferedReader quietly, logging failures instead of throwing.
+     *
+     * @param bf the reader to close, may be null
+     */
+    protected void closeBufferedReader(BufferedReader bf) {
         try {
             if (Objects.nonNull(bf)) {
                 bf.close();

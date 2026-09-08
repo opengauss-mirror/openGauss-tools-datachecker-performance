@@ -35,6 +35,7 @@ public class AdapterContext {
     static {
         CONTEXT.put(DataBaseType.MS, Map.ofEntries(Map.entry(CheckRowRule.class, "mysqlCheckRowRule")));
         CONTEXT.put(DataBaseType.OG, Map.ofEntries(Map.entry(CheckRowRule.class, "openGaussCheckRowRule")));
+        CONTEXT.put(DataBaseType.OGRAC, Map.ofEntries(Map.entry(CheckRowRule.class, "openGaussCheckRowRule")));
     }
 
     public static <T> T getBean(DataBaseType databaseType, Class<T> classz) {

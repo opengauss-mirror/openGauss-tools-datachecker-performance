@@ -122,6 +122,21 @@ public class DataManipulationService {
      */
     public List<Map<String, String>> queryColumnValues(String tableName, List<String> compositeKeys,
         TableMetadata metadata) {
+        return queryColumnValues(tableName, compositeKeys, metadata, false);
+    }
+
+    /**
+     * queryColumnValues
+     *
+     * @param tableName tableName
+     * @param compositeKeys compositeKeys
+     * @param metadata metadata
+     * @param isCaptureRaw whether to also capture the raw database values before mapping
+     *                    (for diff_detail precision comparison)
+     * @return query result
+     */
+    public List<Map<String, String>> queryColumnValues(String tableName, List<String> compositeKeys,
+        TableMetadata metadata, boolean isCaptureRaw) {
         Assert.isTrue(Objects.nonNull(metadata), "Abnormal table metadata information, failed to build select SQL");
         final List<ColumnsMetaData> primaryMetas = metadata.getPrimaryMetas();
         Assert.isTrue(!CollectionUtils.isEmpty(primaryMetas),
@@ -136,7 +151,7 @@ public class DataManipulationService {
                 .tableName(tableName)
                 .conditionPrimary(primaryData)
                 .build();
-            resultMap = queryColumnValuesSinglePrimaryKey(querySql, compositeKeys);
+            resultMap = queryColumnValuesSinglePrimaryKey(querySql, compositeKeys, isCaptureRaw);
         } else {
             // Compound primary key table data query
             String querySql = dmlBuilder.schema(extractProperties.getSchema())
@@ -145,7 +160,7 @@ public class DataManipulationService {
                 .conditionCompositePrimary(primaryMetas)
                 .build();
             List<Object[]> batchParam = dmlBuilder.conditionCompositePrimaryValue(primaryMetas, compositeKeys);
-            resultMap = queryColumnValuesByCompositePrimary(querySql, batchParam);
+            resultMap = queryColumnValuesByCompositePrimary(querySql, batchParam, isCaptureRaw);
         }
         rectifyValue(metadata, resultMap);
         return resultMap;
@@ -206,11 +221,12 @@ public class DataManipulationService {
         }
     }
 
-    private List<Map<String, String>> queryColumnValuesByCompositePrimary(String selectDml, List<Object[]> batchParam) {
+    private List<Map<String, String>> queryColumnValuesByCompositePrimary(String selectDml, List<Object[]> batchParam,
+        boolean isCaptureRaw) {
         // Query the current task data and organize the data
         HashMap<String, Object> paramMap = new HashMap<>(InitialCapacity.CAPACITY_1);
         paramMap.put(DmlBuilder.PRIMARY_KEYS, batchParam);
-        return queryColumnValues(selectDml, paramMap);
+        return queryColumnValues(selectDml, paramMap, isCaptureRaw);
     }
 
     /**
@@ -226,11 +242,12 @@ public class DataManipulationService {
         return statementQuery(statement.replace(":primaryKeys", String.join(",", primaryKeys)), tableMetadata);
     }
 
-    private List<Map<String, String>> queryColumnValuesSinglePrimaryKey(String selectDml, List<String> primaryKeys) {
+    private List<Map<String, String>> queryColumnValuesSinglePrimaryKey(String selectDml, List<String> primaryKeys,
+        boolean isCaptureRaw) {
         // Query the current task data and organize the data
         HashMap<String, Object> paramMap = new HashMap<>(InitialCapacity.CAPACITY_1);
         paramMap.put(DmlBuilder.PRIMARY_KEYS, primaryKeys);
-        return queryColumnValues(selectDml, paramMap);
+        return queryColumnValues(selectDml, paramMap, isCaptureRaw);
     }
 
     private List<RowDataHash> statementQuery(String pageStatement, Map<String, Object> paramMap,
@@ -275,8 +292,10 @@ public class DataManipulationService {
         return result;
     }
 
-    private List<Map<String, String>> queryColumnValues(String selectDml, Map<String, Object> paramMap) {
+    private List<Map<String, String>> queryColumnValues(String selectDml, Map<String, Object> paramMap,
+        boolean isCaptureRaw) {
         ResultSetHandler handler = resultSetFactory.createHandler(databaseType);
+        handler.setCaptureRaw(isCaptureRaw);
         return dataAccessService.query(selectDml, paramMap, (rs, rowNum) -> handler.putOneResultSetToMap(rs));
     }
 

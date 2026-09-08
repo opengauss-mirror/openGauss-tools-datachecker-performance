@@ -80,6 +80,15 @@ public class SliceCheckWorker implements Runnable {
     private static final Logger LOGGER = LogUtils.getLogger(SliceCheckWorker.class);
     private static final int THRESHOLD_MIN_BUCKET_SIZE = 2;
 
+    /**
+     * Max diff detail log lines printed per slice; beyond that, results are collected but
+     * not printed. STRICT mode can produce tens of thousands of diff rows, and printing
+     * them line by line via synchronous LOGGER.info calls would stall the worker thread and
+     * freeze table progress. Diff results are still collected in full (check accuracy is
+     * unaffected); only the log volume is capped.
+     */
+    private static final int MAX_DIFF_DETAIL_LOG_PER_SLICE = 20;
+
     private final SliceVo slice;
 
     private final String processNo;
@@ -91,6 +100,11 @@ public class SliceCheckWorker implements Runnable {
     private final LocalDateTime startTime;
 
     private long sliceRowCount;
+
+    // Diff detail log lines already printed for the current slice; throttles with
+    // MAX_DIFF_DETAIL_LOG_PER_SLICE
+    private int diffLogCount = 0;
+
     // 设置最大尝试次数
     private int maxAttemptsTimes;
     private Topic topic = new Topic();
@@ -265,15 +279,25 @@ public class SliceCheckWorker implements Runnable {
         Map<String, RowDataHash> sourceMap = sourceBucket.getBucket();
         Map<String, RowDataHash> sinkMap = sinkBucket.getBucket();
         MapDifference<String, RowDataHash> bucketDifference = Maps.difference(sourceMap, sinkMap);
-        List<Difference> entriesOnlyOnLeft = collectorDeleteOrInsert(bucketDifference.entriesOnlyOnLeft());
-        List<Difference> entriesOnlyOnRight = collectorDeleteOrInsert(bucketDifference.entriesOnlyOnRight());
+        List<Difference> entriesOnlyOnLeft = collectorDeleteOrInsert(bucketDifference.entriesOnlyOnLeft(),
+            "INSERT(source has, sink missing)");
+        List<Difference> entriesOnlyOnRight = collectorDeleteOrInsert(bucketDifference.entriesOnlyOnRight(),
+            "DELETE(sink has, source missing)");
         List<Difference> differing = collectorUpdate(bucketDifference.entriesDiffering());
         return DifferencePair.of(entriesOnlyOnLeft, entriesOnlyOnRight, differing);
     }
 
-    private List<Difference> collectorDeleteOrInsert(Map<String, RowDataHash> diffMaps) {
+    private List<Difference> collectorDeleteOrInsert(Map<String, RowDataHash> diffMaps, String diffType) {
         List<Difference> result = new LinkedList<>();
         diffMaps.forEach((key, diff) -> {
+            // Cap diff detail printing at N lines per slice; beyond that only collect
+            // results, so a large volume of diffs in STRICT mode does not stall the worker
+            // thread with line-by-line synchronous LOGGER.info calls and freeze table progress.
+            if (diffLogCount < MAX_DIFF_DETAIL_LOG_PER_SLICE) {
+                LOGGER.info("diff detail table={}, slice={}, type={}, key={}, kHash={}, vHash={}",
+                    slice.getTable(), slice.getNo(), diffType, key, diff.getKHash(), diff.getVHash());
+                diffLogCount++;
+            }
             result.add(new Difference(key, diff.getIdx()));
         });
         return result;
@@ -282,8 +306,18 @@ public class SliceCheckWorker implements Runnable {
     private List<Difference> collectorUpdate(Map<String, MapDifference.ValueDifference<RowDataHash>> diffMaps) {
         List<Difference> result = new LinkedList<>();
         diffMaps.forEach((key, diff) -> {
-            RowDataHash rowDataHash = diff.leftValue();
-            result.add(new Difference(key, rowDataHash.getIdx()));
+            RowDataHash sourceRow = diff.leftValue();
+            RowDataHash sinkRow = diff.rightValue();
+            // Cap diff detail printing at N lines per slice; beyond that only collect results
+            if (diffLogCount < MAX_DIFF_DETAIL_LOG_PER_SLICE) {
+                LOGGER.info(
+                    "diff detail table={}, slice={}, type=UPDATE, key={}, source(kHash={}, vHash={}), "
+                        + "sink(kHash={}, vHash={})",
+                    slice.getTable(), slice.getNo(), key, sourceRow.getKHash(), sourceRow.getVHash(),
+                    sinkRow.getKHash(), sinkRow.getVHash());
+                diffLogCount++;
+            }
+            result.add(new Difference(key, sourceRow.getIdx()));
         });
         return result;
     }
@@ -315,19 +349,23 @@ public class SliceCheckWorker implements Runnable {
         Map<Integer, Pair<Integer, Integer>> bucketDiff = new ConcurrentHashMap<>();
         // Get the Kafka partition number corresponding to the current task
         // Initialize source bucket column list data
-        long startFetch = System.currentTimeMillis();
         CountDownLatch countDownLatch = new CountDownLatch(checkTupleList.size());
-        int avgSliceCount = (int) (sourceTuple.getSlice().getCount() + sinkTuple.getSlice().getCount()) / 2;
         KafkaConsumerHandler consumer = checkContext.createKafkaHandler();
-        checkTupleList.forEach(check -> {
-            initBucketList(check.getEndpoint(), check.getSlice(), check.getBuckets(), bucketDiff, avgSliceCount,
-                consumer);
-            countDownLatch.countDown();
-        });
-        countDownLatch.await();
-        checkContext.returnConsumer(consumer);
-        LogUtils.debug(LOGGER, "fetch slice {} data from topic, cost {} millis", slice.toSimpleString(),
-            costMillis(startFetch));
+        long startFetch = System.currentTimeMillis();
+        long fetchCost = 0L;
+        try {
+            int avgSliceCount = (int) (sourceTuple.getSlice().getCount() + sinkTuple.getSlice().getCount()) / 2;
+            checkTupleList.forEach(check -> {
+                initBucketList(check.getEndpoint(), check.getSlice(), check.getBuckets(), bucketDiff, avgSliceCount,
+                    consumer);
+                countDownLatch.countDown();
+            });
+            countDownLatch.await();
+            fetchCost = costMillis(startFetch);
+        } finally {
+            checkContext.returnConsumer(consumer);
+        }
+        LogUtils.debug(LOGGER, "fetch slice {} data from topic, cost {} millis", slice.toSimpleString(), fetchCost);
         // Align the source and destination bucket list
         alignAllBuckets(sourceTuple, sinkTuple, bucketDiff);
         sortBuckets(sourceTuple.getBuckets());
@@ -387,7 +425,6 @@ public class SliceCheckWorker implements Runnable {
                 if (++attempts >= maxAttemptsTimes) {
                     LogUtils.error(LOGGER, "Reached maximum retry count {}, aborting retry. Error: {}",
                         maxAttemptsTimes, ex.getMessage());
-                    checkContext.returnConsumer(consumer);
                     throw ex;
                 }
                 LogUtils.warn(LOGGER,
@@ -396,7 +433,6 @@ public class SliceCheckWorker implements Runnable {
                 ThreadUtil.sleep(2000);
             } catch (CheckingException ex) {
                 LogUtils.error(LOGGER, "Unknown error occurred while consuming data for slice{}", sliceExtendName, ex);
-                checkContext.returnConsumer(consumer);
                 throw new CheckingException("Data consumption failed", ex);
             }
         }
@@ -458,7 +494,7 @@ public class SliceCheckWorker implements Runnable {
         String sinkTopicName = TopicUtil.getMoreFixedTopicName(processNo, Endpoint.SINK, table, maxTopicSize);
         topic.setSourceTopicName(sourceTopicName);
         topic.setSinkTopicName(sinkTopicName);
-        topic.setPtnNum(0);
-        topic.setPartitions(1);
+        topic.setPtnNum(slice.getPtn());
+        topic.setPartitions(slice.getPtnNum() > 0 ? slice.getPtnNum() : 1);
     }
 }

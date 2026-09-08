@@ -66,8 +66,15 @@ public class ConfigManagement {
     private boolean sqlModePadCharToFullLength;
     @Value("${data.check.create-repair-sql}")
     private boolean isCreateRepairSql;
+    @Value("${data.check.diff-debug-log-enabled:false}")
+    private boolean isDiffDebugLogEnabled;
     @Value("${spring.check.maximum-pool-size}")
     private int maxPoolSize = 10;
+    @Value("${spring.check.sample.ratio:1.0}")
+    private double sampleRatio;
+    @Value("${spring.check.sample.threshold:0}")
+    private int sampleThreshold;
+
     /**
      * config management init
      */
@@ -84,6 +91,9 @@ public class ConfigManagement {
         ConfigCache.put(ConfigConstants.AUTO_DELETE_TOPIC, autoDeleteTopic);
         ConfigCache.put(ConfigConstants.MAXIMUM_POOL_SIZE, maxPoolSize);
         ConfigCache.put(ConfigConstants.CREATE_REPAIR_SQL, isCreateRepairSql);
+        ConfigCache.put(ConfigConstants.DIFF_DEBUG_LOG_ENABLED, isDiffDebugLogEnabled);
+        ConfigCache.put(ConfigConstants.SAMPLE_RATIO, String.valueOf(sampleRatio));
+        ConfigCache.put(ConfigConstants.SAMPLE_THRESHOLD, sampleThreshold);
         initKafka();
     }
 

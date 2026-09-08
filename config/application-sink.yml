@@ -8,12 +8,17 @@ spring:
     core-pool-size: 3
     maximum-pool-size: 3
     maximum-topic-size: 1
+    # Maximum rows per slice; tables exceeding this row count are split into multiple slices; must be identical on both ends
     maximum-table-slice-size: 10000
     extend-maximum-pool-size: 3
   extract:
     schema: test
     databaseType: OG
     query-dop: 8 # jdbc Parallel Query  config
+    # Memory safe watermark ratio (of -Xmx), reserving headroom for GC jitter and short peaks; default 0.30.
+    memory-safe-watermark: 0.30
+    # Minimum concurrent slices: on small heaps or at high watermark, keep at least this many slices running to avoid "all rejected -> deadlock". Default 1, enforced minimum 1.
+    memory-min-concurrency: 1
     debezium-enable: false # no need config,but not delete
     debezium-topic:  # no need config,but not delete
     debezium-groupId: # no need config,but not delete
@@ -21,8 +26,25 @@ spring:
     debezium-avro-registry: http://localhost:8081 # avro schema registry
     debezium-time-period: 1 # no need config,but not delete
     debezium-num-period: 1000 # no need config,but not delete
+
+  jdbc:
+    result-set:
+      # Automatically reduced at runtime based on remaining heap memory; configured here as the upper limit. Can be raised if memory is sufficient
+      fetch-size: 1000
+
   kafka:
     bootstrap-servers: localhost:9092
+    # Producer tuning (passed through to the Kafka client; remove this block to fall back to client defaults)
+#    properties:
+#      # Old broker version (<3.0): idempotence and in-flight>5 are mutually exclusive, so idempotence is explicitly disabled for a deeper pipeline
+#      linger.ms: 30
+#      compression.type: lz4
+#      max.in.flight.requests.per.connection: 20
+#      enable.idempotence: false
+#    producer:
+#      batch-size: 1048576
+#      # Producer send buffer, occupies heap memory; must be smaller than -Xmx
+#      buffer-memory: 67108864
   datasource:
     # driver-class-name: com.mysql.cj.jdbc.Driver
     # url: jdbc:mysql://127.0.0.1:3306/test?useSSL=false&useUnicode=true&characterEncoding=utf-8&serverTimezone=UTC&allowPublicKeyRetrieval=true
@@ -47,3 +69,8 @@ spring:
       max-wait: 600000
       keep-alive: true
       min-evictable-idle-time-millis: 600000
+data:
+  check:
+    # Oracle/oGRAC precision mode: COMPATIBLE (kernel compatible, default) or STRICT (exact comparison)
+    oracle2ograc:
+      precision-mode: COMPATIBLE
