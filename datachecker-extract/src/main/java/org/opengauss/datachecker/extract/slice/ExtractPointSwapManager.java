@@ -125,10 +125,10 @@ public class ExtractPointSwapManager {
      */
     public void pollSwapPoint(TableCheckPointCache tableCheckPointCache) {
         executorService.submit(() -> {
+            LogUtils.info(log, "pollSwapPoint thread started");
             trySubscribe();
             ConsumerRecords<String, String> records;
             AtomicInteger deliveredCount = new AtomicInteger();
-            LogUtils.info(log, "pollSwapPoint thread started");
             int retryTimesWait = 0;
             while (!isCompletedSwapTablePoint) {
                 try {
@@ -190,6 +190,10 @@ public class ExtractPointSwapManager {
         int subscribeTimes = 1;
         boolean isSubscribe = false;
         while (!isSubscribe && subscribeTimes < 5) {
+            if (isCompletedSwapTablePoint || Thread.currentThread().isInterrupted()) {
+                LogUtils.info(log, "pollSwapPoint cancelled during subscribe, task is closing");
+                return;
+            }
             isSubscribe = subscribe();
             subscribeTimes++;
         }
@@ -219,7 +223,11 @@ public class ExtractPointSwapManager {
                     checkPointSwapTopicName, kafkaConsumer.assignment().size());
             }
         } catch (org.apache.kafka.common.KafkaException ex) {
-            log.warn("seekToBeginning {} exception", checkPointSwapTopicName, ex);
+            if (isCompletedSwapTablePoint || Thread.currentThread().isInterrupted()) {
+                LogUtils.info(log, "seekToBeginning {} interrupted on close", checkPointSwapTopicName);
+            } else {
+                log.warn("seekToBeginning {} exception", checkPointSwapTopicName, ex);
+            }
         }
     }
 
