@@ -153,8 +153,12 @@ public class SelectSqlBuilder {
             this.start = (long) start;
             this.offset = (long) offset;
         } else {
-            this.seqStart = (String) start;
-            this.seqEnd = (String) offset;
+            if (start instanceof String) {
+                this.seqStart = escapeValue((String) start);
+            }
+            if (offset instanceof String) {
+                this.seqEnd = escapeValue((String) offset);
+            }
         }
         return this;
     }
@@ -235,14 +239,25 @@ public class SelectSqlBuilder {
         ColumnsMetaData slicePrimaryColumn = tableMetadata.getSliceColumn();
         String primaryKey = escape(slicePrimaryColumn.getColumnName(), dataBaseType);
         final String orderBy = getOrderBy(tableMetadata.getPrimaryMetas(), dataBaseType);
-        String pkCondition = primaryKey + "in (" + inIds.stream()
-            .map(id -> isDigit ? id : "'" + id + "'")
+        String pkCondition = primaryKey + " in (" + inIds.stream()
+            .map(id -> isDigit ? id : "'" + escapeValue(id) + "'")
             .collect(Collectors.joining(",")) + ")";
         return QUERY_WHERE_BETWEEN.replace(COLUMN, columnNames)
             .replace(SCHEMA, schemaEscape)
             .replace(TABLE_NAME, tableName)
             .replace(PK_CONDITION, pkCondition)
             .replace(ORDER_BY, orderBy);
+    }
+
+    /**
+     * Escape single quotes of a string primary key value before embedding it into SQL as
+     * a literal; a raw quote in the value would break the statement syntax.
+     *
+     * @param value raw string value from a checkpoint, never null
+     * @return escaped value, safe to embed inside a SQL string literal
+     */
+    private static String escapeValue(String value) {
+        return value.replace("'", "''");
     }
 
     private String buildSelectSqlWherePrimary(TableMetadata tableMetadata) {

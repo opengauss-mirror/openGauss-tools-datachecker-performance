@@ -86,7 +86,7 @@
     </select>
 
     <select id="next" resultType="string">
-        select ${param.colName} from ${param.schema}.${param.name} where ${param.colName} &gt;= #{param.preValue} order by ${param.colName} asc LIMIT #{param.offset}, 1
+        select ${param.colName} from ${param.schema}.${param.name} where ${param.colName} &gt;= #{param.preValue} order by ${param.colName} asc LIMIT 1 OFFSET #{param.offset}
     </select>
 
     <select id="queryPointList" resultType="string">
