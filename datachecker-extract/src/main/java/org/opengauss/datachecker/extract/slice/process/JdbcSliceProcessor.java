@@ -222,7 +222,8 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
     }
 
     private boolean isSuiteUnionPrimary(DataBaseType dataBaseType) {
-        return Objects.equals(dataBaseType, DataBaseType.OG) || Objects.equals(dataBaseType, DataBaseType.MS);
+        return Objects.equals(dataBaseType, DataBaseType.OG) || Objects.equals(dataBaseType, DataBaseType.MS)
+            || Objects.equals(dataBaseType, DataBaseType.O) || Objects.equals(dataBaseType, DataBaseType.OGRAC);
     }
 
     private QuerySqlEntry createQueryStatement(TableMetadata tableMetadata) {
@@ -243,7 +244,7 @@ public class JdbcSliceProcessor extends AbstractSliceProcessor {
         }
         QuerySqlEntry baseSliceSql = sliceStatement.buildSlice(tableMetadata, slice);
         List<String> pageStatementList = sliceStatement.buildPageStatement(baseSliceSql, sliceCount,
-            slice.getFetchSize());
+            slice.getFetchSize(), tableMetadata);
         LogUtils.debug(log, "table [{}] page query statement count: {}, first: {}",
                 table, pageStatementList.size(), sqlFieldMasker.mask(pageStatementList.get(0)));
         SliceResultSetSender sliceSender = null;

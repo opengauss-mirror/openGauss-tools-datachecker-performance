@@ -143,8 +143,11 @@ public class OracleDataAccessService extends AbstractDataAccessService {
 
     @Override
     public List<Object> queryPointList(Connection connection, DataAccessParam param) {
-        String sql = "select colName from (select ROWNUM rn, colName from " + param.getSchema() + "." + param.getName()
-                + " order by colName asc) where mod(rn," + param.getOffset() + ")=1";
+        // row_number() is evaluated after ORDER BY, so the sampled points are evenly spaced in
+        // key order. Plain ROWNUM is assigned in physical scan order BEFORE the sort, and the
+        // mod() sampling on it would be skewed across the key range.
+        String sql = "select colName from (select colName, row_number() over (order by colName asc) rn from "
+                + param.getSchema() + "." + param.getName() + ") where mod(rn," + param.getOffset() + ")=1";
         sql = sql.replace("colName", param.getColName());
         return adasQueryPointList(connection, sql);
     }
@@ -158,8 +161,9 @@ public class OracleDataAccessService extends AbstractDataAccessService {
 
     @Override
     public long queryUnionColumnCardinality(Connection connection, DataAccessParam param) {
-        // oracle database`table,that is defined by union primary key
-        return 0L;
+        String sqlTmp = "select count(distinct %s) from %s.%s";
+        String sql = String.format(sqlTmp, param.getColName(), param.getSchema(), param.getName());
+        return adasQueryCardinality(connection, sql);
     }
 
     @Override

@@ -25,17 +25,20 @@ import java.sql.DatabaseMetaData;
 import java.util.Optional;
 
 /**
- * JDBC dialect provider that maps oGRAC JDBC URLs to the Postgres dialect.
+ * JDBC dialect provider that maps openGauss family connections (openGauss, oGRAC) to the Postgres dialect.
  *
  * @author : xujintao
  * @date : Created in 2026/9/7
  * @since : 11
  */
-public class OgracDialectConfig implements DialectResolver.JdbcDialectProvider {
+public class OpenGaussDialectProvider implements DialectResolver.JdbcDialectProvider {
     @Override
     public Optional<Dialect> getDialect(JdbcOperations operations) {
         return operations.execute((ConnectionCallback<Optional<Dialect>>) connection -> {
             DatabaseMetaData metaData = connection.getMetaData();
+            if ("openGauss".equalsIgnoreCase(metaData.getDatabaseProductName())) {
+                return Optional.of(JdbcPostgresDialect.INSTANCE);
+            }
             String url = metaData.getURL();
             if (url != null && url.startsWith("jdbc:oGRAC:")) {
                 return Optional.of(JdbcPostgresDialect.INSTANCE);

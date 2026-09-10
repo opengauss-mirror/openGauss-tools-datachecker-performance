@@ -16,15 +16,19 @@
 package org.opengauss.datachecker.extract.task.sql;
 
 import org.opengauss.datachecker.common.config.ConfigCache;
+import org.opengauss.datachecker.common.constant.ConfigConstants;
 import org.opengauss.datachecker.common.entry.enums.CheckMode;
+import org.opengauss.datachecker.common.entry.enums.DataBaseType;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.SliceVo;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
+import org.opengauss.datachecker.common.util.SqlUtil;
 import org.opengauss.datachecker.extract.util.MetaDataUtil;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * single primary slice query statement
@@ -70,14 +74,40 @@ public class UnionPrimarySliceQueryStatement implements SliceQueryStatement {
      * @param baseSliceSql slice sql entry
      * @param sliceCount slice total count
      * @param fetchSize page select fetch size
+     * @param tableMetadata table metadata, used to project the column list of the Oracle pagination wrapper
      * @return page select sql
      */
-    public List<String> buildPageStatement(QuerySqlEntry baseSliceSql, int sliceCount, int fetchSize) {
+    public List<String> buildPageStatement(QuerySqlEntry baseSliceSql, int sliceCount, int fetchSize,
+        TableMetadata tableMetadata) {
         int totalPage = sliceCount / fetchSize + (sliceCount % fetchSize == 0 ? 0 : 1);
         List<String> statements = new ArrayList<>(totalPage);
+        final DataBaseType dataBaseType = ConfigCache.getValue(ConfigConstants.DATA_BASE_TYPE, DataBaseType.class);
+        String oracleColumns = null;
+        if (Objects.equals(dataBaseType, DataBaseType.O)) {
+            oracleColumns = tableMetadata.getColumnsMetas()
+                .stream()
+                .map(column -> SqlUtil.escape(column.getColumnName(), dataBaseType))
+                .collect(Collectors.joining(","));
+        }
         for (int i = 0; i < totalPage; i++) {
-            StringBuilder sqlBuilder = new StringBuilder(baseSliceSql.getSql());
-            sqlBuilder.append(" limit ").append(fetchSize).append(" offset ").append(i * fetchSize);
+            final StringBuilder sqlBuilder = new StringBuilder();
+            if (Objects.equals(dataBaseType, DataBaseType.O)) {
+                sqlBuilder.append("select ")
+                    .append(oracleColumns)
+                    .append(" from (select page_tmp.*, rownum rn from (")
+                    .append(baseSliceSql.getSql())
+                    .append(") page_tmp) where rn > ")
+                    .append(i * fetchSize)
+                    .append(" and rn <= ")
+                    .append((i + 1) * fetchSize);
+            } else {
+                // MySQL / openGauss / oGRAC
+                sqlBuilder.append(baseSliceSql.getSql())
+                    .append(" limit ")
+                    .append(fetchSize)
+                    .append(" offset ")
+                    .append(i * fetchSize);
+            }
             statements.add(sqlBuilder.toString());
         }
         return statements;
