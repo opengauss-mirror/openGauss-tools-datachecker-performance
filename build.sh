@@ -103,8 +103,26 @@ function build_main_pkg() {
     fi
 }
 
+# The third-party notice is a static, version-controlled file at the repo root.
+# Refresh it manually when dependencies change (see gen_third_party_notice.py).
+# The build just copies it into the packaging directory.
+function copy_third_party_notice() {
+    if [ ! -f ${root_path}/Third_Part_Open_Source_Software_Notice ]; then
+        echo "Third_Part_Open_Source_Software_Notice not found in project root..."
+        exit 1
+    fi
+    cp ${root_path}/Third_Part_Open_Source_Software_Notice \
+       ${root_path}/openGauss-DataCheck-${pom_version}/Third_Part_Open_Source_Software_Notice
+    if [ $? -ne 0 ]; then
+        echo "Copy third-party notice failed..."
+        exit 1
+    fi
+    echo "Copied third-party notice into openGauss-DataCheck-${pom_version}/"
+}
+
 prepare_env
 build_main_pkg
+copy_third_party_notice
 
 tar -zcf $root_path/openGauss-DataCheck-${pom_version}.tar.gz ./openGauss-DataCheck-${pom_version}
 
