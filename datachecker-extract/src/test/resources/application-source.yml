@@ -39,11 +39,9 @@ spring:
     # url: jdbc:oracle:thin:@127.0.0.1:1521/TEST
     username: xxxxx
     password: 'xxxxxx' # The password text may contain special characters, which need to be enclosed in quotation marks
-    # Configure initialization connection pool size, minimum number of connections, and maximum number of connections
+    # Configure pool size; initial-size and min-idle are derived from max-active
     # Users can make appropriate adjustments according to the number of current database tables
     druid:
-      initial-size: 5 # initialization connection pool size
-      min-idle: 5 # minimum number of connections
       max-active: 20 # maximum number of connections
       test-while-idle: true
       test-on-borrow: true

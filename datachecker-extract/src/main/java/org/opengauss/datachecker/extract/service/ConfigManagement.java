@@ -67,10 +67,6 @@ public class ConfigManagement {
     private String dsUname;
     @Value("${spring.datasource.password}")
     private String dsPw;
-    @Value("${spring.datasource.druid.initial-size}")
-    private int initialSize;
-    @Value("${spring.datasource.druid.min-idle}")
-    private int minIdle;
     @Value("${spring.datasource.druid.max-active}")
     private int maxActive;
     @Value("${spring.datasource.druid.max-wait}")
@@ -178,8 +174,9 @@ public class ConfigManagement {
         ConfigCache.put(ConfigConstants.DS_USER_NAME, dsUname);
         ConfigCache.put(ConfigConstants.DS_PASSWORD, dsPw);
 
-        ConfigCache.put(ConfigConstants.DRUID_INITIAL_SIZE, initialSize);
-        ConfigCache.put(ConfigConstants.DRUID_MIN_IDLE, minIdle);
+        // initial-size and min-idle are derived from max-active (the single pool size config)
+        ConfigCache.put(ConfigConstants.DRUID_INITIAL_SIZE, maxActive);
+        ConfigCache.put(ConfigConstants.DRUID_MIN_IDLE, maxActive);
         ConfigCache.put(ConfigConstants.DRUID_MAX_ACTIVE, maxActive);
         ConfigCache.put(ConfigConstants.DRUID_MAX_WAIT, maxWait);
         ConfigCache.put(ConfigConstants.DRUID_VALIDATION_QUERY, validationQuery);

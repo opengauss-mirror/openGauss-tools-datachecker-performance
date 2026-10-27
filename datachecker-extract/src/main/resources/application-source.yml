@@ -35,8 +35,6 @@ spring:
     password: xxxxxx
     type: com.alibaba.druid.pool.DruidDataSource
     druid:
-      initialSize: 5
-      minIdle: 5
       maxActive: 20
       max-wait: 60000
       timeBetweenEvictionRunsMillis: 60000

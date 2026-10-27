@@ -28,8 +28,6 @@ spring:
     password: xxxxxxxx
     type: com.alibaba.druid.pool.DruidDataSource
     druid:
-      initialSize: 5
-      minIdle: 10
       maxActive: 20
       max-wait: 60000
       keep-alive: true
