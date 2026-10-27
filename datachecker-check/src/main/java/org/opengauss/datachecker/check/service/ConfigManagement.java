@@ -80,7 +80,8 @@ public class ConfigManagement {
      */
     public void init() {
         ConfigCache.put(ConfigConstants.PROCESS_NO, IdGenerator.nextId36());
-        ConfigCache.put(ConfigConstants.MAXIMUM_TOPIC_SIZE, maxTopicSize);
+        // topic count is used as a modulo divisor; a value less than 1 would cause a division-by-zero error
+        ConfigCache.put(ConfigConstants.MAXIMUM_TOPIC_SIZE, Math.max(maxTopicSize, 1));
         ConfigCache.put(ConfigConstants.CHECK_PATH, checkProperties.getDataPath());
         ConfigCache.put(ConfigConstants.BUCKET_CAPACITY, checkProperties.getBucketExpectCapacity());
         ConfigCache.put(ConfigConstants.ENDPOINT, Endpoint.CHECK);
