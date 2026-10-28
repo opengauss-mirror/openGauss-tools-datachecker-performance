@@ -141,10 +141,12 @@ public class CheckPoint {
     }
 
     public long queryMaxIdOfAutoIncrementTable(TableMetadata tableMetadata) {
+        boolean isOpenGaussB = dataAccessService.isOgCompatibilityB();
+        DataBaseType dataBaseType = ConfigCache.getValue(ConfigConstants.DATA_BASE_TYPE, DataBaseType.class);
         DataAccessParam param = new DataAccessParam();
-        param.setSchema(tableMetadata.getSchema())
-            .setName(tableMetadata.getTableName())
-            .setColName(getPkName(tableMetadata));
+        param.setSchema(SqlUtil.escape(tableMetadata.getSchema(), dataBaseType, isOpenGaussB))
+            .setName(SqlUtil.escape(tableMetadata.getTableName(), dataBaseType, isOpenGaussB))
+            .setColName(SqlUtil.escape(getPkName(tableMetadata), dataBaseType, isOpenGaussB));
         Connection connection = ConnectionMgr.getConnection();
         String maxId = dataAccessService.max(connection, param);
         ConnectionMgr.close(connection, null, null);
