@@ -25,6 +25,7 @@
         <java.version>17</java.version>
         <mysql.connector.java.version>9.3.0</mysql.connector.java.version>
         <opengauss.jdbc.version>7.0.0-og</opengauss.jdbc.version>
+        <bcprov-jdk18on.version>1.86</bcprov-jdk18on.version>
         <oracle.jdbc.version>11.2.0.3</oracle.jdbc.version>
         <druid.version>1.2.27</druid.version>
         <mybatis.version>3.0.5</mybatis.version>
@@ -112,6 +113,11 @@
                 <groupId>org.opengauss</groupId>
                 <artifactId>opengauss-jdbc</artifactId>
                 <version>${opengauss.jdbc.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcprov-jdk18on</artifactId>
+                <version>${bcprov-jdk18on.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.oracle</groupId>
