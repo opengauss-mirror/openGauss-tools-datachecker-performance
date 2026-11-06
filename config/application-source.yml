@@ -44,7 +44,8 @@ spring:
 #    properties:
 #      # Old broker version (<3.0): idempotence and in-flight>5 are mutually exclusive, so idempotence is explicitly disabled for a deeper pipeline
 #      linger.ms: 30
-#      compression.type: lz4
+#      # Supported compression: none (default) / gzip / snappy; lz4 is NOT bundled in this release, do not configure it
+#      compression.type: snappy
 #      max.in.flight.requests.per.connection: 20
 #      enable.idempotence: false
 #    producer:
