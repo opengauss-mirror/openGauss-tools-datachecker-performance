@@ -57,7 +57,6 @@ import javax.sql.DataSource;
 @ConditionalOnBean({ExtractProperties.class})
 @MapperScan(basePackages = "org.opengauss.datachecker.extract.data.mapper", sqlSessionFactoryRef = "sqlSessionFactory")
 public class DruidDataSourceConfig implements DataSourceConfig {
-
     /**
      * Default pool size, consistent with the historical max-active value in the shipped configuration
      */

@@ -1,0 +1,104 @@
+# ============================================================================
+# Check service configuration template for Oracle-to-oGRAC check
+# BEFORE STARTUP, replace the kafka bootstrap-servers placeholder <host>:<port>
+# ============================================================================
+server:
+  port: 9000
+logging:
+  config: config/log4j2.xml
+spring:
+  kafka:
+    bootstrap-servers: <host>:<port>
+  check:
+    core-pool-size: 8
+    maximum-pool-size: 8
+    maximum-topic-size: 8
+    sample:
+      # Sampling check ratio (0~1, 1 means full check)
+      ratio: 1
+      # Sampling trigger threshold: tables whose slice count is less than or equal to this value are fully checked without sampling; 0 means no threshold
+      threshold: 0
+data:
+  check:
+    data-path: ./check_result
+    source-uri: http://127.0.0.1:9001 #  server.port=9001
+    sink-uri: http://127.0.0.1:9002 # server.port=9002
+    # auto-delete-topic :  Configure whether to automatically delete topic.
+    # 0 is not delete; 1 is delete when checked all completed ; 2 is delete when checked a table
+    auto-delete-topic: 1
+    increment-max-diff-count: 1000
+    create-repair-sql: false
+    max-retry-times: 200
+    # Enable this parameter to inspect the details of failed data differences
+    diff-debug-log-enabled: false
+rules:
+  # There are three types of filtering rules: table-level rules, row-level rules, and column-level rules.
+  # Rules are configured in the form of List collection.
+  # filter rule switch: enable=true enables the filter rule, and enable=false closes the filter rule
+  enable: false
+  # Table level verification and filtering: filter the current database table by configuring a black and white list.
+  # The black and white list configuration is mutually exclusive, that is, the black and white list cannot be configured at the same time.
+  # If the black and white list is configured at the same time, only the white list will take effect.
+  # black and white list configuration rules must:
+  # The configured name must be white or black, otherwise the rule is invalid, and we will automatically filter the invalid rule
+  # If the configured TEXT is not a regular expression, the rule is invalid and will be filtered automatically
+  # If the configured TEXT is empty, the rule is invalid and will be filtered automatically
+  # If the configured TEXT is duplicate, the rule item will automatically filter the duplicates.
+  table:
+  #  - name: white
+  #    text: ^[a-zA-Z]+$a-zA-Z_]+$
+  #  - name: white
+  #    text: ^[a-zA-Z][a-zA-Z0-9_]+$
+  #  - name: black
+  #    text: ^[a-zA-Z][a-zA-Z_]+$
+  # Row level filtering is to filter the records that need to be verified in all table by adding rules.
+  # Sort the table data in ascending order according to the primary key, and obtain the records to be verified ,
+  # query quantity, and offset information configured by the user.
+  # If table rule and row rule are configured at the same time, row rule will be adapted based on table rule
+  # We configure a row rule: regex: 10,100.
+  # If the table name is table_name, the primary key is id, then the current table is filtered at the row level,
+  # and the equivalent SQL is select * from table_name order by id asc limit 10 , 100
+  # row configuration rules must:
+  # If the configured text is not match the regular expression ^\d+(\,\d+), then the rule is invalid and will be filtered automatically
+  # If the configured name is not a regular expression, the rule is invalid and will be filtered automatically
+  # If the configured name is empty, the rule is invalid and will be filtered automatically
+  # If the configured name is duplicate, the rule item will automatically filter the duplicates.
+  row:
+  #  - name: ^[a-zA-Z][a-zA-Z_]+$
+  #    text: 10,100
+  #  - name: ^[a-zA-Z][a-zA-Z_]+$
+  #    text: 100,100
+  #  - name: ^[a-zA-Z]+$a-zA-Z_]+$
+  #    text: 100,300
+  #  - name: ^[a-zA-Z]+$
+  #    text: 10a,100
+  #  - name: ^[a-zA-Z][a-zA-Z0-9_]+$
+  #    text: 10,100
+  # Column level filtering is to filter the fields that need to be verified in the current table by adding rules to the table.
+  # Column level filtering includes two rules: inclusion rules and exclusive rules.
+  # Including rules means that only the configured field list is verified, and exclusive rules means that the configured field list is not verified.
+  # Inclusion rules and exclusive rules are mutually exclusive rules.
+  # Inclusion rules and exclusive rules cannot be configured in the same table at the same time, otherwise the rule will not take effect.
+  # When we verify the table data, we require that the table must contain a primary key.
+  # Therefore, if the primary key field is not configured in the inclusion rule, we will automatically add the primary key column to the inclusion rule.
+  # In addition, if the primary key field is configured in the exclusion rule, we will automatically delete the primary key column from the exclusion rule
+  # Column level filter rule configuration:
+  #   name: table_name
+  #   text: field1,field2,...field
+  #   attribute: include
+  # If the configured name is empty, the rule is invalid and will be filtered automatically
+  # If the configured name is duplicate, the rule item will automatically filter the duplicates.
+  # If the configured attribute cannot include or exclude, the rule is invalid, and we will automatically filter the invalid rule
+  column:
+  #  - name: t_test_1
+  #    text: id,portal_id,func_id,name,width,last_upd_time
+  #    attribute: include
+  #  - name: t_test_2
+  #    text: id,portal_id,func_id,name
+  #    attribute: include
+  #  - name: t_test_2
+  #    text: name,height,last_upd_time,last_upd_time
+  #    attribute: include
+  #  - name: t_test_4
+  #    text: name,height,last_upd_time
+  #    attribute: exclude
