@@ -18,11 +18,13 @@ package org.opengauss.datachecker.extract.data.access;
 import org.opengauss.datachecker.common.entry.common.DataAccessParam;
 import org.opengauss.datachecker.common.entry.common.Health;
 import org.opengauss.datachecker.common.entry.common.PointPair;
+import org.opengauss.datachecker.common.entry.enums.DataBaseType;
 import org.opengauss.datachecker.common.entry.enums.LowerCaseTableNames;
 import org.opengauss.datachecker.common.entry.extract.ColumnsMetaData;
 import org.opengauss.datachecker.common.entry.extract.PrimaryColumnBean;
 import org.opengauss.datachecker.common.entry.extract.TableMetadata;
 import org.opengauss.datachecker.common.entry.extract.UniqueColumnBean;
+import org.opengauss.datachecker.common.util.SqlUtil;
 import org.opengauss.datachecker.extract.data.mapper.OracleMetaDataMapper;
 
 import java.sql.Connection;
@@ -116,12 +118,16 @@ public class OracleDataAccessService extends AbstractDataAccessService {
 
     @Override
     public long rowCount(String tableName) {
-        return oracleMetaDataMapper.rowCount(properties.getSchema(), tableName);
+        return oracleMetaDataMapper.rowCount(escape(properties.getSchema()), escape(tableName));
     }
 
     @Override
     public boolean tableExistsRows(String tableName) {
-        return oracleMetaDataMapper.tableExistsRows(properties.getSchema(), tableName);
+        return oracleMetaDataMapper.tableExistsRows(escape(properties.getSchema()), escape(tableName));
+    }
+
+    private String escape(String identifier) {
+        return SqlUtil.escape(identifier, DataBaseType.O);
     }
 
     @Override

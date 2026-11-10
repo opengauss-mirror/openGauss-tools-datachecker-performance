@@ -19,6 +19,7 @@ import com.alibaba.druid.pool.DruidDataSource;
 import com.alibaba.druid.spring.boot.autoconfigure.DruidDataSourceBuilder;
 
 import cn.hutool.core.util.StrUtil;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 
 import org.apache.ibatis.session.SqlSessionFactory;
@@ -33,8 +34,11 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.Bindable;
+import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -54,7 +58,16 @@ import javax.sql.DataSource;
 @MapperScan(basePackages = "org.opengauss.datachecker.extract.data.mapper", sqlSessionFactoryRef = "sqlSessionFactory")
 public class DruidDataSourceConfig implements DataSourceConfig {
     /**
-     * build extract DruidDataSource
+     * Default pool size, consistent with the historical max-active value in the shipped configuration
+     */
+    private static final int DEFAULT_MAX_ACTIVE = 8;
+
+    @Resource
+    private Environment environment;
+
+    /**
+     * build extract DruidDataSource; initial-size and min-idle are derived from max-active,
+     * so max-active is the single pool size configuration item
      *
      * @return DruidDataSource
      */
@@ -62,8 +75,14 @@ public class DruidDataSourceConfig implements DataSourceConfig {
     @ConfigurationProperties(prefix = "spring.datasource.druid")
     public DataSource druidDataSource() {
         DruidDataSource druidDataSource = DruidDataSourceBuilder.create().build();
+        // Binder applies relaxed binding, matching both max-active and maxActive keys;
+        // must read here because @ConfigurationProperties binding happens after this method returns
+        int maxActive = Binder.get(environment)
+            .bind("spring.datasource.druid.max-active", Bindable.of(Integer.class))
+            .orElse(DEFAULT_MAX_ACTIVE);
         druidDataSource.setMaxPoolPreparedStatementPerConnectionSize(20);
-        druidDataSource.setMinIdle(10);
+        druidDataSource.setInitialSize(maxActive);
+        druidDataSource.setMinIdle(maxActive);
         druidDataSource.setRemoveAbandoned(true);
         druidDataSource.setRemoveAbandonedTimeout(300);
         druidDataSource.setLogAbandoned(true);

@@ -1,0 +1,88 @@
+# ============================================================================
+# Oracle source configuration template for Oracle-to-oGRAC check
+# BEFORE STARTUP, replace ALL placeholders in this file, otherwise the service
+# fails at startup (Druid connects to the database eagerly):
+#   <host>:<port>   database address, e.g. 192.168.0.10:1521
+#   <service_name>  Oracle service name, e.g. orcl
+#   <schema>        Oracle user owning the tables to check
+#   <password>      login password
+#   kafka bootstrap-servers and debezium-avro-registry addresses as well
+# The Oracle driver jar is NOT bundled: put ojdbc into the lib directory first
+# ============================================================================
+server:
+  port: 9001
+logging:
+  config: config/log4j2.xml
+
+spring:
+  check:
+    server-uri: http://127.0.0.1:9000
+    core-pool-size: 4
+    maximum-pool-size: 4
+    maximum-topic-size: 4
+    # Maximum rows per slice; tables exceeding this row count are split into multiple slices; must be identical on both ends
+    maximum-table-slice-size: 5000
+    extend-maximum-pool-size: 4
+  extract:
+    schema: <schema> # Oracle user owning the tables to check
+    databaseType: O # Oracle source for Oracle-to-oGRAC check
+    query-dop: 8 # jdbc Parallel Query  config
+    dataLoadMode: jdbc # Only jdbc is supported for Oracle-to-oGRAC check, csv is not available
+    # Memory safe watermark ratio (of -Xmx), reserving headroom for GC jitter and short peaks; default 0.30.
+    memory-safe-watermark: 0.30
+    # Minimum concurrent slices: on small heaps or at high watermark, keep at least this many slices running to avoid "all rejected -> deadlock". Default 1, enforced minimum 1.
+    memory-min-concurrency: 1
+    debezium-enable: false
+    debezium-topic: data_check_avro_inc_topic_w1 # debezium topic
+    debezium-serializer: AvroSerializer # StringSerializer or AvroSerializer
+    debezium-avro-registry: http://<host>:<port> # avro schema registry
+    debezium-groupId: debezium-extract-group # debezium topic groupId
+    debezium-time-period: 1 # Debezium incremental migration verification time period: 24 * 60 unit: Min
+    # debezium-num-period: Debezium incremental migration verification is the threshold value of the number
+    # of incremental change records. The default value is 1000. The threshold value should be greater than 100
+    debezium-num-period: 1000
+
+  jdbc:
+    result-set:
+      # Automatically reduced at runtime based on remaining heap memory; configured here as the upper limit. Can be raised if memory is sufficient
+      fetch-size: 1000
+
+  kafka:
+    bootstrap-servers: <host>:<port>
+    # Producer tuning (passed through to the Kafka client; remove this block to fall back to client defaults)
+#    properties:
+#      # Old broker version (<3.0): idempotence and in-flight>5 are mutually exclusive, so idempotence is explicitly disabled for a deeper pipeline
+#      linger.ms: 30
+#      # Supported compression: none (default) / gzip / snappy; lz4 is NOT bundled in this release, do not configure it
+#      compression.type: snappy
+#      max.in.flight.requests.per.connection: 20
+#      enable.idempotence: false
+#    producer:
+#      batch-size: 1048576
+#      # Producer send buffer, occupies heap memory; must be smaller than -Xmx
+#      buffer-memory: 67108864
+  datasource:
+    driver-class-name: oracle.jdbc.OracleDriver
+    # Oracle driver jar is NOT bundled with the release; put ojdbc into the lib directory before startup
+    url: jdbc:oracle:thin:@<host>:<port>/<service_name>
+    username: <schema>
+    password: '<password>' # The password text may contain special characters, which need to be enclosed in quotation marks
+    # Configure pool size; initial-size and min-idle are derived from max-active
+    # Users can make appropriate adjustments according to the number of current database tables
+    druid:
+      max-active: 8 # maximum number of connections
+      test-while-idle: true
+      test-on-borrow: true
+      validation-query: "SELECT 1 FROM DUAL"
+      validation-query-timeout: 10000
+      connection-error-retry-attempts: 0
+      break-after-acquire-failure: true
+      max-wait: 600000
+      keep-alive: true
+      min-evictable-idle-time-millis: 600000
+data:
+  check:
+    # Oracle/oGRAC precision mode: COMPATIBLE (kernel compatible, default) or STRICT (exact comparison)
+    # Must be identical to the sink side
+    oracle2ograc:
+      precision-mode: COMPATIBLE
